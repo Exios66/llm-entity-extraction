@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import sys
 from collections import defaultdict
@@ -54,6 +55,15 @@ from src.braintrust_utils import load_braintrust_dataset
 from src.cuad_ground_truth import build_expected_fields
 from src.env_utils import require_env
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.experiment_log import (
+    append_experiment,
+    append_markdown,
+    default_jsonl_path,
+    default_md_path,
+    git_snapshot,
+    mean,
+    tokens_summary,
+)
 from src.field_scoring import (
     get_field_types,
     is_entity_list,
@@ -124,7 +134,14 @@ def main_with_args(argv: list[str]) -> int:
                              "per-field score/F1 (most UI detail)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, print the plan without running")
+    parser.add_argument("--experiment-log", type=Path, default=None,
+                        help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH or "
+                             "reports/experiment_log.jsonl); a markdown section is appended "
+                             "to $EXPERIMENT_LOG_MD_PATH or reports/experiment_log.md")
     args = parser.parse_args(argv)
+
+    log_path = args.experiment_log or default_jsonl_path()
+    md_log_path = default_md_path()
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
@@ -209,6 +226,10 @@ def main_with_args(argv: list[str]) -> int:
               f"completeness={verdict.get('completeness', {}).get('completeness_label', '?')}")
         return verdict
 
+    # Per-row actual token usage/cost, captured from the specialist's last
+    # LLM call (the manifest + experiment log aggregate these per run).
+    usage_by_index: dict[int, dict] = {}
+
     @braintrust.traced
     def extract_contract(input_data: dict) -> dict:
         """Extract entities from one contract; returns a COMPOSITE output.
@@ -255,6 +276,9 @@ def main_with_args(argv: list[str]) -> int:
                                  "expected_fields": expected_fields, "scores": {"composite": composite}})
             return composite
 
+        usage = specialist._last_usage or {}
+        usage_by_index[input_data["index"]] = usage
+
         if predicted.get("_parse_error"):
             composite = {"predicted": {}, "error": "parse error", "schema_valid": 0.0,
                          "overall_score": 0.0, "field_presence": 0.0,
@@ -294,6 +318,7 @@ def main_with_args(argv: list[str]) -> int:
             "extracted_fields": {k: v for k, v in predicted.items() if v not in (None, "", [])},
             "entity_list_f1": composite["entity_list_f1"],
             "composite": composite,
+            "usage": usage,
         }
 
         if args.judge and result.needs_judge_review:
@@ -401,8 +426,100 @@ def main_with_args(argv: list[str]) -> int:
     )
 
     print_extraction_summary(result, scored_fields)
+    log_experiment_to_repo(result, scored_fields, with_truth, args, experiment_name,
+                           usage_by_index, log_path, md_log_path)
     braintrust.flush()
     return 0
+
+
+def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict],
+                           args, experiment_name: str, usage_by_index: dict[int, dict],
+                           log_path: Path, md_log_path: Path) -> None:
+    """Append ONE record of this experiment to the repo experiment log.
+
+    The record carries every score (overall, presence, schema validity,
+    per-field content scores and entity-list F1), all run parameters, token
+    usage/cost totals, the data source, and every per-row result — read from
+    the locally computed composite, so it always matches the manifest and the
+    Braintrust lookups.
+    """
+    def _mean_over(outputs: list[dict], key: str) -> float | None:
+        values = [float(o.get(key) or 0.0) for o in outputs if o.get(key) is not None]
+        return round(mean(values), 4) if values else None
+
+    def _mean_field(outputs: list[dict], bucket: str, field: str) -> float | None:
+        values = [
+            float((o.get(bucket) or {}).get(field) or 0.0)
+            for o in outputs if (o.get(bucket) or {}).get(field) is not None
+        ]
+        return round(mean(values), 4) if values else None
+
+    rows = [r for r in result.results if r.error is None and isinstance(r.output, dict)]
+    ok_outputs = [r.output for r in rows if not r.output.get("error")]
+    per_field = {f: _mean_field(ok_outputs, "field_scores", f) for f in scored_fields}
+    per_field = {f: v for f, v in per_field.items() if v is not None}
+    entity_f1 = {f: _mean_field(ok_outputs, "entity_list_f1", f) for f in scored_fields}
+    entity_f1 = {f: v for f, v in entity_f1.items() if v is not None}
+
+    per_row = []
+    for r in result.results:
+        output = r.output if isinstance(r.output, dict) else {}
+        index = r.input.get("index", -1) if isinstance(r.input, dict) else -1
+        per_row.append({
+            "filename": r.input.get("filename") if isinstance(r.input, dict) else "",
+            "status": "error" if r.error is not None or output.get("error") else "completed",
+            "error": r.error or output.get("error"),
+            "overall_score": output.get("overall_score"),
+            "field_presence": output.get("field_presence"),
+            "schema_valid": output.get("schema_valid"),
+            "field_scores": output.get("field_scores"),
+            "entity_list_f1": output.get("entity_list_f1"),
+            "ambiguous_fields": output.get("ambiguous_fields"),
+            "tokens": usage_by_index.get(index) or {},
+        })
+
+    record = {
+        "type": "experiment",
+        "task": "contract_entity_extraction",
+        "experiment_name": experiment_name,
+        "git": git_snapshot(),
+        "model": args.model,
+        "prompt_version": args.prompt_version,
+        "data_source": {
+            "project": f"{args.dataset_project}/{args.dataset}",
+            "ground_truth": "cuad_v1_clause_labels",
+            "dataset_fingerprint": dataset_fingerprint(dataset),
+            "n_samples": len(dataset),
+            "sample_requested": args.sample,
+            "limit": args.limit,
+            "seed": args.seed,
+        },
+        "parameters": {
+            "temperature": args.temperature,
+            "max_tokens": args.max_tokens,
+            "max_input_chars": args.max_input_chars,
+            "reasoning_effort": args.reasoning_effort,
+            "max_concurrency": args.max_concurrency,
+            "bt_scores": args.bt_scores,
+            "judge": args.judge,
+            "manifest": str(args.manifest) if args.manifest else None,
+        },
+        "tokens": tokens_summary(list(usage_by_index.values())),
+        "scores": {
+            "overall_extraction_score": _mean_over(ok_outputs, "overall_score"),
+            "field_presence": _mean_over(ok_outputs, "field_presence"),
+            "schema_valid": _mean_over(ok_outputs, "schema_valid"),
+            "per_field": per_field,
+            "entity_list_f1": entity_f1,
+        },
+        "n_rows": len(result.results),
+        "n_ok": len(ok_outputs),
+        "n_error": len(result.results) - len(ok_outputs),
+        "results": per_row,
+    }
+    jsonl_path = append_experiment(record, log_path)
+    append_markdown(record, md_log_path)
+    print(f"\nExperiment logged to {jsonl_path}")
 
 
 def print_extraction_summary(result, scored_fields: list[str]) -> None:

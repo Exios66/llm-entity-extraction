@@ -37,6 +37,17 @@ def _fake_env(monkeypatch):
     return {"braintrust_key": FAKE_BT_KEY, "openrouter_key": FAKE_OR_KEY}
 
 
+@pytest.fixture(autouse=True)
+def _isolate_experiment_log(monkeypatch, tmp_path):
+    """Redirect the repo experiment log to a per-test tmp dir.
+
+    Tests that run the eval loops (smoke tests) append experiment records;
+    they must never pollute the repo's reports/experiment_log.* files.
+    """
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "experiment_log.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "experiment_log.md"))
+
+
 @pytest.fixture
 def sample_dataset_rows():
     """A small valid multiclass dataset (no network involved)."""

@@ -50,6 +50,15 @@ from src.braintrust_config import load_braintrust_config
 from src.braintrust_utils import load_braintrust_dataset, load_braintrust_image_dataset
 from src.env_utils import require_env
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.experiment_log import (
+    append_experiment,
+    append_markdown,
+    default_jsonl_path,
+    default_md_path,
+    git_snapshot,
+    mean,
+    tokens_summary,
+)
 from src.image_utils import encode_image_base64
 from src.prompts import DEFAULT_PROMPT_VERSION, list_prompts
 from src.scorers import ERROR_PREFIX, build_scorers, exact_match, failure
@@ -333,9 +342,16 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--scorers", default=None,
                         help="Comma-separated scorers: exact_match,failure,cost ('none' for none)")
     parser.add_argument("--no-scorers", action="store_true", help="Skip Braintrust scoring")
+    parser.add_argument("--experiment-log", type=Path, default=None,
+                        help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH or "
+                             "reports/experiment_log.jsonl); a markdown section is appended "
+                             "to $EXPERIMENT_LOG_MD_PATH or reports/experiment_log.md")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, and print the plan without running")
     args = parser.parse_args(argv)
+
+    log_path = args.experiment_log or default_jsonl_path()
+    md_log_path = default_md_path()
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
@@ -603,9 +619,103 @@ def main_with_args(argv: list[str]) -> int:
     )
 
     print_classifications(result, dataset)
+    log_experiment_to_repo(result, dataset, args, experiment_name,
+                           cost_by_index, usage_by_index, log_path, md_log_path)
 
     braintrust.flush()
     return 0
+
+
+def log_experiment_to_repo(result, dataset: list[dict], args, experiment_name: str,
+                           cost_by_index: dict[int, float], usage_by_index: dict[int, dict],
+                           log_path: Path, md_log_path: Path) -> None:
+    """Append ONE record of this experiment to the repo experiment log.
+
+    Carries every score (exact_match, failure rate, cost, per-class
+    accuracy), all run parameters, token usage/cost totals, the data source,
+    and every per-row result.
+    """
+    from src.scorers import normalize_label
+
+    per_class: dict[str, list[bool]] = defaultdict(list)
+    failed = 0
+    costs: list[float] = []
+    per_row = []
+    for r in result.results:
+        index = r.input.get("index", -1) if isinstance(r.input, dict) else -1
+        expected = normalize_label(r.expected)
+        output = "" if r.error is not None else str(r.output)
+        is_error = r.error is not None or output.startswith(ERROR_PREFIX)
+        if is_error:
+            failed += 1
+        else:
+            predicted = normalize_label(output)
+            per_class[expected].append(predicted == expected)
+            costs.append(cost_by_index.get(index, 0.0))
+        per_row.append({
+            "filename": r.input.get("filename") if isinstance(r.input, dict) else "",
+            "status": "error" if is_error else "completed",
+            "error": r.error,
+            "expected": expected if not is_error else None,
+            "predicted": (normalize_label(output) if not is_error else None),
+            "correct": (not is_error) and (normalize_label(output) == expected),
+            "cost_usd": cost_by_index.get(index, 0.0),
+            "tokens": usage_by_index.get(index) or {},
+        })
+
+    total_rows = len(result.results)
+    exact = sum(1 for row in per_row if row["correct"]) / total_rows if total_rows else 0.0
+    failure_rate = failed / total_rows if total_rows else 0.0
+    per_class_acc = {cls: round(mean(values), 4) for cls, values in sorted(per_class.items())}
+
+    data_source = f"{args.dataset_project}/{args.dataset}" if not any(
+        (args.documents_dir, args.images_dir, args.pdf_dir)
+    ) else "local"
+
+    record = {
+        "type": "experiment",
+        "task": f"{args.prompt_mode}_classification",
+        "experiment_name": experiment_name,
+        "git": git_snapshot(),
+        "model": args.model,
+        "prompt_version": args.prompt_version,
+        "data_source": {
+            "source": data_source,
+            "dataset_fingerprint": dataset_fingerprint(dataset),
+            "n_samples": len(dataset),
+            "limit": args.limit,
+            "samples_per_class": args.samples_per_class,
+            "sample_seed": args.sample_seed,
+        },
+        "parameters": {
+            "input_mode": args.input_mode,
+            "prompt_mode": args.prompt_mode,
+            "vision_pages": args.vision_pages,
+            "valid_classes": args.valid_classes,
+            "temperature": args.temperature,
+            "max_tokens": args.max_tokens,
+            "max_input_chars": args.max_input_chars,
+            "max_concurrency": args.max_concurrency,
+            "scorers": args.scorers,
+            "no_scorers": args.no_scorers,
+            "manifest": str(args.manifest) if args.manifest else None,
+        },
+        "tokens": tokens_summary(list(usage_by_index.values())),
+        "scores": {
+            "exact_match": round(exact, 4),
+            "failure": round(failure_rate, 4),
+            "cost_total_usd": round(sum(costs), 6),
+            "cost_mean_usd": round(mean(costs), 6),
+            "per_class_accuracy": per_class_acc,
+        },
+        "n_rows": total_rows,
+        "n_ok": total_rows - failed,
+        "n_error": failed,
+        "results": per_row,
+    }
+    jsonl_path = append_experiment(record, log_path)
+    append_markdown(record, md_log_path)
+    print(f"\nExperiment logged to {jsonl_path}")
 
 
 def print_classifications(result, dataset: list[dict]) -> None:

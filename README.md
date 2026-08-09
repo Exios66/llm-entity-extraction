@@ -55,6 +55,30 @@ scripts/
 tests/                   unit tests
 ```
 
+## Experiment log
+
+Every eval run appends ONE record to `reports/experiment_log.jsonl` (plus a
+human-readable section in `reports/experiment_log.md`): experiment name,
+timestamp, git commit, model, prompt version, data source + fingerprint,
+sample quantity/seed, ALL run parameters, token usage + cost totals, all
+scores (overall, per-field, per-class), and every per-row result. The log is
+append-only and updated automatically by `run_classification_eval.py` and
+`run_extraction_eval.py` (including each arm of `evaluate_prompt_version.py`).
+
+```bash
+# Inspect the whole history
+python - <<'PY'
+import json
+for line in open("reports/experiment_log.jsonl"):
+    r = json.loads(line)
+    print(r["experiment_name"], r["model"], r["prompt_version"],
+          r["scores"].get("overall_extraction_score"), r["tokens"]["total_tokens"])
+PY
+```
+
+Paths default to `reports/experiment_log.{jsonl,md}` and are overridable with
+`EXPERIMENT_LOG_PATH` / `EXPERIMENT_LOG_MD_PATH` or `--experiment-log`.
+
 ## Setup
 
 ```bash
