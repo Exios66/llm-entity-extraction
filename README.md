@@ -3,7 +3,8 @@
 A prompt experiment loop environment for legal document entity extraction: the
 building block for the llm-mailroom agents. Each evaluation tests **one prompt
 version at a time**, runs the agents on **LangChain**, and logs everything to
-**Braintrust** for comparison in the UI.
+**Braintrust** for comparison in the UI — plus a fully expanded, append-only
+experiment log in the repo (`reports/experiment_log.{jsonl,md}`).
 
 Modeled on the [RVL-CDIP-Classifier](https://github.com/Exios66/RVL-CDIP-Classifier)
 repo's Braintrust evaluation pattern (vision classification of document page
@@ -20,6 +21,8 @@ taxonomy/prompts.
    ``sorter_vision_v0`` prompt (ordered check cascade + scratchpad +
    ``<label>/<confidence>/<reasoning>`` tag output) reads the entire agreement
    — recitals, sections, exhibits, signature pages — before deciding.
+   Local PDFs are classified with a confidence-weighted **page vote**
+   (``--vision-pages all``, the default).
 2. **Multi-class LegalBench classification** — the sorter answers the
    LegalBench multi-class classification tasks (`cuad_*` Yes/No clause tasks,
    the 13k-row MAUD per-question suite, hearsay, and 60+ more) via
@@ -29,41 +32,109 @@ The sorter receives **full documents** — either the full extracted text
 (100k-char hard safety cap, truncation recorded on the span, never a 50-token
 preview) or the complete PDF page set in one call.
 
+## The pipeline under test
+
+The eval loops exercise the same LangChain agents the mailroom runs:
+
+| Agent | File | Role |
+|---|---|---|
+| `BaseAgent` | `agents/base_agent.py` | `ChatOpenAI` (OpenRouter) + structured output (JSON schema) + vision calls; `_last_usage` token/cost capture |
+| `SorterAgent` | `agents/sorter_agent.py` | doc-type classification (text `classify_json` + image `classify_image`) plus the **contract subtype** dimension (25 CUAD contract families) |
+| Specialists | `agents/specialist_agents.py` | per-doc-class field extraction (contract, corporate record, due diligence, correspondence, compliance filing, court opinion) + shared JSON schemas |
+| `JudgeAgent` | `agents/judge_agent.py` | offline LLM-as-a-judge: classification / completeness / extraction correctness |
+
+## Scoring (deterministic, field-type-aware)
+
+Exact-match-on-extraction treats every field identically, which is wrong. The
+evaluations score each field by its type (`config/taxonomy.yaml →
+field_scoring:`):
+
+- `id` — normalize + exact match (docket/reference numbers)
+- `date` — canonical ISO parse, then exact match ("March 3, 2024" == "03/03/2024")
+- `money` — strip symbols, float compare within one cent; unparseable prose
+  falls back to fuzzy matching
+- `name` — Jaro-Winkler + token-set ratio on normalized text
+- `free_text` — SQuAD-style token F1
+- `entity_list` — optimal bipartite matching (Hungarian algorithm) over
+  pairwise similarity, then precision/recall/F1
+
+`name`/`free_text` also use embedding cosine similarity
+(`sentence-transformers/all-MiniLM-L6-v2`, lazy, graceful degradation) as a
+second signal when the string score is ambiguous.
+
+Ground truth follows the CUAD dataset card (`theatticusproject/cuad`): all 41
+clause categories are modeled — 9 string-answer categories map to schema
+fields; the 32 YES/NO categories are scored as content **and** as binary
+presence expectations. Expected fields are **type-aware**: the CUAD folder the
+contract came from decides which categories apply (`ground_truth_mode
+"cuad_type_aware"`, `src/cuad_ground_truth.py`). A **factuality guard**
+verifies every predicted list item against a label or the source document and
+reports `verified_precision` / `hallucination_rate`.
+
 ## Layout
 
 ```
 agents/                  LangChain agents (sorter, specialists, judge)
   base_agent.py          ChatOpenAI (OpenRouter) + structured output + vision calls
-  sorter_agent.py        doc-type classification: text (classify_json) + image (classify_image)
-  specialist_agents.py   per-class field extraction + shared schemas
+  sorter_agent.py        doc-type + contract-subtype classification (text + image)
+  specialist_agents.py   per-class field extraction + shared JSON schemas
   judge_agent.py         LLM-as-a-judge (classification/completeness/correctness)
-config/taxonomy.yaml     doc classes, agent->model mapping, thresholds
+config/taxonomy.yaml     doc classes, field types, agent->model mapping, thresholds
 src/
-  braintrust_config.py   loads braintrust.env / .env (org, project, model)
-  braintrust_utils.py    Braintrust HTTP, dataset load/upload, attachment fetch
+  braintrust_config.py   loads braintrust.env / .env (org, project, model, api base)
+  braintrust_utils.py    Braintrust HTTP, dataset load/upload, experiment fetch
   classifier.py          label/confidence/reasoning parsers (RVL-CDIP style)
+  cuad_ground_truth.py   CUAD 41-category catalog -> expected fields + presence
+  env_utils.py           dotenv loading + required-var validation
   evaluation.py          dataset validation, fingerprints, resumable manifests
+  experiment_log.py      append-only repo experiment log (JSONL + markdown renderer)
+  field_scoring.py       deterministic field-type-aware content scoring + factuality audit
   image_utils.py         PDF/TIFF -> 1024x1024 grayscale PNG helpers
   llm_chain.py           LangChain chain factory for eval loops
-  prompts.py             ALL agent prompts, versioned (sorter_v0, sorter_vision_v0, ...)
+  openrouter_utils.py    OpenRouter constants + vision message builders
+  prompts.py             ALL agent prompts, versioned
   scorers.py             deterministic Braintrust scorers (exact_match, failure, cost)
   taxonomy.py            YAML loader for config/taxonomy.yaml
 scripts/
   datasets/              sync the HF corpora into Braintrust datasets
-  eval/                  the experiment loops (classification, binary, multiclass, A/B)
-  reporting/             confusion matrix + markdown experiment reports
-tests/                   unit tests
+    stream_cuad_to_bt.py            CUAD v1: 510 contract PDFs, every page rendered
+    stream_legalbench_to_bt.py      MAUD v1: 139 agreements + 13k-row classification suite
+    stream_legalbench_tasks_to_bt.py 60+ LegalBench classification tasks
+  eval/                  the experiment loops
+    run_classification_eval.py      one prompt, text/vision/task modes, local PDFs
+    run_extraction_eval.py          contracts specialist vs CUAD ground truth
+    run_chained_eval.py             sorter -> extractor end-to-end pipeline eval
+    run_binary_class_eval.py        binary question precision/recall/F1
+    run_multiclass_eval.py          all-class eval with per-class accuracy
+    evaluate_prompt_version.py      A/B two prompt versions on the same dataset
+  reporting/
+    report_generator.py             markdown experiment report from Braintrust
+    confusion_matrix.py             PNG + CSV confusion matrix from Braintrust
+    score_extraction_manifest.py    post-hoc extraction scoring from a manifest
+    render_experiment_log.py        rebuild the markdown log from the JSONL source
+tests/                   unit tests (180, no network)
 ```
 
 ## Experiment log
 
 Every eval run appends ONE record to `reports/experiment_log.jsonl` (plus a
-human-readable section in `reports/experiment_log.md`): experiment name,
+fully expanded section in `reports/experiment_log.md`): experiment name,
 timestamp, git commit, model, prompt version, data source + fingerprint,
 sample quantity/seed, ALL run parameters, token usage + cost totals, all
-scores (overall, per-field, per-class), and every per-row result. The log is
-append-only and updated automatically by `run_classification_eval.py` and
-`run_extraction_eval.py` (including each arm of `evaluate_prompt_version.py`).
+scores (overall, per-field, per-class), and every per-row result — including
+the model's raw predicted outputs.
+
+The markdown log is rendered as **tables, never JSON dumps**: per-document
+results, a document × field scoring matrix (the full per-doc scoring
+calculation), entity-list F1, the factuality audit, CUAD category presence,
+expected × predicted **confusion matrices** (classification and sorter
+contract-subtype), and predicted extractions. The JSONL is the source of
+truth; the markdown is rebuilt from it at any time:
+
+```bash
+python scripts/reporting/render_experiment_log.py          # rebuild the whole markdown log
+python scripts/reporting/render_experiment_log.py --dry-run  # print instead of write
+```
 
 ```bash
 # Inspect the whole history
@@ -89,14 +160,19 @@ cp braintrust.env.example braintrust.env   # fill in creds (org/project/API key)
 cp .env.example .env                       # fill in OPENROUTER_API_KEY
 ```
 
-Required env vars (in `braintrust.env` or `.env`):
+Required env vars (in `braintrust.env` or `.env`; see `src/env_utils.py`):
 
 | Variable | Purpose |
 |---|---|
 | `BRAINTRUST_ORG_ID` | Braintrust org |
 | `BRAINTRUST_PROJECT_ID` / `BRAINTRUST_PROJECT_NAME` | project for experiments/datasets |
 | `BRAINTRUST_API_KEY` | key with write access to the project |
+| `BRAINTRUST_API_BASE` | API base (default `https://api.braintrust.dev`) |
+| `BRAINTRUST_MODEL` | default eval model (default `qwen/qwen3.7-flash`) |
+| `BRAINTRUST_DATASET_PROJECT` | project holding the datasets |
 | `OPENROUTER_API_KEY` | LLM calls through OpenRouter |
+| `OPENROUTER_BASE_URL` | optional: any OpenAI-compatible endpoint (Ollama, vLLM) |
+| `EXPERIMENT_LOG_PATH` / `EXPERIMENT_LOG_MD_PATH` | experiment log paths (optional) |
 
 ## Sync the HF corpora into Braintrust
 
@@ -149,10 +225,10 @@ python scripts/eval/evaluate_prompt_version.py \
 
 # ---- Entity EXTRACTION eval (contracts specialist vs CUAD ground truth) ----
 # Content-scored: every extracted field is compared against the CUAD clause-QA
-# labels with the field-type-aware scorer (date/money/name/free-text
-# normalization, entity-list bipartite F1, semantic embedding rescue via
-# OpenRouter embeddings). The task computes ALL scores locally and returns a
-# composite output; registered Braintrust scorers are trivial lookups on it.
+# labels with the field-type-aware scorer (date/money/name/free-text,
+# entity-list bipartite F1, semantic embedding rescue via OpenRouter
+# embeddings). The task computes ALL scores locally and returns a composite
+# output; registered Braintrust scorers are trivial lookups on it.
 # Default --bt-scores overall registers the cross-experiment tracker pair:
 # overall_extraction_score (complex content accuracy) + field_presence
 # (binary conformance) — comparable across every run in the Braintrust UI.
@@ -160,17 +236,6 @@ python scripts/eval/evaluate_prompt_version.py \
 # feeds the field scores (ground-truth coverage for partial-GT fields like
 # parties/key_obligations/termination_clauses, F1 otherwise); raw
 # precision/recall/F1 are kept in each row's entity_list_scores metadata.
-
-# Ground truth follows the CUAD dataset card (theatticusproject/cuad):
-# all 41 clause categories are modeled — 9 string-answer categories
-# (Document Name -> document_name, Parties, dates, Renewal Term, Governing
-# Law, ...) map to schema fields; the 32 YES/NO categories are scored as
-# content AND as binary presence expectations (category_presence tracker:
-# a labeled clause must be covered; an unlabeled one is satisfied unless
-# fabricated, which the factuality guard catches). Expected fields are
-# TYPE-AWARE: the contract type (CUAD folder) the document belongs to
-# decides which categories/fields are expected (ground_truth_mode
-# "cuad_type_aware").
 python scripts/eval/run_extraction_eval.py \
     --dataset mailroom-cuad-contracts --prompt-version contracts_specialist_v2 \
     --manifest data/manifests/extract_v2.jsonl
@@ -178,33 +243,57 @@ python scripts/reporting/score_extraction_manifest.py data/manifests/extract_v2.
     --output reports/extraction_v2.md          # post-hoc scoring report (free)
 python scripts/eval/run_extraction_eval.py --bt-scores none --limit 3   # pure local
 python scripts/eval/run_extraction_eval.py --bt-scores full --limit 3   # + per-field scorers
-python scripts/eval/run_extraction_eval.py --judge --limit 3              # LLM-judge ambiguous band
+python scripts/eval/run_extraction_eval.py --judge --limit 3            # LLM-judge ambiguous band
 python scripts/eval/run_extraction_eval.py --prompt-version contracts_specialist_v1  # A/B vs v2
+
+# ---- Chained pipeline eval (sorter -> extractor, end to end) ----
+python scripts/eval/run_chained_eval.py \
+    --dataset mailroom-cuad-contracts \
+    --sorter-prompt-version sorter_v1 --extractor-prompt-version contracts_specialist_v4 \
+    --manifest data/manifests/chained_5.jsonl
 
 # Inspect results
 python scripts/reporting/report_generator.py --experiment qwen3.7-flash_sorter_vision_v0
 python scripts/reporting/confusion_matrix.py --experiment qwen3.7-flash_sorter_vision_v0
+python scripts/reporting/render_experiment_log.py
 ```
 
 Experiment naming is `{model-slug}_{prompt-version}` (optionally suffixed
-`_binary-{class}` / `_multiclass`), so re-running the same command overwrites
-the same experiment — identical prompt versions are directly comparable in the
-Braintrust UI, and different prompt versions never collide.
+`_binary-{class}` / `_multiclass` / `_extraction` / `_chained`), so re-running
+the same command overwrites the same experiment — identical prompt versions
+are directly comparable in the Braintrust UI, and different prompt versions
+never collide.
 
 ### Eval runners
 
 | Script | Tests |
 |---|---|
-| `run_classification_eval.py` | one prompt version; `--input-mode auto/text/vision`, `--prompt-mode sorter/task`, `--valid-classes`, `--vision-pages all/first` (all pages of each PDF in one call by default), `--pdf-dir` for local PDFs, exact_match/failure/cost scorers, resumable manifest |
-| `run_extraction_eval.py` | contracts-specialist **entity extraction** vs CUAD clause-QA ground truth: `overall_extraction_score` (complex content accuracy) + `field_presence` (binary guard) registered by default as cross-experiment trackers — composite-output lookups, nothing recomputed on Braintrust; `--bt-scores none|overall|full`; optional `--judge` pass for the ambiguous band; manifest-based post-hoc scoring via `score_extraction_manifest.py` |
+| `run_classification_eval.py` | one prompt version; `--input-mode auto/text/vision`, `--prompt-mode sorter/task`, `--valid-classes`, `--vision-pages all/first` (all pages of each PDF in one call by default), `--pdf-dir`/`--documents-dir`/`--images-dir` for local inputs, exact_match/failure/cost scorers, resumable manifest |
+| `run_extraction_eval.py` | contracts-specialist **entity extraction** vs CUAD clause-QA ground truth: `overall_extraction_score` (complex content accuracy) + `field_presence` (binary guard) registered by default as cross-experiment trackers — composite-output lookups, nothing recomputed on Braintrust; `--bt-scores none/overall/full`; optional `--judge` pass for the ambiguous band; manifest-based post-hoc scoring via `score_extraction_manifest.py` |
+| `run_chained_eval.py` | end-to-end pipeline: sorter (doc_type + contract subtype) → contracts specialist; per-stage scores and token usage, sorter subtype accuracy + extractor content scores in one record |
 | `run_binary_class_eval.py` | one prompt version on a binary question (e.g. `--positive contract`), precision/recall/F1 |
 | `run_multiclass_eval.py` | one prompt version across all taxonomy classes, per-class + macro accuracy |
 | `evaluate_prompt_version.py` | A/B: two prompt versions on the same dataset, delta summary |
 
-Every runner supports `--samples-per-class`, `--sample-seed`, `--limit`,
-`--dry-run`, and stamps the full prompt text into experiment metadata.
-`run_classification_eval` additionally accepts `--manifest` (JSONL checkpoint)
-so an interrupted run resumes without re-paying LLM calls.
+Every runner supports `--samples-per-class`/`--sample`, `--sample-seed`/`--seed`,
+`--limit`, `--dry-run`, `--experiment-log`, and stamps the full prompt text
+into experiment metadata. `run_classification_eval`/`run_extraction_eval`/
+`run_chained_eval` additionally accept `--manifest` (JSONL checkpoint) so an
+interrupted run resumes without re-paying LLM calls.
+
+### Prompt versions
+
+Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
+
+| Family | Versions |
+|---|---|
+| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2` |
+| Sorter (vision) | `sorter_vision_v0` |
+| LegalBench task | `legalbench_task_v0` |
+| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v5` |
+| Other specialists | `corporate_records_specialist`, `due_diligence_specialist`, `correspondence_specialist`, `compliance_specialist`, `court_opinions_specialist` |
+| Agents / judges | `boss`, `reporter`, `judge`, `judge-classification`, `judge-correctness` |
+| PDF | `pdf_transcriber` |
 
 ### LangChain + Braintrust wiring
 
@@ -227,6 +316,12 @@ prompt, response, tokens, latency are all visible in the UI.
 python -m pytest tests/ -v
 ```
 
-Tests never hit the network: prompts, scorers, taxonomy, evaluation helpers,
-config loading, and the streamer parsers are all mocked.
+180 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
+helpers, config loading, field scoring, CUAD ground truth, page voting, the
+chained/extraction/classification eval smoke loops, and the streamer parsers
+are all mocked.
 
+## Agent docs
+
+See `AGENTS.md` for the full agent workflow: architecture, command cheatsheet,
+conventions, and gotchas.

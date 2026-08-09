@@ -581,6 +581,9 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "overall_score": output.get("overall_score"),
             "field_presence": output.get("field_presence"),
             "schema_valid": output.get("schema_valid"),
+            # The specialist's raw predicted extraction — logged so the
+            # experiment log carries the model OUTPUT, not just its scores.
+            "predicted": output.get("predicted"),
             "field_scores": output.get("field_scores"),
             "entity_list_f1": output.get("entity_list_f1"),
             "entity_list_audit": output.get("entity_list_audit"),
