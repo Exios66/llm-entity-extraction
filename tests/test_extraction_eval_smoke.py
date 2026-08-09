@@ -139,9 +139,13 @@ def test_extraction_loop_wiring(fake_extraction_eval, monkeypatch, tmp_path):
     assert fake_extraction_eval.kwargs["metadata"]["ground_truth"] == "cuad_v1_clause_labels"
     assert fake_extraction_eval.kwargs["metadata"]["scoring"] == "field_type_aware_content_scoring"
     assert fake_extraction_eval.kwargs["metadata"]["prompt_version"] == "contracts_specialist_v2"
-    # Scorer economy: ZERO Braintrust scorers registered by default.
-    assert fake_extraction_eval.kwargs["metadata"]["bt_scores"] == "none"
-    assert fake_extraction_eval.kwargs["scores"] == []
+    # Cross-experiment trackers: the default registers the complex content
+    # accuracy + binary conformance lookups (no recompute on Braintrust side).
+    assert fake_extraction_eval.kwargs["metadata"]["bt_scores"] == "overall"
+    names = set(fake_extraction_eval.scores)
+    assert "overall_extraction_score" in names
+    assert "field_presence" in names
+    assert len(fake_extraction_eval.kwargs["scores"]) == 2  # just the tracker pair
 
     # Expected fields were derived from the CUAD clause labels.
     row_input = fake_extraction_eval.kwargs["data"]()[0]["input"]
@@ -150,20 +154,20 @@ def test_extraction_loop_wiring(fake_extraction_eval, monkeypatch, tmp_path):
     assert row_input["expected_fields"]["effective_date"] == "January 15, 2024"
     assert "termination_clauses" in row_input["expected_fields"]
 
-    # The local content scoring (identical to what the manifest records) is
-    # the real signal: governing law exact -> 1.0; parties 1/2 matched
-    # (the disjoint-name guard correctly rejects the wrong party).
-    from src.field_scoring import score_extraction, get_field_types
-
-    local = score_extraction("contract", get_field_types("contract"),
-                             fake_extraction_eval.results[0].output,
-                             row_input["expected_fields"])
-    assert local.field_scores["governing_law"] == 1.0
-    assert local.field_scores["effective_date"] == 1.0
-    assert local.entity_list_scores["parties"].f1 == pytest.approx(0.5)
-    assert 0.0 < local.overall_score < 1.0
-    # Binary conformance: all 4 expected fields populated, schema valid.
-    assert fake_extraction_eval.results[0].output.get("confidence") is not None  # normalized
+    # The composite output carries the locally computed content scores —
+    # governing law exact -> 1.0; parties 1/2 matched (the disjoint-name
+    # guard correctly rejects the wrong party).
+    output = fake_extraction_eval.results[0].output
+    assert output["field_scores"]["governing_law"] == 1.0
+    assert output["field_scores"]["effective_date"] == 1.0
+    assert output["entity_list_f1"]["parties"] == pytest.approx(0.5)
+    assert 0.0 < output["overall_score"] < 1.0
+    assert output["field_presence"] == 1.0  # all 4 expected fields populated
+    assert output["schema_valid"] == 1.0
+    assert output["predicted"].get("confidence") is not None  # normalized + backfilled
+    # The registered tracker scorers are trivial lookups on the composite.
+    assert fake_extraction_eval.scores["overall_extraction_score"] == [output["overall_score"]]
+    assert fake_extraction_eval.scores["field_presence"] == [1.0]
 
 
 def test_extraction_eval_bt_scores_full(fake_extraction_eval, monkeypatch, tmp_path):

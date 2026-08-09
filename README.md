@@ -126,12 +126,21 @@ python scripts/eval/evaluate_prompt_version.py \
 # ---- Entity EXTRACTION eval (contracts specialist vs CUAD ground truth) ----
 # Content-scored: every extracted field is compared against the CUAD clause-QA
 # labels with the field-type-aware scorer (date/money/name/free-text
-# normalization, entity-list bipartite F1). Binary conformance (field_presence,
-# schema_valid) is the guard; content scores are the real signal.
+# normalization, entity-list bipartite F1, semantic embedding rescue via
+# OpenRouter embeddings). The task computes ALL scores locally and returns a
+# composite output; registered Braintrust scorers are trivial lookups on it.
+# Default --bt-scores overall registers the cross-experiment tracker pair:
+# overall_extraction_score (complex content accuracy) + field_presence
+# (binary conformance) — comparable across every run in the Braintrust UI.
 python scripts/eval/run_extraction_eval.py \
-    --dataset mailroom-cuad-contracts --prompt-version contracts_specialist_v1
-python scripts/eval/run_extraction_eval.py --judge --limit 3   # LLM-judge the ambiguous band
-python scripts/eval/run_extraction_eval.py --prompt-version contracts_specialist  # A/B vs v0
+    --dataset mailroom-cuad-contracts --prompt-version contracts_specialist_v2 \
+    --manifest data/manifests/extract_v2.jsonl
+python scripts/reporting/score_extraction_manifest.py data/manifests/extract_v2.jsonl \
+    --output reports/extraction_v2.md          # post-hoc scoring report (free)
+python scripts/eval/run_extraction_eval.py --bt-scores none --limit 3   # pure local
+python scripts/eval/run_extraction_eval.py --bt-scores full --limit 3   # + per-field scorers
+python scripts/eval/run_extraction_eval.py --judge --limit 3              # LLM-judge ambiguous band
+python scripts/eval/run_extraction_eval.py --prompt-version contracts_specialist_v1  # A/B vs v2
 
 # Inspect results
 python scripts/reporting/report_generator.py --experiment qwen3.7-flash_sorter_vision_v0
@@ -148,7 +157,7 @@ Braintrust UI, and different prompt versions never collide.
 | Script | Tests |
 |---|---|
 | `run_classification_eval.py` | one prompt version; `--input-mode auto/text/vision`, `--prompt-mode sorter/task`, `--valid-classes`, `--vision-pages all/first` (all pages of each PDF in one call by default), `--pdf-dir` for local PDFs, exact_match/failure/cost scorers, resumable manifest |
-| `run_extraction_eval.py` | contracts-specialist **entity extraction** vs CUAD clause-QA ground truth: `overall_extraction_score` + per-field content scores + entity-list F1 (field-type-aware: date/money/name/free_text/entity_list), plus binary `field_presence`/`schema_valid` guards; optional `--judge` pass for the ambiguous band |
+| `run_extraction_eval.py` | contracts-specialist **entity extraction** vs CUAD clause-QA ground truth: `overall_extraction_score` (complex content accuracy) + `field_presence` (binary guard) registered by default as cross-experiment trackers — composite-output lookups, nothing recomputed on Braintrust; `--bt-scores none|overall|full`; optional `--judge` pass for the ambiguous band; manifest-based post-hoc scoring via `score_extraction_manifest.py` |
 | `run_binary_class_eval.py` | one prompt version on a binary question (e.g. `--positive contract`), precision/recall/F1 |
 | `run_multiclass_eval.py` | one prompt version across all taxonomy classes, per-class + macro accuracy |
 | `evaluate_prompt_version.py` | A/B: two prompt versions on the same dataset, delta summary |

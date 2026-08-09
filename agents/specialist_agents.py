@@ -159,8 +159,41 @@ class _SpecialistBase(BaseAgent):
         if result.get("_parse_error"):
             logger.error("specialist_parse_error", agent=self.agent_name)
             return {"_parse_error": True}
+        if self._confidence_missing(result):
+            # The model occasionally omits `confidence`; derive it from the
+            # evidence in THIS document (the share of schema fields actually
+            # found) — the rule the prompt itself states.
+            result["confidence"] = round(self._evidence_confidence(result), 4)
         # Guarantee every schema field is present (null/[]/0.0 defaults).
         return normalize_extraction(result, self.schema)
+
+    def _confidence_missing(self, result: dict) -> bool:
+        value = result.get("confidence")
+        return value is None or (isinstance(value, (int, float)) and value == 0.0)
+
+    def _evidence_confidence(self, result: dict) -> float:
+        """Share of schema fields actually found in the extraction (0.0-1.0).
+
+        List fields count as found when non-empty; string fields when
+        non-null. The confidence never exceeds what the extracted facts
+        justify, mirroring the specialist prompts' evidence rule.
+        """
+        properties = (self.schema.get("properties") or {})
+        total = 0
+        found = 0
+        for key, spec in properties.items():
+            if key == "confidence":
+                continue
+            value = result.get(key)
+            type_spec = spec.get("type")
+            if isinstance(type_spec, list):
+                type_spec = next((t for t in type_spec if t != "null"), type_spec[0])
+            total += 1
+            if type_spec == "array":
+                found += 1 if value not in (None, [], "") else 0
+            else:
+                found += 1 if value not in (None, "") else 0
+        return found / total if total else 0.0
 
     @property
     def _doc_label(self) -> str:

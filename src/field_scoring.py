@@ -403,12 +403,23 @@ def score_entity_list(element_type: str, pred, exp, embedding=None) -> EntityLis
 
 
 # ---------------------------------------------------------------------------
-# Embedding second signal (sentence-transformers, lazy)
+# Embedding second signal (local sentence-transformers, remote OpenRouter
+# embeddings fallback, lazy)
 # ---------------------------------------------------------------------------
 
+_DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+_REMOTE_EMBEDDING_MODEL = "openai/text-embedding-3-small"
+
+
 class _EmbeddingMatcher:
-    """Lazy singleton embedding cache. similarity() returns None whenever the
-    model is unavailable — callers then keep the string-only score."""
+    """Lazy singleton embedding cache. similarity() returns None whenever no
+    embedder is available — callers then keep the string-only score.
+
+    Prefers a locally installed sentence-transformers model; when it is not
+    installed (or fails to load), falls back to OpenRouter's embeddings
+    endpoint (``/api/v1/embeddings``) using OPENROUTER_API_KEY — so semantic
+    paraphrase rescue works without a torch install.
+    """
 
     _instance = None
     _lock = threading.Lock()
@@ -422,30 +433,78 @@ class _EmbeddingMatcher:
 
     def __init__(self) -> None:
         self._model = None
+        self._model_loaded = False
+        self._client = None
         self._vectors: dict[str, object] = {}
 
-    def _load(self) -> None:
-        if self._model is not None:
-            return
-        from sentence_transformers import SentenceTransformer
+    # -- local (sentence-transformers) ------------------------------------
 
-        self._model = SentenceTransformer(get_embedding_model())
+    def _load_local(self) -> None:
+        if self._model_loaded:
+            return
+        self._model_loaded = True
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            self._model = SentenceTransformer(get_embedding_model())
+        except Exception:
+            self._model = None
+
+    # -- remote (OpenRouter embeddings) ------------------------------------
+
+    def _load_remote(self) -> None:
+        if self._client is not None:
+            return
+        from src.env_utils import load_env
+
+        load_env()
+        api_key = __import__("os").environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            return
+        try:
+            from openai import OpenAI
+
+            from src.openrouter_utils import OPENROUTER_BASE_URL
+
+            self._client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key, timeout=120)
+        except Exception:
+            self._client = None
+
+    def _embed(self, text: str):
+        import numpy as np
+
+        if self._model is not None:
+            vector = self._model.encode([text], normalize_embeddings=True)[0]
+        else:
+            self._load_remote()
+            if self._client is None:
+                return None
+            resp = self._client.embeddings.create(
+                model=_REMOTE_EMBEDDING_MODEL, input=[text]
+            )
+            vector = np.asarray(resp.data[0].embedding, dtype=np.float64)
+            norm = float(np.linalg.norm(vector))
+            vector = vector / norm if norm else vector
+        return vector
 
     def similarity(self, a: str, b: str) -> float | None:
         if not embedding_enabled():
             return None
         try:
-            if self._model is None:
-                self._load()
+            self._load_local()  # idempotent; sets self._model if available
             import numpy as np
 
             va = self._vectors.get(a)
             if va is None:
-                va = self._model.encode([a], normalize_embeddings=True)[0]
+                va = self._embed(a)
+                if va is None:
+                    return None
                 self._vectors[a] = va
             vb = self._vectors.get(b)
             if vb is None:
-                vb = self._model.encode([b], normalize_embeddings=True)[0]
+                vb = self._embed(b)
+                if vb is None:
+                    return None
                 self._vectors[b] = vb
             sim = float(np.dot(va, vb))
             return min(1.0, max(0.0, sim))

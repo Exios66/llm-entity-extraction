@@ -6,15 +6,16 @@ scores its entity extraction against the CUAD clause-QA labels — the labeled
 extracted information from the Atticus dataset — using the deterministic
 field-type-aware content scorer (src/field_scoring.py).
 
-Scorer economy: by default ZERO Braintrust scorers are registered
-(``--bt-scores none``) — every field is scored LOCALLY during the run (pure
-deterministic math, no Braintrust work) and written to the JSONL manifest
-(``--manifest``) together with the predicted and expected fields. The
-post-hoc report (scripts/reporting/score_extraction_manifest.py) recomputes
-and summarizes everything from the manifest without burning any Braintrust
-scorer quota. ``--bt-scores overall`` registers exactly one score for UI
-visibility; ``--bt-scores full`` registers the whole per-field set (opt-in —
-it burns a scorer per field per row).
+Scorer economy: the task computes EVERY score locally (deterministic
+field-type-aware content scoring incl. semantic embedding rescue) and returns
+a composite output; registered Braintrust scorers are trivial lookups on that
+composite — nothing is recomputed on the Braintrust side. By default
+``--bt-scores overall`` registers the cross-experiment tracker set: the
+complex content accuracy (``overall_extraction_score``) plus the binary
+conformance guard (``field_presence``), so every experiment is comparable in
+the Braintrust UI. ``--bt-scores none`` registers nothing (pure local scoring
++ post-hoc manifest report via scripts/reporting/score_extraction_manifest.py);
+``--bt-scores full`` adds schema_valid and every per-field score/F1.
 
 ``--judge`` adds the grounded LLM-as-judge pass (correctness/completeness
 against the source text) for rows whose content scores land in the ambiguous
@@ -97,7 +98,12 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--prompt-version", default="contracts_specialist_v2",
                         help="Specialist prompt version to test (one per experiment)")
     parser.add_argument("--temperature", type=float, default=0.1, help="Sampling temperature")
-    parser.add_argument("--max-tokens", type=int, default=8192, help="Max output tokens")
+    parser.add_argument("--max-tokens", type=int, default=16384, help="Max output tokens")
+    parser.add_argument("--reasoning-effort", default="none",
+                        help="Reasoning effort for the extraction call ('none' default: the "
+                             "specialist emits JSON directly — thinking models otherwise burn "
+                             "the whole token budget on reasoning and hit length limits on "
+                             "long extractions; 'low'/'medium'/'high' re-enable thinking)")
     parser.add_argument("--max-input-chars", type=int, default=100_000,
                         help="Hard safety cap on document text fed to the model")
     parser.add_argument("--max-concurrency", type=int, default=4, help="Concurrent API calls")
@@ -108,12 +114,14 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--judge", action="store_true",
                         help="Run the grounded LLM-as-judge pass (correctness/completeness) for "
                              "rows whose content scores land in the ambiguous band")
-    parser.add_argument("--bt-scores", choices=("none", "overall", "full"), default="none",
-                        help="Braintrust scorer registration (each registered scorer costs "
-                             "Braintrust-side scoring work per row): none = zero scorers, all "
-                             "scoring is local and scored post-hoc from the manifest (default); "
-                             "overall = exactly ONE overall score for UI visibility; "
-                             "full = the whole per-field scorer set (burns scorer quota)")
+    parser.add_argument("--bt-scores", choices=("none", "overall", "full"), default="overall",
+                        help="Braintrust scorer registration (registered scorers are trivial "
+                             "lookups on the locally-computed composite, so they cost almost "
+                             "nothing): overall = the cross-experiment tracker set — complex "
+                             "content accuracy (overall_extraction_score) + binary conformance "
+                             "(field_presence) (default); none = zero scorers, pure local + "
+                             "post-hoc manifest scoring; full = adds schema_valid + every "
+                             "per-field score/F1 (most UI detail)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, print the plan without running")
     args = parser.parse_args(argv)
@@ -203,13 +211,22 @@ def main_with_args(argv: list[str]) -> int:
 
     @braintrust.traced
     def extract_contract(input_data: dict) -> dict:
-        """Extract entities from one contract; returns the predicted dict."""
+        """Extract entities from one contract; returns a COMPOSITE output.
+
+        The composite carries the predicted extraction PLUS the locally
+        computed scores (overall content score, per-field scores, binary
+        presence/schema validity). Registered Braintrust scorers are trivial
+        lookups on this dict — nothing is recomputed or re-scored on the
+        Braintrust side, and the numbers always match the manifest.
+        """
         filename = input_data["filename"]
         expected_fields = input_data["expected_fields"]
 
-        specialist = ContractsSpecialist(model=args.model, api_key=openrouter_key)
+        specialist = ContractsSpecialist(model=args.model, api_key=openrouter_key,
+                                         prompt_version=args.prompt_version)
         specialist._max_input_chars = args.max_input_chars
         specialist._max_tokens = args.max_tokens
+        specialist._reasoning_effort = args.reasoning_effort
 
         if manifest:
             cached = manifest.get_completed(filename)
@@ -218,26 +235,55 @@ def main_with_args(argv: list[str]) -> int:
                     metadata={"cached": True, "filename": filename,
                               "prompt_version": args.prompt_version}
                 )
-                return cached.get("predicted") or {"_parse_error": True}
+                return cached.get("scores", {}).get("composite") or {
+                    "predicted": cached.get("predicted") or {}, "overall_score": 0.0,
+                    "field_presence": 0.0, "schema_valid": 0.0,
+                    "field_scores": {}, "ambiguous_fields": [], "error": "cached incomplete",
+                }
 
         doc_text = input_data["doc_text"]
         try:
             predicted = specialist.extract(doc_text)
         except Exception as exc:  # noqa: BLE001 - one bad row must not abort
             print(f"ERROR {filename}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            composite = {"predicted": {}, "error": str(exc), "schema_valid": 0.0,
+                         "overall_score": 0.0, "field_presence": 0.0,
+                         "field_scores": {}, "ambiguous_fields": []}
             if manifest:
                 manifest.append({"filename": filename, "status": "error",
-                                 "tag": "ERROR!", "predicted": {}, "error": str(exc)})
-            return {"_parse_error": True, "error": str(exc)}
+                                 "tag": "ERROR!", "predicted": {}, "error": str(exc),
+                                 "expected_fields": expected_fields, "scores": {"composite": composite}})
+            return composite
 
         if predicted.get("_parse_error"):
+            composite = {"predicted": {}, "error": "parse error", "schema_valid": 0.0,
+                         "overall_score": 0.0, "field_presence": 0.0,
+                         "field_scores": {}, "ambiguous_fields": []}
             if manifest:
                 manifest.append({"filename": filename, "status": "error",
-                                 "tag": "ERROR!", "predicted": {}, "error": "parse error"})
-            return predicted
+                                 "tag": "ERROR!", "predicted": {}, "error": "parse error",
+                                 "expected_fields": expected_fields, "scores": {"composite": composite}})
+            return composite
 
-        # Deterministic content scoring against CUAD ground truth.
+        # Deterministic content scoring against CUAD ground truth (LOCAL —
+        # with semantic embedding rescue; never executed on the Braintrust side).
         result = score_extraction("contract", field_types, predicted, expected_fields)
+        populated = sum(
+            1 for key, value in expected_fields.items()
+            if predicted.get(key) not in (None, "", [])
+        )
+        field_presence = populated / len(expected_fields) if expected_fields else 0.0
+
+        composite = {
+            "predicted": predicted,
+            "overall_score": result.overall_score or 0.0,
+            "field_presence": field_presence,
+            "schema_valid": 1.0,
+            "field_scores": result.field_scores,
+            "entity_list_f1": {k: v.f1 for k, v in result.entity_list_scores.items()},
+            "ambiguous_fields": result.ambiguous_fields,
+        }
+
         span_meta = {
             "filename": filename,
             "prompt_version": args.prompt_version,
@@ -246,7 +292,8 @@ def main_with_args(argv: list[str]) -> int:
             "ambiguous_fields": result.ambiguous_fields,
             "expected_fields": expected_fields,
             "extracted_fields": {k: v for k, v in predicted.items() if v not in (None, "", [])},
-            "entity_list_f1": {k: v.f1 for k, v in result.entity_list_scores.items()},
+            "entity_list_f1": composite["entity_list_f1"],
+            "composite": composite,
         }
 
         if args.judge and result.needs_judge_review:
@@ -260,71 +307,52 @@ def main_with_args(argv: list[str]) -> int:
                              "scores": span_meta})
 
         braintrust.current_span().log(metadata=span_meta)
-        return predicted
+        return composite
 
     # ------------------------------------------------------------------
-    # Braintrust scorers (ALL scoring is local; registration is opt-in)
+    # Braintrust scorers — trivial lookups on the locally-computed composite
+    # (nothing recomputed server-side; numbers always match the manifest)
     # ------------------------------------------------------------------
 
-    def schema_valid(output: dict, expected) -> float:
-        """BINARY: did the model return parseable, schema-conformant JSON?"""
-        return 0.0 if not isinstance(output, dict) or output.get("_parse_error") else 1.0
+    def overall_extraction_score(output: dict, expected) -> float:
+        """CONTENT accuracy: mean deterministic content score over non-null
+        CUAD ground-truth fields (computed locally, incl. embedding rescue)."""
+        return float((output or {}).get("overall_score") or 0.0)
 
     def field_presence(output: dict, expected) -> float:
         """BINARY conformance: share of expected fields populated (non-null,
-        non-empty) in the model output — the right expected number of fields."""
-        expected_fields = expected.get("expected_fields") or {}
-        if not expected_fields:
-            return 0.0
-        populated = sum(
-            1 for key, value in expected_fields.items()
-            if output.get(key) not in (None, "", [])
-        )
-        return populated / len(expected_fields)
+        non-empty) in the model output."""
+        return float((output or {}).get("field_presence") or 0.0)
 
-    def overall_extraction_score(output: dict, expected) -> float:
-        """CONTENT score: mean of the per-field deterministic scores over
-        non-null CUAD ground-truth fields."""
-        expected_fields = expected.get("expected_fields") or {}
-        result = score_extraction("contract", field_types, output, expected_fields)
-        return result.overall_score or 0.0
+    def schema_valid(output: dict, expected) -> float:
+        """BINARY: did the model return parseable, schema-conformant JSON?"""
+        return float((output or {}).get("schema_valid") or 0.0)
 
-    def make_field_scorer(field_name: str, field_type: str):
+    def make_field_scorer(field_name: str):
         def scorer(output: dict, expected) -> float:
-            expected_fields = expected.get("expected_fields") or {}
-            if field_name not in expected_fields:
-                return 0.0
-            if is_entity_list(field_type):
-                result = score_field(field_type, output.get(field_name),
-                                     expected_fields[field_name])
-                return getattr(result, "f1", 0.0)
-            return score_field(field_type, output.get(field_name),
-                               expected_fields[field_name])
+            return float(((output or {}).get("field_scores") or {}).get(field_name) or 0.0)
         scorer.__name__ = f"{field_name}_score"
         return scorer
 
-    def make_list_f1_scorer(field_name: str, field_type: str):
+    def make_list_f1_scorer(field_name: str):
         def scorer(output: dict, expected) -> float:
-            expected_fields = expected.get("expected_fields") or {}
-            if field_name not in expected_fields:
-                return 0.0
-            result = score_field(field_type, output.get(field_name),
-                                 expected_fields[field_name])
-            return getattr(result, "f1", 0.0)
+            return float(((output or {}).get("entity_list_f1") or {}).get(field_name) or 0.0)
         scorer.__name__ = f"{field_name}_f1"
         return scorer
 
     if args.bt_scores == "none":
         bt_scorers = []
     elif args.bt_scores == "overall":
-        bt_scorers = [overall_extraction_score]
+        # ONE cross-experiment tracker set: complex content accuracy + the
+        # binary presence guard — cheap lookups, comparable across runs.
+        bt_scorers = [overall_extraction_score, field_presence]
     else:
-        bt_scorers = [schema_valid, field_presence, overall_extraction_score]
+        bt_scorers = [overall_extraction_score, field_presence, schema_valid]
         for field_name in scored_fields:
+            bt_scorers.append(make_field_scorer(field_name))
             field_type = field_types.get(field_name) or "name"
-            bt_scorers.append(make_field_scorer(field_name, field_type))
             if is_entity_list(field_type):
-                bt_scorers.append(make_list_f1_scorer(field_name, field_type))
+                bt_scorers.append(make_list_f1_scorer(field_name))
 
     def _report_eval(evaluator, result, verbose, jsonl):
         failures = [r for r in result.results if r.error]
@@ -378,23 +406,25 @@ def main_with_args(argv: list[str]) -> int:
 
 
 def print_extraction_summary(result, scored_fields: list[str]) -> None:
-    """Print per-field mean content scores, overall, and presence."""
-    rows = [r for r in result.results if r.error is None and
-            isinstance(r.output, dict) and not r.output.get("_parse_error")]
+    """Print per-field mean content scores, overall, and presence.
+
+    Reads the locally computed scores carried in the composite task output —
+    identical to what the manifest and the Braintrust lookups report.
+    """
+    rows = [r for r in result.results if r.error is None and isinstance(r.output, dict)]
     if not rows:
         print("\nNo scored rows.")
         return
 
     totals: dict[str, list[float]] = defaultdict(list)
     for r in rows:
-        expected_fields = (r.expected or {}).get("expected_fields") or {}
-        from src.field_scoring import score_extraction, get_field_types
-
-        res = score_extraction("contract", get_field_types("contract"), r.output, expected_fields)
-        totals["overall"].append(res.overall_score or 0.0)
+        output = r.output
+        if output.get("error"):
+            continue
+        totals["overall"].append(float(output.get("overall_score") or 0.0))
         for key in scored_fields:
-            if key in res.field_scores:
-                totals[key].append(res.field_scores[key])
+            if key in (output.get("field_scores") or {}):
+                totals[key].append(float(output["field_scores"][key]))
 
     print("\n== Extraction eval (content scores vs CUAD ground truth) ==")
     for key in ["overall"] + scored_fields:
@@ -404,23 +434,10 @@ def print_extraction_summary(result, scored_fields: list[str]) -> None:
         mean = sum(values) / len(values)
         print(f"{key:<28} n={len(values):<4} mean={mean:.4f}")
 
-    presence = [
-        r for r in result.results
-        if r.error is None and isinstance(r.output, dict) and not r.output.get("_parse_error")
-    ]
+    presence = [r for r in rows if not r.output.get("error")]
     if presence:
-        from src.field_scoring import score_extraction
-
-        populated_share = []
-        for r in presence:
-            expected_fields = (r.expected or {}).get("expected_fields") or {}
-            if not expected_fields:
-                continue
-            populated = sum(1 for k, v in expected_fields.items()
-                            if r.output.get(k) not in (None, "", []))
-            populated_share.append(populated / len(expected_fields))
-        if populated_share:
-            print(f"\nfield_presence (binary conformance): {sum(populated_share) / len(populated_share):.4f}")
+        values = [float(r.output.get("field_presence") or 0.0) for r in presence]
+        print(f"\nfield_presence (binary conformance): {sum(values) / len(values):.4f}")
 
 
 if __name__ == "__main__":

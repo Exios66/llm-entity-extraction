@@ -1,5 +1,7 @@
 """Tests for extraction normalization (every schema field guaranteed)."""
 
+import pytest
+
 from agents.specialist_agents import CONTRACTS_SCHEMA, normalize_extraction
 
 
@@ -47,7 +49,8 @@ def test_specialist_extract_normalizes(mocker):
         return_value={"parties": ["Acme Inc."]},  # confidence etc. omitted by the model
     )
     result = specialist.extract("contract text")
-    assert result["confidence"] == 0.0  # filled by normalization
+    # Confidence is backfilled from the share of fields actually found (1/8).
+    assert result["confidence"] == pytest.approx(0.125)
     assert result["key_obligations"] == []
     assert result["parties"] == ["Acme Inc."]
 
