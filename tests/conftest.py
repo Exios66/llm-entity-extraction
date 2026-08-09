@@ -64,8 +64,8 @@ def sample_maud_zip(tmp_path):
         zf.writestr(
             "data/MAUD_train.csv",
             "data_type,contract_name,text,answer,label,question,subquestion,text_type,id,category\n"
-            "main,contract_0,some text,Yes,Yes,Is there a termination clause?,None,contract,1,task1\n"
-            "main,contract_0,more text,No,No,Is there an anti-assignment?,None,contract,2,task2\n"
-            "main,contract_1,text,Yes,Yes,Change of control?,None,contract,3,task1\n",
+            "main,contract_0,some text,Yes,Yes,Is there a termination clause?,None,Termination Clause,1,Conditions to Closing\n"
+            "main,contract_0,more text,No,No,Is there an anti-assignment?,None,Anti-Assignment,2,Deal Protection\n"
+            "main,contract_1,text,Yes,Yes,Change of control?,None,Change of Control,3,Deal Protection\n",
         )
     return zip_path

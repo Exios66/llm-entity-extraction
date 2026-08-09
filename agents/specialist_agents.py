@@ -22,6 +22,30 @@ def _string_array(description: str = "") -> dict:
     return {"type": "array", "items": {"type": "string"}, "description": description}
 
 
+def normalize_extraction(result: dict, schema: dict) -> dict:
+    """Guarantee the extraction carries EVERY schema field.
+
+    The model occasionally omits a field (e.g. ``confidence``) or returns a
+    malformed shape. This fills missing keys with their schema defaults
+    (null for nullable strings, [] for arrays, 0.0 for numbers) so downstream
+    scoring and reporting always see a complete, conformant extraction.
+    """
+    normalized = dict(result or {})
+    for key, spec in (schema.get("properties") or {}).items():
+        if key in normalized and normalized[key] not in (None, ""):
+            continue
+        type_spec = spec.get("type")
+        if isinstance(type_spec, list):
+            type_spec = next((t for t in type_spec if t != "null"), type_spec[0])
+        if type_spec == "array":
+            normalized[key] = normalized.get(key) or []
+        elif type_spec == "number":
+            normalized[key] = normalized.get(key) if isinstance(normalized.get(key), (int, float)) else 0.0
+        else:
+            normalized[key] = normalized.get(key) if normalized.get(key) not in (None, "") else None
+    return normalized
+
+
 # =============================================================================
 # Extraction schemas (single source of truth for specialists + judges)
 # =============================================================================
@@ -35,6 +59,11 @@ CONTRACTS_SCHEMA = build_structured_schema({
     "key_obligations": _string_array("Major obligations of each party"),
     "contract_value": _nullable_string("The monetary value or consideration"),
     "renewal_terms": _nullable_string("Terms regarding automatic renewal"),
+    "confidence": {
+        "type": "number", "minimum": 0.0, "maximum": 1.0,
+        "description": "Evidence-grounded extraction confidence (share of fields found, "
+                        "lowered by uncertain values or truncation; never a fixed default)",
+    },
 })
 
 CORPORATE_RECORDS_SCHEMA = build_structured_schema({
@@ -130,7 +159,8 @@ class _SpecialistBase(BaseAgent):
         if result.get("_parse_error"):
             logger.error("specialist_parse_error", agent=self.agent_name)
             return {"_parse_error": True}
-        return result
+        # Guarantee every schema field is present (null/[]/0.0 defaults).
+        return normalize_extraction(result, self.schema)
 
     @property
     def _doc_label(self) -> str:
@@ -141,8 +171,13 @@ class ContractsSpecialist(_SpecialistBase):
     agent_name = "contracts_specialist"
     schema = CONTRACTS_SCHEMA
 
+    def __init__(self, model: str | None = None, api_key: str | None = None,
+                 prompt_version: str = "contracts_specialist"):
+        super().__init__(model=model, api_key=api_key)
+        self.prompt_version = prompt_version
+
     def system_prompt(self) -> str:
-        return get_prompt("contracts_specialist")
+        return get_prompt(self.prompt_version)
 
 
 class CorporateRecordsSpecialist(_SpecialistBase):

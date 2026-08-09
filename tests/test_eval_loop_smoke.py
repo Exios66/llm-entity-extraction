@@ -115,7 +115,7 @@ def test_full_loop_wiring(fake_eval, monkeypatch, tmp_path):
     assert fake_eval.kwargs["project_id"] == "proj-test-0000"
     assert fake_eval.kwargs["metadata"]["prompt_version"] == "sorter_v0"
     assert "prompt" in fake_eval.kwargs["metadata"]
-    assert fake_eval.kwargs["description"] == "qwen/qwen3.7-flash | prompt sorter_v0 | temperature 0.1"
+    assert fake_eval.kwargs["description"] == "qwen/qwen3.7-flash | prompt sorter_v0 | sorter | text | temperature 0.1"
 
     # Data rows carry input/expected/filename.
     rows = fake_eval.kwargs["data"]()
@@ -175,3 +175,116 @@ def test_manifest_checkpoint_skips_cached_rows(fake_eval, monkeypatch, tmp_path)
     assert rc == 0
     # Both rows were cached -> the fake LLM was never invoked again.
     assert calls["n"] == 0
+
+
+def test_vision_mode_uses_classify_image(fake_eval, monkeypatch, tmp_path):
+    """--images-dir wires the vision path: classify_image, not classify_json."""
+    import scripts.eval.run_classification_eval as runner
+
+    import base64
+
+    imgs = tmp_path / "imgs"
+    imgs.mkdir()
+    (imgs / "page1.png").write_bytes(base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    ))
+
+    vision_calls = {"n": 0}
+
+    def fake_classify_image(self, image_b64, image_format="png"):
+        vision_calls["n"] += 1
+        return {"doc_type": "contract", "confidence": 0.95, "reasoning": "vision fake"}
+
+    monkeypatch.setattr("agents.sorter_agent.SorterAgent.classify_image", fake_classify_image)
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+
+    rc = runner.main_with_args([
+        "--images-dir", str(imgs),
+        "--expected", "contract",
+        "--prompt-version", "sorter_vision_v0",
+        "--experiment-name", "smoke_vision",
+        "--project-id", "proj-test-0000",
+    ])
+    assert rc == 0
+    assert vision_calls["n"] == 1
+    assert fake_eval.kwargs["metadata"]["input_mode"] == "vision"
+    assert fake_eval.kwargs["metadata"]["prompt_version"] == "sorter_vision_v0"
+    # Vision default prompt applies even when not explicitly passed.
+    assert fake_eval.kwargs["metadata"]["valid_classes"] is None
+
+
+def test_task_mode_answers_rows(fake_eval, monkeypatch, tmp_path):
+    """--prompt-mode task classifies rows by their 'prompt' field."""
+    import scripts.eval.run_classification_eval as runner
+
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "q0.txt").write_text(
+        "Question: type of consideration?\nOption A: Cash\nMerger Agreement: text\nAnswer:"
+    )
+
+    def fake_answer_task(sorter, input_data, valid_classes, prompt_version):
+        assert "A" in valid_classes
+        prompt = input_data.get("prompt") or input_data.get("doc_text", "")
+        assert "Answer:" in prompt
+        return {"doc_type": "A", "confidence": 1.0, "reasoning": "fake task answer"}
+
+    monkeypatch.setattr(runner, "_answer_task", fake_answer_task)
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+
+    rc = runner.main_with_args([
+        "--documents-dir", str(docs),
+        "--expected", "A",
+        "--prompt-mode", "task",
+        "--valid-classes", "A,B,C,D",
+        "--prompt-version", "legalbench_task_v0",
+        "--experiment-name", "smoke_task",
+        "--project-id", "proj-test-0000",
+    ])
+    assert rc == 0
+    assert fake_eval.kwargs["metadata"]["prompt_mode"] == "task"
+    assert fake_eval.kwargs["metadata"]["valid_classes"] == ["A", "B", "C", "D"]
+    # The doc row still validated against the task class set.
+    assert [r.output for r in fake_eval.results] == ["A"]
+
+
+def test_full_document_mode_one_call_per_pdf(fake_eval, monkeypatch, tmp_path):
+    """Rows carrying pages_b64 are evaluated as ONE PDF each: a single
+    classify_document call with every page, never per-page calls."""
+    import scripts.eval.run_classification_eval as runner
+
+    pdfs = tmp_path / "pdfs"
+    pdfs.mkdir()
+    (pdfs / "a.pdf").write_bytes(b"fake-pdf-a")
+    (pdfs / "b.pdf").write_bytes(b"fake-pdf-b")
+
+    def fake_pdf_to_png(pdf_bytes, page_num=0, target_size=(1024, 1024)):
+        if page_num >= 3:
+            raise ValueError("no more pages")
+        return b"\x89PNG-page-" + pdf_bytes + bytes([page_num])
+
+    monkeypatch.setattr("src.image_utils.pdf_to_png_bytes", fake_pdf_to_png)
+
+    calls = {"n": 0, "pages": None}
+
+    def fake_classify_document(self, pages_base64, image_format="png"):
+        calls["n"] += 1
+        calls["pages"] = len(pages_base64)
+        return {"doc_type": "contract", "confidence": 0.9, "reasoning": "full doc"}
+
+    monkeypatch.setattr("agents.sorter_agent.SorterAgent.classify_document", fake_classify_document)
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+
+    rc = runner.main_with_args([
+        "--pdf-dir", str(pdfs),
+        "--expected", "contract",
+        "--prompt-version", "sorter_vision_v0",
+        "--experiment-name", "smoke_full_doc",
+        "--project-id", "proj-test-0000",
+    ])
+    assert rc == 0
+    # ONE row per PDF, ONE vision call per row (all pages together).
+    assert calls["n"] == 2
+    assert calls["pages"] == 3
+    assert fake_eval.kwargs["metadata"]["vision_pages"] == "all"
+    assert len(fake_eval.results) == 2

@@ -18,10 +18,12 @@ Design notes
 from __future__ import annotations
 
 import json
+import os
 import structlog
 from abc import ABC, abstractmethod
 from typing import Any
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -35,10 +37,16 @@ def build_structured_schema(
     properties: dict,
     required: list[str] | None = None,
     additional_properties: bool = False,
+    title: str = "StructuredOutput",
 ) -> dict:
-    """Build a JSON schema dict for structured output."""
+    """Build a JSON schema dict for structured output.
+
+    ``title`` is required by LangChain's ``with_structured_output`` (it is used
+    as the function/tool name on OpenAI-compatible endpoints).
+    """
     return {
         "type": "object",
+        "title": title,
         "properties": properties,
         "required": required or list(properties.keys()),
         "additionalProperties": additional_properties,
@@ -52,13 +60,14 @@ class BaseAgent(ABC):
 
     def __init__(self, model: str | None = None, api_key: str | None = None):
         self.model = model or "qwen/qwen3.7-flash"
-        self.api_key = api_key or ""
+        self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         self._max_tokens = 4096
-        self._max_input_chars = 25000
+        self._max_input_chars = 100_000  # full-document budget; only a hard safety cap
         self._temperature = 0.1
         self._reasoning_effort = None
         self._llm: ChatOpenAI | None = None
         self._last_usage: dict | None = None
+        self._last_truncated = False
 
     @abstractmethod
     def system_prompt(self) -> str:
@@ -76,9 +85,12 @@ class BaseAgent(ABC):
         (Ollama, vLLM) can be swapped in via ``OPENROUTER_BASE_URL``.
         """
         if self._llm is None:
+            from src.env_utils import load_env
+
+            load_env()
             self._llm = ChatOpenAI(
                 model=self.model,
-                api_key=self.api_key or None,
+                api_key=self.api_key or os.environ.get("OPENROUTER_API_KEY") or None,
                 base_url=OPENROUTER_BASE_URL,
                 temperature=self._temperature,
                 max_tokens=self._max_tokens,
@@ -90,9 +102,24 @@ class BaseAgent(ABC):
         return self._llm
 
     def truncate_input(self, text: str) -> str:
-        """Truncate document text to configured input budget."""
+        """Return the FULL document text, capping only past the hard budget.
+
+        The sorter is meant to classify the full document (fully extracted
+        markdown text, not a 50-token preview). ``_max_input_chars`` is a
+        safety cap for pathological documents only; when it fires, the
+        truncation is recorded on ``_last_truncated`` so callers (and the
+        eval loop's span metadata) can see that the row saw partial input.
+        """
         if len(text) <= self._max_input_chars:
+            self._last_truncated = False
             return text
+        self._last_truncated = True
+        logger.warning(
+            "input_truncated",
+            agent=self.agent_name,
+            chars=len(text),
+            cap=self._max_input_chars,
+        )
         return (
             text[: self._max_input_chars]
             + f"\n\n[... document truncated, {len(text)} total chars ...]"
@@ -132,8 +159,10 @@ class BaseAgent(ABC):
             llm = llm.bind(extra_body={"reasoning": {"effort": reasoning_effort}})
 
         system = system_prompt or self.system_prompt()
+        # System prompts are literal text (they may legally contain curly
+        # braces, e.g. embedded JSON schemas) — never template-parsed.
         prompt = ChatPromptTemplate.from_messages(
-            [("system", system), ("human", "{text}")]
+            [SystemMessage(content=system), ("human", "{text}")]
         )
         chain = prompt | llm | StrOutputParser()
 
@@ -176,8 +205,10 @@ class BaseAgent(ABC):
             structured = llm.with_structured_output(json_schema, method="function_calling", include_raw=True)
 
         system = system_prompt or self.system_prompt()
+        # Literal SystemMessage: system prompts may contain curly braces
+        # (embedded JSON schemas) and must not be template-parsed.
         prompt = ChatPromptTemplate.from_messages(
-            [("system", system), ("human", "{text}")]
+            [SystemMessage(content=system), ("human", "{text}")]
         )
         chain = prompt | structured
 
@@ -222,3 +253,86 @@ class BaseAgent(ABC):
 
         logger.info("llm_structured_response", agent=self.agent_name, keys=list(result.keys()))
         return result
+
+    def _call_vision(
+        self,
+        system_prompt: str,
+        user_text: str,
+        image_base64: str,
+        image_format: str = "png",
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> str:
+        """Vision classification call: system prompt + user text + ONE image.
+
+        The image is sent as an inline data URI (``data:image/png;base64,...``)
+        in a multimodal LangChain message — the same payload shape the
+        RVL-CDIP classifier uses, but through the LangChain stack so the call
+        is traced to Braintrust like every other agent call.
+
+        Args:
+            system_prompt: The classification rules (e.g. the intro half of the
+                vision prompt, split at ``## Output format``).
+            user_text: The output-format contract + any worked examples.
+            image_base64: The document page image, base64-encoded.
+            image_format: Image MIME format ('png', 'jpeg').
+            temperature: Sampling temperature.
+            max_tokens: Max output tokens.
+
+        Returns:
+            The model's raw response text.
+        """
+        return self._call_vision_multi(
+            system_prompt=system_prompt,
+            user_text=user_text,
+            images=[(image_base64, image_format)],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+    def _call_vision_multi(
+        self,
+        system_prompt: str,
+        user_text: str,
+        images: list[tuple[str, str]],
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> str:
+        """Vision classification call with MULTIPLE page images in ONE request.
+
+        The FULL document (every rendered page) is sent in a single call so the
+        model sees the entire PDF at once — one classification per PDF, not one
+        per page. ``images`` is a list of ``(base64, format)`` tuples, each
+        attached as an inline data URI.
+        """
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        llm = self.llm()
+        if temperature is not None or max_tokens is not None:
+            llm = llm.bind(
+                temperature=temperature if temperature is not None else self._temperature,
+                max_tokens=max_tokens or self._max_tokens,
+            )
+
+        content: list[dict] = [{"type": "text", "text": user_text}]
+        for base64_image, image_format in images:
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/{image_format};base64,{base64_image}"},
+            })
+
+        messages = [SystemMessage(content=system_prompt), HumanMessage(content=content)]
+
+        logger.info("llm_vision_call", agent=self.agent_name, model=self.model, pages=len(images))
+        response = llm.invoke(messages)
+        raw_content = response.content if isinstance(response.content, str) else str(response.content)
+
+        usage = getattr(response, "usage_metadata", None) or (response.response_metadata or {}).get("usage") or {}
+        self._last_usage = {
+            "prompt_tokens": usage.get("input_tokens") or usage.get("prompt_tokens") or 0,
+            "completion_tokens": usage.get("output_tokens") or usage.get("completion_tokens") or 0,
+            "total_tokens": usage.get("total_tokens") or 0,
+            "cost": (response.response_metadata or {}).get("cost"),
+        }
+        logger.info("llm_vision_response", agent=self.agent_name, length=len(raw_content))
+        return raw_content

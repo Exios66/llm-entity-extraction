@@ -34,6 +34,7 @@ from src.braintrust_utils import fetch_experiment_rows, find_experiment_by_name,
 from src.env_utils import require_env
 from src.prompts import list_prompts
 from src.scorers import ERROR_PREFIX, normalize_label
+from scripts.eval.run_classification_eval import default_experiment_name
 
 _CONFIG = load_braintrust_config()
 DEFAULT_DATASET = "mailroom-cuad-contracts"
@@ -140,12 +141,13 @@ def main() -> int:
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
 
     available = list_prompts()
-    for pv in (args.prompt_a, args.prompt_b):
-        if pv not in available:
-            parser.error(f"Unknown prompt version {pv!r}. Available: {available}")
+    if not args.compare_only:
+        for pv in (args.prompt_a, args.prompt_b):
+            if pv not in available:
+                parser.error(f"Unknown prompt version {pv!r}. Available: {available}")
 
-    exp_a = args.experiment_a or f"{args.model.split('/')[-1]}_p{args.prompt_a}"
-    exp_b = args.experiment_b or f"{args.model.split('/')[-1]}_p{args.prompt_b}"
+    exp_a = args.experiment_a or default_experiment_name(args.model, args.prompt_a)
+    exp_b = args.experiment_b or default_experiment_name(args.model, args.prompt_b)
 
     if not args.compare_only:
         if args.prompt_a == args.prompt_b and exp_a == exp_b:

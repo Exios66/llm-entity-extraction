@@ -60,6 +60,24 @@ def extract_runner_up(text: str) -> str:
     return min(candidates, key=lambda pair: pair[0])[1]
 
 
+def extract_reasoning(text: str) -> str:
+    """Extract the model's reasoning from a ``<reasoning>...</reasoning>`` tag.
+
+    Used by the vision sorter prompt (RVL-CDIP-style tag output). Falls back
+    to the last non-empty line when the tag is absent.
+    """
+    if not text:
+        return ""
+    tag = re.search(r"<reasoning>\s*(.*?)\s*</reasoning>", text, flags=re.DOTALL | re.IGNORECASE)
+    if tag:
+        return tag.group(1).strip().strip('"')
+    for line in reversed(text.splitlines()):
+        candidate = line.strip()
+        if candidate:
+            return candidate[:500]
+    return ""
+
+
 def extract_confidence(text: str) -> Union[float, None]:
     """Extract the model's self-reported confidence (0-1) from a response."""
     if not text:

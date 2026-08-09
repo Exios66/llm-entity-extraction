@@ -29,12 +29,22 @@ SORTER_SCHEMA = build_structured_schema(
         "doc_type": {"type": "string", "enum": DOC_CLASS_KEYS},
         "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         "reasoning": {"type": "string"},
-    }
+    },
+    title="ClassificationOutput",
 )
 
 
 class SorterAgent(BaseAgent):
-    """Classifies legal documents into mailroom document types."""
+    """Classifies legal documents into mailroom document types.
+
+    Two classification paths share the same output contract
+    (``{"doc_type", "confidence", "reasoning"}``):
+
+    - ``classify_json`` / ``classify`` — text documents (full extracted
+      markdown text; truncation only past the hard safety cap).
+    - ``classify_image`` — document page images (RVL-CDIP-style vision
+      pipeline) using the versioned vision prompt (``sorter_vision_v0``).
+    """
 
     agent_name = "sorter"
 
@@ -100,6 +110,102 @@ class SorterAgent(BaseAgent):
         if result.get("_parse_error"):
             return {"doc_type": "correspondence", "confidence": 0.3, "reasoning": "parse error"}
         return result
+
+    # ------------------------------------------------------------------
+    # Vision path (RVL-CDIP-style image classification)
+    # ------------------------------------------------------------------
+
+    def classify_image(self, image_base64: str, image_format: str = "png") -> dict:
+        """Classify a document PAGE IMAGE with a vision model (qwen).
+
+        Uses the versioned vision prompt (``sorter_vision_v0``): the intro
+        (checks + scratchpad procedure) goes in the system message, the output
+        contract + worked examples go in the image-bearing user message —
+        the same split RVL-CDIP applies (``## Output format`` marker).
+
+        Returns the SAME contract as ``classify_json``:
+        ``{"doc_type", "confidence", "reasoning"}``.
+        """
+        from src.classifier import (
+            clean_prediction,
+            extract_confidence,
+            extract_reasoning,
+        )
+        from src.openrouter_utils import split_prompt
+
+        prompt_text = get_prompt(self.prompt_version)
+        system_text, user_text = split_prompt(prompt_text)
+        if not system_text:
+            system_text, user_text = prompt_text, "Classify the document in this image."
+
+        raw = self._call_vision(
+            system_prompt=system_text,
+            user_text=user_text,
+            image_base64=image_base64,
+            image_format=image_format,
+            temperature=0.1,
+            max_tokens=self._max_tokens,
+        )
+
+        doc_type = clean_prediction(raw)
+        if doc_type not in DOC_CLASS_KEYS:
+            logger.error("sorter_vision_invalid_label", raw_label=doc_type)
+            doc_type = "correspondence"
+
+        confidence = extract_confidence(raw)
+        if confidence is None:
+            confidence = 0.5
+
+        reasoning = extract_reasoning(raw)
+        logger.info("classified_vision", doc_type=doc_type, confidence=confidence)
+        return {"doc_type": doc_type, "confidence": confidence, "reasoning": reasoning}
+
+    def classify_document(self, pages_base64: list[str], image_format: str = "png") -> dict:
+        """Classify a FULL PDF document in ONE vision call.
+
+        Every rendered page of the PDF is sent to the model in a single request
+        (``_call_vision_multi``) — one classification per document, so the
+        model reads the entire agreement (recitals, sections, exhibits,
+        signature pages) before deciding. Returns the standard contract:
+        ``{"doc_type", "confidence", "reasoning"}``.
+        """
+        from src.classifier import (
+            clean_prediction,
+            extract_confidence,
+            extract_reasoning,
+        )
+        from src.openrouter_utils import split_prompt
+
+        if not pages_base64:
+            return {"doc_type": "correspondence", "confidence": 0.0,
+                    "reasoning": "no page images"}
+
+        prompt_text = get_prompt(self.prompt_version)
+        system_text, user_text = split_prompt(prompt_text)
+        if not system_text:
+            system_text, user_text = prompt_text, "Classify the document in these page images."
+
+        raw = self._call_vision_multi(
+            system_prompt=system_text,
+            user_text=user_text,
+            images=[(b64, image_format) for b64 in pages_base64],
+            temperature=0.1,
+            max_tokens=self._max_tokens,
+        )
+
+        doc_type = clean_prediction(raw)
+        if doc_type not in DOC_CLASS_KEYS:
+            logger.error("sorter_vision_invalid_label", raw_label=doc_type)
+            doc_type = "correspondence"
+
+        confidence = extract_confidence(raw)
+        if confidence is None:
+            confidence = 0.5
+
+        reasoning = extract_reasoning(raw)
+        logger.info("classified_document", doc_type=doc_type, pages=len(pages_base64),
+                    confidence=confidence)
+        return {"doc_type": doc_type, "confidence": confidence, "reasoning": reasoning}
 
     def re_evaluate(self, doc_text: str, previous_result: dict) -> tuple[str, float, str]:
         """Re-evaluate a document after low-confidence classification.

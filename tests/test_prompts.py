@@ -15,6 +15,8 @@ def test_all_prompt_keys_exist():
     assert "sorter" in PROMPT_VERSIONS
     assert "sorter_v0" in PROMPT_VERSIONS
     assert "contracts_specialist" in PROMPT_VERSIONS
+    assert "contracts_specialist_v1" in PROMPT_VERSIONS
+    assert "contracts_specialist_v2" in PROMPT_VERSIONS
     assert "corporate_records_specialist" in PROMPT_VERSIONS
     assert "due_diligence_specialist" in PROMPT_VERSIONS
     assert "correspondence_specialist" in PROMPT_VERSIONS
@@ -25,6 +27,14 @@ def test_all_prompt_keys_exist():
     assert "judge-correctness" in PROMPT_VERSIONS
     assert "boss" in PROMPT_VERSIONS
     assert "reporter" in PROMPT_VERSIONS
+
+
+def test_contracts_v2_is_completeness_first():
+    prompt = get_prompt("contracts_specialist_v2")
+    assert "COMPLETENESS IS THE PRIORITY" in prompt
+    assert "one item per distinct obligation" in prompt.lower()
+    assert "operative language" in prompt.lower()
+    assert "confidence" in prompt
 
 
 def test_sorter_prompt_mentions_classes():

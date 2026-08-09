@@ -9,6 +9,7 @@ experiment metadata so experiments are comparable in the UI.
 from __future__ import annotations
 
 import structlog
+from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -62,8 +63,10 @@ def build_classification_chain(
     metadata so Braintrust records exactly what was tested.
     """
     prompt_text = get_prompt(prompt_version)
+    # Literal SystemMessage: prompts may contain curly braces (embedded JSON)
+    # and must not be template-parsed.
     template = ChatPromptTemplate.from_messages(
-        [("system", prompt_text), ("human", "{document}")]
+        [SystemMessage(content=prompt_text), ("human", "{document}")]
     )
     llm = build_chat_model(
         model=model, api_key=api_key, temperature=temperature, max_tokens=max_tokens
@@ -85,7 +88,7 @@ def build_text_chain(
     prompt text is assembled per document. Returns ``(chain, prompt_text)``.
     """
     template = ChatPromptTemplate.from_messages(
-        [("system", system_prompt), ("human", "{document}")]
+        [SystemMessage(content=system_prompt), ("human", "{document}")]
     )
     llm = build_chat_model(
         model=model, api_key=api_key, temperature=temperature, max_tokens=max_tokens

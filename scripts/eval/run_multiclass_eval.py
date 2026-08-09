@@ -37,6 +37,7 @@ from src.env_utils import require_env
 from src.evaluation import validate_dataset
 from src.prompts import DEFAULT_PROMPT_VERSION, list_prompts
 from src.scorers import ERROR_PREFIX, macro_accuracy, normalize_label
+from scripts.eval.run_classification_eval import default_experiment_name
 
 _CONFIG = load_braintrust_config()
 DEFAULT_DATASET = "mailroom-pilot-docs"
@@ -83,7 +84,7 @@ def main() -> int:
         parser.error(f"Unknown prompt version {args.prompt_version!r}. Available: {available}")
 
     experiment_name = args.experiment_name or (
-        f"{args.model.split('/')[-1]}_p{args.prompt_version}_multiclass"
+        f"{default_experiment_name(args.model, args.prompt_version)}_multiclass"
     )
 
     dataset = load_braintrust_dataset(args.dataset_project, args.dataset)
