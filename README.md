@@ -156,6 +156,21 @@ python scripts/eval/evaluate_prompt_version.py \
 # Default --bt-scores overall registers the cross-experiment tracker pair:
 # overall_extraction_score (complex content accuracy) + field_presence
 # (binary conformance) — comparable across every run in the Braintrust UI.
+# With --bt-scores full, per-field trackers report the SAME list score that
+# feeds the field scores (ground-truth coverage for partial-GT fields like
+# parties/key_obligations/termination_clauses, F1 otherwise); raw
+# precision/recall/F1 are kept in each row's entity_list_scores metadata.
+
+# Ground truth follows the CUAD dataset card (theatticusproject/cuad):
+# all 41 clause categories are modeled — 9 string-answer categories
+# (Document Name -> document_name, Parties, dates, Renewal Term, Governing
+# Law, ...) map to schema fields; the 32 YES/NO categories are scored as
+# content AND as binary presence expectations (category_presence tracker:
+# a labeled clause must be covered; an unlabeled one is satisfied unless
+# fabricated, which the factuality guard catches). Expected fields are
+# TYPE-AWARE: the contract type (CUAD folder) the document belongs to
+# decides which categories/fields are expected (ground_truth_mode
+# "cuad_type_aware").
 python scripts/eval/run_extraction_eval.py \
     --dataset mailroom-cuad-contracts --prompt-version contracts_specialist_v2 \
     --manifest data/manifests/extract_v2.jsonl

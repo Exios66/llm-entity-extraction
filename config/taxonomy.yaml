@@ -24,6 +24,25 @@ field_scoring:
   embedding_enabled: true
   embedding_model: sentence-transformers/all-MiniLM-L6-v2
   embedding_rescue_below: 0.7  # only consult embeddings when string score is below this
+  # Fields whose ground truth is a PARTIAL SAMPLE of the document's content
+  # (CUAD clause-QA answer snippets, not exhaustive lists). The model is
+  # usually MORE complete than the label set, so list fields here are scored
+  # by GROUND-TRUTH COVERAGE (recall over matched labels; role-word labels
+  # like "Shipper." match whenever any party is named) instead of F1, which
+  # penalized correct extractions.
+  partial_gt_fields: ["parties", "key_obligations", "termination_clauses"]
+  # Verbatim-clause fields whose label is one sentence of a longer passage:
+  # scored by EXPECTED-WITHIN-PREDICTED token containment, so returning the
+  # expected sentence plus its riders/citations no longer zeroes the field.
+  containment_fields: ["governing_law", "term_length", "renewal_terms"]
+  # Factuality guard ("everything the model reports must be TRUE"): every
+  # predicted list item must match a ground-truth label OR have its content
+  # present in the source document (normalized token coverage >= token_coverage).
+  # Items that are neither are counted as HALLUCINATED and drive the
+  # verified_precision tracker down.
+  factuality_verification:
+    enabled: true
+    token_coverage: 0.7
 
 # Approximate per-1M-token pricing used for estimated_cost_usd scoring.
 cost_models:
@@ -44,6 +63,7 @@ doc_classes:
     specialist: contracts_specialist
     description: "Formal agreements between parties: M&A, vendor, employment, NDAs, etc."
     field_types:
+      document_name: name
       parties: entity_list:name
       effective_date: date
       term_length: free_text

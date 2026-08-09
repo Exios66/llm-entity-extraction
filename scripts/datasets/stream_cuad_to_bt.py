@@ -48,7 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import requests
 
 from src.braintrust_config import load_braintrust_config  # noqa: E402
-from src.cuad_ground_truth import build_expected_fields  # noqa: E402
+from src.cuad_ground_truth import applicable_categories, build_expected_fields  # noqa: E402
 from src.env_utils import require_env  # noqa: E402
 from src.image_utils import resize_with_padding  # noqa: E402
 
@@ -227,6 +227,7 @@ def upload_dataset(
                 input=record["input"],
                 expected=record["expected"],
                 metadata=record.get("metadata", {}),
+                id=record.get("id"),
             )
             inserted += 1
         except Exception as exc:  # noqa: BLE001 - one bad row must not abort
@@ -282,13 +283,20 @@ def build_records(
         labels = clause_labels.get(_norm(stem), {})
         clause_list = labels.get("clauses", [])
         doc_text = labels.get("doc_text", "")
-        expected_fields = build_expected_fields(clause_list)
+        # Per the CUAD dataset card, NOT all expected fields map to each
+        # document: the contract TYPE (folder) the document belongs to decides
+        # which of the 41 clause categories are applicable. The applicable
+        # category set is stamped into the row so eval loops derive
+        # type-aware expected fields without re-fetching the corpus.
+        expected_categories = sorted(applicable_categories(category))
+        expected_fields = build_expected_fields(clause_list, doc_category=category)
 
         page_attachments = [
             _attachment(png_bytes, f"{stem}_page{page_num:04d}.png", api_key)
             for page_num, png_bytes in enumerate(pages, start=1)
         ]
         records.append({
+            "id": f"cuad-{stem}",
             "input": {
                 "image": page_attachments[0] if page_attachments else None,
                 "pages": page_attachments,
@@ -299,6 +307,7 @@ def build_records(
                     "page_count": len(page_attachments),
                     "source_file": pdf_path,
                     "category": category,
+                    "applicable_categories": expected_categories,
                     "document_id": stem,
                     "has_clause_labels": bool(clause_list),
                 },
@@ -308,17 +317,20 @@ def build_records(
                 "clause_labels": clause_list,
                 "clause_count": len(clause_list),
                 "expected_fields": expected_fields,
+                "expected_categories": expected_categories,
             },
             "expected_output": {
                 "doc_type": "contract",
                 "clause_labels": clause_list,
                 "clause_count": len(clause_list),
                 "expected_fields": expected_fields,
+                "expected_categories": expected_categories,
             },
             "metadata": {
                 "source": "cuad_v1",
                 "license": "CC BY 4.0",
                 "category": category,
+                "applicable_categories": expected_categories,
                 "pdf_path": pdf_path,
                 "page_count": len(page_attachments),
                 "clause_count": len(clause_list),

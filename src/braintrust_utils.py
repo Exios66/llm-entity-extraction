@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import re
 import time
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -215,13 +216,23 @@ def load_braintrust_dataset(
         if not doc_text.strip() and not prompt.strip():
             continue
 
+        metadata = dict(input_data.get("metadata") or {}) if isinstance(input_data, dict) else {}
+        # Stable per-document identity: the CUAD stem (document_id / source
+        # file) whenever the dataset carries it, so the SAME contract always
+        # gets the SAME filename across runs and re-synced datasets (index-
+        # based names like "document_12" depend on row order, which Braintrust
+        # does not guarantee).
         filename = input_data.get("filename") if isinstance(input_data, dict) else ""
+        if not filename:
+            filename = (metadata.get("document_id") or "").strip() or \
+                       Path(str(metadata.get("source_file") or "")).stem or \
+                       f"document_{i + 1}"
         records.append({
             "doc_text": doc_text,
             "prompt": prompt,
-            "filename": str(filename or f"document_{i + 1}"),
+            "filename": str(filename),
             "expected": expected,
-            "metadata": dict(input_data.get("metadata") or {}) if isinstance(input_data, dict) else {},
+            "metadata": metadata,
             "expected_output": row.get("expected_output") or {},
             "expected_fields": expected_fields,
             "clause_labels": clause_labels,

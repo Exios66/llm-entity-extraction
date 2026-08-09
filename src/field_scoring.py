@@ -97,6 +97,54 @@ def embedding_enabled() -> bool:
     return bool(val)
 
 
+def get_partial_gt_fields() -> set[str]:
+    """Field names whose CUAD-style ground truth is a PARTIAL sample of the
+    document's content (QA-answer snippets), not an exhaustive list.
+
+    For these fields the model's extraction is usually MORE complete than the
+    label set, so precision penalizes correctness. They are scored by
+    GROUND-TRUTH COVERAGE (recall over matched label items) instead of F1.
+    """
+    try:
+        fields = _field_scoring_config().get("partial_gt_fields") or []
+        return set(fields)
+    except Exception:
+        return set()
+
+
+def get_containment_fields() -> set[str]:
+    """Field names scored by EXPECTED-WITHIN-PREDICTED token containment.
+
+    For verbatim-clause fields whose ground truth is one sentence of a longer
+    passage, a model that returns a SUPERSET (expected sentence plus its
+    riders) is correct on the substance. Containment scores the share of the
+    expected text's normalized tokens covered by the prediction, so
+    over-inclusion no longer zeroes the field.
+    """
+    try:
+        fields = _field_scoring_config().get("containment_fields") or []
+        return set(fields)
+    except Exception:
+        return set()
+
+
+def verification_enabled() -> bool:
+    """Whether predicted list items are verified against the source document
+    text (the factuality guard)."""
+    cfg = _field_scoring_config().get("factuality_verification") or {}
+    return bool(cfg.get("enabled", True))
+
+
+def get_verification_coverage() -> float:
+    """Minimum normalized-token coverage of a predicted item within the
+    source document text for it to count as grounded (not hallucinated)."""
+    cfg = _field_scoring_config().get("factuality_verification") or {}
+    try:
+        return float(cfg.get("token_coverage", 0.7))
+    except (TypeError, ValueError):
+        return 0.7
+
+
 # ---------------------------------------------------------------------------
 # Normalization
 # ---------------------------------------------------------------------------
@@ -129,6 +177,22 @@ def _tokenize(text: str) -> list[str]:
     if not isinstance(text, str):
         text = str(text)
     return _PUNCT_RE.sub(" ", text.lower()).split()
+
+
+# Function words excluded from CONTAINMENT token sets only. Clause labels
+# ("the laws of the State of Delaware") carry them; counting them inflates
+# misses on short paraphrases and under-flags ambiguity.
+_CONTAINMENT_STOPWORDS = {
+    "the", "a", "an", "of", "and", "or", "for", "to", "in", "on", "by", "as",
+    "is", "be", "are", "with", "its", "their", "his", "her", "such", "hereof",
+    "hereunder", "shall", "any", "all", "this", "that", "these", "those",
+    "from", "between", "into", "upon", "under", "over",
+}
+
+
+def _containment_tokens(text: str) -> set[str]:
+    """Normalized token set for containment scoring (stopwords removed)."""
+    return {t for t in _tokenize(text) if t not in _CONTAINMENT_STOPWORDS}
 
 
 def _seq_ratio(a: str, b: str) -> float:
@@ -179,13 +243,35 @@ def _token_f1(pred: str, exp: str) -> float:
 # ---------------------------------------------------------------------------
 
 def _parse_date(text) -> object | None:
-    """Parse to a canonical datetime.date, or None when unparseable."""
+    """Parse to a canonical datetime.date, or None when unparseable.
+
+    Handles the forms that appear in CUAD ground truth: ISO, mm/dd/yyyy,
+    "March 3, 2024", ordinal prose ("10th day of January 2000"), and
+    stray trailing artifacts like "1st day of April, 2007 (".
+    """
     if not isinstance(text, str):
         return None
     s = _WS_RE.sub(" ", text.strip())
     if not s:
         return None
+    # "10th day of January 2000" -> "10 day of January 2000"; dateutil then
+    # still rejects it, so normalize the whole "N day of MONTH YEAR" pattern.
     s = _ORDINAL_RE.sub(r"\1", s)
+    # OCR/scan artifacts can break the day-of pattern ("18t h day of August
+    # 2014" -> "18 day of August 2014"): drop stray letters between the day
+    # number and "day of".
+    s = re.sub(
+        r"\b(\d{1,2})[a-z]*(?:\s+[a-z]+)*\s+day\s+of\b", r"\1 day of", s,
+        flags=re.IGNORECASE,
+    )
+    day_of_month = re.search(
+        r"\b(\d{1,2})\s+day\s+of\s+([A-Za-z]+)[,\s]*(\d{4})?", s, flags=re.IGNORECASE
+    )
+    if day_of_month:
+        month, day, year = day_of_month.group(2), day_of_month.group(1), day_of_month.group(3)
+        s = f"{month} {day}, {year}" if year else f"{month} {day}"
+    # Drop stray trailing punctuation/artifacts ("2007 (", "2007,", ...).
+    s = re.sub(r"[(\[\{,]+$", "", s).strip()
     try:
         from dateutil import parser
 
@@ -304,6 +390,28 @@ def score_free_text_field(pred, exp, embedding=None) -> float:
     return _with_embedding_rescue(f1, pred, exp, embedding)
 
 
+def score_containment_field(pred, exp, embedding=None) -> float:
+    """Share of the EXPECTED text's normalized tokens covered by the prediction.
+
+    Suited to verbatim-clause fields where the ground truth is one sentence of
+    a longer passage and the model legitimately returns a superset (the
+    expected sentence plus its riders or citations). A prediction fully
+    containing the expected text scores 1.0; truncating the expected text
+    scores below 1.0 (missing tokens lower the coverage).
+    """
+    if not isinstance(pred, str):
+        pred = str(pred or "")
+    if not isinstance(exp, str):
+        exp = str(exp or "")
+    te = _containment_tokens(exp)
+    tp = _containment_tokens(pred)
+    if not te:
+        return 1.0 if not tp else 0.0
+    if not tp:
+        return 0.0
+    return round(len(te & tp) / len(te), 4)
+
+
 def score_date_field(pred, exp, embedding=None) -> float:
     """Parse to canonical date, then exact match. Unparseable values fall
     back to fuzzy string matching."""
@@ -326,6 +434,13 @@ class EntityListScore:
     matched: int
     unmatched_predicted: int
     unmatched_expected: int
+    partial_gt: bool = False
+
+    @property
+    def score(self) -> float:
+        """Composite score: F1 normally; GROUND-TRUTH COVERAGE (recall) when
+        the field's label set is a partial sample (partial_gt_fields)."""
+        return self.recall if self.partial_gt else self.f1
 
 
 def _as_list(value) -> list:
@@ -341,33 +456,91 @@ def _element_scorer(element_type: str):
     return FIELD_SCORERS.get(element_type, score_name_field)
 
 
-def score_entity_list(element_type: str, pred, exp, embedding=None) -> EntityListScore:
+# Party ROLE labels that CUAD ground truth uses INSTEAD of the actual entity
+# name ("Shipper.", "Sponsor", "Seller", "Producer", ...). The model extracts
+# the real named party; a role word in the label set is matched whenever the
+# prediction names at least one party (the role is instantiated).
+_ROLE_WORDS = {
+    "shipper", "sponsor", "seller", "buyer", "company", "producer", "reseller",
+    "licensee", "licensor", "party", "parties", "transporter", "customer",
+    "client", "vendor", "purchaser", "lender", "borrower", "guarantor",
+    "manufacturer", "distributor", "owner", "operator",
+}
+
+
+def _is_role_word(text: str) -> bool:
+    tokens = _tokenize(str(text))
+    return 1 <= len(tokens) <= 3 and all(t in _ROLE_WORDS for t in tokens)
+
+
+def _element_similarity(element_type: str, item: str, exp: str, embedding=None) -> float:
+    """Similarity of one predicted list item against one ground-truth item.
+
+    For ``free_text`` elements, CUAD's ground-truth answers are FRAGMENTS of
+    the document's verbatim clause ("...at any other time upon ninety (90)
+    days' prior written notice of impending termination."), while the model
+    extracts the FULL clause. Token-F1 alone under-scores long verbatim items,
+    so when the item covers >= the verification coverage of the answer's plain
+    tokens, that coverage is the similarity (the item IS the labeled clause).
+    """
+    base = _element_scorer(element_type)(item, exp, embedding=embedding)
+    if element_type == "free_text":
+        answer_tokens = set(_tokenize(str(exp)))
+        item_tokens = set(_tokenize(str(item)))
+        if answer_tokens:
+            coverage = len(answer_tokens & item_tokens) / len(answer_tokens)
+            if coverage >= get_verification_coverage():
+                return max(float(base), coverage)
+    return base
+
+
+def score_entity_list(element_type: str, pred, exp, embedding=None,
+                      partial_gt: bool = False) -> EntityListScore:
     """Pairwise similarity matrix + Hungarian assignment (scipy), thresholded,
-    then precision/recall/F1 over the matched set."""
+    then precision/recall/F1 over the matched set.
+
+    ``partial_gt=True`` (label sets that are QA-answer samples rather than
+    exhaustive lists): role-word label items count as matched whenever the
+    prediction names any party, and the reported score becomes ground-truth
+    coverage (recall) — extra correct predictions no longer cut the score.
+    """
     pred_items = [str(item) for item in _as_list(pred)]
     exp_items = [str(item) for item in _as_list(exp)]
     if not pred_items and not exp_items:
-        return EntityListScore("", 1.0, 1.0, 1.0, 0, 0, 0)
+        return EntityListScore("", 1.0, 1.0, 1.0, 0, 0, 0, partial_gt)
     if not pred_items:
-        return EntityListScore("", 0.0, 1.0, 0.0, 0, 0, len(exp_items))
+        return EntityListScore("", 0.0, 0.0, 0.0, 0, 0, len(exp_items), partial_gt)
     if not exp_items:
-        return EntityListScore("", 1.0, 0.0, 0.0, 0, len(pred_items), 0)
+        return EntityListScore("", 1.0, 0.0, 0.0, 0, len(pred_items), 0, partial_gt)
 
     scorer = _element_scorer(element_type)
     threshold = get_bipartite_match_threshold()
     n_pred, n_exp = len(pred_items), len(exp_items)
 
+    # Role-word labels are matched by the mere presence of named parties.
+    if partial_gt:
+        real_exp = [e for e in exp_items if not _is_role_word(e)]
+        role_items = n_exp - len(real_exp)
+        pred_has_party = any(not _is_role_word(p) for p in pred_items)
+    else:
+        real_exp = exp_items
+        role_items = 0
+        pred_has_party = False
+
     # Skip the Hungarian machinery when a single-element list is trivially
     # scored — cheaper and identical for the common one-name lists.
-    if n_pred == 1 and n_exp == 1:
-        matched = 1 if scorer(pred_items[0], exp_items[0], embedding) >= threshold else 0
+    if len(pred_items) == 1 and len(real_exp) == 1:
+        matched = 1 if _element_similarity(
+            element_type, pred_items[0], real_exp[0], embedding
+        ) >= threshold else 0
     else:
         try:
             import numpy as np
             from scipy.optimize import linear_sum_assignment
 
             sim = np.array([
-                [scorer(p, e, embedding) for e in exp_items] for p in pred_items
+                [_element_similarity(element_type, p, e, embedding) for e in real_exp]
+                for p in pred_items
             ])
             row_idx, col_idx = linear_sum_assignment(1.0 - sim)
             matched = sum(1 for r, c in zip(row_idx, col_idx) if sim[r, c] >= threshold)
@@ -378,15 +551,18 @@ def score_entity_list(element_type: str, pred, exp, embedding=None) -> EntityLis
             assigned_exp = set()
             for p_item in pred_items:
                 best, best_e = threshold, None
-                for ei, e_item in enumerate(exp_items):
+                for ei, e_item in enumerate(real_exp):
                     if ei in assigned_exp:
                         continue
-                    s = scorer(p_item, e_item, embedding)
+                    s = _element_similarity(element_type, p_item, e_item, embedding)
                     if s >= best:
                         best, best_e = s, ei
                 if best_e is not None:
                     matched += 1
                     assigned_exp.add(best_e)
+
+    if role_items and pred_has_party:
+        matched += role_items
 
     precision = matched / n_pred
     recall = matched / n_exp
@@ -399,7 +575,241 @@ def score_entity_list(element_type: str, pred, exp, embedding=None) -> EntityLis
         matched=matched,
         unmatched_predicted=n_pred - matched,
         unmatched_expected=n_exp - matched,
+        partial_gt=partial_gt,
     )
+
+
+# ---------------------------------------------------------------------------
+# Factuality audit — "everything the model reports must be TRUE"
+# ---------------------------------------------------------------------------
+#
+# Coverage scoring treats a GT hit as correct even when the model extracts
+# MORE than the label set — but correctness must not mean "extra garbage".
+# For every predicted list item we check: (a) does it match a ground-truth
+# label, or (b) is its content actually present in the source document text
+# (normalized token coverage)? Items that are NEITHER are counted as
+# HALLUCINATED. This yields:
+#   verified_precision = (GT-matched + doc-grounded) / n_predicted
+#   hallucination_rate  = ungrounded / n_predicted
+
+
+def verify_list_items(items: list, doc_text: str, token_coverage: float | None = None) -> list[bool]:
+    """Groundedness flags: is each item's content present in ``doc_text``?
+
+    Items are verbatim clause quotes or legal names; a genuine quote shares
+    nearly all of its (stopword-filtered) tokens with the source document,
+    while fabricated content shares few. ``token_coverage`` is the minimum
+    share of the item's normalized tokens found in the document (default from
+    config). Items with no content tokens are unverifiable (False).
+    """
+    threshold = get_verification_coverage() if token_coverage is None else token_coverage
+    dt_tokens = _containment_tokens(str(doc_text or ""))
+    flags: list[bool] = []
+    for item in items or []:
+        it_tokens = _containment_tokens(str(item))
+        if not it_tokens:
+            flags.append(False)
+            continue
+        if not dt_tokens:
+            flags.append(False)
+            continue
+        coverage = len(it_tokens & dt_tokens) / len(it_tokens)
+        flags.append(coverage >= threshold)
+    return flags
+
+
+def audit_list_field(
+    element_type: str,
+    pred_items: list,
+    exp_items: list,
+    doc_text: str | None,
+    token_coverage: float | None = None,
+) -> dict:
+    """Per-item truth audit for one list field.
+
+    Each predicted item is TRUE when it matches any ground-truth label
+    (element scorer above the match threshold) OR its content is grounded in
+    the source document. Returns the counts plus the two trackers.
+    """
+    pred_items = [str(item) for item in _as_list(pred_items)]
+    exp_items = [str(item) for item in _as_list(exp_items)]
+    n_pred = len(pred_items)
+    if n_pred == 0:
+        return {"n_predicted": 0, "matched_gt": 0, "verified_in_doc": 0,
+                "true_items": 0, "verified_precision": 0.0,
+                "hallucinated": 0, "hallucination_rate": 0.0,
+                "doc_verification": False}
+
+    scorer = _element_scorer(element_type)
+    match_threshold = get_bipartite_match_threshold()
+    dt_tokens = _containment_tokens(str(doc_text or ""))
+    verify_threshold = get_verification_coverage() if token_coverage is None else token_coverage
+
+    matched_gt = verified = true_items = 0
+    for item in pred_items:
+        hit_gt = any(
+            _element_similarity(element_type, item, e) >= match_threshold
+            for e in exp_items
+        ) if exp_items else False
+        it_tokens = _containment_tokens(item)
+        in_doc = bool(it_tokens) and bool(dt_tokens) and (
+            len(it_tokens & dt_tokens) / len(it_tokens) >= verify_threshold
+        )
+        if hit_gt:
+            matched_gt += 1
+        if in_doc:
+            verified += 1
+        if hit_gt or in_doc:
+            true_items += 1
+
+    return {
+        "n_predicted": n_pred,
+        "matched_gt": matched_gt,
+        "verified_in_doc": verified,
+        "true_items": true_items,
+        "verified_precision": round(true_items / n_pred, 4),
+        "hallucinated": n_pred - true_items,
+        "hallucination_rate": round((n_pred - true_items) / n_pred, 4),
+        "doc_verification": bool(doc_text),
+    }
+
+
+def _verification_tokens(value, field_type: str) -> set[str]:
+    """Token set used to check a predicted VALUE against the source document.
+
+    Dates are converted to prose ("November 1, 2002", unpadded day) BEFORE
+    tokenizing so an ISO prediction ("2002-11-01") matches the document's
+    prose date instead of tripping the containment check on format
+    differences.
+    """
+    text = str(value or "")
+    if field_type == "date":
+        parsed = _parse_date(text)
+        if parsed is not None:
+            text = f"{parsed.strftime('%B')} {parsed.day}, {parsed.year}"
+    return _containment_tokens(text)
+
+
+# Date-like spans in a document: numeric (04-01-06, 3/24/2006), month-first
+# prose (April 1, 2006), or day-first prose ("18th day of August, 2014",
+# incl. OCR artifacts like "18t h day of"). Used to ground predicted dates
+# against the source text.
+_DATE_CANDIDATE_RE = re.compile(
+    r"\b\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}\b"
+    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}\b"
+    r"|\b\d{1,2}[a-z]*(?:\s+[a-z]+)*\s+day\s+of\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*,?\s*\d{4}\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _date_grounded_in_doc(pred_date, doc_text: str) -> bool:
+    """True when the document contains a date parseable to ``pred_date``,
+    in ANY format (numeric dashed, slashed, or prose month-name)."""
+    if pred_date is None or not doc_text:
+        return False
+    for match in _DATE_CANDIDATE_RE.finditer(doc_text):
+        candidate = _parse_date(match.group(0))
+        if candidate is not None and candidate == pred_date:
+            return True
+    return False
+
+
+def audit_scalar_field(field_type: str, pred, exp, doc_text: str | None) -> dict:
+    """Factuality audit for one SCALAR (non-list) field.
+
+    The predicted value is TRUE when it matches the ground truth (element
+    scorer above the match threshold) OR its content is grounded in the
+    source document. Dates are grounded by parsing the document's date
+    candidates (any format); other values by normalized token coverage of
+    the predicted value within the document text. Fields the model left
+    empty are not reported content and are not audited (callers skip them).
+    """
+    pred = str(pred or "")
+    if not pred.strip():
+        return {"n_predicted": 0, "matched_gt": 0, "verified_in_doc": 0,
+                "true_items": 0, "verified_precision": 0.0,
+                "hallucinated": 0, "hallucination_rate": 0.0,
+                "doc_verification": bool(doc_text)}
+    scorer = FIELD_SCORERS.get(field_type, score_name_field)
+    threshold = get_bipartite_match_threshold()
+    matched = exp not in (None, "") and scorer(pred, str(exp)) >= threshold
+    in_doc = False
+    if doc_text:
+        if field_type == "date":
+            in_doc = _date_grounded_in_doc(_parse_date(pred), doc_text)
+        else:
+            it_tokens = _verification_tokens(pred, field_type)
+            dt_tokens = _containment_tokens(doc_text)
+            in_doc = bool(it_tokens) and bool(dt_tokens) and (
+                len(it_tokens & dt_tokens) / len(it_tokens) >= get_verification_coverage()
+            )
+    true = bool(matched) or bool(in_doc)
+    return {
+        "n_predicted": 1,
+        "matched_gt": int(bool(matched)),
+        "verified_in_doc": int(bool(in_doc)),
+        "true_items": int(true),
+        "verified_precision": 1.0 if true else 0.0,
+        "hallucinated": 0 if true else 1,
+        "hallucination_rate": 0.0 if true else 1.0,
+        "doc_verification": bool(doc_text),
+    }
+
+
+def score_category_presence(predicted: dict | None, presence_expectations: dict,
+                            field_types: dict[str, str]) -> tuple[float, dict]:
+    """Binary YES/NO presence scoring for CUAD's presence-type categories.
+
+    CUAD's 32 Yes/No categories each expect the answer "Yes" when a labeled
+    clause exists (the extraction must cover that clause) and "No" when no
+    clause exists (satisfied by default — fabricating such a clause is
+    already punished by the factuality guard).
+
+    ``presence_expectations``: ``{category: {"expected": bool, "answer": str,
+    "field": str}}`` (see cuad_ground_truth.build_presence_expectations).
+
+    Returns ``(score, detail)`` where ``score`` is the share of expected-True
+    categories whose clause text is matched by a predicted item in the
+    category's mapped field, and ``detail`` records every category's outcome.
+    """
+    predicted = predicted or {}
+    matched = 0
+    expected_true = 0
+    detail: dict[str, dict] = {}
+    for category, expectation in sorted((presence_expectations or {}).items()):
+        field = expectation.get("field") or "key_obligations"
+        if not expectation.get("expected"):
+            detail[category] = {"expected": False, "matched": None, "field": field}
+            continue
+        expected_true += 1
+        answer = str(expectation.get("answer") or "")
+        items = [str(item) for item in _as_list(predicted.get(field))]
+        field_type = field_types.get(field) or "name"
+        element_type = field_type.split(":", 1)[1] if is_entity_list(field_type) else field_type
+        scorer = _element_scorer(element_type)
+        threshold = get_bipartite_match_threshold()
+        answer_tokens = set(_tokenize(answer))
+        hit = False
+        for item in items:
+            if _element_similarity(element_type, item, answer) >= threshold:
+                hit = True
+                break
+            # The labeled clause text may be a fragment of the extracted item:
+            # a covered category when >= 70% of the answer's plain tokens
+            # appear within the item (e.g. "shall not assign" inside the full
+            # verbatim anti-assignment clause).
+            if answer_tokens:
+                item_tokens = set(_tokenize(item))
+                coverage = len(answer_tokens & item_tokens) / len(answer_tokens)
+                if coverage >= get_verification_coverage():
+                    hit = True
+                    break
+        if hit:
+            matched += 1
+        detail[category] = {"expected": True, "matched": hit, "field": field,
+                            "answer": answer, "predicted_items": len(items)}
+    score = round(matched / expected_true, 4) if expected_true else 1.0
+    return score, detail
 
 
 # ---------------------------------------------------------------------------
@@ -531,6 +941,7 @@ FIELD_SCORERS = {
     "money": score_money_field,
     "name": score_name_field,
     "free_text": score_free_text_field,
+    "containment": score_containment_field,
 }
 
 # List-valued field types whose element scorer is specified as a suffix:
@@ -542,11 +953,12 @@ def is_entity_list(field_type: str) -> bool:
     return field_type == LIST_PREFIX or field_type.startswith(LIST_PREFIX + ":")
 
 
-def score_field(field_type: str, pred, exp, embedding=None):
+def score_field(field_type: str, pred, exp, embedding=None, partial_gt: bool = False):
     """Score one field. Returns a float, or an EntityListScore for list fields."""
     if is_entity_list(field_type):
         element_type = field_type.split(":", 1)[1] if ":" in field_type else "name"
-        return score_entity_list(element_type, pred, exp, embedding=embedding)
+        return score_entity_list(element_type, pred, exp, embedding=embedding,
+                                 partial_gt=partial_gt)
     scorer = FIELD_SCORERS.get(field_type, score_name_field)
     return scorer(pred, exp, embedding=embedding)
 
@@ -584,10 +996,21 @@ class ExtractionScoreResult:
     overall_score: float | None
     ambiguous_fields: list[str]
     entity_list_scores: dict[str, EntityListScore] = field(default_factory=dict)
+    # Factuality audit per list field: {field: audit dict} with
+    # verified_precision / hallucination_rate (see audit_list_field).
+    entity_list_audit: dict[str, dict] = field(default_factory=dict)
 
     @property
     def needs_judge_review(self) -> bool:
         return bool(self.ambiguous_fields)
+
+    @property
+    def overall_verified_precision(self) -> float | None:
+        """Mean verified_precision across the row's scored list fields
+        (None when no list field was audited)."""
+        values = [a["verified_precision"] for a in self.entity_list_audit.values()
+                  if a.get("n_predicted")]
+        return round(sum(values) / len(values), 4) if values else None
 
 
 def score_extraction(
@@ -595,6 +1018,7 @@ def score_extraction(
     field_types: dict[str, str],
     predicted: dict | None,
     expected: dict | None,
+    doc_text: str | None = None,
 ) -> ExtractionScoreResult:
     """Score one extraction deterministically.
 
@@ -606,10 +1030,20 @@ def score_extraction(
       (``field_scoring.ambiguous_band``) — the signal that escalates to the
       LLM judge.
     - List fields also produce ``entity_list_scores`` with precision/recall.
+    - When ``doc_text`` is provided, EVERY field the model populated (list
+      items and scalar values alike, whether or not the ground truth labels
+      that field) produces an ``entity_list_audit`` entry: a reported value
+      is TRUE when it matches a ground-truth label OR its content is grounded
+      in the source document (the factuality guard — nothing the model
+      reports may be fabricated). ``overall_verified_precision`` is the mean
+      over every audited field, so it is anchored to exactly the components
+      that make it up.
     """
     predicted = predicted or {}
     expected = expected or {}
     band_low, band_high = get_ambiguous_band()
+    partial_gt_fields = get_partial_gt_fields()
+    containment_fields = get_containment_fields()
     needs_embedding = any(
         ft in ("name", "free_text") or (is_entity_list(ft) and (ft.split(":", 1)[1] if ":" in ft else "name") in ("name", "free_text"))
         for ft in field_types.values()
@@ -619,6 +1053,7 @@ def score_extraction(
     field_scores: dict[str, float] = {}
     ambiguous: list[str] = []
     entity_list_scores: dict[str, EntityListScore] = {}
+    entity_list_audit: dict[str, dict] = {}
 
     for key, exp_value in expected.items():
         if exp_value is None or exp_value == "":
@@ -628,17 +1063,42 @@ def score_extraction(
         if pred_value is None:
             score = 0.0
         else:
-            result = score_field(field_type, pred_value, exp_value, embedding=embedding)
+            if key in containment_fields and field_type in ("name", "free_text", "containment"):
+                field_type = "containment"
+            result = score_field(field_type, pred_value, exp_value, embedding=embedding,
+                                 partial_gt=key in partial_gt_fields)
             if isinstance(result, EntityListScore):
                 result.field_name = key
                 entity_list_scores[key] = result
-                score = result.f1
+                score = result.score
             else:
                 score = result
         score = round(score, 4)
         field_scores[key] = score
         if band_low <= score <= band_high:
             ambiguous.append(key)
+
+    if verification_enabled() and doc_text:
+        # Factuality audit for EVERY content field the model populated —
+        # including fields the ground truth does not label. Only schema
+        # content fields (``field_types``) are audited: meta fields like
+        # ``confidence`` are not reported content and are never audited.
+        # overall_verified_precision is the mean over these audits, so it
+        # covers exactly the content the model reported and can never be
+        # detached from its components.
+        for key, field_type in sorted(field_types.items()):
+            pred_value = predicted.get(key)
+            if pred_value in (None, "", []) or key in entity_list_audit:
+                continue
+            if is_entity_list(field_type):
+                element_type = field_type.split(":", 1)[1] if ":" in field_type else "name"
+                entity_list_audit[key] = audit_list_field(
+                    element_type, pred_value, expected.get(key) or [], doc_text,
+                )
+            else:
+                entity_list_audit[key] = audit_scalar_field(
+                    field_type, pred_value, expected.get(key), doc_text,
+                )
 
     scored = list(field_scores.values())
     overall = round(sum(scored) / len(scored), 4) if scored else None
@@ -648,4 +1108,5 @@ def score_extraction(
         overall_score=overall,
         ambiguous_fields=ambiguous,
         entity_list_scores=entity_list_scores,
+        entity_list_audit=entity_list_audit,
     )

@@ -52,7 +52,7 @@ import braintrust
 from agents.specialist_agents import ContractsSpecialist
 from src.braintrust_config import load_braintrust_config
 from src.braintrust_utils import load_braintrust_dataset
-from src.cuad_ground_truth import build_expected_fields
+from src.cuad_ground_truth import build_expected_fields, build_presence_expectations
 from src.env_utils import require_env
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
 from src.experiment_log import (
@@ -67,6 +67,7 @@ from src.experiment_log import (
 from src.field_scoring import (
     get_field_types,
     is_entity_list,
+    score_category_presence,
     score_extraction,
     score_field,
 )
@@ -80,14 +81,20 @@ DEFAULT_DATASET = "mailroom-cuad-contracts"
 def load_expected_fields(rows: list[dict]) -> list[dict]:
     """Derive per-row expected_fields from the dataset's CUAD ground truth.
 
-    Prefers ``expected_fields`` surfaced by the loader (stored in the row's
-    expected dict); falls back to deriving from the raw clause labels.
+    Per the CUAD dataset card, NOT all expected fields map to each document:
+    the contract TYPE the document belongs to decides what fields to expect,
+    so the row's metadata ``category`` (CUAD folder) drives the derivation.
+    Also builds the YES/NO category presence expectations. Prefers
+    ``expected_fields`` surfaced by the loader (stored in the row's expected
+    dict); falls back to deriving from the raw clause labels.
     """
     for row in rows:
-        if row.get("expected_fields"):
-            continue
         clause_labels = row.get("clause_labels") or (row.get("expected_output") or {}).get("clause_labels") or []
-        row["expected_fields"] = build_expected_fields(clause_labels)
+        doc_category = (row.get("metadata") or {}).get("category") or None
+        row["doc_category"] = doc_category
+        if not row.get("expected_fields"):
+            row["expected_fields"] = build_expected_fields(clause_labels, doc_category=doc_category)
+        row["expected_presence"] = build_presence_expectations(clause_labels, doc_category=doc_category)
     return rows
 
 
@@ -269,6 +276,7 @@ def main_with_args(argv: list[str]) -> int:
             print(f"ERROR {filename}: {type(exc).__name__}: {exc}", file=sys.stderr)
             composite = {"predicted": {}, "error": str(exc), "schema_valid": 0.0,
                          "overall_score": 0.0, "field_presence": 0.0,
+                         "category_presence": 0.0,
                          "field_scores": {}, "ambiguous_fields": []}
             if manifest:
                 manifest.append({"filename": filename, "status": "error",
@@ -282,6 +290,7 @@ def main_with_args(argv: list[str]) -> int:
         if predicted.get("_parse_error"):
             composite = {"predicted": {}, "error": "parse error", "schema_valid": 0.0,
                          "overall_score": 0.0, "field_presence": 0.0,
+                         "category_presence": 0.0,
                          "field_scores": {}, "ambiguous_fields": []}
             if manifest:
                 manifest.append({"filename": filename, "status": "error",
@@ -291,12 +300,22 @@ def main_with_args(argv: list[str]) -> int:
 
         # Deterministic content scoring against CUAD ground truth (LOCAL —
         # with semantic embedding rescue; never executed on the Braintrust side).
-        result = score_extraction("contract", field_types, predicted, expected_fields)
+        # doc_text is passed in for the FACTUALITY guard: every predicted list
+        # item must match a label or be grounded in the source document.
+        result = score_extraction("contract", field_types, predicted, expected_fields,
+                                  doc_text=doc_text)
         populated = sum(
             1 for key, value in expected_fields.items()
             if predicted.get(key) not in (None, "", [])
         )
         field_presence = populated / len(expected_fields) if expected_fields else 0.0
+
+        # CUAD YES/NO category presence: the 32 presence-type categories each
+        # expect a binary answer — labeled clause present (the extraction must
+        # cover it) or absent (satisfied unless fabricated).
+        category_presence, presence_detail = score_category_presence(
+            predicted, input_data.get("expected_presence") or {}, field_types
+        )
 
         composite = {
             "predicted": predicted,
@@ -304,19 +323,43 @@ def main_with_args(argv: list[str]) -> int:
             "field_presence": field_presence,
             "schema_valid": 1.0,
             "field_scores": result.field_scores,
-            "entity_list_f1": {k: v.f1 for k, v in result.entity_list_scores.items()},
+            "category_presence": category_presence,
+            "category_presence_detail": presence_detail,
+            # The list score that feeds the per-field score and the overall
+            # tracker: ground-truth COVERAGE (recall) for partial-GT fields,
+            # F1 otherwise. Raw precision/recall/f1 are kept in
+            # ``entity_list_scores`` for audit, so every Braintrust tracker
+            # is mutually consistent.
+            "entity_list_f1": {k: v.score for k, v in result.entity_list_scores.items()},
+            "entity_list_scores": {
+                k: {"precision": v.precision, "recall": v.recall, "f1": v.f1,
+                    "matched": v.matched, "n_predicted": v.matched + v.unmatched_predicted,
+                    "n_expected": v.matched + v.unmatched_expected}
+                for k, v in result.entity_list_scores.items()
+            },
+            # Factuality guard: verified_precision (share of predicted items
+            # that match a label OR are grounded in the source document) and
+            # hallucination_rate (share that are neither).
+            "entity_list_audit": result.entity_list_audit,
+            "overall_verified_precision": result.overall_verified_precision or 0.0,
             "ambiguous_fields": result.ambiguous_fields,
         }
 
         span_meta = {
             "filename": filename,
             "prompt_version": args.prompt_version,
+            "doc_category": input_data.get("doc_category"),
             "overall_score": result.overall_score,
             "field_scores": result.field_scores,
             "ambiguous_fields": result.ambiguous_fields,
             "expected_fields": expected_fields,
+            "expected_presence": input_data.get("expected_presence") or {},
             "extracted_fields": {k: v for k, v in predicted.items() if v not in (None, "", [])},
             "entity_list_f1": composite["entity_list_f1"],
+            "entity_list_scores": composite["entity_list_scores"],
+            "entity_list_audit": composite["entity_list_audit"],
+            "category_presence": category_presence,
+            "category_presence_detail": presence_detail,
             "composite": composite,
             "usage": usage,
         }
@@ -353,6 +396,25 @@ def main_with_args(argv: list[str]) -> int:
         """BINARY: did the model return parseable, schema-conformant JSON?"""
         return float((output or {}).get("schema_valid") or 0.0)
 
+    def overall_verified_precision(output: dict, expected) -> float:
+        """FACTUALITY guard: mean over the row's list fields of the share of
+        predicted items that match a ground-truth label OR are grounded in
+        the source document. Items that are neither are hallucinations —
+        a row reporting fabricated content scores 0 on this tracker even
+        when its coverage score is perfect."""
+        audits = ((output or {}).get("entity_list_audit") or {})
+        values = [float(a.get("verified_precision") or 0.0) for a in audits.values()
+                  if a.get("n_predicted")]
+        return round(sum(values) / len(values), 4) if values else 0.0
+
+    def category_presence(output: dict, expected) -> float:
+        """CUAD YES/NO category conformance: share of the document's
+        applicable presence-type categories (labeled clauses that must be
+        covered) whose clause is present in the extraction. Per the CUAD
+        dataset card, these categories expect a Yes/No answer; absent
+        categories are satisfied unless the model fabricates them."""
+        return float((output or {}).get("category_presence") or 0.0)
+
     def make_field_scorer(field_name: str):
         def scorer(output: dict, expected) -> float:
             return float(((output or {}).get("field_scores") or {}).get(field_name) or 0.0)
@@ -360,24 +422,57 @@ def main_with_args(argv: list[str]) -> int:
         return scorer
 
     def make_list_f1_scorer(field_name: str):
+        """List trackers report the SAME list score that feeds the per-field
+        score (GT coverage for partial-GT fields, F1 otherwise) — so the
+        per-field score, the *_f1 tracker, and the overall tracker never
+        disagree in the Braintrust UI. Raw precision/recall/f1 remain
+        available in the row's ``entity_list_scores`` metadata for audit."""
         def scorer(output: dict, expected) -> float:
             return float(((output or {}).get("entity_list_f1") or {}).get(field_name) or 0.0)
         scorer.__name__ = f"{field_name}_f1"
+        return scorer
+
+    def make_list_precision_scorer(field_name: str):
+        """OVER-EXTRACTION guard: share of predicted items that match a
+        ground-truth label (raw precision). Extra-but-true items lower this
+        tracker; the verified_precision tracker shows how many of the extras
+        are at least grounded in the source document."""
+        def scorer(output: dict, expected) -> float:
+            audit = ((output or {}).get("entity_list_audit") or {}).get(field_name) or {}
+            n_pred = audit.get("n_predicted") or 0
+            if not n_pred:
+                return 0.0
+            return round(audit.get("matched_gt", 0) / n_pred, 4)
+        scorer.__name__ = f"{field_name}_precision"
+        return scorer
+
+    def make_list_verified_precision_scorer(field_name: str):
+        """TRUTH guard: share of predicted items that match a label OR are
+        grounded in the source document text."""
+        def scorer(output: dict, expected) -> float:
+            audit = ((output or {}).get("entity_list_audit") or {}).get(field_name) or {}
+            return float(audit.get("verified_precision") or 0.0)
+        scorer.__name__ = f"{field_name}_verified_precision"
         return scorer
 
     if args.bt_scores == "none":
         bt_scorers = []
     elif args.bt_scores == "overall":
         # ONE cross-experiment tracker set: complex content accuracy + the
-        # binary presence guard — cheap lookups, comparable across runs.
-        bt_scorers = [overall_extraction_score, field_presence]
+        # binary presence guard + the factuality guard + CUAD YES/NO
+        # category conformance — cheap lookups, comparable across runs.
+        bt_scorers = [overall_extraction_score, field_presence,
+                      overall_verified_precision, category_presence]
     else:
-        bt_scorers = [overall_extraction_score, field_presence, schema_valid]
+        bt_scorers = [overall_extraction_score, field_presence, schema_valid,
+                      overall_verified_precision, category_presence]
         for field_name in scored_fields:
             bt_scorers.append(make_field_scorer(field_name))
             field_type = field_types.get(field_name) or "name"
             if is_entity_list(field_type):
                 bt_scorers.append(make_list_f1_scorer(field_name))
+                bt_scorers.append(make_list_precision_scorer(field_name))
+                bt_scorers.append(make_list_verified_precision_scorer(field_name))
 
     def _report_eval(evaluator, result, verbose, jsonl):
         failures = [r for r in result.results if r.error]
@@ -392,7 +487,9 @@ def main_with_args(argv: list[str]) -> int:
         args.project,
         data=lambda: [
             {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
-                       "doc_text": d["doc_text"], "expected_fields": d["expected_fields"]},
+                       "doc_text": d["doc_text"], "expected_fields": d["expected_fields"],
+                       "expected_presence": d.get("expected_presence") or {},
+                       "doc_category": d.get("doc_category")},
              "expected": {
                  "doc_type": d["expected"],
                  "expected_fields": d["expected_fields"],
@@ -454,12 +551,24 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
         ]
         return round(mean(values), 4) if values else None
 
+    def _mean_audit(outputs: list[dict], field: str, subkey: str) -> float | None:
+        values = [
+            float(((o.get("entity_list_audit") or {}).get(field) or {}).get(subkey) or 0.0)
+            for o in outputs
+            if ((o.get("entity_list_audit") or {}).get(field) or {}).get(subkey) is not None
+        ]
+        return round(mean(values), 4) if values else None
+
     rows = [r for r in result.results if r.error is None and isinstance(r.output, dict)]
     ok_outputs = [r.output for r in rows if not r.output.get("error")]
     per_field = {f: _mean_field(ok_outputs, "field_scores", f) for f in scored_fields}
     per_field = {f: v for f, v in per_field.items() if v is not None}
     entity_f1 = {f: _mean_field(ok_outputs, "entity_list_f1", f) for f in scored_fields}
     entity_f1 = {f: v for f, v in entity_f1.items() if v is not None}
+    verified = {f: _mean_audit(ok_outputs, f, "verified_precision") for f in scored_fields}
+    verified = {f: v for f, v in verified.items() if v is not None}
+    hallucinations = {f: _mean_audit(ok_outputs, f, "hallucination_rate") for f in scored_fields}
+    hallucinations = {f: v for f, v in hallucinations.items() if v is not None}
 
     per_row = []
     for r in result.results:
@@ -474,6 +583,9 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "schema_valid": output.get("schema_valid"),
             "field_scores": output.get("field_scores"),
             "entity_list_f1": output.get("entity_list_f1"),
+            "entity_list_audit": output.get("entity_list_audit"),
+            "overall_verified_precision": output.get("overall_verified_precision"),
+            "category_presence": output.get("category_presence"),
             "ambiguous_fields": output.get("ambiguous_fields"),
             "tokens": usage_by_index.get(index) or {},
         })
@@ -488,6 +600,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
         "data_source": {
             "project": f"{args.dataset_project}/{args.dataset}",
             "ground_truth": "cuad_v1_clause_labels",
+            "ground_truth_mode": "cuad_type_aware",
             "dataset_fingerprint": dataset_fingerprint(dataset),
             "n_samples": len(dataset),
             "sample_requested": args.sample,
@@ -509,8 +622,12 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "overall_extraction_score": _mean_over(ok_outputs, "overall_score"),
             "field_presence": _mean_over(ok_outputs, "field_presence"),
             "schema_valid": _mean_over(ok_outputs, "schema_valid"),
+            "overall_verified_precision": _mean_over(ok_outputs, "overall_verified_precision"),
+            "category_presence": _mean_over(ok_outputs, "category_presence"),
             "per_field": per_field,
             "entity_list_f1": entity_f1,
+            "verified_precision": verified,
+            "hallucination_rate": hallucinations,
         },
         "n_rows": len(result.results),
         "n_ok": len(ok_outputs),

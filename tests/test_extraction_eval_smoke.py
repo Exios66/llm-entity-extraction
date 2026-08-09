@@ -140,12 +140,15 @@ def test_extraction_loop_wiring(fake_extraction_eval, monkeypatch, tmp_path):
     assert fake_extraction_eval.kwargs["metadata"]["scoring"] == "field_type_aware_content_scoring"
     assert fake_extraction_eval.kwargs["metadata"]["prompt_version"] == "contracts_specialist_v2"
     # Cross-experiment trackers: the default registers the complex content
-    # accuracy + binary conformance lookups (no recompute on Braintrust side).
+    # accuracy + binary conformance + factuality-guard + CUAD YES/NO category
+    # conformance lookups (no recompute on Braintrust side).
     assert fake_extraction_eval.kwargs["metadata"]["bt_scores"] == "overall"
     names = set(fake_extraction_eval.scores)
     assert "overall_extraction_score" in names
     assert "field_presence" in names
-    assert len(fake_extraction_eval.kwargs["scores"]) == 2  # just the tracker pair
+    assert "overall_verified_precision" in names
+    assert "category_presence" in names
+    assert len(fake_extraction_eval.kwargs["scores"]) == 4  # the tracker quartet
 
     # Expected fields were derived from the CUAD clause labels.
     row_input = fake_extraction_eval.kwargs["data"]()[0]["input"]
@@ -161,6 +164,17 @@ def test_extraction_loop_wiring(fake_extraction_eval, monkeypatch, tmp_path):
     assert output["field_scores"]["governing_law"] == 1.0
     assert output["field_scores"]["effective_date"] == 1.0
     assert output["entity_list_f1"]["parties"] == pytest.approx(0.5)
+    # Raw precision/recall/F1 audit detail rides alongside the tracker values.
+    audit = output["entity_list_scores"]["parties"]
+    assert audit["precision"] == pytest.approx(0.5)
+    assert audit["recall"] == pytest.approx(0.5)
+    assert audit["f1"] == pytest.approx(0.5)
+    assert audit["n_predicted"] == 2
+    # Factuality guard runs against the document text (present in the row).
+    fact = output["entity_list_audit"]["parties"]
+    assert fact["n_predicted"] == 2
+    assert fact["matched_gt"] == 1
+    assert fact["verified_precision"] > 0.0
     assert 0.0 < output["overall_score"] < 1.0
     assert output["field_presence"] == 1.0  # all 4 expected fields populated
     assert output["schema_valid"] == 1.0

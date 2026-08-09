@@ -49,8 +49,9 @@ def test_specialist_extract_normalizes(mocker):
         return_value={"parties": ["Acme Inc."]},  # confidence etc. omitted by the model
     )
     result = specialist.extract("contract text")
-    # Confidence is backfilled from the share of fields actually found (1/8).
-    assert result["confidence"] == pytest.approx(0.125)
+    # Confidence is backfilled from the share of fields actually found
+    # (1 of the 9 schema fields, rounded to 4 decimals).
+    assert result["confidence"] == pytest.approx(1 / 9, abs=1e-4)
     assert result["key_obligations"] == []
     assert result["parties"] == ["Acme Inc."]
 

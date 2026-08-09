@@ -51,14 +51,15 @@ def normalize_extraction(result: dict, schema: dict) -> dict:
 # =============================================================================
 
 CONTRACTS_SCHEMA = build_structured_schema({
+    "document_name": _nullable_string("The name of the contract (e.g. 'Web Hosting Agreement')"),
     "parties": _string_array("The names of the contracting parties"),
-    "effective_date": _nullable_string("mm/dd/yyyy"),
-    "term_length": _nullable_string("The duration or term of the agreement"),
-    "termination_clauses": _string_array("Conditions under which the agreement can be terminated"),
-    "governing_law": _nullable_string("The jurisdiction whose laws govern the agreement"),
-    "key_obligations": _string_array("Major obligations of each party"),
+    "effective_date": _nullable_string("YYYY-MM-DD (ISO)"),
+    "term_length": _nullable_string("The full duration or term of the agreement, including any riders"),
+    "termination_clauses": _string_array("Conditions under which the agreement can be terminated (verbatim operative language)"),
+    "governing_law": _nullable_string("The jurisdiction whose laws govern the agreement (governing-law sentence only)"),
+    "key_obligations": _string_array("Major obligations of each party (verbatim operative language, one item per obligation)"),
     "contract_value": _nullable_string("The monetary value or consideration"),
-    "renewal_terms": _nullable_string("Terms regarding automatic renewal"),
+    "renewal_terms": _nullable_string("Renewal, extension, or rollover terms (automatic or otherwise)"),
     "confidence": {
         "type": "number", "minimum": 0.0, "maximum": 1.0,
         "description": "Evidence-grounded extraction confidence (share of fields found, "
@@ -148,11 +149,21 @@ class _SpecialistBase(BaseAgent):
     """Shared extract() implementation over a per-class schema."""
 
     schema: dict
+    handoff_context: str | None = None
 
     def extract(self, doc_text: str) -> dict:
         truncated = self.truncate_input(doc_text)
+        # When the sorter hands this document off, its classification is
+        # prefixed to the extraction call so the specialist extracts with the
+        # expected clause set in mind (mailroom chained pipeline).
+        user_message = f"Extract fields from this {self._doc_label} document:\n\n{truncated}"
+        if self.handoff_context:
+            user_message = (
+                f"{self.handoff_context}\n\n"
+                f"Extract fields from this {self._doc_label} document:\n\n{truncated}"
+            )
         result = self._call_structured(
-            f"Extract fields from this {self._doc_label} document:\n\n{truncated}",
+            user_message,
             json_schema=self.schema,
             temperature=0.1,
         )

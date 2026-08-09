@@ -7,6 +7,8 @@ evaluation loops can test exactly one prompt version per Braintrust experiment.
 
 from __future__ import annotations
 
+import re
+
 import structlog
 from agents.base_agent import BaseAgent, build_structured_schema
 from src.prompts import get_prompt
@@ -24,9 +26,106 @@ DOC_CLASSES = [
 
 DOC_CLASS_KEYS = [d["key"] for d in DOC_CLASSES]
 
+# The CONTRACT SUBGROUP dimension (CUAD corpus, 25 contract types): the
+# finer-grained family of agreement a contract belongs to. The sorter outputs
+# ``contract_subtype`` alongside ``doc_type`` so the mailroom knows which
+# specialist expectations apply (per the CUAD dataset card, the group a
+# document belongs to decides what fields to expect). Keys are normalized
+# folder names from the CUAD tree; "other" is the fallback for contracts that
+# fit none of the listed families.
+CONTRACT_SUBTYPES = [
+    {"key": "affiliate", "label": "Affiliate Agreement", "description": "Affiliate/referral program agreements"},
+    {"key": "agency", "label": "Agency Agreement", "description": "Agency representation agreements"},
+    {"key": "collaboration", "label": "Collaboration / Cooperation Agreement", "description": "R&D and cooperation collaborations"},
+    {"key": "co_branding", "label": "Co-Branding Agreement", "description": "Co-branded marketing/product agreements"},
+    {"key": "consulting", "label": "Consulting Agreement", "description": "Consulting and advisory services"},
+    {"key": "development", "label": "Development Agreement", "description": "Product/software/services development"},
+    {"key": "distributor", "label": "Distributor Agreement", "description": "Distribution and resale rights"},
+    {"key": "endorsement", "label": "Endorsement Agreement", "description": "Endorsements and endorsement riders: celebrity/influencer deals, product or service endorsements, and endorsement riders or amendments attached to insurance, annuity, or other agreements"},
+    {"key": "franchise", "label": "Franchise Agreement", "description": "Franchise rights and operations"},
+    {"key": "hosting", "label": "Hosting Agreement", "description": "Web/application hosting services"},
+    {"key": "ip", "label": "IP Agreement", "description": "Intellectual property transfer/license agreements"},
+    {"key": "joint_venture", "label": "Joint Venture Agreement", "description": "Joint venture and project collaborations"},
+    {"key": "license", "label": "License Agreement", "description": "Licensing of technology, content, or IP"},
+    {"key": "maintenance", "label": "Maintenance Agreement", "description": "Maintenance and support services"},
+    {"key": "manufacturing", "label": "Manufacturing Agreement", "description": "Manufacturing and supply of goods"},
+    {"key": "marketing", "label": "Marketing Agreement", "description": "Marketing and promotion services"},
+    {"key": "non_compete_no_solicit", "label": "Non-Compete / No-Solicit / Non-Disparagement Agreement", "description": "Restrictive-covenant agreements"},
+    {"key": "outsourcing", "label": "Outsourcing Agreement", "description": "Business-process outsourcing"},
+    {"key": "promotion", "label": "Promotion Agreement", "description": "Promotional services and campaigns"},
+    {"key": "reseller", "label": "Reseller Agreement", "description": "Reseller and value-added distribution"},
+    {"key": "service", "label": "Service Agreement", "description": "General professional/support services"},
+    {"key": "sponsorship", "label": "Sponsorship Agreement", "description": "Sponsorship of events/content"},
+    {"key": "strategic_alliance", "label": "Strategic Alliance Agreement", "description": "Strategic alliances and partnerships"},
+    {"key": "supply", "label": "Supply Agreement", "description": "Supply of goods or materials"},
+    {"key": "transportation", "label": "Transportation Agreement", "description": "Transportation and logistics services"},
+]
+
+CONTRACT_SUBTYPE_KEYS = [s["key"] for s in CONTRACT_SUBTYPES]
+
+# Folder-name aliases from the CUAD tree -> canonical subtype key.
+_SUBTYPE_ALIASES = {
+    "affiliate_agreements": "affiliate",
+    "affiliate_agreement": "affiliate",
+    "agency_agreements": "agency",
+    "co_branding": "co_branding",
+    "collaboration": "collaboration",
+    "consulting_agreements": "consulting",
+    "development": "development",
+    "distributor": "distributor",
+    "endorsement": "endorsement",
+    "endorsement_agreement": "endorsement",
+    "franchise": "franchise",
+    "hosting": "hosting",
+    "ip": "ip",
+    "joint_venture": "joint_venture",
+    "joint_venture_filing": "joint_venture",
+    "license_agreements": "license",
+    "maintenance": "maintenance",
+    "manufacturing": "manufacturing",
+    "marketing": "marketing",
+    "non_compete_non_solicit": "non_compete_no_solicit",
+    "outsourcing": "outsourcing",
+    "promotion": "promotion",
+    "reseller": "reseller",
+    "service": "service",
+    "sponsorship": "sponsorship",
+    "strategic_alliance": "strategic_alliance",
+    "supply": "supply",
+    "transportation": "transportation",
+}
+
+SUBTYPE_UNKNOWN = "other"
+
+
+def normalize_subtype(value) -> str:
+    """Coerce a raw sorter subtype output (or a CUAD folder name) to a
+    canonical subtype key; unknown/non-contract values become ``other``."""
+    if value is None:
+        return SUBTYPE_UNKNOWN
+    key = re.sub(r"[^a-z0-9]", "", str(value).strip().lower())
+    if not key:
+        return SUBTYPE_UNKNOWN
+    if key in CONTRACT_SUBTYPE_KEYS:
+        return key
+    if key in _SUBTYPE_ALIASES:
+        return _SUBTYPE_ALIASES[key]
+    # "License Agreement" -> "license"; "Non-Compete" -> non_compete_no_solicit.
+    for subtype in CONTRACT_SUBTYPES:
+        norm_label = re.sub(r"[^a-z0-9]", "", subtype["label"].lower())
+        if key == norm_label or key.startswith(norm_label[:8]):
+            return subtype["key"]
+    return SUBTYPE_UNKNOWN
+
 SORTER_SCHEMA = build_structured_schema(
     {
         "doc_type": {"type": "string", "enum": DOC_CLASS_KEYS},
+        "contract_subtype": {
+            "type": ["string", "null"],
+            "enum": CONTRACT_SUBTYPE_KEYS + [SUBTYPE_UNKNOWN],
+            "description": "The contract family/subgroup — REQUIRED when doc_type is "
+                           "contract, null otherwise. See the subtype list in the prompt.",
+        },
         "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         "reasoning": {"type": "string"},
     },
@@ -65,7 +164,14 @@ class SorterAgent(BaseAgent):
             f"- {d['key']}: {d['label']} — {d['description']}"
             for d in DOC_CLASSES
         )
-        return base_prompt.replace("{{doc_type_descriptions}}", doc_type_descriptions)
+        base_prompt = base_prompt.replace("{{doc_type_descriptions}}", doc_type_descriptions)
+        if "{{contract_subtypes}}" not in base_prompt:
+            return base_prompt
+        contract_subtypes = "\n".join(
+            f"- {s['key']}: {s['label']} — {s['description']}"
+            for s in CONTRACT_SUBTYPES
+        )
+        return base_prompt.replace("{{contract_subtypes}}", contract_subtypes)
 
     def classify(self, doc_text: str) -> tuple[str, float, str]:
         """Classify a document and return (doc_type, confidence, reasoning).
@@ -85,19 +191,23 @@ class SorterAgent(BaseAgent):
 
         if result.get("_parse_error"):
             logger.error("sorter_parse_error")
-            return ("correspondence", 0.3, "parse error — defaulting to correspondence")
+            return ("correspondence", SUBTYPE_UNKNOWN, 0.3, "parse error — defaulting to correspondence")
 
         doc_type = result.get("doc_type", "correspondence")
         if doc_type not in DOC_CLASS_KEYS:
             doc_type = "correspondence"
+        contract_subtype = normalize_subtype(
+            result.get("contract_subtype") if doc_type == "contract" else None
+        )
         try:
             confidence = float(result.get("confidence", 0.5))
         except (TypeError, ValueError):
             confidence = 0.5
         reasoning = result.get("reasoning", "")
 
-        logger.info("classified", doc_type=doc_type, confidence=confidence)
-        return (doc_type, confidence, reasoning)
+        logger.info("classified", doc_type=doc_type, contract_subtype=contract_subtype,
+                    confidence=confidence)
+        return (doc_type, contract_subtype, confidence, reasoning)
 
     def classify_json(self, doc_text: str) -> dict:
         """Classify and return the raw structured dict (used by eval loops)."""
@@ -108,7 +218,14 @@ class SorterAgent(BaseAgent):
             temperature=0.1,
         )
         if result.get("_parse_error"):
-            return {"doc_type": "correspondence", "confidence": 0.3, "reasoning": "parse error"}
+            return {"doc_type": "correspondence", "contract_subtype": None,
+                    "confidence": 0.3, "reasoning": "parse error"}
+        doc_type = result.get("doc_type", "correspondence")
+        if doc_type not in DOC_CLASS_KEYS:
+            doc_type = "correspondence"
+        result["contract_subtype"] = normalize_subtype(
+            result.get("contract_subtype") if doc_type == "contract" else None
+        )
         return result
 
     # ------------------------------------------------------------------

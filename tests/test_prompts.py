@@ -14,9 +14,14 @@ from src.prompts import (
 def test_all_prompt_keys_exist():
     assert "sorter" in PROMPT_VERSIONS
     assert "sorter_v0" in PROMPT_VERSIONS
+    assert "sorter_v1" in PROMPT_VERSIONS
+    assert "sorter_v2" in PROMPT_VERSIONS
     assert "contracts_specialist" in PROMPT_VERSIONS
     assert "contracts_specialist_v1" in PROMPT_VERSIONS
     assert "contracts_specialist_v2" in PROMPT_VERSIONS
+    assert "contracts_specialist_v3" in PROMPT_VERSIONS
+    assert "contracts_specialist_v4" in PROMPT_VERSIONS
+    assert "contracts_specialist_v5" in PROMPT_VERSIONS
     assert "corporate_records_specialist" in PROMPT_VERSIONS
     assert "due_diligence_specialist" in PROMPT_VERSIONS
     assert "correspondence_specialist" in PROMPT_VERSIONS
@@ -27,6 +32,29 @@ def test_all_prompt_keys_exist():
     assert "judge-correctness" in PROMPT_VERSIONS
     assert "boss" in PROMPT_VERSIONS
     assert "reporter" in PROMPT_VERSIONS
+
+
+def test_sorter_v2_hybrid_and_endorsement_rules():
+    prompt = get_prompt("sorter_v2")
+    assert "HYBRID AGREEMENTS" in prompt
+    assert "SUBTYPE CONFIDENCE" in prompt
+    # The endorsement description (injected via {{contract_subtypes}}) is
+    # broadened beyond celebrity deals to include product/insurance riders.
+    from agents.sorter_agent import SorterAgent
+
+    rendered = SorterAgent(prompt_version="sorter_v2").system_prompt()
+    assert "endorsement riders" in rendered
+    assert "{{contract_subtypes}}" in prompt
+
+
+def test_extractor_v5_truncation_and_full_clause_rules():
+    prompt = get_prompt("contracts_specialist_v5")
+    assert "TRUNCATION-AWARE COMPLETENESS" in prompt
+    assert "ninety (90) days" in prompt  # full termination clause incl. riders
+    assert "Governing Law" in prompt
+    # v5 keeps v4's Yes/No category enumeration.
+    assert "anti-assignment" in prompt
+    assert "third-party beneficiary" in prompt
 
 
 def test_contracts_v2_is_completeness_first():
