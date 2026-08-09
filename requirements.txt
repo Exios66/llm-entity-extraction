@@ -1,0 +1,31 @@
+# Mailroom prompt experiment loop — runtime dependencies.
+# Python 3.10+ (tested on 3.13).
+
+# LLM framework
+langchain-core>=1.0
+langchain-openai>=0.3
+openai>=1.60
+
+# LLM provider calls
+requests>=2.32.0
+python-dotenv>=1.0.0
+
+# Braintrust evaluation + LangChain tracing integration
+braintrust>=0.31
+
+# Config / logging
+PyYAML>=6.0
+structlog>=24.0
+
+# Document image processing (vision classification path)
+Pillow>=10.4.0
+
+# Data / reporting
+pandas>=2.0.0
+numpy>=1.26.0
+matplotlib>=3.9.0
+pyarrow>=15.0.0
+
+# Dev / test
+pytest>=8.0
+pytest-mock>=3.14
