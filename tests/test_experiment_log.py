@@ -95,3 +95,80 @@ def test_git_snapshot_runs_in_repo():
     assert "commit" in snapshot
     assert isinstance(snapshot["commit"], str) and snapshot["commit"]
     assert isinstance(snapshot["dirty"], bool)
+
+
+def test_experiment_markdown_renders_score_tables():
+    from src.experiment_log import experiment_markdown
+
+    record = {
+        "experiment_name": "exp_scores",
+        "task": "contract_entity_extraction",
+        "model": "m",
+        "scores": {
+            "overall_extraction_score": 0.8123,
+            "field_presence": 0.9,
+            "per_field": {"parties": 0.5, "governing_law": 1.0},
+            "entity_list_f1": {"parties": 0.5},
+        },
+        "results": [
+            {"filename": "a.pdf", "status": "completed", "overall_score": 0.8123,
+             "field_presence": 0.9, "schema_valid": 1.0,
+             "field_scores": {"parties": 0.5, "governing_law": 1.0},
+             "entity_list_f1": {"parties": 0.5}},
+            {"filename": "b.pdf", "status": "completed", "overall_score": 0.6,
+             "field_presence": 1.0, "schema_valid": 1.0,
+             "field_scores": {"parties": 1.0, "governing_law": 1.0},
+             "entity_list_f1": {"parties": 1.0}},
+        ],
+    }
+    text = experiment_markdown(record)
+    # Headline scores lead, then per-field breakdown tables.
+    assert "| overall_extraction_score | 0.8123 |" in text
+    assert "**Scores — per_field**" in text
+    # Full scoring calculation: document x field matrix with a mean column.
+    assert "Per-field content scores (document x field)" in text
+    assert "| parties | 0.5 | 1 |" in text
+    assert "| mean |" in text
+
+
+def test_experiment_markdown_renders_confusion_matrix():
+    from src.experiment_log import experiment_markdown
+
+    record = {
+        "experiment_name": "exp_class",
+        "task": "sorter_classification",
+        "results": [
+            {"filename": "a", "status": "completed", "expected": "contract",
+             "predicted": "contract", "correct": True},
+            {"filename": "b", "status": "completed", "expected": "contract",
+             "predicted": "correspondence", "correct": False},
+            {"filename": "c", "status": "completed", "expected": "correspondence",
+             "predicted": "correspondence", "correct": True},
+        ],
+    }
+    text = experiment_markdown(record)
+    assert "Confusion matrix (expected x predicted)" in text
+    assert "| contract | **1** | 1 |" in text
+    assert "| correspondence | 0 | **1** |" in text
+
+
+def test_render_full_log_has_index_and_sections():
+    from src.experiment_log import render_full_log
+
+    records = [
+        {"experiment_name": "one", "task": "t1", "model": "m",
+         "scores": {"exact_match": 0.5}, "n_rows": 2,
+         "tokens": {"total_tokens": 100},
+         "results": [{"filename": "a", "status": "completed"}]},
+        {"experiment_name": "two", "task": "t2", "model": "m",
+         "scores": {"overall_extraction_score": 0.75}, "n_rows": 3,
+         "tokens": {"total_tokens": 200},
+         "results": [{"filename": "b", "status": "completed"}]},
+    ]
+    text = render_full_log(records)
+    assert text.startswith("# Experiment Log")
+    assert "## Index" in text
+    assert "| 1 | one |" in text
+    assert "| 2 | two |" in text
+    assert "## one  (t1)" in text
+    assert "## two  (t2)" in text
