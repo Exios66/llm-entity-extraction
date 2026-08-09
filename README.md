@@ -316,12 +316,17 @@ prompt, response, tokens, latency are all visible in the UI.
 python -m pytest tests/ -v
 ```
 
-180 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
+183 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
 helpers, config loading, field scoring, CUAD ground truth, page voting, the
 chained/extraction/classification eval smoke loops, and the streamer parsers
 are all mocked.
 
-## Agent docs
+## Docs
 
-See `AGENTS.md` for the full agent workflow: architecture, command cheatsheet,
-conventions, and gotchas.
+- `SCORING.md` — every scorer and metric: classification, binary, multiclass,
+  field-type-aware content scoring, factuality audit, chained stage trackers,
+  A/B deltas, token/cost accounting.
+- `CHANGELOG.md` — semantic-version history of all significant releases
+  (each tagged `vX.Y.Z`).
+- `AGENTS.md` — the agent workflow guide: setup, commands, architecture,
+  conventions, and gotchas.

@@ -106,6 +106,11 @@ Key modules:
 
 ## Scoring model (read before touching scorers)
 
+The canonical, formula-level reference for every scorer and metric is
+**`SCORING.md`** (classification, binary, multiclass, field-type-aware content
+scoring, factuality audit, chained stage trackers, A/B deltas, token/cost
+accounting). The rules below are the invariants:
+
 - **Content accuracy** — per-field deterministic scores by type
   (see README "Scoring"); entity lists via optimal bipartite matching
   (Hungarian) over pairwise similarity, threshold 0.6.
@@ -178,7 +183,7 @@ Key modules:
 - New streamer parsing → `test_cuad_streamer.py` /
   `test_legalbench_streamer.py` / `test_streamers.py`.
 - Run the full suite before committing: `python -m pytest tests/ -q`
-  (currently 180 tests, all passing).
+  (currently 183 tests, all passing).
 
 ## Gotchas
 
