@@ -344,6 +344,10 @@ def _with_embedding_rescue(string_score: float, pred, exp, embedding) -> float:
     string-level reject. Fetches the matcher lazily when not provided."""
     if string_score >= get_embedding_rescue_below():
         return string_score
+    # Empty predictions/labels are never "rescued" by embeddings — a blank
+    # answer must stay a miss, not pick up cosine noise (~0.4-0.5 vs any text).
+    if not str(pred).strip() or not str(exp).strip():
+        return string_score
     if embedding is None:
         embedding = _get_embedding()
     if embedding is None:
