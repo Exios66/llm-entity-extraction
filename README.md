@@ -60,7 +60,12 @@ field_scoring:`):
 
 `name`/`free_text` also use embedding cosine similarity
 (`sentence-transformers/all-MiniLM-L6-v2`, lazy, graceful degradation) as a
-second signal when the string score is ambiguous.
+second signal when the string score is ambiguous (below the `embedding_rescue_below`
+threshold). The embedder prefers the local model and falls back to OpenRouter
+embeddings (`openai/text-embedding-3-small`) when sentence-transformers is not
+installed or the model cannot load — so the rescue works with a plain
+`pip install -r requirements.txt` too. Empty predictions/labels are never
+rescued by embeddings: a blank answer stays a miss.
 
 Ground truth follows the CUAD dataset card (`theatticusproject/cuad`): all 41
 clause categories are modeled — 9 string-answer categories map to schema
@@ -100,6 +105,7 @@ scripts/
     stream_cuad_to_bt.py            CUAD v1: 510 contract PDFs, every page rendered
     stream_legalbench_to_bt.py      MAUD v1: 139 agreements + 13k-row classification suite
     stream_legalbench_tasks_to_bt.py 60+ LegalBench classification tasks
+    download_cuad_pdfs.py           full CUAD v1 corpus (PDFs + CUAD_v1.json) to data/cuad_pdfs/
   eval/                  the experiment loops
     run_classification_eval.py      one prompt, text/vision/task modes, local PDFs
     run_extraction_eval.py          contracts specialist vs CUAD ground truth
@@ -112,7 +118,7 @@ scripts/
     confusion_matrix.py             PNG + CSV confusion matrix from Braintrust
     score_extraction_manifest.py    post-hoc extraction scoring from a manifest
     render_experiment_log.py        rebuild the markdown log from the JSONL source
-tests/                   unit tests (180, no network)
+tests/                   unit tests (183, no network)
 ```
 
 ## Experiment log
@@ -153,12 +159,26 @@ Paths default to `reports/experiment_log.{jsonl,md}` and are overridable with
 ## Setup
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # recommended; .venv/ is gitignored
 pip install -r requirements.txt
 # vision pipeline needs poppler for PDF -> PNG rendering:
 brew install poppler   (or apt install poppler-utils)
 cp braintrust.env.example braintrust.env   # fill in creds (org/project/API key)
 cp .env.example .env                       # fill in OPENROUTER_API_KEY
 ```
+
+Optional — local semantic embedding rescue (recommended): install
+`sentence-transformers` to embed with the local `all-MiniLM-L6-v2` model
+(free, fast, offline, reproducible) instead of paid OpenRouter embedding calls:
+
+```bash
+pip install sentence-transformers   # pulls torch (~2-3 GB)
+```
+
+Both routes are verified and interchangeable: the scorer uses the local model
+when available and falls back to OpenRouter embeddings automatically when it
+isn't. Without sentence-transformers, the rescue still works (OpenRouter
+fallback, tiny per-request cost); with it, nothing is sent to the network.
 
 Required env vars (in `braintrust.env` or `.env`; see `src/env_utils.py`):
 
@@ -194,6 +214,17 @@ python scripts/datasets/stream_legalbench_to_bt.py
 #    from the GitHub raw data — one Braintrust dataset per task
 python scripts/datasets/stream_legalbench_tasks_to_bt.py --dry-run
 python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks all
+
+# OPTIONAL — keep the FULL CUAD corpus locally instead of streaming to Braintrust:
+# all 510 contract PDFs (CUAD folder structure preserved) + CUAD_v1.json clause
+# QA annotations, mirrored into data/cuad_pdfs/. Resumable: re-running skips
+# already-downloaded files. Feed the local PDFs to the eval loop with --pdf-dir.
+python scripts/datasets/download_cuad_pdfs.py --dry-run      # preview
+python scripts/datasets/download_cuad_pdfs.py --limit 12     # first 12 PDFs
+python scripts/datasets/download_cuad_pdfs.py                # all 510 + CUAD_v1.json
+python scripts/datasets/download_cuad_pdfs.py --category "Franchise"
+python scripts/datasets/download_cuad_pdfs.py --out-dir data/cuad_pdfs --skip-json
+python scripts/datasets/download_cuad_pdfs.py --overwrite    # re-download everything
 ```
 
 ## The loop (one prompt at a time)
@@ -226,8 +257,9 @@ python scripts/eval/evaluate_prompt_version.py \
 # ---- Entity EXTRACTION eval (contracts specialist vs CUAD ground truth) ----
 # Content-scored: every extracted field is compared against the CUAD clause-QA
 # labels with the field-type-aware scorer (date/money/name/free-text,
-# entity-list bipartite F1, semantic embedding rescue via OpenRouter
-# embeddings). The task computes ALL scores locally and returns a composite
+# entity-list bipartite F1, semantic embedding rescue — local
+# sentence-transformers with an OpenRouter embedding fallback). The task
+# computes ALL scores locally and returns a composite
 # output; registered Braintrust scorers are trivial lookups on it.
 # Default --bt-scores overall registers the cross-experiment tracker pair:
 # overall_extraction_score (complex content accuracy) + field_presence
@@ -287,10 +319,10 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 
 | Family | Versions |
 |---|---|
-| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2` |
+| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
-| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v5` |
+| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v8` |
 | Other specialists | `corporate_records_specialist`, `due_diligence_specialist`, `correspondence_specialist`, `compliance_specialist`, `court_opinions_specialist` |
 | Agents / judges | `boss`, `reporter`, `judge`, `judge-classification`, `judge-correctness` |
 | PDF | `pdf_transcriber` |

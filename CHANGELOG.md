@@ -6,6 +6,67 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.10.0] - 2026-08-09
+
+### Added
+- `scripts/datasets/download_cuad_pdfs.py` — download the FULL CUAD v1 corpus
+  (all 510 contract PDFs + `CUAD_v1.json` clause QA annotations) into a local
+  subdirectory (`data/cuad_pdfs/` default), preserving the CUAD folder
+  structure so `category_of()` still works locally. Resumable (existing
+  non-empty files are skipped), `--limit`, `--category`, `--out-dir`,
+  `--skip-json`, `--overwrite`, `--dry-run`. Complements the streaming
+  `stream_cuad_to_bt.py`: keeps the PDFs on disk for `--pdf-dir` evals.
+- `.venv` setup with `sentence-transformers` (torch-backed) — the semantic
+  embedding rescue now runs the LOCAL `all-MiniLM-L6-v2` model (free, fast,
+  offline, reproducible) with the OpenRouter `text-embedding-3-small`
+  fallback verified working end-to-end when the local model is unavailable.
+- **Sorter prompt v3** (`sorter_v3`) — hybrid-agreement development
+  preference: when one named family is development AND development machinery
+  is present (development plan, milestones, joint R&D committee, development
+  funding), development wins over the commercial family (matches the CUAD
+  corpus filing convention), and two-family hybrids are capped at 0.85
+  confidence with the runner-up named. Fixes the last sorter subtype error:
+  "Distribution and Development Agreement" → development (was distributor).
+- **Contracts specialist prompts v6–v8** (`contracts_specialist_v6/v7/v8`) —
+  v6 added the term-length definition guard (never answer with a defined
+  term's definition — extract the agreement's own Term clause), per-clause
+  key_obligations granularity, and truncated-tail governing-law scanning.
+  Chained A/B showed v6's granularity rule fragmented single clauses into
+  per-subsection micro-items (eDiets key_obligations 0.92 → 0.69, lost the
+  "Minimum Commitment" GT span); v7's clause-complete counter-fix blew the
+  16k-token output budget on a 122k-char agreement (JSON truncated, row
+  scored 0.0). **v8 is the empirically validated synthesis**: v5's
+  sentence-level granularity restored verbatim, keeping ONLY the two v6 rules
+  that survived (term-length definition guard + truncated-tail governing
+  law).
+- `run_chained_eval.py` default `--max-tokens` raised 16384 → 32768 — full
+  verbatim extraction of 50+ clauses on long agreements exceeds 16k tokens,
+  which truncated the JSON and zeroed rows.
+
+### Changed
+- **Embedding rescue guard** (`src/field_scoring.py`, `_with_embedding_rescue`):
+  empty/whitespace predictions or labels are never rescued by embeddings — a
+  blank answer stays a miss. Previously an empty prediction could be inflated
+  to ~0.45 by cosine similarity to any text once a real embedder was
+  available; the bug only surfaced when the local sentence-transformers route
+  became active (the OpenRouter fallback silently failed under the fake test
+  key). Test suite still fully network-free, 183 tests passing.
+- **Chained eval post-mortem (v2+v5 vs v3+v8, same 5-doc sample, seed 42)**:
+  sorter subtype accuracy 0.8 → **1.0** (the Ritter hybrid fix, confidence
+  correctly capped at 0.85); extractor overall 0.9165 → 0.8933, with the
+  entire delta coming from the Phasebio 292k-char agreement whose ground-truth
+  governing law (char 276k), term clause (char 196k), cap-on-liability
+  (char 283k), and non-compete (char 109k) all sit beyond the 100k input cap —
+  a pipeline truncation limit, not a prompt failure (all extractions remain
+  100% verified, zero hallucinations). eDiets key_obligations varies 0.69–0.92
+  run-to-run on identical prompt semantics (51 items, ±2 GT-span matches) —
+  stochastic, not prompt-driven.
+- `README.md` — setup documents the `.venv` + optional `sentence-transformers`
+  install and both embedding routes; the corpus-sync section documents
+  `download_cuad_pdfs.py`; layout adds the new streamer; prompt table lists
+  `sorter_v3` and `contracts_specialist_v6/v7/v8`; test count fixed to 183 in
+  the layout tree.
+
 ## [v0.9.0] - 2026-08-09
 
 ### Added
@@ -187,6 +248,7 @@ history of the repository's tags. Format follows
 - Repository bootstrap: `.gitattributes`, initial `README.md` scaffold.
 
 [Unreleased]: https://github.com/Exios66/llm-entity-extraction
+[v0.10.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.10.0
 [v0.9.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.9.0
 [v0.8.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.8.0
 [v0.7.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.7.0

@@ -90,7 +90,9 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--extractor-prompt-version", default="contracts_specialist_v4",
                         help="Contracts specialist prompt version (extraction)")
     parser.add_argument("--temperature", type=float, default=0.1, help="Sampling temperature")
-    parser.add_argument("--max-tokens", type=int, default=16384, help="Max output tokens")
+    parser.add_argument("--max-tokens", type=int, default=32768,
+                        help="Max output tokens (extraction of 50+ verbatim clauses on long "
+                             "agreements exceeds 16k — 16,384 truncates the JSON)")
     parser.add_argument("--reasoning-effort", default="none",
                         help="Reasoning effort for the extraction call")
     parser.add_argument("--max-input-chars", type=int, default=100_000,
