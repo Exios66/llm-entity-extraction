@@ -423,7 +423,30 @@ def experiment_markdown(record: dict) -> str:
         lines.append("### Per-document results")
         lines.append("")
         first = results[0]
-        if "sorter" in first and "extractor_scores" in first:
+        if task == "subtype_classification" or (
+                "sorter" in first and "extractor_scores" not in first):
+            # Sorter-only subtype classification shape.
+            header = ["#", "Document", "Status", "doc_type", "subtype",
+                      "expected subtype", "doc_type ok", "subtype ok",
+                      "equiv ok", "confidence", "failure mode", "error"]
+            rows = []
+            for i, row in enumerate(results):
+                sorter = row.get("sorter") or {}
+                rows.append([
+                    f"d{i + 1}",
+                    _fmt(row.get("filename"), max_len=90),
+                    row.get("status", "—"),
+                    _fmt(sorter.get("doc_type")),
+                    _fmt(sorter.get("contract_subtype")),
+                    _fmt(sorter.get("expected_subtype")),
+                    _fmt(sorter.get("doc_type_ok")),
+                    _fmt(sorter.get("subtype_ok")),
+                    _fmt(sorter.get("subtype_ok_equiv")),
+                    _fmt(sorter.get("confidence")),
+                    _fmt(sorter.get("failure_mode")),
+                    _fmt(row.get("error")),
+                ])
+        elif "sorter" in first and "extractor_scores" in first:
             header = ["#", "Document", "Status", "doc_type", "subtype",
                       "subtype ok", "confidence", "extraction score",
                       "field presence", "error"]
@@ -556,6 +579,48 @@ def experiment_markdown(record: dict) -> str:
                   _fmt(row.get("correct"))]
                  for i, row in enumerate(results)]))
             lines.append("")
+
+    # ------------------------------------------- subtype accuracy by class
+    if task == "subtype_classification":
+        per_subtype = (record.get("scores") or {}).get("sorter", {}).get("per_subtype") or {}
+        if per_subtype:
+            lines.append("### Subtype classification accuracy by class")
+            lines.append("")
+            lines.extend(_md_table(
+                ["Subtype", "Correct", "Correct (equiv)", "Total",
+                 "Accuracy", "Accuracy (equiv)"],
+                [[_fmt(k), _fmt(v.get("correct")), _fmt(v.get("equiv")),
+                  _fmt(v.get("total")), _fmt(v.get("accuracy")),
+                  _fmt(v.get("accuracy_equiv"))]
+                 for k, v in sorted(per_subtype.items())]))
+            lines.append("")
+
+        # -------------------------------- failed-classification insights
+        insights = (record.get("scores") or {}).get("sorter", {}).get("failure_insights") or {}
+        failures = insights.get("failures") or []
+        if failures:
+            lines.append("### Failed classification insights")
+            lines.append("")
+            lines.append("The model's own reasoning on every failed row — the "
+                         "evidence it cited for the wrong family, and the failure "
+                         "mode that explains WHY it missed:")
+            lines.append("")
+            mode_counts = insights.get("mode_counts") or {}
+            if mode_counts:
+                lines.extend(_md_table(
+                    ["Failure mode", "Count"],
+                    [[_fmt(k), _fmt(v)] for k, v in sorted(mode_counts.items())]))
+                lines.append("")
+            for i, f in enumerate(failures):
+                lines.append(f"**{i + 1}. {_fmt(f.get('filename'), max_len=110)}** — "
+                             f"expected `{f.get('expected')}` vs predicted "
+                             f"`{f.get('predicted')}` "
+                             f"({f.get('doc_type')}, conf {_fmt(f.get('confidence'))}) "
+                             f"— mode: `{f.get('mode')}`"
+                             f"{' — RECOVERED by family equivalence' if f.get('equiv_recovered') else ''}")
+                lines.append("")
+                lines.append(f"> {_fmt(f.get('reasoning'), max_len=4000)}")
+                lines.append("")
 
     return "\n".join(lines)
 

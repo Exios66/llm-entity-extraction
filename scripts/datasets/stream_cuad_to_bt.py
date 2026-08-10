@@ -259,6 +259,7 @@ def build_records(
     api_key: str,
     clause_labels: dict[str, dict] | None = None,
     max_pages: int = 20,
+    text_only: bool = False,
     on_progress=None,
 ) -> list[dict]:
     """Stream each PDF, render pages, and build ONE record per document.
@@ -267,14 +268,22 @@ def build_records(
     (``pages`` — every rendered page) plus ``image`` (page 1) for the
     single-page vision path, the full contract text, and the CUAD clause QA
     ground truth (``expected_output``) for the extraction agent.
+
+    With ``text_only=True`` the PDFs are NOT fetched or rendered: rows carry
+    the CUAD_v1.json contract text + category metadata only — the cheap,
+    poppler-free path for building the full-corpus TEXT dataset (used by the
+    sorter-only subtype eval, which classifies on text).
     """
     clause_labels = clause_labels or {}
     records: list[dict] = []
     failures: list[str] = []
     for i, pdf_path in enumerate(pdf_paths):
         try:
-            pdf_bytes = stream_pdf(pdf_path)
-            pages = render_pdf_pages(pdf_bytes, pages_per_doc, target_size, max_pages=max_pages)
+            if text_only:
+                pages: list[bytes] = []
+            else:
+                pdf_bytes = stream_pdf(pdf_path)
+                pages = render_pdf_pages(pdf_bytes, pages_per_doc, target_size, max_pages=max_pages)
         except Exception as exc:  # noqa: BLE001
             failures.append(f"{pdf_path}: {type(exc).__name__}: {exc}")
             continue
@@ -379,6 +388,10 @@ def main() -> int:
                         metavar=("W", "H"), help=f"Output image size (default: {DEFAULT_TARGET_SIZE[0]} {DEFAULT_TARGET_SIZE[1]})")
     parser.add_argument("--no-clause-labels", action="store_true",
                         help="Skip merging CUAD_v1.json clause QA ground truth (extraction agent labels)")
+    parser.add_argument("--text-only", action="store_true",
+                        help="Skip PDF fetching/rendering entirely: rows carry the CUAD_v1.json "
+                             "contract TEXT + category metadata only (no poppler, no images) — "
+                             "the cheap path for the full-corpus text dataset")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing to Braintrust")
     args = parser.parse_args()
 
@@ -418,7 +431,8 @@ def main() -> int:
     print(f"Categories: {dict(by_category)}")
 
     if args.dry_run:
-        print(f"\nDry run: {len(pdf_paths)} PDFs (full page sets) would sync as "
+        mode = "text rows (no PDFs)" if args.text_only else "full page sets"
+        print(f"\nDry run: {len(pdf_paths)} PDFs ({mode}) would sync as "
               f"{len(pdf_paths)} document rows to {args.dataset}")
         for p in pdf_paths[:8]:
             print(f"  would sync  {Path(p).name}  ({category_of(p)})")
@@ -426,7 +440,10 @@ def main() -> int:
             print(f"  ... and {len(pdf_paths) - 8} more")
         return 0
 
-    print(f"Streaming {len(pdf_paths)} PDFs, rendering pages...")
+    if args.text_only:
+        print(f"Building {len(pdf_paths)} TEXT-ONLY rows (no PDF fetch/render)...")
+    else:
+        print(f"Streaming {len(pdf_paths)} PDFs, rendering pages...")
     records = build_records(
         pdf_paths,
         pages_per_doc=pages_per_doc,
@@ -434,6 +451,7 @@ def main() -> int:
         api_key=api_key,
         clause_labels=clause_labels,
         max_pages=args.max_pages,
+        text_only=args.text_only,
         on_progress=lambda i, n: print(f"  Processed {i}/{n} PDFs..."),
     )
     if not records:
@@ -441,8 +459,12 @@ def main() -> int:
         return 1
 
     total_pages = sum(r["metadata"]["page_count"] for r in records)
-    print(f"\n{len(records)} documents, {total_pages} pages total "
-          f"({total_pages / max(1, len(records)):.1f} avg pages/doc)")
+    if args.text_only:
+        print(f"\n{len(records)} text documents "
+              f"({total_pages / max(1, len(records)):.1f} avg pages/doc — 0 images)")
+    else:
+        print(f"\n{len(records)} documents, {total_pages} pages total "
+              f"({total_pages / max(1, len(records)):.1f} avg pages/doc)")
     print(f"Uploading {len(records)} document rows to {args.dataset}...")
     summary = upload_dataset(
         records,
@@ -452,7 +474,7 @@ def main() -> int:
         description=f"CUAD v1 contract page images ({len(records)} rows, CC BY 4.0) — doc_type=contract",
         metadata={"source": "cuad_v1", "license": "CC BY 4.0",
                   "pdfs": len(pdf_paths), "pages_per_doc": args.pages_per_doc,
-                  "target_size": list(target_size)},
+                  "target_size": list(target_size), "text_only": args.text_only},
         on_progress=lambda i, n: print(f"  Inserted {i}/{n}..."),
     )
     print(f"\nDone: {summary['inserted']} inserted, {summary['failed']} failed into {args.dataset}")

@@ -95,6 +95,10 @@ def main_with_args(argv: list[str]) -> int:
                              "agreements exceeds 16k — 16,384 truncates the JSON)")
     parser.add_argument("--reasoning-effort", default="none",
                         help="Reasoning effort for the extraction call")
+    parser.add_argument("--sorter-reasoning-effort", default="medium",
+                        help="Reasoning effort for the SORTER's classification call "
+                             "(default: medium — the sorter must weigh operative "
+                             "clauses across 25 near-synonymous families)")
     parser.add_argument("--max-input-chars", type=int, default=100_000,
                         help="Hard safety cap on document text fed to the agents")
     parser.add_argument("--max-concurrency", type=int, default=4, help="Concurrent API calls")
@@ -192,6 +196,7 @@ def main_with_args(argv: list[str]) -> int:
                              prompt_version=args.sorter_prompt_version)
         sorter._max_input_chars = args.max_input_chars
         sorter._max_tokens = min(args.max_tokens, 4096)
+        sorter._reasoning_effort = args.sorter_reasoning_effort
         try:
             sorter_result = sorter.classify_json(doc_text)
         except Exception as exc:  # noqa: BLE001 - one bad row must not abort
@@ -383,6 +388,8 @@ def main_with_args(argv: list[str]) -> int:
             "sorter_prompt": args.sorter_prompt_version,
             "extractor_prompt": args.extractor_prompt_version,
             "model": args.model,
+            "reasoning_effort": args.reasoning_effort,
+            "sorter_reasoning_effort": args.sorter_reasoning_effort,
             "task": "chained_sorter_extractor",
             "ground_truth": "cuad_v1_clause_labels",
             "ground_truth_mode": "cuad_type_aware",
@@ -466,6 +473,7 @@ def log_experiment_to_repo(result, scored_fields, dataset, args, experiment_name
             "temperature": args.temperature,
             "max_tokens": args.max_tokens,
             "reasoning_effort": args.reasoning_effort,
+            "sorter_reasoning_effort": args.sorter_reasoning_effort,
             "max_input_chars": args.max_input_chars,
             "max_concurrency": args.max_concurrency,
             "bt_scores": args.bt_scores,

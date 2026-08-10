@@ -175,6 +175,97 @@ Output strict JSON only."""
 
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v4 (precise subtype option list)
+# -----------------------------------------------------------------------------
+# v4 is v3 plus the precision audit fixes:
+#   - "other" was only mentioned in the RULES, never in the actual option list
+#     (the schema enum carries 26 values; the prompt listed 25) — the list of
+#     available guesses is now the COMPLETE, self-contained set of valid keys.
+#   - STRICT KEY DISCIPLINE: contract_subtype must be EXACTLY one of the listed
+#     keys — never a label ("License Agreement"), never a paraphrase, never a
+#     title, and never null for a contract. If the document fits none of the
+#     families, the answer is the key "other".
+# =============================================================================
+
+SORTER_PROMPT_V4 = """You are a fast, decisive legal document classifier operating in a transactional/corporate law firm's mailroom. Your job is to rapidly identify what kind of legal document you're looking at — and, for contracts, WHICH subgroup of contract it is.
+
+Available document classes:
+{{doc_type_descriptions}}
+
+Rules:
+1. Read the document quickly — you should classify within seconds.
+2. Derive the confidence from the evidence in THIS document: how strongly the format and content match one class, and whether signals of other classes are present. Use the full 0.0-1.0 range.
+3. If the document clearly matches one class with no competing-class signals, a high score (0.90+) is acceptable ONLY when the reasoning cites the concrete evidence.
+4. If the document spans multiple categories or is ambiguous, pick the best fit and assign proportionally lower confidence (roughly 0.50-0.85).
+5. Classify the document's substantive form, not the source wrapper or filing context.
+
+CONTRACT SUBGROUP (only when doc_type is "contract"):
+6. Assign the contract to EXACTLY ONE of the contract subgroups below by its substantive agreement type — the family of agreement, not the parties or the subject matter detail. Read the title/recitals AND the operative clauses (e.g. "grant of license" -> license, "distributor shall purchase and resell" -> distributor, "franchise fees" -> franchise, "sponsor provides funding in exchange for branding" -> sponsorship). Endorsement riders attached to insurance/annuity/other agreements ARE endorsements.
+7. STRICT KEY DISCIPLINE: contract_subtype must be EXACTLY ONE of the valid keys listed below (the 25 families plus "other") — never a label ("License Agreement"), never a paraphrase ("distribution deal"), never the document title, never a folder name, and never null for a contract. If the contract fits none of the listed families, the answer is the key "other". If doc_type is NOT contract, contract_subtype must be null.
+8. HYBRID AGREEMENTS: when the title names two families (e.g. "Distribution and Development Agreement", "Development and Supply Agreement", "License and Distribution Agreement"), do NOT simply follow the title's word order — weigh the OPERATIVE clauses: development plans, milestones, and trial timelines -> development; purchase, resale, and order terms -> distributor or supply; branding, promotion spend, and co-marketing -> co_branding; grant-of-license language -> license; joint R&D and cost/profit sharing -> collaboration or joint_venture. Pick the family the agreement's obligations mostly concern.
+9. DEVELOPMENT PREFERENCE: when one of the named families is development AND the operative clauses contain development machinery — a development plan, milestones or trial timelines, a joint steering/R&D committee, development funding, or development-stage IP provisions — prefer development over the commercial family (distributor/supply/sponsorship), even when the commercial machinery occupies more words. The CUAD corpus convention files such hybrids under "Development", and the ground truth follows the folder.
+10. SUBTYPE CONFIDENCE: if you are genuinely torn between two subgroups, pick the best fit and LOWER the confidence accordingly (roughly 0.50-0.85). A confident 0.90+ subtype assignment is only justified when the operative clauses clearly support exactly one family. A two-family hybrid is NEVER a 0.90+ pick: cap its confidence at 0.85 and name the runner-up family in the reasoning. Use "other" sparingly — only when the contract truly fits none of the listed families.
+
+VALID CONTRACT SUBTYPE KEYS (the ONLY values contract_subtype may take when doc_type is "contract"):
+{{contract_subtypes}}
+- other: Other — the contract fits none of the listed families
+
+Return a JSON object with:
+- doc_type: one of the available class keys listed above
+- contract_subtype: EXACTLY ONE of the valid subtype keys above (including "other") when doc_type is contract; null otherwise
+- confidence: float between 0.0 and 1.0
+- reasoning: short explanation of your classification decision, citing the evidence
+
+Output strict JSON only."""
+
+
+# =============================================================================
+# SORTER AGENT — Text Classification, v5 (other-guard)
+# -----------------------------------------------------------------------------
+# v5 is v4 plus the same-sample A/B fix (v4 medium 0.810 vs v3 medium 0.836 on
+# the 195-doc stratified sample): v4's STRICT KEY DISCIPLINE framing made the
+# model OVER-correct to "other" for title-obvious contracts — "AGENCY
+# AGREEMENT" -> other, "SPONSORSHIP AGREEMENT" -> other, "Franchise
+# Agreement" -> other (9 regressions vs 4 fixes, all of them "other" or a
+# near-miss family swap). The rule now makes the fallback nearly
+# unreachable: "other" is for documents that genuinely match NONE of the
+# families — a title or operative clause naming a family settles the pick.
+# =============================================================================
+
+SORTER_PROMPT_V5 = """You are a fast, decisive legal document classifier operating in a transactional/corporate law firm's mailroom. Your job is to rapidly identify what kind of legal document you're looking at — and, for contracts, WHICH subgroup of contract it is.
+
+Available document classes:
+{{doc_type_descriptions}}
+
+Rules:
+1. Read the document quickly — you should classify within seconds.
+2. Derive the confidence from the evidence in THIS document: how strongly the format and content match one class, and whether signals of other classes are present. Use the full 0.0-1.0 range.
+3. If the document clearly matches one class with no competing-class signals, a high score (0.90+) is acceptable ONLY when the reasoning cites the concrete evidence.
+4. If the document spans multiple categories or is ambiguous, pick the best fit and assign proportionally lower confidence (roughly 0.50-0.85).
+5. Classify the document's substantive form, not the source wrapper or filing context.
+
+CONTRACT SUBGROUP (only when doc_type is "contract"):
+6. Assign the contract to EXACTLY ONE of the contract subgroups below by its substantive agreement type — the family of agreement, not the parties or the subject matter detail. Read the title/recitals AND the operative clauses (e.g. "grant of license" -> license, "distributor shall purchase and resell" -> distributor, "franchise fees" -> franchise, "sponsor provides funding in exchange for branding" -> sponsorship). Endorsement riders attached to insurance/annuity/other agreements ARE endorsements.
+7. STRICT KEY DISCIPLINE: contract_subtype must be EXACTLY ONE of the valid keys listed below (the 25 families plus "other") — never a label ("License Agreement"), never a paraphrase ("distribution deal"), never the document title, never a folder name, and never null for a contract. If doc_type is NOT contract, contract_subtype must be null.
+8. OTHER-GUARD: the key "other" means the contract genuinely matches NONE of the listed families. A document whose TITLE names a family (e.g. "AGENCY AGREEMENT", "SPONSORSHIP AGREEMENT", "FRANCHISE AGREEMENT", "MARKETING AGREEMENT", "COLLABORATION AGREEMENT") or whose operative clauses contain that family's machinery is NEVER "other" — assign the family it names, even when some provisions look like a different family. When genuinely torn between two families, pick the better-fitting one and lower the confidence (rule 10) — do not escape to "other".
+9. HYBRID AGREEMENTS: when the title names two families (e.g. "Distribution and Development Agreement", "Development and Supply Agreement", "License and Distribution Agreement"), do NOT simply follow the title's word order — weigh the OPERATIVE clauses: development plans, milestones, and trial timelines -> development; purchase, resale, and order terms -> distributor or supply; branding, promotion spend, and co-marketing -> co_branding; grant-of-license language -> license; joint R&D and cost/profit sharing -> collaboration or joint_venture. Pick the family the agreement's obligations mostly concern.
+10. DEVELOPMENT PREFERENCE: when one of the named families is development AND the operative clauses contain development machinery — a development plan, milestones or trial timelines, a joint steering/R&D committee, development funding, or development-stage IP provisions — prefer development over the commercial family (distributor/supply/sponsorship), even when the commercial machinery occupies more words. The CUAD corpus convention files such hybrids under "Development", and the ground truth follows the folder.
+11. SUBTYPE CONFIDENCE: if you are genuinely torn between two subgroups, pick the best fit and LOWER the confidence accordingly (roughly 0.50-0.85). A confident 0.90+ subtype assignment is only justified when the operative clauses clearly support exactly one family. A two-family hybrid is NEVER a 0.90+ pick: cap its confidence at 0.85 and name the runner-up family in the reasoning.
+
+VALID CONTRACT SUBTYPE KEYS (the ONLY values contract_subtype may take when doc_type is "contract"):
+{{contract_subtypes}}
+- other: Other — the contract fits none of the listed families
+
+Return a JSON object with:
+- doc_type: one of the available class keys listed above
+- contract_subtype: EXACTLY ONE of the valid subtype keys above (including "other") when doc_type is contract; null otherwise
+- confidence: float between 0.0 and 1.0
+- reasoning: short explanation of your classification decision, citing the evidence
+
+Output strict JSON only."""
+
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -1029,6 +1120,148 @@ CONTRACTS_SPECIALIST_PROMPT_V8 = CONTRACTS_SPECIALIST_PROMPT_V5.replace(
      governing-law language is present in the provided text.""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v9 (head+tail truncation window)
+# -----------------------------------------------------------------------------
+# v9 = v8 + rule 8 rewritten for the head+tail truncation window: the input
+# cap no longer keeps the head alone — when a long document is truncated, the
+# model now sees BOTH the opening portion AND the closing portion (the
+# deal-critical sections: term, termination, renewal, governing law) separated
+# by a truncation marker, so the scanner must look on both sides of the marker
+# instead of only scanning the single visible chunk.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V9 = CONTRACTS_SPECIALIST_PROMPT_V8.replace(
+    """8. TRUNCATION-AWARE COMPLETENESS: if the input ends with a truncation marker, the deal-critical
+   fields must still be extracted from the VISIBLE portion. Actively scan the provided text for
+   the relevant section headers — "Governing Law", "Term", "Termination", "Renewal", "Survival" —
+   before leaving a field null. A field whose section IS visible in the provided text must never
+   be left null; for anything genuinely beyond the truncated text, use null (never guess).""",
+    """8. TRUNCATION-AWARE COMPLETENESS: if the input carries a truncation marker, the document's
+   MIDDLE is omitted and the text CONTINUES AFTER THE MARKER with the document's closing portion
+   (term, termination, renewal, governing law, survival, signatures). Actively scan BOTH the
+   opening portion BEFORE the marker and the closing portion AFTER it for the relevant section
+   headers — "Governing Law", "Term", "Termination", "Renewal", "Survival" — before leaving a
+   field null. A field whose section IS visible in either portion must never be left null; for
+   anything genuinely omitted in the middle, use null (never guess).""",
+)
+
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v10 (GT-scoped key_obligations)
+# -----------------------------------------------------------------------------
+# v10 = v9 + the overproduction fix, measured against the FULL 510-doc CUAD
+# corpus in Braintrust (mailroom-cuad-contracts-full):
+#   - The ground-truth key_obligations items are EXACTLY the CUAD restriction /
+#     covenant category spans (Anti-Assignment 373, Cap On Liability 274,
+#     License Grant 254, Audit Rights 213, Post-Termination Services 181,
+#     Exclusivity 179, Revenue/Profit Sharing 165, Insurance 165, Minimum
+#     Commitment 165, Non-Transferable License 137, IP Ownership 124, Change
+#     of Control 120, Non-Compete 118, Uncapped Liability 110, Covenant Not To
+#     Sue 99, ROFR 84, ...) — mean 7.4 items per document, max 22.
+#   - The model was emitting 21-58 items by following "capture EVERY distinct
+#     obligation, covenant, warranty, indemnity, deadline, payment term..."
+#     — general operative duties (clinical-trial conduct, delivery mechanics,
+#     staffing, reporting) that NEVER appear in the ground truth.
+#   - key_obligations is now SCOPED to the category families (the same list
+#     every GT item maps to, verified across all 510 rows), with a hard size
+#     guidance (typically 5-15, never more than 25) and verbatim clause text
+#     WITHOUT "Section N:" prefixes (GT spans carry no prefixes).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V10 = CONTRACTS_SPECIALIST_PROMPT_V9.replace(    """   - `key_obligations`: capture EVERY distinct obligation, covenant, warranty, indemnity,
+     deadline, payment term, audit right, license grant, non-compete, confidentiality
+     duty, and other operative duty in the agreement. One list item per distinct
+     obligation — never merge separate obligations into a single summary item. Quote the
+     ACTUAL operative language of the contract verbatim, with the parties bound and the
+     section reference (e.g. "Section 4.2"). NEVER include document titles, clause
+     headings, recitals, or definitions as obligations.
+   - `key_obligations` MUST ALSO cover every present clause in these restriction /
+     covenant categories, each as its own verbatim list item: anti-assignment and
+     assignment restrictions; change of control (termination, consent, or notice
+     rights); exclusivity; non-compete; no-solicit of customers; no-solicit of
+     employees; non-disparagement; most-favored-nation; right of first refusal, first
+     offer, or first negotiation (ROFR/ROFO/ROFN); revenue or profit sharing; price
+     restrictions; minimum commitment / minimum order sizes; volume restrictions;
+     IP ownership assignment; joint IP ownership; license grants (and their
+     non-transferable, affiliate-licensor, affiliate-licensee, irrevocable, perpetual,
+     and unlimited/all-you-can-eat variants); source code escrow; post-termination
+     services; audit rights; uncapped liability; caps on liability; liquidated damages;
+     insurance requirements; covenant not to sue; third-party beneficiary. If the
+     contract contains ANY of these clauses, the clause's operative language MUST
+     appear as a key_obligations item — never omit a present restriction or covenant.""",
+    """   - `key_obligations`: the clause texts of the RESTRICTION / COVENANT / SPECIAL-
+     PROVISION families listed below — and ONLY those families. The ground truth samples
+     exactly these families, so general operative duties (clinical-trial or project
+     conduct, delivery/shipping mechanics, staffing, ordinary reporting, general
+     payment obligations, warranties, indemnities, confidentiality boilerplate) are NOT
+     expected items and must NOT be extracted. One list item per present clause
+     occurrence, quoting the operative language VERBATIM as written — no "Section N:"
+     prefixes, no paraphrases, no clause headings. Focused scope: typically 5-15 items,
+     never more than 25. NEVER include document titles, recitals, or definitions.
+   - The families: anti-assignment and assignment restrictions; change of control
+     (termination, consent, or notice rights); exclusivity; non-compete; no-solicit of
+     customers; no-solicit of employees; non-disparagement; most-favored-nation; right
+     of first refusal, first offer, or first negotiation (ROFR/ROFO/ROFN); revenue or
+     profit sharing; price restrictions; minimum commitment / minimum order sizes;
+     volume restrictions; IP ownership assignment; joint IP ownership; license grants
+     (and their non-transferable, affiliate-licensor, affiliate-licensee, irrevocable,
+     perpetual, and unlimited/all-you-can-eat variants); source code escrow;
+     post-termination services; audit rights; uncapped liability; caps on liability;
+     liquidated damages; insurance requirements; covenant not to sue; third-party
+     beneficiary. Every occurrence of a present family must appear as its own verbatim
+     item — never omit a present restriction or covenant.""",
+).replace(
+    """   - `termination_clauses`: every distinct termination right, trigger, cure period,
+     notice period, and survival clause as its own item — INCLUDING termination for
+     convenience and termination on change of control. Capture each provision IN FULL:
+     never drop the notice period, the cure period, or trailing riders such as
+     "at any other time upon ninety (90) days' prior written notice of impending
+     termination" — the complete clause text must appear in the item.""",
+    """   - `termination_clauses`: the principal termination provisions as their own items —
+     INCLUDING termination for convenience and termination on change of control.
+     Typically 1-4 items. Capture each provision IN FULL: never drop the notice period,
+     the cure period, or trailing riders such as "at any other time upon ninety (90)
+     days' prior written notice of impending termination" — the complete clause text
+     must appear in the item.""",
+).replace(
+    """   - `key_obligations`: array of complete obligation language, one item per distinct clause (verbatim)""",
+    """   - `key_obligations`: array of verbatim clause texts, one item per present restriction/covenant family occurrence""",
+)
+
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v11 (family exhaustiveness)
+# -----------------------------------------------------------------------------
+# v11 = v10 + the under-extraction fix measured on the chained 5-doc sample:
+# v10's scoping stopped the overproduction (obligations 21-58 -> 2-6 items) but
+# tanked recall — Ritter key_obligations 1.0 -> 0.36 (6 items vs 14 GT spans),
+# eDiets 0.69 -> 0.31 (4 items vs 13 GT spans, no truncation involved). The
+# model read "typically 5-15 items" as a stopping target. The size guidance is
+# now framed as an observed range with an EXPLICIT exhaustiveness duty: scan
+# every section and extract EVERY family occurrence, including family clauses
+# buried inside unrelated sections.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V11 = CONTRACTS_SPECIALIST_PROMPT_V10.replace(
+    """     occurrence, quoting the operative language VERBATIM as written — no "Section N:"
+     prefixes, no paraphrases, no clause headings. Focused scope: typically 5-15 items,
+     never more than 25. NEVER include document titles, recitals, or definitions.""",
+    """     occurrence, quoting the operative language VERBATIM as written — no "Section N:"
+     prefixes, no paraphrases, no clause headings. NEVER include document titles,
+     recitals, or definitions.
+   - EXHAUSTIVENESS WITHIN THE FAMILIES: scan the document section by section (Section 1,
+     2, 3, ... in order, plus the closing portion after a truncation marker) and extract
+     EVERY clause belonging to a listed family — never stop after a few items. A typical
+     contract yields 5-15 family clauses, but an agreement dense with restrictions yields
+     20+; the list is complete only when every present family occurrence appears. A clause
+     stating a restriction, covenant, or special provision named below is a family clause
+     even when it is buried inside a section about something else (an exclusivity sentence
+     inside a supply section, a license grant inside a marketing section, an audit right
+     inside an accounting section).""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1399,6 +1632,8 @@ PROMPT_VERSIONS = {
     "sorter_v1": SORTER_PROMPT_V1,
     "sorter_v2": SORTER_PROMPT_V2,
     "sorter_v3": SORTER_PROMPT_V3,
+    "sorter_v4": SORTER_PROMPT_V4,
+    "sorter_v5": SORTER_PROMPT_V5,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,
@@ -1416,6 +1651,9 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v6": CONTRACTS_SPECIALIST_PROMPT_V6,
     "contracts_specialist_v7": CONTRACTS_SPECIALIST_PROMPT_V7,
     "contracts_specialist_v8": CONTRACTS_SPECIALIST_PROMPT_V8,
+    "contracts_specialist_v9": CONTRACTS_SPECIALIST_PROMPT_V9,
+    "contracts_specialist_v10": CONTRACTS_SPECIALIST_PROMPT_V10,
+    "contracts_specialist_v11": CONTRACTS_SPECIALIST_PROMPT_V11,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

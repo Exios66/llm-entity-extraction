@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-entity-extraction"
+version = "0.11.0"
+description = "LangChain agents (sorter, specialists, judge) + prompt experiment loop for legal document classification and entity extraction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "langchain-core>=1.0",
+    "langchain-openai>=0.3",
+    "openai>=1.60",
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.0",
+    "braintrust>=0.31",
+    "PyYAML>=6.0",
+    "structlog>=24.0",
+    "Pillow>=10.4.0",
+    "pandas>=2.0.0",
+    "numpy>=1.26.0",
+    "matplotlib>=3.9.0",
+    "pyarrow>=15.0.0",
+]
+
+# Optional extras mirror the README setup paths.
+[project.optional-dependencies]
+embeddings = ["sentence-transformers>=3.0"]
+pdf = ["pdf2image>=1.17"]
+dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+
+# Flat top-level package layout: llm-mailroom (and the eval scripts) import
+# the agents/specialists/judges directly, e.g.
+#     from agents.sorter_agent import SorterAgent
+#     from agents.judge_agent import JudgeAgent
+#     from src.prompts import get_prompt
+# The config/ package ships taxonomy.yaml next to the code so the taxonomy
+# loader works from both editable and wheel installs.
+[tool.setuptools]
+packages = ["agents", "src", "config"]
+
+[tool.setuptools.package-data]
+config = ["*.yaml"]

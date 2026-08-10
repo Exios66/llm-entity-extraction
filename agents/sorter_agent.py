@@ -97,6 +97,37 @@ _SUBTYPE_ALIASES = {
 
 SUBTYPE_UNKNOWN = "other"
 
+# Semantically interchangeable contract families: a classification into ANY
+# member of the same equivalence class is a correct routing decision, not a
+# miss. Derived from the observed subtype-eval failures on the 50-contract
+# sample, where the sorter's family-level answer was defensible but the exact
+# CUAD-folder key differed:
+#   - reseller <-> distributor  ("Reseller Agreement" defining itself as a
+#     "Distribution Agreement" — pure resale-channel synonymy)
+#   - maintenance <-> license   (software "License and Maintenance" hybrids —
+#     both CUAD samples of this pair sit in the Maintenance folder, and the
+#     license grant is the operative core either way)
+#   - development <-> license   (development agreements whose operative
+#     mechanism is an IP/brand license — e.g. "Training Program Development
+#     Agreement" built on a licensed IP + royalty structure)
+#   - affiliate <-> joint_venture (an "Affiliate Agreement" whose operative
+#     clause declares the parties joint venturers)
+SUBTYPE_EQUIVALENCES: list[frozenset[str]] = [
+    frozenset({"reseller", "distributor"}),
+    frozenset({"maintenance", "license"}),
+    frozenset({"development", "license"}),
+    frozenset({"affiliate", "joint_venture"}),
+]
+
+
+def equivalent_subtypes(a: str, b: str) -> bool:
+    """Return True when two subtype keys are the same family or members of
+    the same interchangeable family class (see ``SUBTYPE_EQUIVALENCES``)."""
+    a, b = str(a), str(b)
+    if a == b:
+        return True
+    return any(a in cls and b in cls for cls in SUBTYPE_EQUIVALENCES)
+
 
 def normalize_subtype(value) -> str:
     """Coerce a raw sorter subtype output (or a CUAD folder name) to a
@@ -155,6 +186,12 @@ class SorterAgent(BaseAgent):
     ):
         super().__init__(model=model, api_key=api_key)
         self.prompt_version = prompt_version
+        # The sorter classifies 25 near-synonymous contract families where
+        # title-vs-operatives conflicts are common (reseller/distributor,
+        # license/maintenance, development/license, ...). Medium reasoning
+        # effort makes it weigh the operative clauses before committing;
+        # overridden per-run via the eval runners' --reasoning-effort flag.
+        self._reasoning_effort = "medium"
 
     def system_prompt(self) -> str:
         base_prompt = get_prompt(self.prompt_version)

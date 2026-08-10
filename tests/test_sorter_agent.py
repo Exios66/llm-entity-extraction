@@ -5,11 +5,14 @@ import pytest
 
 from agents.sorter_agent import (
     CONTRACT_SUBTYPES,
+    CONTRACT_SUBTYPE_KEYS,
     DOC_CLASS_KEYS,
     SORTER_SCHEMA,
     SUBTYPE_UNKNOWN,
     SorterAgent,
     normalize_subtype,
+    SUBTYPE_EQUIVALENCES,
+    equivalent_subtypes,
 )
 
 
@@ -114,6 +117,28 @@ def test_normalize_subtype_aliases_and_labels():
     assert normalize_subtype("") == SUBTYPE_UNKNOWN
 
 
+def test_equivalent_subtypes_family_classes():
+    # Exact keys are trivially equivalent.
+    assert equivalent_subtypes("license", "license")
+    assert equivalent_subtypes("reseller", "reseller")
+    # The defensible family pairs recovered from the subtype-eval failures.
+    assert equivalent_subtypes("reseller", "distributor")
+    assert equivalent_subtypes("distributor", "reseller")
+    assert equivalent_subtypes("maintenance", "license")
+    assert equivalent_subtypes("development", "license")
+    assert equivalent_subtypes("affiliate", "joint_venture")
+    # Distinct families are NOT equivalent.
+    assert not equivalent_subtypes("license", "franchise")
+    assert not equivalent_subtypes("development", "supply")
+    assert not equivalent_subtypes("reseller", "marketing")
+    assert not equivalent_subtypes("license", "other")
+    # Every equivalence class is a pair of registered subtype keys.
+    for cls in SUBTYPE_EQUIVALENCES:
+        assert len(cls) == 2
+        for key in cls:
+            assert key in CONTRACT_SUBTYPE_KEYS
+
+
 def test_truncate_input_budget():
     sorter = SorterAgent()
     sorter._max_input_chars = 50
@@ -122,3 +147,65 @@ def test_truncate_input_budget():
     assert "truncated" in truncated
     short = sorter.truncate_input("short")
     assert short == "short"
+
+
+def test_truncate_input_head_tail_window():
+    sorter = SorterAgent()
+    sorter._max_input_chars = 100
+    text = "HEAD" + "x" * 200 + "TAIL"
+    truncated = sorter.truncate_input(text)
+    assert sorter._last_truncated is True
+    assert truncated.startswith("HEAD")  # opening portion kept
+    assert truncated.rstrip().endswith("TAIL")  # closing portion kept
+    assert "document truncated" in truncated
+    pre = truncated[: truncated.find("[... document truncated")].strip("\n")
+    post = truncated[truncated.rfind("...]\n\n") + 5:].strip("\n")
+    assert len(pre) + len(post) == 100  # exactly the budget of content, marker excluded
+
+    sorter2 = SorterAgent()
+    sorter2._max_input_chars = 100
+    assert sorter2.truncate_input("short") == "short"
+    assert sorter2._last_truncated is False
+
+
+def test_subtype_option_list_complete_and_precise():
+    import re
+
+    # The prompt's list of available guesses MUST match the schema enum EXACTLY
+    # (all 25 families + "other") — a subtype the model can output must be
+    # visible in the option list, and nothing in the option list may be
+    # rejected by the schema. (sorter_v0 predates the subtype dimension and
+    # has no subgroup section — it is exempt; v1-v3 predate the precision fix
+    # and omit "other" from the list, which v4 repairs.)
+    enum = set(SORTER_SCHEMA["properties"]["contract_subtype"]["enum"])
+    for version in ("sorter_v1", "sorter_v2", "sorter_v3"):
+        prompt = SorterAgent(prompt_version=version).system_prompt()
+        section = prompt.split("Contract subgroups:")[-1]
+        listed = set(re.findall(r"- (\w+):", section.split("Return a JSON object")[0]))
+        assert listed == enum - {"other"}, \
+            f"{version}: prompt options {listed} != schema enum minus 'other'"
+    for version in ("sorter_v4", "sorter_v5"):
+        prompt = SorterAgent(prompt_version=version).system_prompt()
+        section = prompt.split("VALID CONTRACT SUBTYPE KEYS")[1]
+        listed = set(re.findall(r"- (\w+):", section.split("Return a JSON object")[0]))
+        assert listed == enum, f"{version}: prompt options {listed} != schema enum {enum}"
+        assert "other" in listed, f"{version}: 'other' must be an explicit option"
+
+    # Every CUAD corpus folder must normalize to a key that IS in the prompt
+    # option list (the sorter can never be asked to guess a class it was not
+    # given as an option).
+    cuad_folders = [
+        "Affiliate_Agreements", "Agency Agreements", "Co_Branding", "Collaboration",
+        "Consulting Agreements", "Development", "Distributor", "Endorsement",
+        "Endorsement Agreement", "Franchise", "Hosting", "IP", "Joint Venture",
+        "Joint Venture _ Filing", "License_Agreements", "Maintenance", "Manufacturing",
+        "Marketing", "Non_Compete_Non_Solicit", "Outsourcing", "Promotion", "Reseller",
+        "Service", "Sponsorship", "Strategic Alliance", "Supply", "Transportation",
+        "Affiliate Agreement",
+    ]
+    prompt = SorterAgent(prompt_version="sorter_v4").system_prompt()
+    section = prompt.split("VALID CONTRACT SUBTYPE KEYS")[1].split("Return a JSON object")[0]
+    options = set(re.findall(r"- (\w+):", section))
+    for folder in cuad_folders:
+        assert normalize_subtype(folder) in options, \
+            f"folder {folder!r} -> {normalize_subtype(folder)!r} not in sorter options"

@@ -101,14 +101,26 @@ class BaseAgent(ABC):
                 self._llm.extra_body = {"reasoning": {"effort": self._reasoning_effort}}
         return self._llm
 
+    # Share of the input budget kept from the document's TAIL when truncation
+    # fires: deal-critical sections (term, termination, renewal, governing law,
+    # signatures) sit in the closing portion of long agreements, which a
+    # head-only cap loses entirely — the 292k-char Phasebio agreement's
+    # governing-law clause at char 276k is invisible under a 100k head cap.
+    TRUNCATION_TAIL_FRACTION = 0.4
+
     def truncate_input(self, text: str) -> str:
         """Return the FULL document text, capping only past the hard budget.
 
         The sorter is meant to classify the full document (fully extracted
         markdown text, not a 50-token preview). ``_max_input_chars`` is a
-        safety cap for pathological documents only; when it fires, the
-        truncation is recorded on ``_last_truncated`` so callers (and the
-        eval loop's span metadata) can see that the row saw partial input.
+        safety cap for pathological documents only; when it fires, the input
+        is kept as a HEAD + TAIL window instead of the head alone: the first
+        ``(1 - TRUNCATION_TAIL_FRACTION)`` of the budget from the opening
+        (recitals, parties, definitions, early obligations) plus the remaining
+        share from the CLOSING portion (term, termination, renewal, governing
+        law, signature pages). A marker between the two records the truncation
+        on ``_last_truncated`` so callers (and the eval loop's span metadata)
+        can see that the row saw partial input.
         """
         if len(text) <= self._max_input_chars:
             self._last_truncated = False
@@ -119,10 +131,15 @@ class BaseAgent(ABC):
             agent=self.agent_name,
             chars=len(text),
             cap=self._max_input_chars,
+            tail_fraction=self.TRUNCATION_TAIL_FRACTION,
         )
+        budget = max(1, int(self._max_input_chars))
+        head = int(budget * (1.0 - self.TRUNCATION_TAIL_FRACTION))
         return (
-            text[: self._max_input_chars]
-            + f"\n\n[... document truncated, {len(text)} total chars ...]"
+            text[:head]
+            + f"\n\n[... document truncated, {len(text)} total chars; middle omitted — "
+              f"closing portion continues below (term, termination, governing law) ...]\n\n"
+            + text[-(budget - head):]
         )
 
     # ------------------------------------------------------------------

@@ -6,6 +6,57 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Sorter-only subtype evaluation** (`scripts/eval/run_subtype_eval.py`) — one
+  sorter call per PDF; strict + family-level (`subtype_accuracy_equiv`)
+  scoring, per-subtype accuracy, confusion matrix, resumable manifest,
+  `--stratified N` for even, class-representative sampling (200-doc run over
+  the full 510-contract corpus: 8 docs per subtype × 25).
+- **Subtype equivalence scoring** — `SUBTYPE_EQUIVALENCES` +
+  `equivalent_subtypes()`: reseller↔distributor, maintenance↔license,
+  development↔license, affiliate↔joint_venture count as correct routing.
+- **Sorter medium reasoning** — `SorterAgent` defaults to
+  `reasoning_effort="medium"` (verified: 95→483 completion tokens vs `none`);
+  the eval runners expose `--reasoning-effort` / `--sorter-reasoning-effort`
+  and stamp it in Braintrust experiment metadata.
+- **Sorter prompt v4/v5** — the option list is now the COMPLETE, precise set
+  of valid keys (25 families + `other`, matching the schema enum exactly —
+  enforced by a wiring test over every CUAD folder), with strict key
+  discipline (v4) and an `other`-guard (v5) fixing v4's over-caution
+  ("AGENCY AGREEMENT" → other regressions).
+- **Contracts specialist v10/v11** — data-scoped extraction from the full
+  510-doc corpus: the GT `key_obligations` spans are exactly the CUAD
+  restriction/covenant families (mean 7.4, max 22 items). v10 scoped
+  `key_obligations` to those families (overproduction 21-58 → 2-6 items) but
+  under-extracted; v11 adds section-by-section family exhaustiveness —
+  measured best overall (chained 5-doc sample: 0.906, obligations 2-12,
+  `verified_precision` 1.0).
+- **Packaging** — `pyproject.toml` + `config/__init__.py`: `pip install -e .`
+  exposes `agents`/`src`/`config` (taxonomy.yaml included) so the LangChain
+  agents import and run inside the llm-mailroom LangGraph architecture;
+  verified by an out-of-repo import test.
+- **Judge agent test suite** (`tests/test_judge_agent.py`, 14 tests) — the
+  evaluator's steps (task spec / field list / extracted data / source text),
+  choices (enum coercion + [0,1] clamping), reasoning passthrough, and
+  scoring fallbacks for classification, completeness, and correctness.
+- **Head + tail truncation window** (`BaseAgent.truncate_input`) and
+  `contracts_specialist_v9` (scan both sides of the truncation marker);
+  `--text-only` mode for `stream_cuad_to_bt.py` (full 510-contract text
+  dataset, no poppler); head+tail and option-list wiring tests. Test count
+  193.
+
+### Changed
+- Chained eval: sorter reasoning flag wired through; `--max-tokens` default
+  32768 (extraction of 50+ verbatim clauses exceeds 16k).
+- 200-doc stratified A/B (same 195 docs, seed 42): v3-none 0.7897 →
+  v3-medium 0.8359 strict (+4.6pp — medium reasoning helps); the earlier
+  "regression" vs the 50-doc run (0.84/0.94) was sample composition, not the
+  enhancements (50-run: 5/8 equivalence-recoverable misses; 200-run: 4/32).
+- README documents packaging, subtype eval, equivalence scoring, reasoning,
+  and the new prompt versions.
+
 ## [v0.10.0] - 2026-08-09
 
 ### Added

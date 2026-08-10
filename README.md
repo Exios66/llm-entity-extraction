@@ -29,8 +29,10 @@ taxonomy/prompts.
    `--prompt-mode task` with the `legalbench_task_v0` prompt.
 
 The sorter receives **full documents** — either the full extracted text
-(100k-char hard safety cap, truncation recorded on the span, never a 50-token
-preview) or the complete PDF page set in one call.
+(100k-char hard safety cap; past the cap the input becomes a HEAD + TAIL
+window — opening portion plus the closing portion where term, termination,
+renewal, governing law, and signatures live — truncation recorded on the span,
+never a 50-token preview) or the complete PDF page set in one call.
 
 ## The pipeline under test
 
@@ -112,6 +114,7 @@ scripts/
     run_chained_eval.py             sorter -> extractor end-to-end pipeline eval
     run_binary_class_eval.py        binary question precision/recall/F1
     run_multiclass_eval.py          all-class eval with per-class accuracy
+    run_subtype_eval.py             sorter-only contract-subtype eval (one call per PDF)
     evaluate_prompt_version.py      A/B two prompt versions on the same dataset
   reporting/
     report_generator.py             markdown experiment report from Braintrust
@@ -165,6 +168,17 @@ pip install -r requirements.txt
 brew install poppler   (or apt install poppler-utils)
 cp braintrust.env.example braintrust.env   # fill in creds (org/project/API key)
 cp .env.example .env                       # fill in OPENROUTER_API_KEY
+```
+
+The repo is also pip-installable so the LangChain agents can be imported and
+called from OTHER codebases (e.g. the llm-mailroom LangGraph architecture):
+
+```bash
+pip install -e .        # editable: new agent/prompt changes are picked up immediately
+# then, from anywhere:
+from agents.sorter_agent import SorterAgent
+from agents.judge_agent import JudgeAgent
+from agents.specialist_agents import ContractsSpecialist
 ```
 
 Optional — local semantic embedding rescue (recommended): install
@@ -284,6 +298,19 @@ python scripts/eval/run_chained_eval.py \
     --sorter-prompt-version sorter_v1 --extractor-prompt-version contracts_specialist_v4 \
     --manifest data/manifests/chained_5.jsonl
 
+# ---- SORTER-ONLY subtype eval (contract subclass classification) ----
+# One sorter call per PDF; scored for doc_type accuracy, EXACT subtype
+# accuracy (CUAD-folder key) AND family-level accuracy (subtype_accuracy_equiv
+# — defensible family equivalents like reseller/distributor,
+# maintenance/license, development/license, affiliate/joint_venture count as
+# correct routing). Per-subtype accuracy + expected x predicted confusion
+# matrix in the repo log.
+python scripts/eval/run_subtype_eval.py --dry-run                  # preview
+python scripts/eval/run_subtype_eval.py                            # all 50 contracts
+python scripts/eval/run_subtype_eval.py --sorter-prompt-version sorter_v3 \
+    --manifest data/manifests/subtype_50_v3.jsonl
+python scripts/eval/run_subtype_eval.py --sample 10 --seed 42      # pilot slice
+
 # Inspect results
 python scripts/reporting/report_generator.py --experiment qwen3.7-flash_sorter_vision_v0
 python scripts/reporting/confusion_matrix.py --experiment qwen3.7-flash_sorter_vision_v0
@@ -305,6 +332,7 @@ never collide.
 | `run_chained_eval.py` | end-to-end pipeline: sorter (doc_type + contract subtype) → contracts specialist; per-stage scores and token usage, sorter subtype accuracy + extractor content scores in one record |
 | `run_binary_class_eval.py` | one prompt version on a binary question (e.g. `--positive contract`), precision/recall/F1 |
 | `run_multiclass_eval.py` | one prompt version across all taxonomy classes, per-class + macro accuracy |
+| `run_subtype_eval.py` | sorter-only contract-family eval: one classification per PDF; `sorter_exact_match` (doc_type), `sorter_subtype_accuracy` (EXACT CUAD-folder key) and `sorter_subtype_accuracy_equiv` (family-level — defensible equivalents like reseller/distributor, maintenance/license, development/license, affiliate/joint_venture recognized as correct routing), per-subtype accuracy + confusion matrix in the repo log |
 | `evaluate_prompt_version.py` | A/B: two prompt versions on the same dataset, delta summary |
 
 Every runner supports `--samples-per-class`/`--sample`, `--sample-seed`/`--seed`,
@@ -319,10 +347,10 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 
 | Family | Versions |
 |---|---|
-| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3` |
+| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3`, `sorter_v4`, `sorter_v5` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
-| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v8` |
+| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v11` |
 | Other specialists | `corporate_records_specialist`, `due_diligence_specialist`, `correspondence_specialist`, `compliance_specialist`, `court_opinions_specialist` |
 | Agents / judges | `boss`, `reporter`, `judge`, `judge-classification`, `judge-correctness` |
 | PDF | `pdf_transcriber` |
