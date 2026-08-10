@@ -79,6 +79,47 @@ def test_append_markdown_renders_section(tmp_path):
     assert "boom" in text
 
 
+def test_renderer_includes_judge_review_section(monkeypatch, tmp_path):
+    import json as _json
+
+    import src.experiment_log as el
+
+    judgments_dir = tmp_path / "judgments"
+    judgments_dir.mkdir()
+    monkeypatch.setattr(el, "JUDGMENTS_DIR", judgments_dir)
+
+    record = {
+        "experiment_name": "exp_judged",
+        "task": "subtype_classification",
+        "model": "m",
+        "scores": {"sorter": {
+            "subtype_accuracy": 0.5,
+            "failure_insights": {"mode_counts": {"family_confusion": 1}, "n_failed": 1,
+                                 "failures": [{"filename": "a.pdf", "expected": "license",
+                                               "predicted": "franchise", "mode": "family_confusion",
+                                               "equiv_recovered": False, "reasoning": "title says franchise"}]},
+        }},
+        "results": [{"filename": "a.pdf", "status": "completed",
+                     "sorter": {"doc_type": "contract", "contract_subtype": "franchise",
+                                "expected_subtype": "license", "subtype_ok": False,
+                                "subtype_ok_equiv": False, "confidence": 0.9,
+                                "failure_mode": "family_confusion",
+                                "reasoning": "title says franchise"}}],
+    }
+    (judgments_dir / "exp_judged.jsonl").write_text(_json.dumps({
+        "filename": "a.pdf", "expected_subtype": "license", "predicted_subtype": "franchise",
+        "judgment": {"classification_correct": "correct", "classification_quality": 0.9,
+                     "reasoning": "The document IS a franchise agreement — the folder mislabels it."},
+    }) + "\n")
+
+    md = el.experiment_markdown(record)
+    assert "### Failed classification insights" in md
+    assert "family_confusion" in md
+    assert "### Judge agent review (post hoc)" in md
+    assert "correct" in md and "quality 0.9" in md
+    assert "folder mislabels" in md
+
+
 def test_default_paths_read_env(monkeypatch, tmp_path):
     from src.experiment_log import default_jsonl_path, default_md_path
 

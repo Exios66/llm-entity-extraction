@@ -246,11 +246,29 @@ class SorterAgent(BaseAgent):
                     confidence=confidence)
         return (doc_type, contract_subtype, confidence, reasoning)
 
-    def classify_json(self, doc_text: str) -> dict:
-        """Classify and return the raw structured dict (used by eval loops)."""
+    def classify_json(self, doc_text: str, subtype_focus: bool = False) -> dict:
+        """Classify and return the raw structured dict (used by eval loops).
+
+        With ``subtype_focus=True`` the model is explicitly TASKED with
+        sorting the document into its contract subtype: the user message tells
+        it the document IS a contract and that the subtype assignment is the
+        decision being scored — used by the chained eval, whose rows are all
+        contracts, so the sorter scores represent the subtype task rather
+        than a general doc-type gate.
+        """
         truncated = self.truncate_input(doc_text)
+        if subtype_focus:
+            user_message = (
+                "This document IS a contract (all documents in this task are "
+                "contracts). Your job is to sort it into its correct CONTRACT "
+                "SUBTYPE: assign the contract_subtype key that best matches its "
+                "agreement family, and confirm doc_type as \"contract\".\n\n"
+                f"Contract text:\n\n{truncated}"
+            )
+        else:
+            user_message = f"Classify this legal document:\n\n{truncated}"
         result = self._call_structured(
-            f"Classify this legal document:\n\n{truncated}",
+            user_message,
             json_schema=SORTER_SCHEMA,
             temperature=0.1,
         )

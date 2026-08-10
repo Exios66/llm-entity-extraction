@@ -198,7 +198,11 @@ def main_with_args(argv: list[str]) -> int:
         sorter._max_tokens = min(args.max_tokens, 4096)
         sorter._reasoning_effort = args.sorter_reasoning_effort
         try:
-            sorter_result = sorter.classify_json(doc_text)
+            # subtype_focus=True: every chained row IS a contract, so the
+            # sorter is explicitly tasked with sorting the document into its
+            # contract subtype — its scores then measure the subtype task,
+            # not a general doc-type gate.
+            sorter_result = sorter.classify_json(doc_text, subtype_focus=True)
         except Exception as exc:  # noqa: BLE001 - one bad row must not abort
             sorter_result = {"doc_type": "correspondence", "contract_subtype": SUBTYPE_UNKNOWN,
                              "confidence": 0.0, "reasoning": f"error: {exc}"}

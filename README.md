@@ -121,6 +121,8 @@ scripts/
     confusion_matrix.py             PNG + CSV confusion matrix from Braintrust
     score_extraction_manifest.py    post-hoc extraction scoring from a manifest
     render_experiment_log.py        rebuild the markdown log from the JSONL source
+    judge_experiment.py             post-hoc JudgeAgent review of failed classifications
+    backfill_subtype_reasoning.py   one-time enrichment: full failure reasoning from spans
 tests/                   unit tests (183, no network)
 ```
 

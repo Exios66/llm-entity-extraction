@@ -30,6 +30,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+# Post-hoc judge judgments live per experiment in data/judgments/<name>.jsonl;
+# the renderer includes a Judge agent review section for records that have one.
+JUDGMENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "judgments"
+
 JSONL_ENV = "EXPERIMENT_LOG_PATH"
 MD_ENV = "EXPERIMENT_LOG_MD_PATH"
 DEFAULT_JSONL = "reports/experiment_log.jsonl"
@@ -318,6 +322,14 @@ def _confusion_from_pairs(
             matrix[expected][predicted] = 0
         matrix[expected][predicted] += 1
     return _confusion_matrix_lines(title, matrix, classes)
+
+
+def _load_judgments(experiment_name: str) -> list[dict]:
+    """Load the post-hoc judge judgments for an experiment, if any."""
+    path = JUDGMENTS_DIR / f"{experiment_name}.jsonl"
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in open(path) if line.strip()]
 
 
 def experiment_markdown(record: dict) -> str:
@@ -620,6 +632,34 @@ def experiment_markdown(record: dict) -> str:
                              f"{' — RECOVERED by family equivalence' if f.get('equiv_recovered') else ''}")
                 lines.append("")
                 lines.append(f"> {_fmt(f.get('reasoning'), max_len=4000)}")
+                lines.append("")
+
+    # --------------------------------------- judge agent review (post hoc)
+    judgments = _load_judgments(name)
+    if judgments:
+        lines.append("### Judge agent review (post hoc)")
+        lines.append("")
+        lines.append("The offline JudgeAgent audited every failed classification "
+                     "against the source document — is the sorter's pick the best "
+                     "fit for THIS document, independent of the CUAD folder?")
+        lines.append("")
+        summary: dict[str, int] = {}
+        for entry in judgments:
+            label = (entry.get("judgment") or {}).get("classification_correct", "?")
+            summary[label] = summary.get(label, 0) + 1
+        lines.extend(_md_table(["Judgment", "Count"],
+                               [[_fmt(k), _fmt(v)] for k, v in sorted(summary.items())]))
+        lines.append("")
+        for i, entry in enumerate(judgments):
+            judgment = entry.get("judgment") or {}
+            lines.append(f"**{i + 1}. {_fmt(entry.get('filename'), max_len=110)}** — "
+                         f"expected `{entry.get('expected_subtype')}` vs predicted "
+                         f"`{entry.get('predicted_subtype')}` — judge: "
+                         f"**{_fmt(judgment.get('classification_correct'))}** "
+                         f"(quality {_fmt(judgment.get('classification_quality'))})")
+            lines.append("")
+            if judgment.get("reasoning"):
+                lines.append(f"> {_fmt(judgment.get('reasoning'), max_len=2000)}")
                 lines.append("")
 
     return "\n".join(lines)

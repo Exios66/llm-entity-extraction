@@ -62,7 +62,8 @@ def fake_chained_eval(monkeypatch):
 
     calls = {"sorter": 0, "extractor": 0}
 
-    def fake_classify_json(self, doc_text):
+    def fake_classify_json(self, doc_text, subtype_focus=False):
+        assert subtype_focus is True  # the chained task sorts contracts by subtype
         calls["sorter"] += 1
         return {"doc_type": "contract", "contract_subtype": "license",
                 "confidence": 0.95, "reasoning": "license agreement"}
