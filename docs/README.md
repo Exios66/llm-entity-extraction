@@ -14,30 +14,42 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
 
 | Path | Contents |
 |---|---|
-| `index.html` | The viewer (single page, hash-routed: `#/` index, `#/run/{n}` detail, `#/run/{n}/doc/{i}` single-document trace) |
-| `assets/` | `site.css` + `site.js` — dependency-free, no CDN, no build step |
+| `index.html` | The viewer (single page, hash-routed: `#/` index, `#/task/{slug}` / `#/prompt/{v}` / `#/model/{m}` group views, `#/run/{n}` detail, `#/run/{n}/doc/{i}` single-document trace) |
+| `assets/` | `site.css` + `site.js` — dependency-free, no CDN, no build step; dark "gradient night" theme via masthead toggle, `?theme=dark`, or system preference |
 | `data/` | **Generated** — `meta.json`, `index.json` (run summaries), `runs/{n}.json` (full records) |
 | `README.md` | this file |
 
 ## Viewer features
 
-- **Scoring reference card** — the index opens with a "how to read these
-  numbers" card: display bands (≥85% Strong · 60–85% Moderate · <60% Weak),
-  per-task headline formulas, each metric's calculation + meaning, and links
-  to `SCORING.md`. Content is generated into `meta.json` by
-  `build_site.py` and mirrors `SCORING.md` — keep both in sync.
+- **Sample-size-aware scoring** — every headline score carries a Wilson 95%
+  CI (n=5 → ±27pp, n=509 → ±2.2pp) with the sample size shown; the
+  **Δ vs best** column is colored only when the difference is statistically
+  significant at 95% (two-proportion z-test), otherwise shown as "≈" — small
+  samples are never presented as beating or losing to large ones.
+- **Scoring reference card** — display bands (≥85% Strong · 60–85% Moderate ·
+  <60% Weak), per-task headline formulas, each metric's calculation +
+  meaning, a "sample sizes matter" explainer, and links to `SCORING.md`.
+- **Group views** — `#/task/{slug}`, `#/prompt/{version}`, `#/model/{model}`:
+  aggregates (runs / documents / tokens / best / median / worst), a
+  grouped-by table (tasks → prompts, prompts → tasks), and the filtered run
+  list. Task tags, prompt names, and models link to their group views
+  everywhere.
 - **Dashboard** — stat cards per task (best / median / worst + run link),
-  filterable runs table with score cells (band-colored %, raw value, score
-  bar, composition line), a **Δ vs best** column (percentage points vs the
-  best run of the same task), and an errors column.
-- **Run detail** — banded metric cards, a task-specific **score composition**
-  card (component bars), per-field content scores (extraction), sorter /
-  extractor stage scores (chained), per-subtype accuracy + confusion matrix +
-  failure insights (subtype), and a per-document results table.
-- **Trace view** — `#/run/{n}/doc/{i}` (or "view trace →" on any document
-  row) shows the full per-document record: expected vs predicted, doc-type /
-  subtype verdicts, failure mode, tokens, and the model's **full
-  classification reasoning**, with previous/next navigation.
+  filterable runs table (search + task/model/prompt + **minimum sample
+  size**), score cells with band-colored %, raw value, CI + n, and
+  composition line.
+- **Run detail** — banded metric cards, task-specific **score composition**
+  card, per-field content scores, per-subtype accuracy + confusion matrix +
+  failure insights, and a per-document results table.
+- **Trace view** — `#/run/{n}/doc/{i}` shows the full record: classification
+  verdicts + reasoning, and — where applicable — **interpreted extraction
+  scores** (what each metric means, type-aware field scoring, entity-list
+  factuality audit with hallucination counts, CUAD category presence,
+  ambiguous fields, and the raw predicted extraction), with prev/next
+  navigation.
+- **Dark mode** — light and dark themes share the same markup; the dark
+  "gradient night" theme adds radial glows, gradient score bars and title,
+  and tuned chips/tables. `?theme=light|dark` forces a theme (shareable).
 
 ## Rebuilding the data
 

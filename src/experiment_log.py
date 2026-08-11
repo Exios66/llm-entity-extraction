@@ -692,6 +692,16 @@ def render_full_log(records: list[dict], title: str = "Experiment Log") -> str:
                 scores["extractor"].get("overall_extraction_score"), (int, float)):
             headline = (f"sorter {_fmt(scores.get('sorter', {}).get('exact_match'))} / "
                         f"extractor {scores['extractor']['overall_extraction_score']:.4f}")
+        elif isinstance(scores.get("accuracy"), (int, float)):
+            # LegalBench suite tasks (legalbench/ in llm-mailroom).
+            detail = ""
+            if isinstance(scores.get("macro_f1"), (int, float)):
+                detail = f" · macro-F1 {_fmt(scores['macro_f1'])}"
+            elif isinstance(scores.get("macro_category_accuracy"), (int, float)):
+                detail = f" · macro {_fmt(scores['macro_category_accuracy'])}"
+            elif isinstance(scores.get("accuracy_equiv"), (int, float)):
+                detail = f" · equiv {_fmt(scores['accuracy_equiv'])}"
+            headline = f"accuracy {scores['accuracy']:.4f}{detail}"
         prompt = record.get("prompt_version")
         if not prompt and isinstance(record.get("prompt_versions"), dict):
             prompt = " + ".join(str(v) for v in record["prompt_versions"].values())

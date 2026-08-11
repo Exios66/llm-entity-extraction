@@ -3,11 +3,20 @@
  * scripts/site/build_site.py.
  *
  * Views:
- *   #/                       index: stats + scoring reference + runs table
- *   #/run/{id}               run detail: headline cards, score composition,
- *                            per-document results
- *   #/run/{id}/doc/{i}       single-document trace: full per-row record incl.
- *                            the model's classification reasoning
+ *   #/                          index: stats + scoring reference + runs table
+ *   #/task/{slug}               task view: aggregates + runs, grouped by prompt
+ *   #/prompt/{prompt}           prompt view: all runs of a prompt version,
+ *                               grouped by task
+ *   #/model/{model}             model view (same template)
+ *   #/run/{id}                  run detail: headline cards, score composition,
+ *                               per-document results
+ *   #/run/{id}/doc/{i}          single-document trace: classification +
+ *                               full extraction scores, interpreted
+ *
+ * Sample-size awareness: every headline score carries a Wilson 95% CI whose
+ * width shrinks with n (n=5 -> ±27pp, n=509 -> ±2.2pp), and the "Δ vs best"
+ * column is only colored when the difference is statistically significant
+ * (two-proportion z-test) — small-sample runs are never "overly punished".
  */
 "use strict";
 
@@ -27,7 +36,6 @@ function esc(v) {
 const fmt = {
   int: (n) => (n == null ? "—" : Number(n).toLocaleString("en-US")),
   pct: (v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`),
-  pct1: (v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`),
   score: (v) => (v == null ? "—" : v.toFixed(4)),
   date: (iso) => {
     if (!iso) return "—";
@@ -35,10 +43,33 @@ const fmt = {
     return isNaN(d) ? iso : d.toISOString().replace("T", " ").slice(0, 16) + " UTC";
   },
   tokens: (v) => (v == null ? "—" : Number(v).toLocaleString("en-US")),
-  cost: (v) => (v == null ? "—" : `$${Number(v).toFixed(4)}`),
 };
 
-/* ---------- display bands (documented in the scoring card on the index) ---- */
+/* ---------- statistics (sample-size-aware) ---------- */
+
+function wilsonHalf(p, n, z = 1.96) {
+  if (p == null || !n) return null;
+  const denom = 1 + z * z / n;
+  const center = (p + z * z / (2 * n)) / denom;
+  return z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n)) / denom;
+}
+
+function pooledSEpp(runA, runB) {
+  const p1 = runA.headline?.value, p2 = runB.headline?.value;
+  const n1 = runA.n_rows, n2 = runB.n_rows;
+  if (p1 == null || p2 == null || !n1 || !n2) return null;
+  return 100 * Math.sqrt((p1 * (1 - p1)) / n1 + (p2 * (1 - p2)) / n2);
+}
+
+function ciText(run) {
+  const ci = run.ci95;
+  if (!ci) return "";
+  const n = run.n_rows;
+  return `<span class="hl-sample faint mono" title="Wilson 95% score interval — width shrinks with sample size">` +
+    `n=${fmt.int(n)} · 95% CI ${(ci.lo * 100).toFixed(1)}–${(ci.hi * 100).toFixed(1)}%</span>`;
+}
+
+/* ---------- display bands (documented in the scoring card) ---------- */
 
 function band(v) {
   if (v == null) return null;
@@ -53,13 +84,13 @@ function bandChip(v, label) {
   return `<span class="chip ${b.cls}" title="display band — see the scoring card">${esc(label || b.label)}</span>`;
 }
 
-function barHtml(v, width = 64) {
+function barHtml(v) {
   if (v == null) return '<span class="faint">—</span>';
   const pct = Math.max(0, Math.min(1, v)) * 100;
   return `<span class="bar ${band(v).cls}"><i style="width:${pct.toFixed(1)}%"></i></span>`;
 }
 
-function taskTag(task) {
+function taskTag(task, asLink = false) {
   const label = (task || "").replace("_", " ");
   const cls = task?.startsWith("contract")
     ? "extraction"
@@ -68,24 +99,41 @@ function taskTag(task) {
       : task?.startsWith("subtype")
         ? "subtype"
         : "";
-  return `<span class="task-tag ${cls}">${esc(label)}</span>`;
+  const inner = esc(label);
+  const html = `<span class="task-tag ${cls}">${inner}</span>`;
+  if (!asLink) return html;
+  return `<a href="#/task/${encodeURIComponent(task || "")}" data-nav-stop>${html}</a>`;
 }
 
-/* Headline score cell: big %, raw value, band bar, label, composition line. */
-function headlineCell(h) {
+/* Headline cell: big %, CI + n, band, bar, label, composition. */
+function headlineCell(h, run) {
   if (!h || h.value == null) return '<span class="faint">—</span>';
   const b = band(h.value);
   const pct = (h.value * 100).toFixed(1);
-  return `<span class="hl" title="${esc(h.label || "")}: ${pct}%">
+  return `<span class="hl" title="${esc(h.label || "")}: ${pct}% (${esc(h.detail || "")})">
     <span class="hl-row">
       <strong class="hl-val ${b ? b.cls : ""}">${pct}%</strong>
       <span class="hl-raw faint mono">${fmt.score(h.value)}</span>
       <span class="hl-bar">${barHtml(h.value)}</span>
       ${b ? `<span class="chip ${b.cls}">${b.label}</span>` : ""}
     </span>
+    ${run ? ciText(run) : ""}
     <span class="hl-label soft">${esc(h.label || "")}</span>
     ${h.detail ? `<span class="hl-detail faint">${esc(h.detail)}</span>` : ""}
   </span>`;
+}
+
+/* Δ vs best — colored only when statistically significant (95%). */
+function deltaCell(run, bestRun) {
+  if (run.delta_best_pp == null) return '<span class="faint">—</span>';
+  if (run.delta_best_pp === 0) return '<span class="delta zero">best</span>';
+  const se = bestRun ? pooledSEpp(run, bestRun) : null;
+  const d = run.delta_best_pp;
+  const label = `${d > 0 ? "+" : ""}${d.toFixed(1)}pp`;
+  if (se != null && Math.abs(d) < 1.96 * se) {
+    return `<span class="delta ns" title="Difference ${label} is NOT statistically significant at 95% (two-proportion test): n=${fmt.int(run.n_rows)} vs ${fmt.int(bestRun.n_rows)} — CI overlap">≈ ${label}</span>`;
+  }
+  return `<span class="delta ${d > 0 ? "up" : "down"}" title="Statistically significant vs best (two-proportion z-test, 95%): n=${fmt.int(run.n_rows)} vs ${fmt.int(bestRun?.n_rows ?? "—")}">${label}</span>`;
 }
 
 /* ---------- routing ---------- */
@@ -101,6 +149,8 @@ function parseHash() {
   if (m) return { view: "doc", id: Number(m[1]), doc: Number(m[2]) };
   m = window.location.hash.match(/^#\/run\/(\d+)/);
   if (m) return { view: "run", id: Number(m[1]) };
+  m = window.location.hash.match(/^#\/(task|prompt|model)\/(.+)/);
+  if (m) return { view: "group", kind: m[1], key: decodeURIComponent(m[2]) };
   return { view: "index" };
 }
 
@@ -108,7 +158,24 @@ async function route() {
   const r = parseHash();
   if (r.view === "doc") await renderDoc(r.id, r.doc);
   else if (r.view === "run") await renderRun(r.id);
+  else if (r.view === "group") await renderGroup(r.kind, r.key);
   else await renderIndex();
+}
+
+/* ---------- theme ---------- */
+
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("theme", t); } catch (e) { /* private mode */ }
+  const btn = $("#theme-toggle");
+  if (btn) btn.textContent = t === "dark" ? "☀" : "☾";
+}
+
+function initTheme() {
+  const btn = $("#theme-toggle");
+  if (btn) btn.addEventListener("click", () =>
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+  applyTheme(document.documentElement.dataset.theme || "light");
 }
 
 /* ---------- index view ---------- */
@@ -125,15 +192,12 @@ function statCards() {
     { k: "Models", v: fmt.int(Object.keys(m.models || {}).length),
       d: Object.keys(m.models || {}).join(", ") },
   ];
-  if ((m.n_error || 0) > 0) {
-    cards.push({ k: "Errors", v: fmt.int(m.n_error), d: "across all runs" });
-  }
   for (const task of Object.keys(aggs).sort()) {
     const a = aggs[task];
     cards.push({
       k: `Best · ${task.replace("_", " ")}`,
       v: fmt.pct(a.best.value),
-      d: `median ${fmt.pct(a.median)} · worst ${fmt.pct(a.worst.value)} · ${a.runs} runs`,
+      d: `median ${fmt.pct(a.median)} · worst ${fmt.pct(a.worst.value)} · ${a.runs} runs · ${fmt.int(a.documents ?? 0)} docs`,
       href: `#/run/${a.best.run_id}`,
       best: true,
     });
@@ -150,8 +214,6 @@ function statCards() {
     .join("");
 }
 
-/* The "how scoring works" reference card — content from meta.scoring_guide
- * (generated from SCORING.md by build_site.py). */
 function scoringCard() {
   const g = state.meta.scoring_guide || {};
   const bands = (g.bands || [])
@@ -188,6 +250,16 @@ function scoringCard() {
         <p>${esc(g.general || "")}</p>
         <h3>Display bands</h3>
         ${bands}
+        <h3>Sample sizes matter</h3>
+        <div class="note">
+          Every score carries a <strong>Wilson 95% confidence interval</strong> whose width
+          shrinks with the sample: n=5 → roughly ±27pp, n=509 → ±2.2pp. The <strong>Δ vs best</strong>
+          column is only colored red/green when the difference is <strong>statistically
+          significant at 95%</strong> (two-proportion z-test); insignificant deltas are shown
+          as “≈” in gray — a 5-document run is never presented as beating or losing to a
+          509-document run on bare accuracy. Only same-sample runs (same dataset, seed, and
+          size) are directly comparable.
+        </div>
         ${tasks}
         <p class="soft" style="margin-top:12px">Full formula-level reference:
           <a href="${esc(refs.scoring_md || "")}" target="_blank" rel="noopener">SCORING.md</a> ·
@@ -203,6 +275,12 @@ function options(rows, get, placeholder) {
     `<option value="">${placeholder}</option>` +
     values.map((v) => `<option>${esc(v)}</option>`).join("")
   );
+}
+
+function bestRunFor(task) {
+  const b = (state.meta.task_aggregates || {})[task]?.best;
+  if (!b) return null;
+  return state.index.find((r) => r.id === b.run_id) || null;
 }
 
 function indexTable(rows) {
@@ -225,26 +303,20 @@ function indexTable(rows) {
   ];
   const arrow = (k) => (key === k ? `<span class="arrow">${state.sortDir === "asc" ? "▲" : "▼"}</span>` : "");
   const head = cols
-    .map(([label, k, num]) => `<th class="${num ? "num" : ""}" data-key="${k}">${label}${arrow(k)}</th>`)
+    .map(([label, k, num]) => `<th class="${num ? "num" : ""}" data-key="${k}" title="${k === "delta_best_pp" ? "colored only when statistically significant (95%, two-proportion test)" : ""}">${label}${arrow(k)}</th>`)
     .join("");
   const body = sorted
     .map((r) => {
-      const delta = r.delta_best_pp;
-      const deltaHtml = delta == null
-        ? '<span class="faint">—</span>'
-        : delta === 0
-          ? '<span class="delta zero">best</span>'
-          : `<span class="delta ${delta > 0 ? "up" : "down"}">${delta > 0 ? "+" : ""}${delta.toFixed(1)}pp</span>`;
       const err = r.n_error || 0;
       return `<tr data-id="${r.id}">
         <td class="num faint">${r.id}</td>
         <td><span class="mono">${esc(r.experiment_name)}</span>
             ${r.git ? `<div class="faint" style="font-size:11px">@${esc(r.git.commit)}</div>` : ""}</td>
-        <td>${taskTag(r.task)}</td>
-        <td class="mono">${esc(r.model)}</td>
-        <td class="mono">${esc(r.prompts)}</td>
-        <td>${headlineCell(r.headline)}</td>
-        <td class="num" style="white-space:nowrap">${deltaHtml}</td>
+        <td>${taskTag(r.task, true)}</td>
+        <td class="mono">${r.model ? `<a href="#/model/${encodeURIComponent(r.model)}" data-nav-stop>${esc(r.model)}</a>` : "—"}</td>
+        <td class="mono">${r.prompts && r.prompts !== "—" ? `<a href="#/prompt/${encodeURIComponent(r.prompts)}" data-nav-stop>${esc(r.prompts)}</a>` : esc(r.prompts)}</td>
+        <td>${headlineCell(r.headline, r)}</td>
+        <td class="num" style="white-space:nowrap">${deltaCell(r, bestRunFor(r.task))}</td>
         <td class="num">${fmt.int(r.n_rows)}</td>
         <td class="num">${err > 0 ? `<span class="delta down">${err}</span>` : `<span class="faint">0</span>`}</td>
         <td class="num">${fmt.tokens(r.total_tokens)}</td>
@@ -260,6 +332,7 @@ function applyFilters() {
   const task = $("#f-task").value;
   const model = $("#f-model").value;
   const prompt = $("#f-prompt").value;
+  const minN = Number($("#f-minn").value || 0);
   const rows = state.index.filter(
     (r) =>
       (!q ||
@@ -269,10 +342,36 @@ function applyFilters() {
           .includes(q)) &&
       (!task || r.task === task) &&
       (!model || r.model === model) &&
-      (!prompt || r.prompts === prompt)
+      (!prompt || r.prompts === prompt) &&
+      (r.n_rows || 0) >= minN
   );
   $("#run-count").textContent = `${rows.length} of ${state.index.length} runs`;
   $("#index-table").innerHTML = indexTable(rows);
+}
+
+function bindFilters() {
+  for (const id of ["q", "f-task", "f-model", "f-prompt", "f-minn"]) {
+    $("#" + id).addEventListener("input", applyFilters);
+  }
+  $("#index-table").addEventListener("click", (e) => {
+    const stop = e.target.closest("[data-nav-stop]");
+    if (stop) { e.stopPropagation(); return; }
+    const tr = e.target.closest("tr[data-id]");
+    if (tr) window.location.hash = `#/run/${tr.dataset.id}`;
+  });
+  $("#index-table").addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-key]");
+    if (!th) return;
+    const k = th.dataset.key;
+    if (state.sortKey === k) {
+      state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    } else {
+      state.sortKey = k;
+      state.sortDir = ["id", "headline", "delta_best_pp", "n_rows", "n_error", "total_tokens"].includes(k)
+        ? "desc" : "asc";
+    }
+    applyFilters();
+  });
 }
 
 async function renderIndex() {
@@ -294,6 +393,14 @@ async function renderIndex() {
         <select id="f-task"></select>
         <select id="f-model"></select>
         <select id="f-prompt"></select>
+        <select id="f-minn" title="Only show runs with at least this many documents — small samples have wide confidence intervals">
+          <option value="0">any sample size</option>
+          <option value="10">n ≥ 10</option>
+          <option value="50">n ≥ 50</option>
+          <option value="100">n ≥ 100</option>
+          <option value="200">n ≥ 200</option>
+          <option value="500">n ≥ 500</option>
+        </select>
         <span class="count" id="run-count"></span>
       </div>
       <div id="index-table"></div>
@@ -301,27 +408,128 @@ async function renderIndex() {
   $("#f-task").innerHTML = options(state.index, (r) => r.task, "All tasks");
   $("#f-model").innerHTML = options(state.index, (r) => r.model, "All models");
   $("#f-prompt").innerHTML = options(state.index, (r) => r.prompts, "All prompts");
-  for (const id of ["q", "f-task", "f-model", "f-prompt"]) {
-    $("#" + id).addEventListener("input", applyFilters);
+  bindFilters();
+  applyFilters();
+}
+
+/* ---------- group views (task / prompt / model) ---------- */
+
+function groupHeader(kind, key) {
+  const label = kind === "task" ? "Task" : kind === "prompt" ? "Prompt version" : "Model";
+  return `<a class="back" href="#/">← All runs</a>
+    <div class="detail-head">
+      <h2><span class="mono">${esc(key)}</span></h2>
+      <div class="meta-line">${esc(label)} · ${kind === "task" ? taskTag(key) : ""}</div>
+    </div>`;
+}
+
+function groupStats(kind, key, runs) {
+  const values = runs.map((r) => r.headline?.value).filter((v) => v != null);
+  const docs = runs.reduce((s, r) => s + (r.n_rows || 0), 0);
+  const toks = runs.reduce((s, r) => s + (r.total_tokens || 0), 0);
+  const sorted = [...values].sort((a, b) => a - b);
+  const median = sorted.length
+    ? sorted.length % 2
+      ? sorted[(sorted.length - 1) / 2]
+      : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+    : null;
+  const best = values.length ? Math.max(...values) : null;
+  const worst = values.length ? Math.min(...values) : null;
+  const bestRun = runs.find((r) => r.headline?.value === best);
+  const cards = [
+    { k: "Runs", v: fmt.int(runs.length) },
+    { k: "Documents", v: fmt.int(docs) },
+    { k: "Tokens", v: fmt.tokens(toks) },
+    { k: "Best", v: fmt.pct(best), href: bestRun ? `#/run/${bestRun.id}` : null },
+    { k: "Median", v: fmt.pct(median) },
+    { k: "Worst", v: fmt.pct(worst) },
+  ];
+  return `<div class="stats">${cards.map((c) =>
+    `<div class="stat"><div class="k">${esc(c.k)}</div><div class="v">${c.href ? `<a href="${c.href}">${esc(c.v)}</a>` : esc(c.v)}</div></div>`).join("")}</div>`;
+}
+
+function groupByTable(kind, runs) {
+  /* task -> group by prompt; prompt/model -> group by task. */
+  const groupKey = kind === "task" ? "prompts" : "task";
+  const groups = new Map();
+  for (const r of runs) {
+    const k = r[groupKey] || "—";
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
   }
+  const rows = [...groups.entries()]
+    .map(([key, rs]) => {
+      const values = rs.map((r) => r.headline?.value).filter((v) => v != null);
+      const best = values.length ? Math.max(...values) : null;
+      const sorted = [...values].sort((a, b) => a - b);
+      const median = sorted.length
+        ? sorted.length % 2
+          ? sorted[(sorted.length - 1) / 2]
+          : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+        : null;
+      const docs = rs.reduce((s, r) => s + (r.n_rows || 0), 0);
+      const bestRun = rs.find((r) => r.headline?.value === best);
+      const target = groupKey === "prompts" ? `#/prompt/${encodeURIComponent(key)}` : `#/task/${encodeURIComponent(key)}`;
+      return `<a class="group-row" href="${target}" data-nav-stop style="display:grid">
+        <span class="gname mono">${esc(key)}</span>
+        <span class="gval">${fmt.int(rs.length)} runs</span>
+        <span class="gval">${fmt.int(docs)} docs</span>
+        <span class="gval">${fmt.pct(best)}${bestRun ? ` <span class="faint">run ${bestRun.id}</span>` : ""}</span>
+        <span class="gval faint">median ${fmt.pct(median)}</span>
+      </a>`;
+    })
+    .join("");
+  return `<div class="card"><h2>Grouped by ${groupKey === "prompts" ? "prompt version" : groupKey}</h2>
+    <div class="group-grid">
+      <div class="group-row" style="font-weight:650;color:var(--text-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em">
+        <span>${groupKey === "prompts" ? "Prompt" : "Task"}</span><span class="gval">Runs</span><span class="gval">Docs</span><span class="gval">Best</span><span class="gval">Median</span>
+      </div>
+      ${rows}
+    </div></div>`;
+}
+
+async function renderGroup(kind, key) {
+  if (!state.meta) {
+    const [meta, index] = await Promise.all([
+      fetchJson("data/meta.json"),
+      fetchJson("data/index.json"),
+    ]);
+    state.meta = meta;
+    state.index = index;
+  }
+  const runs = state.index.filter((r) =>
+    kind === "task" ? r.task === key : kind === "prompt" ? r.prompts === key : r.model === key);
+  if (!runs.length) {
+    $("#view").innerHTML = `<div class="empty">No runs for ${esc(kind)} ${esc(key)}.</div>`;
+    return;
+  }
+  $("#view").innerHTML = `
+    ${groupHeader(kind, key)}
+    ${groupStats(kind, key, runs)}
+    ${groupByTable(kind, runs)}
+    <div class="card"><h2>Runs</h2>
+      <div class="filters">
+        <input type="search" id="q" placeholder="Filter these runs…" />
+        <span class="count" id="run-count"></span>
+      </div>
+      <div id="index-table"></div>
+    </div>`;
+  const localFilter = () => {
+    const q = ($("#q").value || "").toLowerCase();
+    const rows = runs.filter((r) => !q ||
+      [r.experiment_name, r.model, r.prompts, r.task, r.git?.commit].join(" ").toLowerCase().includes(q));
+    $("#run-count").textContent = `${rows.length} of ${runs.length} runs`;
+    $("#index-table").innerHTML = indexTable(rows);
+  };
+  $("#q").addEventListener("input", localFilter);
   $("#index-table").addEventListener("click", (e) => {
+    const stop = e.target.closest("[data-nav-stop]");
+    if (stop) { e.stopPropagation(); return; }
     const tr = e.target.closest("tr[data-id]");
     if (tr) window.location.hash = `#/run/${tr.dataset.id}`;
   });
-  $("#index-table").addEventListener("click", (e) => {
-    const th = e.target.closest("th[data-key]");
-    if (!th) return;
-    const k = th.dataset.key;
-    if (state.sortKey === k) {
-      state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-    } else {
-      state.sortKey = k;
-      state.sortDir = ["id", "headline", "delta_best_pp", "n_rows", "n_error", "total_tokens"].includes(k)
-        ? "desc" : "asc";
-    }
-    applyFilters();
-  });
-  applyFilters();
+  localFilter();
+  window.scrollTo(0, 0);
 }
 
 /* ---------- run detail view ---------- */
@@ -344,7 +552,7 @@ function scoreRows(obj) {
     .map(
       ([name, v]) =>
         `<div class="score-row"><div class="name">${esc(name)}</div>
-         <div class="track"><i class="${band(v).cls}" style="width:${(Math.max(0, Math.min(1, v)) * 100).toFixed(1)}%"></i></div>
+         <div class="track"><i class="${band(v)?.cls ?? ""}" style="width:${v == null ? 0 : (Math.max(0, Math.min(1, v)) * 100).toFixed(1)}%"></i></div>
          <div class="value">${v == null ? "—" : fmt.pct(v)}</div></div>`
     )
     .join("");
@@ -354,7 +562,6 @@ function kvCard(title, body, flush = false) {
   return `<div class="card"><h2>${esc(title)}</h2><div class="body${flush ? " flush" : ""}">${body}</div></div>`;
 }
 
-/* Big metric cards for the run header. kind: "ratio" (0-1, percent) or "count". */
 function metricCard(k, v, opts = {}) {
   const isRatio = opts.kind !== "count";
   const b = isRatio ? band(v) : null;
@@ -364,15 +571,15 @@ function metricCard(k, v, opts = {}) {
       ? `${fmt.pct(v)} <span class="faint mono" style="font-size:12px">${fmt.score(v)}</span>`
       : fmt.int(v);
   const chip = b ? ` <span class="chip ${b.cls}">${b.label}</span>` : "";
+  const nBadge = opts.n ? ` <span class="badge" title="sample size — CI width shrinks with n">n=${fmt.int(opts.n)}</span>` : "";
   return `<div class="stat ${opts.best ? "best" : ""}">
     <div class="k">${esc(k)}</div>
-    <div class="v">${val}${chip}</div>
+    <div class="v">${val}${chip}${nBadge}</div>
     ${opts.d ? `<div class="d">${esc(opts.d)}</div>` : ""}
     ${opts.note ? `<div class="d faint">${esc(opts.note)}</div>` : ""}
   </div>`;
 }
 
-/* Per-run score composition bars (task-specific breakdown). */
 function compositionCard(run) {
   const task = run.task;
   const scores = run.scores || {};
@@ -513,24 +720,25 @@ async function renderRun(id) {
   const extractor = task === "contract_entity_extraction" ? scores : scores.extractor || {};
   const dataSource = run.data_source || {};
   const git = run.git || {};
+  const n = run.n_rows;
 
   const cards = [];
   if (task === "subtype_classification") {
-    cards.push(metricCard("Doc-type accuracy", sorter.exact_match, { d: "primary class == contract", note: "exact_match" }));
-    cards.push(metricCard("Subtype strict", sorter.subtype_accuracy, { d: "exact CUAD folder", best: true }));
-    cards.push(metricCard("Subtype equiv", sorter.subtype_accuracy_equiv, { d: "strict or defensible family" }));
+    cards.push(metricCard("Doc-type accuracy", sorter.exact_match, { d: "primary class == contract", note: "exact_match", n }));
+    cards.push(metricCard("Subtype strict", sorter.subtype_accuracy, { d: "exact CUAD folder", best: true, n }));
+    cards.push(metricCard("Subtype equiv", sorter.subtype_accuracy_equiv, { d: "strict or defensible family", n }));
     cards.push(metricCard("Confidence", sorter.confidence, { d: "mean model-reported confidence" }));
-    cards.push(metricCard("Failed rows", sorter.failure_insights?.n_failed, { kind: "count", d: Object.entries(sorter.failure_insights?.mode_counts || {}).map(([m, n]) => `${m} ×${n}`).join(" · ") }));
+    cards.push(metricCard("Failed rows", sorter.failure_insights?.n_failed, { kind: "count", d: Object.entries(sorter.failure_insights?.mode_counts || {}).map(([m, x]) => `${m} ×${x}`).join(" · ") }));
   } else if (task === "chained_sorter_extractor") {
-    cards.push(metricCard("Extractor score", scores.extractor?.overall_extraction_score, { d: "end-to-end extraction quality", best: true }));
-    cards.push(metricCard("Sorter doc-type", scores.sorter?.exact_match, { d: "routing to contract path" }));
-    cards.push(metricCard("Verified precision", extractor.overall_verified_precision, { d: "factuality guard — grounded items" }));
-    cards.push(metricCard("Field presence", extractor.field_presence, { d: "share of expected fields populated" }));
-    cards.push(metricCard("Category presence", extractor.category_presence, { d: "CUAD clause coverage" }));
+    cards.push(metricCard("Extractor score", scores.extractor?.overall_extraction_score, { d: "end-to-end extraction quality", best: true, n }));
+    cards.push(metricCard("Sorter doc-type", scores.sorter?.exact_match, { d: "routing to contract path", n }));
+    cards.push(metricCard("Verified precision", extractor.overall_verified_precision, { d: "factuality guard — grounded items", n }));
+    cards.push(metricCard("Field presence", extractor.field_presence, { d: "share of expected fields populated", n }));
+    cards.push(metricCard("Category presence", extractor.category_presence, { d: "CUAD clause coverage", n }));
   } else {
-    cards.push(metricCard("Overall extraction", scores.overall_extraction_score, { d: "composite of per-field content scores", best: true }));
-    cards.push(metricCard("Field presence", scores.field_presence, { d: "share of expected fields populated" }));
-    cards.push(metricCard("Schema valid", scores.schema_valid, { d: "parseable, conformant JSON output" }));
+    cards.push(metricCard("Overall extraction", scores.overall_extraction_score, { d: "composite of per-field content scores", best: true, n }));
+    cards.push(metricCard("Field presence", scores.field_presence, { d: "share of expected fields populated", n }));
+    cards.push(metricCard("Schema valid", scores.schema_valid, { d: "parseable, conformant JSON output", n }));
     cards.push(metricCard("Errors", run.n_error ?? 0, { kind: "count", d: `of ${fmt.int(run.n_rows)} rows` }));
   }
 
@@ -565,7 +773,7 @@ async function renderRun(id) {
       "total cost (usd)": total.cost_total_usd,
       "rows with usage": total.rows_with_usage,
     })}</table>
-    ${costZero ? `<div class="soft faint" style="font-size:12px;margin-top:6px">Costs are $0.00 — rows carried no OpenRouter usage billing (manifest-replayed and Langfuse-traced rows are unpriced by design; see SCORING.md §7).</div>` : ""}`));
+    ${costZero ? `<div class="note">Costs are $0.00 — rows carried no OpenRouter usage billing (manifest-replayed and Langfuse-traced rows are unpriced by design; see SCORING.md §7).</div>` : ""}`));
 
   if (task === "contract_entity_extraction") {
     sections.push(kvCard("Per-field content scores", `
@@ -574,7 +782,7 @@ async function renderRun(id) {
         "field presence": scores.field_presence,
         "schema valid": scores.schema_valid,
       })}${scores.per_field ? scoreRows(scores.per_field) : ""}</div>
-      <div class="soft faint" style="font-size:12px;margin-top:6px">Entity-list fields (parties, key_obligations, termination_clauses) report ground-truth coverage — extra correct extractions don't cut the score.</div>`));
+      <div class="note">Entity-list fields (parties, key_obligations, termination_clauses) report ground-truth coverage — extra correct extractions don't cut the score. See the scoring reference for per-field-type scoring.</div>`));
   } else if (task === "chained_sorter_extractor") {
     sections.push(kvCard("Sorter stage scores", `<div style="max-width:640px">${scoreRows(scores.sorter)}</div>`));
     sections.push(kvCard("Extractor stage scores", `<div style="max-width:640px">${scoreRows(extractor)}</div>`));
@@ -597,7 +805,7 @@ async function renderRun(id) {
     const fi = sorter.failure_insights || {};
     const failures = (fi.failures || [])
       .map(
-        (f, i) => `<tr class="insight-row">
+        (f) => `<tr class="insight-row">
           <td class="mono" style="max-width:340px;overflow-wrap:anywhere">${esc(f.filename)}</td>
           <td class="mono">${esc(f.expected)}</td>
           <td class="mono">${esc(f.predicted)}</td>
@@ -617,12 +825,13 @@ async function renderRun(id) {
 
   sections.push(kvCard(`Per-document results (${fmt.int(run.n_rows)})`, resultsTable(run, id)));
 
-  const headline = headlineCell((state.index.find((r) => r.id === id) || {}).headline);
+  const summary = state.index.find((r) => r.id === id) || null;
+  const headline = headlineCell(summary?.headline, summary);
   $("#view").innerHTML = `
     <a class="back" href="#/">← All runs</a>
     <div class="detail-head">
       <h2><span class="mono">${esc(run.experiment_name)}</span></h2>
-      <div class="meta-line">${taskTag(task)} · ${esc(run.model)} · run #${id} · ${fmt.date(run.timestamp)} · ${headline}</div>
+      <div class="meta-line">${taskTag(task, true)} · ${esc(run.model)} · run #${id} · ${fmt.date(run.timestamp)} · ${headline}</div>
     </div>
     ${sections.join("")}`;
 
@@ -637,6 +846,90 @@ async function renderRun(id) {
 
 /* ---------- single-document trace view ---------- */
 
+const EXTRACTION_INTERPRETATION =
+  "Field scores are type-aware (SCORING.md §3): dates/money/IDs are exact-after-normalize; " +
+  "names use normalized fuzzy matching (Jaro-Winkler + token-set ratio); free-text uses SQuAD " +
+  "token F1; entity lists use optimal bipartite matching (threshold 0.6) reported as " +
+  "ground-truth coverage for partial-GT fields (parties, key_obligations, termination_clauses); " +
+  "containment fields (governing_law, term_length, renewal_terms) are scored by expected-token coverage.";
+
+/* Factuality audit table — the "why" behind verified_precision. */
+function entityAuditTable(audit) {
+  if (!audit || !Object.keys(audit).length) return "";
+  const rows = Object.entries(audit)
+    .map(([field, a]) => {
+      const bad = (a.hallucinated || 0) > 0;
+      return `<tr>
+        <td class="mono">${esc(field)}</td>
+        <td class="num">${fmt.int(a.n_predicted)}</td>
+        <td class="num">${fmt.int(a.matched_gt)}</td>
+        <td class="num">${fmt.int(a.verified_in_doc)}</td>
+        <td class="num">${fmt.int(a.true_items)}</td>
+        <td class="num">${bad ? `<span class="delta down">${fmt.int(a.hallucinated)}</span>` : `<span class="faint">0</span>`}</td>
+        <td class="num">${a.verified_precision == null ? "—" : fmt.pct(a.verified_precision)}</td>
+        <td class="num">${a.hallucination_rate == null ? "—" : fmt.pct(a.hallucination_rate)}</td>
+      </tr>`;
+    })
+    .join("");
+  return kvCard("Entity-list factuality audit", `
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Field</th><th class="num">Predicted</th><th class="num">Matched GT</th>
+        <th class="num">Verified in doc</th><th class="num">True items</th><th class="num">Hallucinated</th>
+        <th class="num">Verified precision</th><th class="num">Hallucination rate</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="note"><strong>How to read it:</strong> every predicted item must match a ground-truth
+      label OR be grounded in the document text (token coverage ≥ 0.7; dates parsed from the document).
+      <strong>Matched GT</strong> = items hitting a label; <strong>Verified in doc</strong> = items grounded
+      in the source; <strong>True items</strong> = either; <strong>Hallucinated</strong> = neither —
+      these drive the row's hallucination rate and verified precision.</div>`);
+}
+
+function extractionScoresSection(ex, opts = {}) {
+  const parts = [];
+  const metrics = {
+    "overall score": ex.overall_score,
+    "field presence": ex.field_presence,
+    "schema valid": ex.schema_valid,
+  };
+  if (opts.verified !== false) metrics["verified precision (factuality)"] = ex.overall_verified_precision;
+  if (opts.category !== false) metrics["category presence (CUAD coverage)"] = ex.category_presence;
+  const meaning = {
+    "overall score": "mean of the per-field content scores over expected fields with a non-null ground-truth value",
+    "field presence": "share of expected fields the model populated at all (non-null/non-empty)",
+    "schema valid": "output parsed as conformant JSON — 0 means the row was unusable",
+    "verified precision (factuality)": "share of predicted items that match a ground-truth label OR are grounded in the document text",
+    "category presence (CUAD coverage)": "share of the document's applicable CUAD presence-categories whose clause text appears in the extraction",
+  };
+  const rows = Object.entries(metrics)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `<div class="score-row"><div class="name" title="${esc(meaning[k] || "")}">${esc(k)}</div>
+      <div class="track"><i class="${band(v)?.cls ?? ""}" style="width:${v == null ? 0 : (Math.max(0, Math.min(1, v)) * 100).toFixed(1)}%"></i></div>
+      <div class="value">${v == null ? "—" : fmt.pct(v)}</div></div>`)
+    .join("");
+  parts.push(`<div style="max-width:640px">${rows}</div>`);
+  if (ex.field_scores && Object.keys(ex.field_scores).length) {
+    parts.push(`<div style="margin-top:10px"><strong class="soft" style="font-size:12px">Per-field content scores</strong>
+      <div style="max-width:640px">${scoreRows(ex.field_scores)}</div></div>`);
+  }
+  parts.push(`<div class="note"><strong>How these are scored:</strong> ${EXTRACTION_INTERPRETATION}</div>`);
+  return kvCard("Extraction scores — interpreted", parts.join(""));
+}
+
+function predictedExtractionCard(pred) {
+  if (!pred || typeof pred !== "object") return "";
+  const rows = Object.entries(pred)
+    .filter(([, v]) => v !== null && v !== undefined && v !== "")
+    .map(([k, v]) => {
+      const html = Array.isArray(v)
+        ? v.map((x) => `<div class="mono" style="padding:2px 0">• ${esc(x)}</div>`).join("")
+        : `<span class="mono">${esc(v)}</span>`;
+      return `<tr><td class="k">${esc(k)}</td><td class="v">${html}</td></tr>`;
+    })
+    .join("");
+  return kvCard("Predicted extraction (model output)", `<table class="kv">${rows}</table>`);
+}
+
 async function renderDoc(runId, docIndex) {
   const run = await fetchJson(`data/runs/${String(runId).padStart(3, "0")}.json`);
   const res = (run.results || [])[docIndex];
@@ -647,9 +940,9 @@ async function renderDoc(runId, docIndex) {
   const task = run.task;
   const total = run.results.length;
   const sorter = res.sorter || {};
-
   const sections = [];
 
+  /* Stage 1 — classification (subtype and chained runs). */
   if (task === "subtype_classification" || task === "chained_sorter_extractor") {
     sections.push(kvCard("Sorter classification", `
       <div class="kv" style="max-width:720px">${kvRowsTyped({
@@ -668,42 +961,51 @@ async function renderDoc(runId, docIndex) {
     sections.push(kvCard("Sorter tokens", `<table class="kv">${kvRowsTyped(res.sorter_tokens)}</table>`));
   }
 
+  /* Stage 2 — extraction scores, interpreted, where applicable. */
   if (task === "contract_entity_extraction") {
-    sections.push(kvCard("Extraction scores", `
-      <div style="max-width:640px">${scoreRows({
-        "overall score": res.overall_score,
-        "field presence": res.field_presence,
-        "schema valid": res.schema_valid,
-      })}${res.field_scores ? scoreRows(res.field_scores) : ""}</div>`));
+    sections.push(extractionScoresSection(res, { verified: false, category: false }));
+    sections.push(entityAuditTable(res.entity_list_audit));
     if (res.entity_list_f1 && Object.keys(res.entity_list_f1).length) {
-      sections.push(kvCard("Entity-list F1 (raw audit)", `<table class="kv">${kvRowsTyped(res.entity_list_f1)}</table>`));
+      sections.push(kvCard("Entity-list scores (raw audit)", `<table class="kv">${kvRowsTyped(res.entity_list_f1)}</table>`));
+    }
+    if (res.ambiguous_fields?.length) {
+      sections.push(kvCard("Ambiguous fields", `<span class="mono">${esc(res.ambiguous_fields.join(", "))}</span>
+        <div class="note">Scores inside the ambiguous band [0.5, 0.85] — these fields trigger the optional judge review pass (SCORING.md §3).</div>`));
     }
     sections.push(kvCard("Tokens", `<table class="kv">${kvRowsTyped(res.tokens)}</table>`));
   }
 
   if (task === "chained_sorter_extractor") {
     const ex = res.extractor_scores || {};
-    sections.push(kvCard("Extractor scores", `
-      <div style="max-width:640px">${scoreRows({
-        "overall score": ex.overall_score,
-        "field presence": ex.field_presence,
-        "schema valid": ex.schema_valid,
-        "verified precision": ex.overall_verified_precision,
-        "category presence": ex.category_presence,
-      })}${ex.field_scores ? scoreRows(ex.field_scores) : ""}</div>`));
+    sections.push(extractionScoresSection(ex));
+    sections.push(entityAuditTable(ex.entity_list_audit));
     if (ex.entity_list_f1 && Object.keys(ex.entity_list_f1).length) {
-      sections.push(kvCard("Entity-list F1 (raw audit)", `<table class="kv">${kvRowsTyped(ex.entity_list_f1)}</table>`));
+      sections.push(kvCard("Entity-list scores (raw audit)", `<table class="kv">${kvRowsTyped(ex.entity_list_f1)}</table>`));
+    }
+    if (ex.category_presence_detail && Object.keys(ex.category_presence_detail).length) {
+      const applicable = Object.entries(ex.category_presence_detail).filter(([, c]) => c.expected === true);
+      if (applicable.length) {
+        sections.push(kvCard("CUAD category presence", `
+          <div class="table-wrap"><table class="data">
+            <thead><tr><th>Category</th><th>Matched</th><th>Field</th></tr></thead>
+            <tbody>${applicable.map(([cat, c]) => `<tr>
+              <td class="mono">${esc(cat)}</td>
+              <td>${c.matched === true ? '<span class="badge" style="color:var(--good)">covered</span>'
+                    : c.matched === false ? '<span class="badge" style="color:var(--bad)">missing</span>'
+                    : '<span class="faint">—</span>'}</td>
+              <td class="mono">${esc(c.field || "")}</td></tr>`).join("")}</tbody>
+          </table></div>
+          <div class="note">Applicable CUAD presence categories (expected=true) and whether the extraction covers them (SCORING.md §4, category_presence).</div>`));
+      }
     }
     if (ex.ambiguous_fields?.length) {
-      sections.push(kvCard("Ambiguous fields", `<span class="mono">${esc(ex.ambiguous_fields.join(", "))}</span>`));
+      sections.push(kvCard("Ambiguous fields", `<span class="mono">${esc(ex.ambiguous_fields.join(", "))}</span>
+        <div class="note">Scores inside the ambiguous band [0.5, 0.85] — these fields trigger the optional judge review pass (SCORING.md §3).</div>`));
     }
+    sections.push(predictedExtractionCard(ex.predicted));
     sections.push(kvCard("Extractor tokens", `<table class="kv">${kvRowsTyped(res.extractor_tokens)}</table>`));
   }
 
-  if (res.ambiguous_fields?.length && task === "contract_entity_extraction") {
-    sections.push(kvCard("Ambiguous fields", `<span class="mono">${esc(res.ambiguous_fields.join(", "))}</span>
-      <div class="soft faint" style="font-size:12px;margin-top:4px">Per-field scores inside the ambiguous band [0.5, 0.85] — the optional judge pass targets these.</div>`));
-  }
   if (res.error) {
     sections.push(kvCard("Error", `<div class="reasoning">${esc(res.error)}</div>`));
   }
@@ -715,7 +1017,7 @@ async function renderDoc(runId, docIndex) {
     <a class="back" href="#/run/${runId}">← Run ${runId}: <span class="mono">${esc(run.experiment_name)}</span></a>
     <div class="detail-head">
       <h2 class="mono" style="font-size:16px">${esc(res.filename || "(unnamed document)")}</h2>
-      <div class="meta-line">${taskTag(task)} · document ${docIndex + 1} of ${total}
+      <div class="meta-line">${taskTag(task, true)} · document ${docIndex + 1} of ${total}
         · ${res.status === "completed" ? '<span class="badge" style="color:var(--good)">ok</span>' : `<span class="badge" style="color:var(--bad)">${esc(res.status)}</span>`}
         <span class="trace-nav" style="float:right">${prev} ${next}</span></div>
     </div>
@@ -727,6 +1029,7 @@ async function renderDoc(runId, docIndex) {
 
 async function boot() {
   try {
+    initTheme();
     const [meta, index] = await Promise.all([
       fetchJson("data/meta.json"),
       fetchJson("data/index.json"),

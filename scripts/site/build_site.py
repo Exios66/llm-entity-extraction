@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -96,6 +97,20 @@ def headline_score(record: dict) -> dict:
                 "value": strict,
                 "detail": detail,
             }
+    if task == "legalbench_binary_answer":
+        value = scores.get("accuracy")
+        if isinstance(value, (int, float)):
+            detail = (
+                f"macro {_fmt(scores.get('macro_category_accuracy') or 0)}"
+                f" · yes-F1 {_fmt(scores.get('yes_f1') or 0)}"
+                f" · cal {_fmt(scores.get('calibration_error') or 0)}"
+            )
+            return {"label": "QA accuracy", "value": value, "detail": detail}
+    if task == "legalbench_multiclass_classification":
+        value = scores.get("accuracy")
+        if isinstance(value, (int, float)):
+            detail = f"strict {_fmt(value)} · equiv {_fmt(scores.get('accuracy_equiv') or 0)}"
+            return {"label": "family accuracy", "value": value, "detail": detail}
     return {}
 
 
@@ -137,6 +152,26 @@ def breakdown(record: dict) -> dict:
             "n_failed": failures.get("n_failed"),
             "mode_counts": failures.get("mode_counts") or {},
         }
+    if task == "legalbench_binary_answer":
+        return {
+            "accuracy": scores.get("accuracy"),
+            "macro_category_accuracy": scores.get("macro_category_accuracy"),
+            "yes_f1": scores.get("yes_f1"),
+            "confidence_mean": scores.get("confidence_mean"),
+            "calibration_error": scores.get("calibration_error"),
+            "n_questions": scores.get("n_questions"),
+            "n_yes": scores.get("n_yes"),
+            "n_no": scores.get("n_no"),
+        }
+    if task == "legalbench_multiclass_classification":
+        return {
+            "accuracy": scores.get("accuracy"),
+            "accuracy_equiv": scores.get("accuracy_equiv"),
+            "macro_f1": scores.get("macro_f1"),
+            "confidence_mean": scores.get("confidence_mean"),
+            "calibration_error": scores.get("calibration_error"),
+            "n_documents": scores.get("n_documents"),
+        }
     return {}
 
 
@@ -146,6 +181,26 @@ def prompt_string(record: dict) -> str:
     if not prompt and isinstance(record.get("prompt_versions"), dict):
         prompt = " + ".join(str(v) for v in record["prompt_versions"].values())
     return prompt or "—"
+
+
+def wilson_ci(p: float | None, n: int | None, z: float = 1.96) -> dict | None:
+    """Wilson score interval for a proportion (95% by default).
+
+    Sample-size-aware: the interval narrows with n, so a 5-document run gets
+    a wide interval while a 509-document run gets a tight one. Used to
+    quantify how much a score could vary by chance, and to flag deltas
+    between runs of different sizes as not statistically meaningful.
+    """
+    if p is None or not n:
+        return None
+    denom = 1 + z * z / n
+    center = (p + z * z / (2 * n)) / denom
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom
+    return {
+        "lo": max(0.0, center - half),
+        "hi": min(1.0, center + half),
+        "half_pp": half * 100,
+    }
 
 
 def summarize(record: dict, run_id: int, best_by_task: dict[str, float]) -> dict:
@@ -171,6 +226,7 @@ def summarize(record: dict, run_id: int, best_by_task: dict[str, float]) -> dict
         "model": record.get("model", ""),
         "prompts": prompt_string(record),
         "headline": headline,
+        "ci95": wilson_ci(headline["value"], record.get("n_rows")) if headline else None,
         "breakdown": breakdown(record),
         "n_rows": record.get("n_rows"),
         "n_ok": record.get("n_ok"),
@@ -300,6 +356,55 @@ SCORING_GUIDE = {
                              "equivalent_family (recovered by equivalence)")},
             ],
         },
+        "legalbench_binary_answer": {
+            "headline": {"key": "accuracy", "label": "QA accuracy"},
+            "summary": ("LegalBench suite (llm-mailroom/legalbench/) — CUAD contract-QA "
+                        "binary-answer task: yes/no questions over contracts with "
+                        "evidence spans, scored against the CUAD annotations."),
+            "formula": "headline = share of questions answered correctly (predicted yes/no == annotation)",
+            "conveys": "Contract-comprehension accuracy on a large, real legal QA corpus.",
+            "components": [
+                {"key": "accuracy", "label": "Accuracy",
+                 "calculation": "share of questions with predicted == expected",
+                 "meaning": "Headline comprehension quality."},
+                {"key": "macro_category_accuracy", "label": "Macro category accuracy",
+                 "calculation": "mean of per-clause-category accuracies (41 categories)",
+                 "meaning": "Whether any clause family is disproportionately hard."},
+                {"key": "yes_f1", "label": "Yes-class F1",
+                 "calculation": "F1 for answering 'yes' (precision/recall over yes predictions vs yes labels)",
+                 "meaning": "False-positive tendency on affirmative answers."},
+                {"key": "confidence_mean", "label": "Confidence mean",
+                 "calculation": "mean of the model's reported per-question confidence",
+                 "meaning": "Calibration signal."},
+                {"key": "calibration_error", "label": "Calibration error (ECE)",
+                 "calculation": "expected calibration error over confidence/outcome pairs",
+                 "meaning": "How well confidence matches observed correctness."},
+            ],
+        },
+        "legalbench_multiclass_classification": {
+            "headline": {"key": "accuracy", "label": "Family accuracy (strict)"},
+            "summary": ("LegalBench suite (llm-mailroom/legalbench/) — CUAD contract-family "
+                        "classification: assign one of the 25 contract families (+ other) "
+                        "to each contract, scored against the family derived from the "
+                        "CUAD folder/title taxonomy."),
+            "formula": ("headline = strict family accuracy; equiv additionally accepts "
+                        "defensible family swaps (same SUBTYPE_EQUIVALENCES as the sorter)"),
+            "conveys": "Multiclass legal-routing accuracy with a defensible-equivalence lens.",
+            "components": [
+                {"key": "accuracy", "label": "Strict accuracy",
+                 "calculation": "share of documents whose family key matches exactly",
+                 "meaning": "Exact family-level routing."},
+                {"key": "accuracy_equiv", "label": "Equiv accuracy",
+                 "calculation": "strict OR defensible equivalent family",
+                 "meaning": "Routing to a legally-defensible family."},
+                {"key": "macro_f1", "label": "Macro F1",
+                 "calculation": "mean one-vs-rest F1 over families with labels present",
+                 "meaning": "Class balance-adjusted quality."},
+                {"key": "confidence_mean", "label": "Confidence mean",
+                 "calculation": "mean of the model's reported per-document confidence",
+                 "meaning": "Calibration signal."},
+            ],
+        },
     },
     "references": {
         "scoring_md": f"{REPO_URL}/blob/main/SCORING.md",
@@ -361,6 +466,12 @@ def build_meta(records: list[dict], jsonl_path: Path, out_dir: Path) -> dict:
             "best": {"run_id": best_pair[0], "value": best_pair[1]},
             "median": median,
             "worst": {"run_id": worst_pair[0], "value": worst_pair[1]},
+            "documents": sum(r.get("n_rows") or 0 for r in records if r.get("task") == task),
+            "tokens": sum(
+                ((r.get("tokens") or {}).get("total") or {}).get("total_tokens")
+                if "total" in (r.get("tokens") or {})
+                else (r.get("tokens") or {}).get("total_tokens") or 0
+                for r in records if r.get("task") == task),
         }
 
     return {
