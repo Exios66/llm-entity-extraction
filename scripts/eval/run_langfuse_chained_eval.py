@@ -100,8 +100,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="Reasoning effort for the extraction call")
     parser.add_argument("--sorter-reasoning-effort", default="medium",
                         help="Reasoning effort for the SORTER's classification call")
-    parser.add_argument("--max-input-chars", type=int, default=100_000,
-                        help="Hard safety cap on document text fed to the agents")
+    parser.add_argument("--max-input-chars", type=int, default=150_000,
+                        help="Hard safety cap on document text fed to the agents "
+                             "(150k default: the full corpus's largest contracts run "
+                             "106-122k chars; head+tail window when exceeded)")
     parser.add_argument("--max-concurrency", type=int, default=8, help="Concurrent API calls")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{sorter}+{extractor}_chained_langfuse)")
@@ -350,10 +352,18 @@ def main_with_args(argv: list[str]) -> int:
                         "entity_list_f1": {k: v.score for k, v in result.entity_list_scores.items()},
                         "entity_list_audit": result.entity_list_audit,
                         "ambiguous_fields": result.ambiguous_fields,
+                        "truncated": bool(specialist._last_truncated),
                     },
                 }
 
-                specialist_handle.set_output(composite["extractor"])
+                specialist_handle.set_output({
+                    "overall_score": composite["extractor"]["overall_score"],
+                    "field_presence": field_presence,
+                    "category_presence": category_presence,
+                    "overall_verified_precision": composite["extractor"]["overall_verified_precision"],
+                    "schema_valid": 1.0,
+                    "truncated": composite["extractor"]["truncated"],
+                })
                 specialist_handle.score("overall_extraction_score", composite["extractor"]["overall_score"],
                                         comment="mean deterministic content score vs CUAD GT")
                 specialist_handle.score("field_presence", field_presence,

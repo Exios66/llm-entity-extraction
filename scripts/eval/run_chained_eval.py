@@ -100,8 +100,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="Reasoning effort for the SORTER's classification call "
                              "(default: medium — the sorter must weigh operative "
                              "clauses across 25 near-synonymous families)")
-    parser.add_argument("--max-input-chars", type=int, default=100_000,
-                        help="Hard safety cap on document text fed to the agents")
+    parser.add_argument("--max-input-chars", type=int, default=150_000,
+                        help="Hard safety cap on document text fed to the agents "
+                             "(150k default: the full corpus's largest contracts run "
+                             "106-122k chars; head+tail window when exceeded)")
     parser.add_argument("--max-concurrency", type=int, default=4, help="Concurrent API calls")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_sorter-v{extractor}_chained)")
@@ -308,6 +310,10 @@ def main_with_args(argv: list[str]) -> int:
                 "entity_list_f1": {k: v.score for k, v in result.entity_list_scores.items()},
                 "entity_list_audit": result.entity_list_audit,
                 "ambiguous_fields": result.ambiguous_fields,
+                # Truncation auditability: True when the document exceeded the
+                # input cap and the specialist saw only head+tail (labeled
+                # clauses in the omitted middle are unrecoverable).
+                "truncated": bool(specialist._last_truncated),
             },
         }
 

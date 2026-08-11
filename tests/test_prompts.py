@@ -95,3 +95,33 @@ def test_judge_prompts_are_distinct():
     cls = get_prompt("judge-classification")
     corr = get_prompt("judge-correctness")
     assert judge != cls != corr
+
+
+def test_contracts_v12_field_accuracy_and_rescan_rules():
+    from src.prompts import CONTRACTS_SPECIALIST_PROMPT_V11, CONTRACTS_SPECIALIST_PROMPT_V12
+
+    # v12 is a strict derivation of v11: the base is untouched, the derived
+    # prompt adds the field-accuracy and re-scan duties.
+    assert CONTRACTS_SPECIALIST_PROMPT_V12 != CONTRACTS_SPECIALIST_PROMPT_V11
+    assert CONTRACTS_SPECIALIST_PROMPT_V12.startswith(CONTRACTS_SPECIALIST_PROMPT_V11[:300])
+    assert "contracts_specialist_v12" in PROMPT_VERSIONS
+
+    v12 = CONTRACTS_SPECIALIST_PROMPT_V12
+    # Effective-date rule: defined-term preference, full date phrase.
+    assert 'DEFINES an "Effective Date"' in v12
+    assert "the defined term wins" in v12
+    # Governing-law verbatim-in-full duty (containment fix).
+    assert "VERBATIM and IN FULL" in v12
+    assert "conflict-of-laws qualifier" in v12
+    # Re-scan duty names the families the 5-doc sample missed.
+    assert "RE-SCAN DUTY" in v12
+    for family in ("volume restrictions", "caps on liability", "uncapped liability",
+                   "audit rights", "third-party beneficiary", "change of control",
+                   "anti-assignment"):
+        assert family in v12, f"v12 missing re-scan family {family}"
+    # Truncation honesty: never fabricate for the omitted middle.
+    assert "never fabricate a clause for it" in v12
+    # v11 predates the new rules.
+    v11 = CONTRACTS_SPECIALIST_PROMPT_V11
+    assert "RE-SCAN DUTY" not in v11
+    assert "VERBATIM and IN FULL" not in v11

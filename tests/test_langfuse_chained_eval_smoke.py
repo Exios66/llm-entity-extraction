@@ -126,6 +126,10 @@ def test_langfuse_chained_loop_wiring(fake_langfuse_chained, monkeypatch, tmp_pa
                                       "overall_verified_precision", "category_presence"}
     assert specialist_scores["overall_extraction_score"]["value"] >= 0.0
 
+    # Truncation auditability: the specialist span output carries the flag.
+    specialist_span_output = fake_langfuse_chained.spans[2].updates[-1]["output"]
+    assert specialist_span_output["truncated"] is False
+
     # Manifest header carries backend + handoff scope.
     assert json.loads(manifest.read_text().splitlines()[0])["metadata"]["tracing_backend"] == "langfuse"
     assert json.loads(manifest.read_text().splitlines()[0])["metadata"]["handoff_scope"] == "subtype"

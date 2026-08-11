@@ -121,8 +121,10 @@ def main_with_args(argv: list[str]) -> int:
                              "specialist emits JSON directly — thinking models otherwise burn "
                              "the whole token budget on reasoning and hit length limits on "
                              "long extractions; 'low'/'medium'/'high' re-enable thinking)")
-    parser.add_argument("--max-input-chars", type=int, default=100_000,
-                        help="Hard safety cap on document text fed to the model")
+    parser.add_argument("--max-input-chars", type=int, default=150_000,
+                        help="Hard safety cap on document text fed to the model "
+                             "(150k default: the full corpus's largest contracts run "
+                             "106-122k chars; head+tail window when exceeded)")
     parser.add_argument("--max-concurrency", type=int, default=4, help="Concurrent API calls")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{prompt-version}_extraction)")
@@ -343,6 +345,9 @@ def main_with_args(argv: list[str]) -> int:
             "entity_list_audit": result.entity_list_audit,
             "overall_verified_precision": result.overall_verified_precision or 0.0,
             "ambiguous_fields": result.ambiguous_fields,
+            # Truncation auditability: True when the document exceeded the input
+            # cap and the specialist saw only head+tail.
+            "truncated": bool(specialist._last_truncated),
         }
 
         span_meta = {
@@ -596,6 +601,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "overall_verified_precision": output.get("overall_verified_precision"),
             "category_presence": output.get("category_presence"),
             "ambiguous_fields": output.get("ambiguous_fields"),
+            "truncated": output.get("truncated"),
             "tokens": usage_by_index.get(index) or {},
         })
 

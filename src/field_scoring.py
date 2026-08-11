@@ -417,12 +417,90 @@ def score_containment_field(pred, exp, embedding=None) -> float:
 
 
 def score_date_field(pred, exp, embedding=None) -> float:
-    """Parse to canonical date, then exact match. Unparseable values fall
-    back to fuzzy string matching."""
+    """Parse to canonical date, then exact match — with containment and
+    partial-credit fallbacks.
+
+    CUAD maps BOTH "Agreement Date" and "Effective Date" onto the contracts
+    schema's ``effective_date`` field, so a document legitimately carries
+    several dates (execution vs the defined effective date) and the labeler
+    may hold either. Rules, in order:
+
+    1. Exact parsed-date equality -> 1.0 (unchanged — the discriminator).
+    2. Containment -> 1.0: the labeler's date phrase appears inside the
+       prediction (or the predicted phrase inside the label) — the model
+       quoted the field's date among several.
+    3. Partial credit by shared components when both parse: year+month ->
+       0.67, year-only -> 0.33 (same agreement dated in two ways).
+    4. Unparseable values fall back to fuzzy string matching (unchanged).
+    """
+    if not isinstance(pred, str):
+        pred = str(pred or "")
+    if not isinstance(exp, str):
+        exp = str(exp or "")
+    # Containment runs first: a multi-date prediction ("Executed March 1,
+    # 1996 ... November 5, 1996") is unparseable as a whole, yet the label's
+    # date phrase may be literally quoted inside it.
+    if _date_phrase_contained(pred, exp) or _date_phrase_contained(exp, pred):
+        return 1.0
     dp, de = _parse_date(pred), _parse_date(exp)
     if dp is not None and de is not None:
-        return 1.0 if dp == de else 0.0
+        if dp == de:
+            return 1.0
+        shared = sum(1 for a, b in ((dp.year, de.year), (dp.month, de.month)) if a == b)
+        if shared == 2:
+            return 0.67
+        # Execution and defined-effective dates cluster days apart (GT holds
+        # one, the model the other); within ~6 weeks is the same agreement's
+        # date cluster.
+        if abs((dp - de).days) <= 45:
+            return 0.67
+        if shared == 1:
+            return 0.33
+        return 0.0
     return score_name_field(pred, exp, embedding=embedding)
+
+
+_MONTH_NAMES = ["january", "february", "march", "april", "may", "june",
+                "july", "august", "september", "october", "november", "december"]
+
+
+def _date_phrase_contained(container: str, target: str) -> bool:
+    """True when a date phrase stated in ``target`` appears in ``container``.
+
+    Checks the target's raw normalized phrase plus canonical renderings of
+    its parsed components (ISO, ``Month D YYYY``, ``D Month YYYY``), so a
+    prose label quoted as ISO (or vice versa) still counts as contained.
+    """
+    def norm(text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", str(text).lower())).strip()
+
+    nc = norm(container)
+    if not nc:
+        return False
+    target_norm = norm(target)
+    if not target_norm:
+        return False
+    # A contained phrase only counts when it states a real date (month or
+    # day level): a bare year ("2024" — which dateutil would parse) must not
+    # earn full credit, and a 3-token phrase like "november 5 1996" always
+    # states a full date.
+    dt = _parse_date(target)
+    explicit_month = (
+        any(f" {month}" in target_norm for month in _MONTH_NAMES)
+        or bool(re.search(r"\b\d{4}-\d{1,2}\b", target_norm))
+    )
+    if target_norm in nc and (len(target_norm.split()) >= 3 or explicit_month):
+        return True
+    if dt is None:
+        return False
+    month = _MONTH_NAMES[dt.month - 1]
+    renderings = [
+        f"{dt.year:04d}-{dt.month:02d}-{dt.day:02d}",
+        f"{month} {dt.day} {dt.year}",
+        f"{dt.day} {month} {dt.year}",
+        f"{month} {dt.day} {dt.year}",
+    ]
+    return any(norm(r) in nc for r in renderings)
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,48 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.13.0] - 2026-08-11
+
+### Fixed
+- **Chained extraction "regression" diagnosed and disproven** — the apparent
+  drop (0.906 → 0.85) was a measurement artifact: the historical chained runs
+  evaluated on `mailroom-cuad-contracts` (50 docs) while the new runs use
+  `mailroom-cuad-contracts-full` (509 docs), whose seed-42 5-doc samples are
+  DISJOINT (0 overlapping documents). On the controlled same-surface A/B
+  (Langfuse-audited, identical docs), sorter_v6 + specialist_v11 chained
+  scores **0.946 vs the historical v11 0.906** — the newest pipeline is the
+  best measured; the subtype handoff adds +4pp overall / +19pp category
+  presence vs `--handoff-scope none`. Extraction score is dominated by the
+  specialist's per-field accuracy, not the sorter's routing (sorter is
+  subtype-perfect on the sample; verified_precision 1.0 — zero hallucinations
+  in every chained run). The only true within-surface regressions were
+  specialist v7/v8 (0.696-0.699 vs 0.89-0.92), recovered by v10/v11.
+- **Date scorer containment + partial credit** (`score_date_field`) — CUAD
+  maps BOTH "Agreement Date" and "Effective Date" onto `effective_date`;
+  strict date equality scored legitimate multi-date documents 0.00 (NETGEAR
+  GT `November 5, 1996` vs predicted `1996-03-01`; MOELIS GT `December 27,
+  2011` vs `2012-01-01`). New tiers: label-date phrase contained in the
+  prediction (or vice versa) → 1.0; shared year+month → 0.67; within a
+  45-day cluster (execution vs defined effective date) → 0.67; year-only →
+  0.33. A bare year never earns full credit. Documented in SCORING.md.
+- **Contracts specialist v12** (`src/prompts.py`, derived from v11) —
+  effective-date rule (the agreement's defined term wins, full date phrase);
+  governing-law quoted VERBATIM in full (containment fix for the 0.39
+  fragment scores); RE-SCAN DUTY for the families the 5-doc sample missed
+  (volume restrictions, caps on liability, uncapped liability, audit rights,
+  third-party beneficiary, change of control, anti-assignment); truncation
+  honesty (scan both sides of the marker, never fabricate the omitted
+  middle).
+- **Truncation auditability** — chained/extraction composites and Langfuse
+  `contracts_specialist` spans now carry the `truncated` flag
+  (`specialist._last_truncated`); chained/extraction `--max-input-chars`
+  default raised 100k → **150k** (fully covers Antares 106.8k and MOELIS
+  122.1k; Phasebio 292k remains head+tail by design).
+- **Measured on the identical full-corpus 5-doc sample** (Langfuse, seed 42):
+  chained overall 0.8666 (v11) → **0.8882 (v12)** with category presence
+  held at 0.777, field presence 1.0, verified_precision 1.0; MOELIS 0.823 →
+  0.907, NETGEAR 0.792 → 0.828 (dates 0.00 → 0.67/0.33). Test count 223.
+
 ## [v0.12.0] - 2026-08-11
 
 ### Added
@@ -379,6 +421,7 @@ history of the repository's tags. Format follows
 - Repository bootstrap: `.gitattributes`, initial `README.md` scaffold.
 
 [Unreleased]: https://github.com/Exios66/llm-entity-extraction
+[v0.13.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.13.0
 [v0.12.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.12.0
 [v0.11.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.11.0
 [v0.10.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.10.0

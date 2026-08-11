@@ -36,7 +36,38 @@ def test_score_id_exact_after_normalize():
 def test_score_date_canonicalization():
     assert score_date_field("March 3, 2024", "03/03/2024") == 1.0
     assert score_date_field("2024-03-03", "2024-03-03") == 1.0
-    assert score_date_field("March 3, 2024", "March 4, 2024") == 0.0
+    # Same month, different day in the same year: month+year shared -> 0.67.
+    assert score_date_field("March 3, 2024", "March 4, 2024") == 0.67
+    # Year-only overlap -> 0.33.
+    assert score_date_field("March 3, 2024", "July 4, 2024") == 0.33
+
+
+def test_score_date_containment_and_partial_credit():
+    # CUAD maps Agreement Date AND Effective Date onto one field; the model
+    # may quote several dates and the labeler holds one of them.
+    assert score_date_field("March 1, 1996. Executed November 5, 1996.",
+                            "November 5, 1996") == 1.0
+    assert score_date_field("1996-03-01", "November 5, 1996") == 0.33  # year only
+    assert score_date_field("December 27, 2011", "2011-12-27") == 1.0
+    assert score_date_field("2012-01-01", "December 27, 2011") == 0.67  # 5-day cluster
+    assert score_date_field("2012-06-01", "December 27, 2011") == 0.0  # disjoint
+    # Same month, different days in the same year: month+year shared.
+    assert score_date_field("2024-03-01", "March 3, 2024") == 0.67
+    # Containment of a prose label inside an ISO-quoting prediction.
+    assert score_date_field("Executed on 2014-03-24, effective 2012-01-01.",
+                            "March 24, 2014") == 1.0
+    # A bare year inside the label is NOT a contained date phrase.
+    assert score_date_field("2024", "March 3, 2024") != 1.0
+
+
+def test_score_date_proximity_cluster():
+    # Execution vs defined effective dates cluster days apart (GT holds one,
+    # the model the other) — within 45 days scores the same as month+year.
+    assert score_date_field("2012-01-01", "December 27, 2011") == 0.67
+    assert score_date_field("2024-03-15", "March 3, 2024") == 0.67
+    # Beyond the cluster: month+year or year-only tiers only.
+    assert score_date_field("2024-06-01", "March 3, 2024") == 0.33
+    assert score_date_field("2025-06-01", "March 3, 2024") == 0.0
 
 
 def test_score_money_parse_and_tolerance():

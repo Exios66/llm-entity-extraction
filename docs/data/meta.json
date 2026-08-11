@@ -1,16 +1,16 @@
 {
- "built_at": "2026-08-11T02:32:59.429603+00:00",
+ "built_at": "2026-08-11T02:53:59.178394+00:00",
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 32,
+ "run_count": 38,
  "tasks": {
-  "contract_entity_extraction": 7,
-  "chained_sorter_extractor": 12,
+  "contract_entity_extraction": 9,
+  "chained_sorter_extractor": 16,
   "subtype_classification": 11,
   "sorter_classification": 2
  },
  "models": {
-  "qwen/qwen3.7-flash": 32
+  "qwen/qwen3.7-flash": 38
  },
  "prompts": {
   "contracts_specialist_v2": 1,
@@ -26,22 +26,24 @@
   "sorter_v5 + contracts_specialist_v11": 1,
   "sorter_v5": 3,
   "sorter_v6": 5,
-  "sorter_v6 + contracts_specialist_v11": 4,
-  "contracts_specialist_v11": 2
+  "sorter_v6 + contracts_specialist_v11": 6,
+  "contracts_specialist_v11": 3,
+  "sorter_v6 + contracts_specialist_v12": 2,
+  "contracts_specialist_v12": 1
  },
- "n_rows": 2415,
- "n_ok": 2415,
+ "n_rows": 2445,
+ "n_ok": 2445,
  "n_error": 0,
- "total_tokens": 29032048,
+ "total_tokens": 30057887,
  "best_per_task": {
   "contract_entity_extraction": {
-   "run_id": 3,
-   "value": 0.9173,
+   "run_id": 35,
+   "value": 0.9399,
    "label": "extraction"
   },
   "chained_sorter_extractor": {
-   "run_id": 7,
-   "value": 0.9165,
+   "run_id": 33,
+   "value": 0.946,
    "label": "extractor score"
   },
   "subtype_classification": {
@@ -52,32 +54,32 @@
  },
  "task_aggregates": {
   "contract_entity_extraction": {
-   "runs": 7,
+   "runs": 9,
    "best": {
-    "run_id": 3,
-    "value": 0.9173
+    "run_id": 35,
+    "value": 0.9399
    },
-   "median": 0.8012,
+   "median": 0.8387,
    "worst": {
     "run_id": 1,
     "value": 0.6563
    },
-   "documents": 56,
-   "tokens": 709197
+   "documents": 66,
+   "tokens": 915235
   },
   "chained_sorter_extractor": {
-   "runs": 12,
+   "runs": 16,
    "best": {
-    "run_id": 7,
-    "value": 0.9165
+    "run_id": 33,
+    "value": 0.946
    },
-   "median": 0.87905,
+   "median": 0.8888,
    "worst": {
     "run_id": 9,
     "value": 0.6959
    },
-   "documents": 60,
-   "tokens": 2210990
+   "documents": 80,
+   "tokens": 3030791
   },
   "subtype_classification": {
    "runs": 11,

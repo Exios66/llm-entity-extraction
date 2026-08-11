@@ -382,7 +382,7 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 | Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3`, `sorter_v4`, `sorter_v5`, `sorter_v6` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
-| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v11` |
+| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v12` |
 | Other specialists | `corporate_records_specialist`, `due_diligence_specialist`, `correspondence_specialist`, `compliance_specialist`, `court_opinions_specialist` |
 | Agents / judges | `boss`, `reporter`, `judge`, `judge-classification`, `judge-correctness` |
 | PDF | `pdf_transcriber` |
@@ -445,7 +445,7 @@ python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
 python -m pytest tests/ -v
 ```
 
-220 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
+223 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
 helpers, config loading, field scoring, CUAD ground truth, the subtype
 handoff cue, page voting, the chained/extraction/classification/subtype/langfuse
 eval smoke loops, and the streamer parsers are all mocked.

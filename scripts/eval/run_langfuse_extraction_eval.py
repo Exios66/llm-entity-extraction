@@ -88,8 +88,10 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--max-tokens", type=int, default=16384, help="Max output tokens")
     parser.add_argument("--reasoning-effort", default="none",
                         help="Reasoning effort for the extraction call")
-    parser.add_argument("--max-input-chars", type=int, default=100_000,
-                        help="Hard safety cap on document text fed to the model")
+    parser.add_argument("--max-input-chars", type=int, default=150_000,
+                        help="Hard safety cap on document text fed to the model "
+                             "(150k default: the full corpus's largest contracts run "
+                             "106-122k chars; head+tail window when exceeded)")
     parser.add_argument("--max-concurrency", type=int, default=8, help="Concurrent API calls")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{prompt-version}_extraction_langfuse)")
@@ -271,6 +273,7 @@ def main_with_args(argv: list[str]) -> int:
                     "entity_list_audit": result.entity_list_audit,
                     "overall_verified_precision": result.overall_verified_precision or 0.0,
                     "ambiguous_fields": result.ambiguous_fields,
+                    "truncated": bool(specialist._last_truncated),
                 }
 
                 specialist_handle.set_output({
@@ -279,6 +282,7 @@ def main_with_args(argv: list[str]) -> int:
                     "category_presence": category_presence,
                     "overall_verified_precision": composite["overall_verified_precision"],
                     "schema_valid": 1.0,
+                    "truncated": composite["truncated"],
                 })
                 specialist_handle.score("overall_extraction_score", composite["overall_score"],
                                         comment="mean deterministic content score vs CUAD GT")

@@ -1310,6 +1310,53 @@ CONTRACTS_SPECIALIST_PROMPT_V11 = CONTRACTS_SPECIALIST_PROMPT_V10.replace(
      inside an accounting section).""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v12 (field-accuracy + re-scan)
+# -----------------------------------------------------------------------------
+# v12 = v11 + the field-accuracy and completeness fixes measured on the
+# full-corpus chained 5-doc sample (sorter_v6 + specialist_v11, Langfuse-
+# audited): overall 0.8666 with per-doc drags from
+#   - effective_date 0.00 on 2/5 docs (GT holds the execution date — NETGEAR
+#     "November 5, 1996", MOELIS "December 27, 2011" — the model picked the
+#     contract's separately DEFINED effective date "1996-03-01" / "2012-01-01";
+#     CUAD maps BOTH Agreement Date and Effective Date onto this field);
+#   - governing_law containment 0.39 (model returned a truncated fragment of
+#     the clause vs the GT's complete sentence);
+#   - presence misses on labeled clauses the v11 family list covers: Volume
+#     Restriction (ON2TECH, NETGEAR), Cap On Liability + Uncapped Liability
+#     (NANOPHASE), Anti-Assignment + Audit Rights (Antares, 106.8k chars —
+#     head+tail truncated past the 100k cap), Change Of Control + Third Party
+#     Beneficiary (MOELIS, 122.1k chars — same truncation).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V12 = CONTRACTS_SPECIALIST_PROMPT_V11.replace(
+    "`effective_date`: the date the agreement takes effect.",
+    "`effective_date`: the date the agreement takes effect. When the agreement "
+    "DEFINES an \"Effective Date\" (a defined term), output that defined date; "
+    "when it states only an execution/signature date, output that date; when both "
+    "appear, output the date the agreement takes effect per its own definition "
+    "(the defined term wins). Output the FULL date phrase (month, day, and year) "
+    "in ISO format per the format rules below.",
+).replace(
+    "or waiver language, and do NOT append section citations.",
+    "or waiver language, and do NOT append section citations. Quote the "
+    "governing-law sentence VERBATIM and IN FULL — every word, including the "
+    "conflict-of-laws qualifier (e.g. \"except that body of law dealing with "
+    "conflicts of law\"). Never paraphrase, abridge, or truncate the sentence: "
+    "the ground truth holds the complete sentence, and a partial quote scores "
+    "by how many of its words are covered.",
+).replace(
+    "inside an accounting section).",
+    "inside an accounting section).\n   - RE-SCAN DUTY: after building the list, "
+    "re-scan the document for the families most often missed — volume restrictions "
+    "and minimum order sizes, caps on liability, uncapped liability, audit rights, "
+    "third-party beneficiary, change of control, and anti-assignment — and add each "
+    "present occurrence as its own verbatim item. When the document text contains a "
+    "truncation marker, scan BOTH sides of the marker; the omitted middle is "
+    "unrecoverable — never fabricate a clause for it.",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1703,6 +1750,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v9": CONTRACTS_SPECIALIST_PROMPT_V9,
     "contracts_specialist_v10": CONTRACTS_SPECIALIST_PROMPT_V10,
     "contracts_specialist_v11": CONTRACTS_SPECIALIST_PROMPT_V11,
+    "contracts_specialist_v12": CONTRACTS_SPECIALIST_PROMPT_V12,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,
