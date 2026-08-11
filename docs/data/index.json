@@ -277,8 +277,8 @@
   "prompts": "sorter_v3",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 0.96,
-   "detail": "strict 0.9600 / equiv 0.8400"
+   "value": 0.84,
+   "detail": "doc_type 0.9600 \u00b7 strict 0.8400"
   },
   "n_rows": 50,
   "n_ok": 50,
@@ -302,8 +302,8 @@
   "prompts": "sorter_v3",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 0.96,
-   "detail": "strict 0.9600 / equiv 0.8400"
+   "value": 0.84,
+   "detail": "doc_type 0.9600 \u00b7 strict 0.8400 \u00b7 equiv 0.9400"
   },
   "n_rows": 50,
   "n_ok": 50,
@@ -327,8 +327,8 @@
   "prompts": "sorter_v3",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 0.9846,
-   "detail": "strict 0.9846 / equiv 0.8359"
+   "value": 0.8359,
+   "detail": "doc_type 0.9846 \u00b7 strict 0.8359 \u00b7 equiv 0.8564"
   },
   "n_rows": 195,
   "n_ok": 195,
@@ -352,8 +352,8 @@
   "prompts": "sorter_v3",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 0.9744,
-   "detail": "strict 0.9744 / equiv 0.7897"
+   "value": 0.7897,
+   "detail": "doc_type 0.9744 \u00b7 strict 0.7897 \u00b7 equiv 0.8256"
   },
   "n_rows": 195,
   "n_ok": 195,
@@ -377,8 +377,8 @@
   "prompts": "sorter_v4",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 0.9795,
-   "detail": "strict 0.9795 / equiv 0.8103"
+   "value": 0.8103,
+   "detail": "doc_type 0.9795 \u00b7 strict 0.8103 \u00b7 equiv 0.8308"
   },
   "n_rows": 195,
   "n_ok": 195,
@@ -452,8 +452,8 @@
   "prompts": "sorter_v5",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 0.9843,
-   "detail": "strict 0.9843 / equiv 0.8585"
+   "value": 0.8585,
+   "detail": "doc_type 0.9843 \u00b7 strict 0.8585 \u00b7 equiv 0.8743"
   },
   "n_rows": 509,
   "n_ok": 509,
@@ -478,7 +478,7 @@
   "headline": {
    "label": "subtype strict / equiv",
    "value": 1.0,
-   "detail": "strict 1.0000 / equiv 1.0000"
+   "detail": "doc_type 1.0000 \u00b7 strict 1.0000 \u00b7 equiv 1.0000"
   },
   "n_rows": 5,
   "n_ok": 5,
@@ -502,8 +502,8 @@
   "prompts": "sorter_v5",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 0.9846,
-   "detail": "strict 0.9846 / equiv 0.8410"
+   "value": 0.841,
+   "detail": "doc_type 0.9846 \u00b7 strict 0.8410 \u00b7 equiv 0.8667"
   },
   "n_rows": 195,
   "n_ok": 195,
@@ -527,8 +527,8 @@
   "prompts": "sorter_v6",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 1.0,
-   "detail": "strict 1.0000 / equiv 0.9385"
+   "value": 0.9385,
+   "detail": "doc_type 1.0000 \u00b7 strict 0.9385 \u00b7 equiv 0.9436"
   },
   "n_rows": 195,
   "n_ok": 195,
@@ -552,8 +552,8 @@
   "prompts": "sorter_v6",
   "headline": {
    "label": "subtype strict / equiv",
-   "value": 1.0,
-   "detail": "strict 1.0000 / equiv 0.9436"
+   "value": 0.9436,
+   "detail": "doc_type 1.0000 \u00b7 strict 0.9436 \u00b7 equiv 0.9487"
   },
   "n_rows": 195,
   "n_ok": 195,
@@ -758,5 +758,30 @@
   "data_source_project": null,
   "data_source_n_samples": 3,
   "seed": null
+ },
+ {
+  "id": 32,
+  "experiment_name": "qwen3.7-flash_sorter_v6_subtype_langfuse",
+  "task": "subtype_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v6",
+  "headline": {
+   "label": "subtype strict / equiv",
+   "value": 0.9312,
+   "detail": "doc_type 0.9961 \u00b7 strict 0.9312 \u00b7 equiv 0.9391"
+  },
+  "n_rows": 509,
+  "n_ok": 509,
+  "n_error": null,
+  "total_tokens": 6305231,
+  "cost_usd": null,
+  "timestamp": "2026-08-11T01:52:09.063281+00:00",
+  "git": {
+   "commit": "a660aea",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509,
+  "seed": 42
  }
 ]

@@ -85,13 +85,17 @@ def headline_score(record: dict) -> dict:
             }
     if task == "subtype_classification":
         sorter = scores.get("sorter") or {}
-        strict = sorter.get("exact_match")
-        equiv = sorter.get("subtype_accuracy")
-        if isinstance(strict, (int, float)) and isinstance(equiv, (int, float)):
+        doc_type = sorter.get("exact_match")
+        strict = sorter.get("subtype_accuracy")
+        equiv = sorter.get("subtype_accuracy_equiv")
+        if isinstance(strict, (int, float)) and isinstance(doc_type, (int, float)):
+            detail = f"doc_type {_fmt(doc_type)} · strict {_fmt(strict)}"
+            if isinstance(equiv, (int, float)):
+                detail += f" · equiv {_fmt(equiv)}"
             return {
                 "label": "subtype strict / equiv",
                 "value": strict,
-                "detail": (f"strict {_fmt(strict)} / equiv {_fmt(equiv)}"),
+                "detail": detail,
             }
     return {}
 

@@ -390,8 +390,9 @@ async function renderRun(id) {
 
   const cards = [];
   if (task === "subtype_classification") {
-    cards.push({ k: "Strict accuracy", v: fmt.score(sorter.exact_match), d: "exact CUAD subtype" });
-    cards.push({ k: "Equiv accuracy", v: fmt.score(sorter.subtype_accuracy), d: "equivalent family" });
+    cards.push({ k: "Doc type accuracy", v: fmt.score(sorter.exact_match), d: "primary class == contract" });
+    cards.push({ k: "Subtype accuracy", v: fmt.score(sorter.subtype_accuracy), d: "strict CUAD folder" });
+    cards.push({ k: "Subtype equiv", v: fmt.score(sorter.subtype_accuracy_equiv), d: "defensible family" });
     cards.push({ k: "Confidence", v: fmt.score(sorter.confidence), d: "mean model confidence" });
     cards.push({ k: "Failed rows", v: fmt.int(sorter.failure_insights?.n_failed), d: Object.entries(sorter.failure_insights?.mode_counts || {}).map(([m, n]) => `${m} ×${n}`).join(" · ") });
   } else if (task === "chained_sorter_extractor") {
@@ -449,16 +450,17 @@ async function renderRun(id) {
     sections.push(kvCard("Extractor scores", `<div style="max-width:560px">${scoreRows(extractor)}</div>`));
   } else {
     sections.push(kvCard("Sorter scores", `<div style="max-width:560px">${scoreRows({
-      "exact match": sorter.exact_match,
-      "subtype accuracy (equiv)": sorter.subtype_accuracy,
+      "doc type accuracy (exact match)": sorter.exact_match,
+      "subtype accuracy (strict)": sorter.subtype_accuracy,
+      "subtype accuracy (equiv family)": sorter.subtype_accuracy_equiv,
       confidence: sorter.confidence,
     })}</div>`));
     const perSubtype = sorter.per_subtype || {};
     const keys = Object.keys(perSubtype).sort();
     sections.push(kvCard("Per-subtype accuracy", `
       <div class="table-wrap"><table class="data">
-        <thead><tr><th>Subtype</th><th class="num">Accuracy</th><th class="num">Correct</th><th class="num">Total</th><th style="width:30%"></th></tr></thead>
-        <tbody>${keys.map((k) => `<tr><td class="mono">${esc(k)}</td><td class="num">${fmt.score(perSubtype[k].accuracy)}</td><td class="num">${fmt.int(perSubtype[k].correct)}</td><td class="num">${fmt.int(perSubtype[k].total)}</td><td>${barHtml(perSubtype[k].accuracy)}</td></tr>`).join("")}</tbody>
+        <thead><tr><th>Subtype</th><th class="num">Accuracy</th><th class="num">Equiv</th><th class="num">Correct</th><th class="num">Total</th><th style="width:30%"></th></tr></thead>
+        <tbody>${keys.map((k) => `<tr><td class="mono">${esc(k)}</td><td class="num">${fmt.score(perSubtype[k].accuracy)}</td><td class="num">${fmt.score(perSubtype[k].accuracy_equiv)}</td><td class="num">${fmt.int(perSubtype[k].correct)}</td><td class="num">${fmt.int(perSubtype[k].total)}</td><td>${barHtml(perSubtype[k].accuracy)}</td></tr>`).join("")}</tbody>
       </table></div>`));
     if (sorter.confusion_matrix) {
       sections.push(kvCard("Confusion matrix", confusionMatrix(sorter.confusion_matrix)));
