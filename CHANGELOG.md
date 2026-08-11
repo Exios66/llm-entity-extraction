@@ -6,6 +6,66 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.12.0] - 2026-08-11
+
+### Added
+- **Full-corpus sorter baseline** — `qwen3.7-flash_sorter_v5_subtype`: the
+  complete 509-contract CUAD run (sorter_v5, reasoning `medium`): doc_type
+  exact_match 0.9843, strict subtype 0.8585, family-level equiv 0.8743, mean
+  confidence 0.9404; 72 misses classified by failure mode (40 family
+  confusion / 16 other-fallback / 8 function-over-form / 8 equivalent-family).
+- **Sorter v6** (`src/prompts.py`) — surgical derivation of v5 (base string
+  untouched, registered in `PROMPT_VERSIONS`) with data-backed rules for the
+  509-run's miss clusters: rule 12 SEC Joint Filing Agreements →
+  joint_venture (13/72 misses); rule 13 maintenance preference (license+
+  maintenance hybrids + financial-sense maintenance, 17/72); rule 14 hosting
+  is not license/development (8/72); rule 15 remarketing → marketing; rule 16
+  marketing-core guard; rule 17 annex inheritance; plus the rule-10
+  refinement (development preference does not override an operating core —
+  manufacturing/marketing/hosting).
+- **Same-sample 195-doc A/B** (`--stratified 200 --seed 42`, the documented
+  baseline sample): sorter_v6 0.9385 strict vs v5 0.8410 (**+9.75pp**),
+  equiv 0.9436 vs 0.8667, exact_match 1.0, failures 31→12 — vs the
+  historical v3-medium 0.8359 / v4 0.8103 baselines on the same sample.
+- **Langfuse mirror environment** — dedicated project
+  (`llm-mailroom-experiments`, keys in gitignored `langfuse.env`), every
+  trace tagged with `LANGFUSE_ENVIRONMENT`, session-scoped deterministic
+  trace ids (`sha256(session|filename)`) so re-runs of the SAME experiment
+  update traces in place while different experiments never merge.
+- **Per-agent designated tasks on Langfuse** — `LangfuseTracer.agent_observation`
+  opens one nested span per pipeline agent (sorter / contracts_specialist)
+  with its own LangChain generation and its designated task scores attached
+  to the agent's OWN observation: sorter (exact_match, subtype_accuracy,
+  confidence) and contracts_specialist (overall_extraction_score,
+  field_presence, overall_verified_precision, category_presence,
+  schema_valid) — per-agent performance metrics derivable over time.
+- **Langfuse mirror runners** — `run_langfuse_subtype_eval.py` (existing),
+  `run_langfuse_chained_eval.py`, `run_langfuse_extraction_eval.py`,
+  `run_langfuse_classification_eval.py` (text): same data/tasks/scorers/
+  manifest/experiment-log as their Braintrust counterparts, zero scored-run
+  quota (deterministic NUMERIC scores per trace). Braintrust loggers gained
+  additive `tracing_backend`/`tracing_meta` record fields.
+- **Subtype-scoped chained handoff** — `build_subtype_handoff(subtype)` in
+  `src/cuad_ground_truth.py` (SUBTYPE_CUAD_FOLDERS reverse-mapping + the CUAD
+  per-type category tables): with the new `--handoff-scope subtype` default
+  the specialist is cued with the PREDICTED subtype's expected field groups
+  and never-applicable clause categories. 5-doc chained A/B (sorter_v6 +
+  specialist_v11, seed 42): overall 0.8666 vs 0.8497 (+1.7pp), category
+  presence 0.7773 vs 0.7106 (+6.7pp). `--handoff-scope none` reproduces the
+  legacy handoff.
+- **GH Pages site** (`docs/`) — static, dependency-free viewer over the
+  experiment log (`index.html` + `site.css`/`site.js` + generated
+  `docs/data/`); `scripts/site/build_site.py` regenerates the data
+  (`--check` verifies currency). Pages source fixed to `main → /docs`.
+
+### Changed
+- `agents/base_agent.py` accepts optional LangChain `callbacks` (Langfuse
+  handler threading; Braintrust path unchanged); `ContractsSpecialist` and
+  `SorterAgent` forward them.
+- `requirements.txt`: +`langchain>=1.0`, +`langfuse>=3.0`.
+- README/AGENTS.md document the Langfuse mirror workflow, per-agent task
+  matrix, and handoff scope flag; test count 220.
+
 ## [v0.11.0] - 2026-08-10
 
 ### Added
@@ -319,6 +379,7 @@ history of the repository's tags. Format follows
 - Repository bootstrap: `.gitattributes`, initial `README.md` scaffold.
 
 [Unreleased]: https://github.com/Exios66/llm-entity-extraction
+[v0.12.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.12.0
 [v0.11.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.11.0
 [v0.10.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.10.0
 [v0.9.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.9.0

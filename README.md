@@ -362,6 +362,10 @@ never collide.
 | `run_multiclass_eval.py` | one prompt version across all taxonomy classes, per-class + macro accuracy |
 | `run_subtype_eval.py` | sorter-only contract-family eval: one classification per PDF; `sorter_exact_match` (doc_type), `sorter_subtype_accuracy` (EXACT CUAD-folder key) and `sorter_subtype_accuracy_equiv` (family-level — defensible equivalents like reseller/distributor, maintenance/license, development/license, affiliate/joint_venture recognized as correct routing), per-subtype accuracy + confusion matrix in the repo log |
 | `evaluate_prompt_version.py` | A/B: two prompt versions on the same dataset, delta summary |
+| `run_langfuse_subtype_eval.py` | **Langfuse mirror** of `run_subtype_eval` (same data/task/scorers) — traces into the SEPARATE `llm-mailroom-experiments` project, zero Braintrust scored-run quota |
+| `run_langfuse_chained_eval.py` | **Langfuse mirror** of the chained eval: per-agent spans (`sorter`, `contracts_specialist`) with each agent's designated task scores attached to its own observation; `--handoff-scope subtype` (default) cues the specialist with the predicted subtype's CUAD field groups |
+| `run_langfuse_extraction_eval.py` | **Langfuse mirror** of the specialist-only extraction eval |
+| `run_langfuse_classification_eval.py` | **Langfuse mirror** of the doc-type classification eval (text mode) |
 
 Every runner supports `--samples-per-class`/`--sample`, `--sample-seed`/`--seed`,
 `--limit`, `--dry-run`, `--experiment-log`, and stamps the full prompt text
@@ -375,7 +379,7 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 
 | Family | Versions |
 |---|---|
-| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3`, `sorter_v4`, `sorter_v5` |
+| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3`, `sorter_v4`, `sorter_v5`, `sorter_v6` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
 | Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v11` |
@@ -391,6 +395,43 @@ so every `ChatPromptTemplate -> ChatOpenAI -> parser` chain invocation inside
 the eval task is traced as a nested span under the Braintrust experiment row —
 prompt, response, tokens, latency are all visible in the UI.
 
+### Langfuse mirror (separate environment, per-agent tasks)
+
+The `run_langfuse_*_eval.py` runners execute the SAME datasets, tasks, and
+deterministic logic scorers as their Braintrust counterparts, but trace into a
+SEPARATE Langfuse project — `llm-mailroom-experiments` (keys in gitignored
+`langfuse.env`, `langfuse.env.example` in-repo). Every trace carries
+`environment=llm-mailroom-experiments` and a session-scoped deterministic
+trace id, so re-runs of one experiment update their traces in place and
+different experiments never merge. Langfuse runs never consume Braintrust
+scored-run quotas: the logic scorers are computed locally and logged per trace
+as NUMERIC scores.
+
+Each pipeline agent has a **designated task** traced as its own observation
+with its scores attached to that observation — per-agent performance metrics
+derivable over time in Langfuse:
+
+| Agent | Observation | Task scores |
+|---|---|---|
+| `sorter` | span per document | `exact_match`, `subtype_accuracy`, `subtype_accuracy_equiv`, `confidence` |
+| `contracts_specialist` | span per document | `overall_extraction_score`, `field_presence`, `overall_verified_precision`, `category_presence`, `schema_valid` |
+
+The chained mirror passes the sorter's class + subclass to the specialist via
+`handoff_context`; with `--handoff-scope subtype` (default) the specialist is
+additionally cued with the PREDICTED subtype's CUAD field-group scope
+(`build_subtype_handoff` — expected schema fields + applicable /
+never-applicable clause categories; a pure function of the subtype, no
+ground-truth answers). `--handoff-scope none` reproduces the legacy handoff.
+Measured on the same 5-doc chained sample: overall 0.8666 vs 0.8497 (+1.7pp)
+and category presence 0.7773 vs 0.7106 (+6.7pp).
+
+```bash
+cp langfuse.env.example langfuse.env   # fill in the SEPARATE project's keys
+python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
+    --sorter-prompt-version sorter_v6 --extractor-prompt-version contracts_specialist_v11 \
+    --manifest data/manifests/chained_langfuse.jsonl
+```
+
 ## Adding a prompt version
 
 1. Add a constant to `src/prompts.py` (e.g. `SORTER_PROMPT_V1`) and register it
@@ -404,10 +445,10 @@ prompt, response, tokens, latency are all visible in the UI.
 python -m pytest tests/ -v
 ```
 
-183 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
-helpers, config loading, field scoring, CUAD ground truth, page voting, the
-chained/extraction/classification eval smoke loops, and the streamer parsers
-are all mocked.
+220 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
+helpers, config loading, field scoring, CUAD ground truth, the subtype
+handoff cue, page voting, the chained/extraction/classification/subtype/langfuse
+eval smoke loops, and the streamer parsers are all mocked.
 
 ## Docs
 

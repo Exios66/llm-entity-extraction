@@ -66,10 +66,23 @@ python scripts/eval/run_extraction_eval.py --dataset mailroom-cuad-contracts \
 python scripts/eval/run_chained_eval.py --dataset mailroom-cuad-contracts \
     --sorter-prompt-version sorter_v5 --extractor-prompt-version contracts_specialist_v11 \
     --manifest data/manifests/chained_5.jsonl                      # sorter -> extractor
+python scripts/eval/run_chained_eval.py ... --handoff-scope none   # legacy handoff (no subtype cue)
 python scripts/eval/run_subtype_eval.py --dataset mailroom-cuad-contracts-full \
     --stratified 200 --seed 42 --sorter-prompt-version sorter_v5   # sorter-only, even across classes
 python scripts/eval/evaluate_prompt_version.py --dataset mailroom-cuad-contracts \
     --prompt-a sorter_vision_v0 --prompt-b sorter_vision_v1         # A/B
+
+# Langfuse mirrors (SEPARATE project llm-mailroom-experiments; keys in langfuse.env)
+python scripts/eval/run_langfuse_subtype_eval.py --dataset mailroom-cuad-contracts-full \
+    --sorter-prompt-version sorter_v6
+python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
+    --sorter-prompt-version sorter_v6 --extractor-prompt-version contracts_specialist_v11
+python scripts/eval/run_langfuse_extraction_eval.py --prompt-version contracts_specialist_v11
+python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_v6
+
+# Site data (derived from the experiment log; never hand-edit docs/data)
+python scripts/site/build_site.py          # regenerate docs/data/
+python scripts/site/build_site.py --check  # verify it is current
 
 # Reporting (all offline except the two Braintrust fetchers)
 python scripts/reporting/report_generator.py --experiment <name>        # fetches Braintrust
@@ -111,7 +124,8 @@ Key modules:
 | `src/taxonomy.py` | loads `config/taxonomy.yaml` — doc classes, field types, agent→model mapping, thresholds. Changing the taxonomy = YAML edit, not code. |
 | `src/prompts.py` | ALL prompts, versioned in `PROMPT_VERSIONS`; `get_prompt(version)`, `list_prompts()`. The version key IS the experiment identity. |
 | `src/field_scoring.py` | field-type-aware content scorer: date/money/id/name/free_text/entity_list (bipartite matching), embedding rescue (local sentence-transformers, OpenRouter fallback, empty-string guard), factuality verification, ambiguous band. |
-| `src/cuad_ground_truth.py` | CUAD 41-category catalog → per-document expected fields (type-aware by CUAD folder) + YES/NO presence expectations. |
+| `src/cuad_ground_truth.py` | CUAD 41-category catalog → per-document expected fields (type-aware by CUAD folder) + YES/NO presence expectations + `build_subtype_handoff()` (the subtype-scoped specialist cue used by `--handoff-scope subtype`). |
+| `src/langfuse_tracing.py` | Langfuse mirror tracer: one trace per document (session-scoped deterministic id), `agent_observation()` opens one span per pipeline agent with its designated task scores attached to that observation; graceful no-op when keys are missing. |
 | `src/experiment_log.py` | append-only JSONL + markdown renderer (tables, confusion matrices, scoring matrices, outputs, failure insights); `render_full_log()` for the rebuild. |
 | `src/evaluation.py` | dataset validation, fingerprints, `ManifestStore` (thread-safe JSONL resume checkpoints). |
 | `src/scorers.py` | deterministic Braintrust scorers (exact_match, failure, cost) + `normalize_label`. |

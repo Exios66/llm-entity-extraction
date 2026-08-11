@@ -568,5 +568,195 @@
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
   "data_source_n_samples": 195,
   "seed": 42
+ },
+ {
+  "id": 24,
+  "experiment_name": "qwen3.7-flash_sorter_v6_specialist_v11_chained_ab_none",
+  "task": "chained_sorter_extractor",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v6 + contracts_specialist_v11",
+  "headline": {
+   "label": "sorter / extractor",
+   "value": 0.92485,
+   "detail": "sorter 1.0000 / extractor 0.8497"
+  },
+  "n_rows": 5,
+  "n_ok": 5,
+  "n_error": null,
+  "total_tokens": 181673,
+  "cost_usd": null,
+  "timestamp": "2026-08-11T01:38:44.248343+00:00",
+  "git": {
+   "commit": "87be75a",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 5,
+  "seed": 42
+ },
+ {
+  "id": 25,
+  "experiment_name": "qwen3.7-flash_sorter_v6_specialist_v11_chained_ab_subtype",
+  "task": "chained_sorter_extractor",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v6 + contracts_specialist_v11",
+  "headline": {
+   "label": "sorter / extractor",
+   "value": 0.9333,
+   "detail": "sorter 1.0000 / extractor 0.8666"
+  },
+  "n_rows": 5,
+  "n_ok": 5,
+  "n_error": null,
+  "total_tokens": 183118,
+  "cost_usd": null,
+  "timestamp": "2026-08-11T01:39:52.032973+00:00",
+  "git": {
+   "commit": "87be75a",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 5,
+  "seed": 42
+ },
+ {
+  "id": 26,
+  "experiment_name": "pilot_langfuse_chained_v6_v11",
+  "task": "chained_sorter_extractor",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v6 + contracts_specialist_v11",
+  "headline": {
+   "label": "sorter / extractor",
+   "value": 0.93435,
+   "detail": "sorter 1.0000 / extractor 0.8687"
+  },
+  "n_rows": 5,
+  "n_ok": 5,
+  "n_error": null,
+  "total_tokens": 182602,
+  "cost_usd": null,
+  "timestamp": "2026-08-11T01:41:01.062780+00:00",
+  "git": {
+   "commit": "87be75a",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 5,
+  "seed": 42
+ },
+ {
+  "id": 27,
+  "experiment_name": "pilot_langfuse_classification_v6",
+  "task": "sorter_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v6",
+  "headline": {},
+  "n_rows": 3,
+  "n_ok": 3,
+  "n_error": 0,
+  "total_tokens": 52390,
+  "cost_usd": 0.0,
+  "timestamp": "2026-08-11T01:41:26.996066+00:00",
+  "git": {
+   "commit": "87be75a",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 3,
+  "seed": null
+ },
+ {
+  "id": 28,
+  "experiment_name": "pilot_langfuse_extraction_v11",
+  "task": "contract_entity_extraction",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracts_specialist_v11",
+  "headline": {
+   "label": "extraction",
+   "value": 0.8387
+  },
+  "n_rows": 3,
+  "n_ok": 3,
+  "n_error": 0,
+  "total_tokens": 52940,
+  "cost_usd": 0.0,
+  "timestamp": "2026-08-11T01:41:32.800650+00:00",
+  "git": {
+   "commit": "87be75a",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 3,
+  "seed": 42
+ },
+ {
+  "id": 29,
+  "experiment_name": "pilot_langfuse_chained_v6_v11_2",
+  "task": "chained_sorter_extractor",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v6 + contracts_specialist_v11",
+  "headline": {
+   "label": "sorter / extractor",
+   "value": 0.92205,
+   "detail": "sorter 1.0000 / extractor 0.8441"
+  },
+  "n_rows": 5,
+  "n_ok": 5,
+  "n_error": null,
+  "total_tokens": 183551,
+  "cost_usd": null,
+  "timestamp": "2026-08-11T01:44:16.518003+00:00",
+  "git": {
+   "commit": "a660aea",
+   "dirty": false
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 5,
+  "seed": 42
+ },
+ {
+  "id": 30,
+  "experiment_name": "pilot_langfuse_extraction_v11_2",
+  "task": "contract_entity_extraction",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracts_specialist_v11",
+  "headline": {
+   "label": "extraction",
+   "value": 0.8012
+  },
+  "n_rows": 3,
+  "n_ok": 3,
+  "n_error": 0,
+  "total_tokens": 52957,
+  "cost_usd": 0.0,
+  "timestamp": "2026-08-11T01:45:31.314472+00:00",
+  "git": {
+   "commit": "a660aea",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 3,
+  "seed": 42
+ },
+ {
+  "id": 31,
+  "experiment_name": "pilot_langfuse_classification_v6_2",
+  "task": "sorter_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v6",
+  "headline": {},
+  "n_rows": 3,
+  "n_ok": 3,
+  "n_error": 0,
+  "total_tokens": 52876,
+  "cost_usd": 0.0,
+  "timestamp": "2026-08-11T01:45:56.001912+00:00",
+  "git": {
+   "commit": "a660aea",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 3,
+  "seed": null
  }
 ]
