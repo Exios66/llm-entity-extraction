@@ -50,14 +50,18 @@ logger = structlog.get_logger(__name__)
 TRACE_ID_LENGTH = 32
 
 
-def deterministic_trace_id(filename: str) -> str:
-    """Return a stable Langfuse trace id for a document.
+def deterministic_trace_id(filename: str, session_id: str = "") -> str:
+    """Return a stable Langfuse trace id for a document within an experiment.
 
     W3C trace ids are 32-char lowercase hex strings; a sha256 of the stable
-    CUAD stem satisfies that while keeping the same contract on the SAME trace
-    across runs (and resumptions).
+    CUAD stem (scoped by the experiment's session id) satisfies that while
+    keeping the SAME contract on the SAME trace across runs and resumptions
+    OF THE SAME EXPERIMENT. Different experiments (different session ids) on
+    the same corpus get disjoint traces — a re-run updates its own traces in
+    place instead of merging observations across experiments.
     """
-    return hashlib.sha256(str(filename).encode("utf-8")).hexdigest()[:TRACE_ID_LENGTH]
+    seed = f"{session_id}|{filename}"
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:TRACE_ID_LENGTH]
 
 
 @dataclass
@@ -88,20 +92,74 @@ class TraceHandle:
         except Exception:  # noqa: BLE001 - observability must never break the run
             logger.warning("langfuse_trace_output_failed", trace_id=self.trace_id)
 
-    def score(self, name: str, value: float, comment: str = "") -> None:
-        """Log one deterministic logic score against the document's trace."""
+    def score(self, name: str, value: float, comment: str = "",
+              observation_id: str | None = None) -> None:
+        """Log one deterministic logic score against the document's trace.
+
+        ``observation_id`` pins the score to a specific observation (e.g. an
+        agent's span) instead of the whole trace — the per-agent task scores
+        (sorter, contracts_specialist) attach to their own spans.
+        """
         if self.disabled or self._client is None:
+            return
+        try:
+            kwargs = {
+                "trace_id": self.trace_id,
+                "name": name,
+                "value": value,
+                "data_type": "NUMERIC",
+                "comment": comment,
+            }
+            if observation_id:
+                kwargs["observation_id"] = observation_id
+            self._client.create_score(**kwargs)
+        except Exception:  # noqa: BLE001 - observability must never break the run
+            logger.warning("langfuse_score_failed", trace_id=self.trace_id, name=name)
+
+
+@dataclass
+class AgentHandle:
+    """Per-agent observation handle yielded by :meth:`LangfuseTracer.agent_observation`.
+
+    The handle carries the agent span's ``observation_id`` so its designated
+    task scores (exact_match/subtype_accuracy/... for the sorter,
+    overall_extraction_score/field_presence/... for the specialist) attach to
+    the agent's OWN observation — that is what makes per-agent performance
+    metrics derivable over time in Langfuse.
+    """
+
+    trace_id: str
+    observation_id: str = ""
+    handler: Any = None
+    disabled: bool = False
+    _span: Any = None
+    _client: Any = None
+
+    def set_output(self, output: Any) -> None:
+        """Attach the agent's composite result to its observation."""
+        if self.disabled or self._span is None:
+            return
+        try:
+            self._span.update(output=output)
+        except Exception:  # noqa: BLE001 - observability must never break the run
+            logger.warning("langfuse_agent_output_failed", trace_id=self.trace_id)
+
+    def score(self, name: str, value: float, comment: str = "") -> None:
+        """Log one deterministic logic score against the AGENT's observation."""
+        if self.disabled or self._client is None or not self.observation_id:
             return
         try:
             self._client.create_score(
                 trace_id=self.trace_id,
+                observation_id=self.observation_id,
                 name=name,
                 value=value,
                 data_type="NUMERIC",
                 comment=comment,
             )
         except Exception:  # noqa: BLE001 - observability must never break the run
-            logger.warning("langfuse_score_failed", trace_id=self.trace_id, name=name)
+            logger.warning("langfuse_agent_score_failed",
+                           trace_id=self.trace_id, name=name)
 
 
 class LangfuseTracer:
@@ -193,7 +251,7 @@ class LangfuseTracer:
         block so ``session_id`` / ``environment`` / ``tags`` reach the trace
         AND the nested LLM generation created by the callback handler.
         """
-        trace_id = deterministic_trace_id(filename)
+        trace_id = deterministic_trace_id(filename, self._session_id)
         handle = TraceHandle(trace_id=trace_id, disabled=True)
         if self.disabled:
             yield handle
@@ -235,3 +293,62 @@ class LangfuseTracer:
         except Exception:  # noqa: BLE001 - observability must never break the run
             logger.warning("langfuse_trace_failed", filename=filename, exc_info=True)
             yield TraceHandle(trace_id=trace_id, disabled=True)
+
+    @contextmanager
+    def agent_observation(
+        self,
+        agent_name: str,
+        metadata: dict | None = None,
+    ) -> Iterator[AgentHandle]:
+        """Open ONE per-agent observation nested under the current trace.
+
+        Must be called INSIDE a :meth:`trace_document` block. The observation
+        is a SPAN named after the agent (e.g. ``sorter``,
+        ``contracts_specialist``); the LangChain ``CallbackHandler`` created
+        inside nests the agent's LLM generation under it, and
+        :meth:`AgentHandle.score` attaches the agent's designated task scores
+        to the agent's own observation.
+
+        Usage::
+
+            with tracer.trace_document(filename, expected) as trace:
+                with tracer.agent_observation("sorter", {"prompt_version": ...}) as sorter:
+                    result = sorter_agent.classify_json(text, callbacks=[sorter.handler])
+                    sorter.score("subtype_accuracy", 1.0)
+                with tracer.agent_observation("contracts_specialist", {...}) as specialist:
+                    ...
+        """
+        disabled = AgentHandle(trace_id="", disabled=True)
+        if self.disabled or self._client is None:
+            yield disabled
+            return
+        try:
+            from langfuse import propagate_attributes
+            from langfuse.langchain import CallbackHandler
+
+            trace_id = self._client.get_current_trace_id()
+            with self._client.start_as_current_observation(
+                as_type="span",
+                name=agent_name,
+                input=dict(metadata or {}),
+                metadata={"agent": agent_name, **(metadata or {})},
+            ) as span:
+                with propagate_attributes(tags=[f"agent:{agent_name}"]):
+                    handler = CallbackHandler()
+                handle = AgentHandle(
+                    trace_id=trace_id,
+                    observation_id=getattr(span, "id", "") or "",
+                    handler=handler,
+                    disabled=False,
+                    _span=span,
+                    _client=self._client,
+                )
+                try:
+                    yield handle
+                finally:
+                    # The span closes with the context manager.
+                    pass
+        except Exception:  # noqa: BLE001 - observability must never break the run
+            logger.warning("langfuse_agent_span_failed",
+                           agent=agent_name, exc_info=True)
+            yield disabled

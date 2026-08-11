@@ -1,0 +1,349 @@
+{
+ "type": "experiment",
+ "task": "contract_entity_extraction",
+ "experiment_name": "qwen3.7-flash_contracts_specialist_v2_extraction",
+ "git": {
+  "commit": "25eaddd",
+  "dirty": false
+ },
+ "model": "qwen/qwen3.7-flash",
+ "prompt_version": "contracts_specialist_v2",
+ "data_source": {
+  "project": "mailroom-eval/mailroom-cuad-contracts",
+  "ground_truth": "cuad_v1_clause_labels",
+  "dataset_fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
+  "n_samples": 10,
+  "sample_requested": 10,
+  "limit": null,
+  "seed": 42
+ },
+ "parameters": {
+  "temperature": 0.1,
+  "max_tokens": 16384,
+  "max_input_chars": 100000,
+  "reasoning_effort": "none",
+  "max_concurrency": 4,
+  "bt_scores": "overall",
+  "judge": false,
+  "manifest": "data/manifests/extract_live10_v2.jsonl"
+ },
+ "tokens": {
+  "prompt_tokens": 71840,
+  "completion_tokens": 39965,
+  "total_tokens": 111805,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "rows_with_usage": 10
+ },
+ "scores": {
+  "overall_extraction_score": 0.6563,
+  "field_presence": 0.98,
+  "schema_valid": 1.0,
+  "per_field": {
+   "effective_date": 0.8465,
+   "governing_law": 0.9443,
+   "key_obligations": 0.2663,
+   "parties": 0.5334,
+   "renewal_terms": 0.5781,
+   "term_length": 0.9441,
+   "termination_clauses": 0.2857
+  },
+  "entity_list_f1": {
+   "key_obligations": 0.2663,
+   "parties": 0.5333,
+   "termination_clauses": 0.2857
+  }
+ },
+ "n_rows": 10,
+ "n_ok": 10,
+ "n_error": 0,
+ "results": [
+  {
+   "filename": "document_41",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.6296,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 1.0,
+    "key_obligations": 0.2222,
+    "parties": 0.6667
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.22222222222222224,
+    "parties": 0.6666666666666666
+   },
+   "ambiguous_fields": [
+    "parties"
+   ],
+   "tokens": {
+    "prompt_tokens": 1262,
+    "completion_tokens": 434,
+    "total_tokens": 1696,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_8",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.5778,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 0.6157,
+    "governing_law": 0.9769,
+    "key_obligations": 0.2963,
+    "parties": 0.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.29629629629629634,
+    "parties": 0.0
+   },
+   "ambiguous_fields": [
+    "effective_date"
+   ],
+   "tokens": {
+    "prompt_tokens": 4766,
+    "completion_tokens": 1985,
+    "total_tokens": 6751,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_2",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.5433,
+   "field_presence": 0.8,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 1.0,
+    "governing_law": 0.8416,
+    "key_obligations": 0.2083,
+    "parties": 0.6667,
+    "renewal_terms": 0.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.20833333333333331,
+    "parties": 0.6666666666666666
+   },
+   "ambiguous_fields": [
+    "governing_law",
+    "parties"
+   ],
+   "tokens": {
+    "prompt_tokens": 4885,
+    "completion_tokens": 3215,
+    "total_tokens": 8100,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_18",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.5788,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 0.5899,
+    "governing_law": 1.0,
+    "key_obligations": 0.1692,
+    "parties": 0.6667,
+    "term_length": 0.7614,
+    "termination_clauses": 0.2857
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.16923076923076924,
+    "parties": 0.6666666666666666,
+    "termination_clauses": 0.2857142857142857
+   },
+   "ambiguous_fields": [
+    "effective_date",
+    "parties",
+    "term_length"
+   ],
+   "tokens": {
+    "prompt_tokens": 23268,
+    "completion_tokens": 13861,
+    "total_tokens": 37129,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_16",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.703,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 0.5839,
+    "governing_law": 0.873,
+    "key_obligations": 0.4878,
+    "parties": 0.6667,
+    "term_length": 0.9034
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.4878048780487804,
+    "parties": 0.6666666666666666
+   },
+   "ambiguous_fields": [
+    "effective_date",
+    "parties"
+   ],
+   "tokens": {
+    "prompt_tokens": 6174,
+    "completion_tokens": 4106,
+    "total_tokens": 10280,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_15",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.767,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.1681,
+    "parties": 0.6667,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.1680672268907563,
+    "parties": 0.6666666666666666
+   },
+   "ambiguous_fields": [
+    "parties"
+   ],
+   "tokens": {
+    "prompt_tokens": 11348,
+    "completion_tokens": 7260,
+    "total_tokens": 18608,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_9",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.6279,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 1.0,
+    "governing_law": 0.8764,
+    "key_obligations": 0.2632,
+    "parties": 0.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.2631578947368421,
+    "parties": 0.0
+   },
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 8124,
+    "completion_tokens": 4190,
+    "total_tokens": 12314,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_7",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.6997,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 1.0,
+    "key_obligations": 0.0976,
+    "parties": 0.6667,
+    "renewal_terms": 0.7342,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.0975609756097561,
+    "parties": 0.6666666666666666
+   },
+   "ambiguous_fields": [
+    "parties",
+    "renewal_terms"
+   ],
+   "tokens": {
+    "prompt_tokens": 5574,
+    "completion_tokens": 1759,
+    "total_tokens": 7333,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_35",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.644,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 0.6751,
+    "governing_law": 0.9867,
+    "key_obligations": 0.25,
+    "parties": 0.6667,
+    "renewal_terms": 1.0,
+    "termination_clauses": 0.2857
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.25,
+    "parties": 0.6666666666666666,
+    "termination_clauses": 0.2857142857142857
+   },
+   "ambiguous_fields": [
+    "effective_date",
+    "parties"
+   ],
+   "tokens": {
+    "prompt_tokens": 4466,
+    "completion_tokens": 2784,
+    "total_tokens": 7250,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_6",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.7917,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.5,
+    "parties": 0.6667
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.5,
+    "parties": 0.6666666666666666
+   },
+   "ambiguous_fields": [
+    "key_obligations",
+    "parties"
+   ],
+   "tokens": {
+    "prompt_tokens": 1973,
+    "completion_tokens": 371,
+    "total_tokens": 2344,
+    "cost": null
+   }
+  }
+ ],
+ "timestamp": "2026-08-09T20:39:28.310699+00:00"
+}

@@ -71,6 +71,9 @@ def fake_chained_eval(monkeypatch):
     def fake_extract(self, doc_text):
         calls["extractor"] += 1
         assert self.handoff_context  # the sorter hands off its classification
+        # Default --handoff-scope subtype: the PREDICTED subtype's CUAD
+        # field-group cue is part of the handoff (sorter predicts "license").
+        assert "Expected field groups for this license agreement family" in self.handoff_context
         return {
             "document_name": "Content License Agreement",
             "parties": ["Acme Technologies, Inc.", "Beta Holdings Corp."],

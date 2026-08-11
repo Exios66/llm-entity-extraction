@@ -1,0 +1,366 @@
+/* llm-entity-extraction — experiment log viewer. Light, minimal, data-first. */
+
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f6f7f9;
+  --border: #e4e7ec;
+  --text: #1a1f2b;
+  --text-soft: #5b6472;
+  --text-faint: #8a93a2;
+  --accent: #2456d6;
+  --accent-soft: #eef2fd;
+  --good: #1a7f37;
+  --mid: #b58900;
+  --bad: #c62828;
+  --mono: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.masthead-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.masthead h1 .mono { color: var(--accent); }
+
+.masthead .sub { color: var(--text-soft); font-size: 12.5px; }
+
+.masthead .nav {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
+  font-size: 12.5px;
+  align-items: center;
+}
+
+.masthead .nav a { color: var(--text-soft); }
+.masthead .nav a:hover { color: var(--accent); text-decoration: none; }
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+}
+
+.mono { font-family: var(--mono); font-size: 12.5px; }
+.faint { color: var(--text-faint); }
+.soft { color: var(--text-soft); }
+
+/* ---------- layout ---------- */
+
+main { max-width: 1080px; margin: 0 auto; padding: 24px; }
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.card h2 {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.card .body { padding: 16px; }
+.card .body.flush { padding: 0; }
+
+/* ---------- stat cards ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+
+.stat .k {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.stat .v { font-size: 20px; font-weight: 650; margin-top: 2px; }
+.stat .d { font-size: 12px; color: var(--text-soft); margin-top: 1px; }
+.stat.best { border-color: #c9d6f5; background: var(--accent-soft); }
+
+/* ---------- filters ---------- */
+
+.filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  align-items: center;
+}
+
+.filters input[type="search"],
+.filters select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  outline: none;
+}
+
+.filters input[type="search"] { flex: 1 1 220px; }
+.filters select { min-width: 130px; }
+
+.filters input:focus, .filters select:focus { border-color: var(--accent); }
+
+.filters .count { margin-left: auto; font-size: 12.5px; color: var(--text-soft); }
+
+/* ---------- tables ---------- */
+
+.table-wrap { overflow-x: auto; }
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.data th, table.data td {
+  text-align: left;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+table.data th {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: var(--bg-soft);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+table.data th:hover { color: var(--text-soft); }
+table.data th .arrow { opacity: 0.5; margin-left: 3px; }
+
+table.data tbody tr { cursor: pointer; }
+table.data tbody tr:hover { background: var(--accent-soft); }
+table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data th.num { text-align: right; }
+
+.task-tag {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.task-tag.extraction { color: var(--accent); border-color: #c9d6f5; background: var(--accent-soft); }
+.task-tag.chained { color: #6b21a8; border-color: #e5d5f5; background: #f7f0fc; }
+.task-tag.subtype { color: #0e7490; border-color: #c6e8f2; background: #eef9fc; }
+
+.score-cell { white-space: nowrap; }
+.score-cell .label { color: var(--text-soft); font-size: 12px; margin-right: 6px; }
+
+.bar {
+  display: inline-block;
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.bar.good i { background: var(--good); }
+.bar.warn i { background: var(--mid); }
+.bar.bad i { background: var(--bad); }
+
+/* ---------- detail ---------- */
+
+.back { font-size: 13px; margin-bottom: 8px; display: inline-block; }
+
+.detail-head {
+  margin-bottom: 20px;
+}
+
+.detail-head h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.detail-head h2 .mono { font-weight: 600; }
+
+.detail-head .meta-line { color: var(--text-soft); font-size: 13px; }
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kv { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.kv td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.kv tr:last-child td { border-bottom: none; }
+
+.kv td.k {
+  color: var(--text-soft);
+  width: 40%;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+.kv td.v { word-break: break-word; }
+
+/* score rows with bars */
+
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.score-row:last-child { border-bottom: none; }
+
+.score-row .name { width: 34%; color: var(--text-soft); }
+.score-row .track { flex: 1; height: 8px; background: var(--bg-soft);
+  border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.score-row .track i { display: block; height: 100%; background: var(--accent); }
+.score-row .track i.good { background: var(--good); }
+.score-row .track i.warn { background: var(--mid); }
+.score-row .track i.bad { background: var(--bad); }
+.score-row .value { width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- failure insights / reasoning ---------- */
+
+.reasoning {
+  font-size: 12.5px;
+  color: var(--text-soft);
+  max-height: 96px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.insight-row td { padding: 10px 14px; }
+
+.mode-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono);
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-soft);
+}
+
+/* ---------- footer ---------- */
+
+footer {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+footer .divider { border-top: 1px solid var(--border); padding-top: 14px; }
+
+.empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-soft);
+}
+
+@media (max-width: 720px) {
+  .masthead .nav { margin-left: 0; }
+  .score-row .name { width: 45%; }
+}

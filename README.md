@@ -123,6 +123,8 @@ scripts/
     render_experiment_log.py        rebuild the markdown log from the JSONL source
     judge_experiment.py             post-hoc JudgeAgent review of failed classifications
     backfill_subtype_reasoning.py   one-time enrichment: full failure reasoning from spans
+  site/
+    build_site.py                   rebuild docs/ (GitHub Pages) data from the JSONL
 tests/                   unit tests (183, no network)
 ```
 
@@ -145,6 +147,8 @@ truth; the markdown is rebuilt from it at any time:
 ```bash
 python scripts/reporting/render_experiment_log.py          # rebuild the whole markdown log
 python scripts/reporting/render_experiment_log.py --dry-run  # print instead of write
+python scripts/site/build_site.py                          # rebuild the site data (docs/)
+python scripts/site/build_site.py --check                  # verify the site data is current
 ```
 
 ```bash
@@ -160,6 +164,28 @@ PY
 
 Paths default to `reports/experiment_log.{jsonl,md}` and are overridable with
 `EXPERIMENT_LOG_PATH` / `EXPERIMENT_LOG_MD_PATH` or `--experiment-log`.
+
+## Website
+
+The associated website for this repo is a static experiment-log viewer
+served by GitHub Pages — **no Actions runners**:
+
+**https://exios66.github.io/llm-entity-extraction/**
+
+- The site lives entirely in `docs/` (see `docs/README.md`): a
+  dependency-free single-page viewer with a filterable/searchable runs index,
+  per-run detail pages (scores, per-field breakdowns, per-document results,
+  confusion matrices, failure insights), and lazy-loaded run data.
+- `docs/data/` is DERIVED from `reports/experiment_log.jsonl` via
+  `scripts/site/build_site.py` — never hand-edit it. After every run:
+
+  ```bash
+  python scripts/reporting/render_experiment_log.py   # markdown log
+  python scripts/site/build_site.py                   # site data
+  ```
+
+- Enabling Pages is a one-time repo setting: **Settings → Pages → Deploy from
+  a branch → `main` → `/docs`**.
 
 ## Setup
 

@@ -1,0 +1,50 @@
+{
+ "built_at": "2026-08-11T01:32:42.663320+00:00",
+ "source": "reports/experiment_log.jsonl",
+ "repo_url": "https://github.com/Exios66/llm-entity-extraction",
+ "run_count": 23,
+ "tasks": {
+  "contract_entity_extraction": 5,
+  "chained_sorter_extractor": 8,
+  "subtype_classification": 10
+ },
+ "models": {
+  "qwen/qwen3.7-flash": 23
+ },
+ "prompts": {
+  "contracts_specialist_v2": 1,
+  "contracts_specialist_v3": 4,
+  "sorter_v1 + contracts_specialist_v4": 1,
+  "sorter_v2 + contracts_specialist_v5": 1,
+  "sorter_v3 + contracts_specialist_v6": 1,
+  "sorter_v3 + contracts_specialist_v7": 1,
+  "sorter_v3 + contracts_specialist_v8": 2,
+  "sorter_v3": 4,
+  "sorter_v4": 1,
+  "sorter_v5 + contracts_specialist_v10": 1,
+  "sorter_v5 + contracts_specialist_v11": 1,
+  "sorter_v5": 3,
+  "sorter_v6": 2
+ },
+ "n_rows": 1874,
+ "n_ok": 1874,
+ "n_error": 0,
+ "total_tokens": 21784710,
+ "best_per_task": {
+  "contract_entity_extraction": {
+   "run_id": 3,
+   "value": 0.9173,
+   "label": "extraction"
+  },
+  "chained_sorter_extractor": {
+   "run_id": 7,
+   "value": 0.95825,
+   "label": "sorter / extractor"
+  },
+  "subtype_classification": {
+   "run_id": 20,
+   "value": 1.0,
+   "label": "subtype strict / equiv"
+  }
+ }
+}

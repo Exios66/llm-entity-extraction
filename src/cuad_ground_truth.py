@@ -252,6 +252,46 @@ TYPE_ALIASES = {
     "Affiliate Agreement": "Affiliate_Agreements",
 }
 
+# Canonical sorter subtype key -> the CUAD folder name(s) that map to it
+# (reverse of the folder->key aliases in ``agents/sorter_agent.py``; a few
+# keys cover multiple folders, e.g. endorsement and joint_venture). This is
+# what lets the chained handoff cue the specialist with the field scope of
+# the PREDICTED subtype (production-identical: no ground-truth leakage).
+SUBTYPE_CUAD_FOLDERS: dict[str, list[str]] = {
+    "affiliate": ["Affiliate_Agreements"],
+    "agency": ["Agency Agreements"],
+    "co_branding": ["Co_Branding"],
+    "collaboration": ["Collaboration"],
+    "consulting": ["Consulting Agreements"],
+    "development": ["Development"],
+    "distributor": ["Distributor"],
+    "endorsement": ["Endorsement", "Endorsement Agreement"],
+    "franchise": ["Franchise"],
+    "hosting": ["Hosting"],
+    "ip": ["IP"],
+    "joint_venture": ["Joint Venture", "Joint Venture _ Filing"],
+    "license": ["License_Agreements"],
+    "maintenance": ["Maintenance"],
+    "manufacturing": ["Manufacturing"],
+    "marketing": ["Marketing"],
+    "non_compete_no_solicit": ["Non_Compete_Non_Solicit"],
+    "outsourcing": ["Outsourcing"],
+    "promotion": ["Promotion"],
+    "reseller": ["Reseller"],
+    "service": ["Service"],
+    "sponsorship": ["Sponsorship"],
+    "strategic_alliance": ["Strategic Alliance"],
+    "supply": ["Supply"],
+    "transportation": ["Transportation"],
+    "other": [],
+}
+
+# Contracts-schema fields, in the order the handoff cue lists them.
+_HANDOFF_FIELD_ORDER = [
+    "document_name", "parties", "effective_date", "term_length",
+    "renewal_terms", "governing_law", "key_obligations", "termination_clauses",
+]
+
 _ALL_CATEGORIES = set(CUAD_CATEGORIES)
 
 
@@ -319,6 +359,50 @@ def applicable_categories(doc_category: str | None) -> set[str]:
     if excluded is None:
         return set(_ALL_CATEGORIES)
     return _ALL_CATEGORIES - excluded
+
+
+def build_subtype_handoff(subtype: str | None) -> str:
+    """Build the subtype-scoped extraction cue for the chained handoff.
+
+    A pure function of the PREDICTED sorter subtype: the schema field groups
+    the specialist should expect for that contract family (per the CUAD
+    dataset card, "the group a document belongs to decides what fields to
+    expect"), grouped by the CUAD categories that map to each field, plus the
+    categories that NEVER apply to the family (the specialist must not invent
+    them). Only category/field NAMES are passed — never ground-truth answers —
+    so the cue is production-identical and leaks nothing.
+
+    Returns an empty string for the fallback/unknown subtype (no narrowing).
+    """
+    subtype = str(subtype or "").strip().lower()
+    folders = SUBTYPE_CUAD_FOLDERS.get(subtype) or []
+    if not folders:
+        return ""
+    applicable: set[str] = set()
+    for folder in folders:
+        applicable |= applicable_categories(folder)
+
+    fields: dict[str, list[str]] = defaultdict(list)
+    presence_only: list[str] = []
+    for category in sorted(applicable):
+        field = CUAD_CATEGORIES[category]["field"]
+        if field is None:
+            presence_only.append(category)
+        else:
+            fields[field].append(category)
+
+    excluded = sorted(_ALL_CATEGORIES - applicable)
+    lines = [f"Expected field groups for this {subtype} agreement family:"]
+    for field in _HANDOFF_FIELD_ORDER:
+        if field in fields:
+            lines.append(f"- {field}: {', '.join(fields[field])}")
+    if presence_only:
+        lines.append(f"- presence-only clauses (tracked, not extracted): "
+                     f"{', '.join(presence_only)}")
+    if excluded:
+        lines.append("Not expected in this family — do not invent clauses for: "
+                     f"{', '.join(excluded)}")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

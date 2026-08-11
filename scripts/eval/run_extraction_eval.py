@@ -531,7 +531,9 @@ def main_with_args(argv: list[str]) -> int:
 
 def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict],
                            args, experiment_name: str, usage_by_index: dict[int, dict],
-                           log_path: Path, md_log_path: Path) -> None:
+                           log_path: Path, md_log_path: Path,
+                           tracing_backend: str = "braintrust",
+                           tracing_meta: dict | None = None) -> None:
     """Append ONE record of this experiment to the repo experiment log.
 
     The record carries every score (overall, presence, schema validity,
@@ -539,6 +541,10 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
     usage/cost totals, the data source, and every per-row result — read from
     the locally computed composite, so it always matches the manifest and the
     Braintrust lookups.
+
+    ``tracing_backend`` names where the run was traced (``braintrust``
+    default, ``langfuse`` for the mirror runner); ``tracing_meta`` carries
+    backend specifics (project/environment) into the record's parameters.
     """
     def _mean_over(outputs: list[dict], key: str) -> float | None:
         values = [float(o.get(key) or 0.0) for o in outputs if o.get(key) is not None]
@@ -616,9 +622,11 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "max_input_chars": args.max_input_chars,
             "reasoning_effort": args.reasoning_effort,
             "max_concurrency": args.max_concurrency,
-            "bt_scores": args.bt_scores,
-            "judge": args.judge,
+            "bt_scores": getattr(args, "bt_scores", "none"),
+            "judge": getattr(args, "judge", False),
             "manifest": str(args.manifest) if args.manifest else None,
+            "tracing_backend": tracing_backend,
+            **({"tracing": tracing_meta} if tracing_meta else {}),
         },
         "tokens": tokens_summary(list(usage_by_index.values())),
         "scores": {

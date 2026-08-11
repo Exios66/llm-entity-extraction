@@ -216,8 +216,8 @@ class ContractsSpecialist(_SpecialistBase):
     schema = CONTRACTS_SCHEMA
 
     def __init__(self, model: str | None = None, api_key: str | None = None,
-                 prompt_version: str = "contracts_specialist"):
-        super().__init__(model=model, api_key=api_key)
+                 prompt_version: str = "contracts_specialist", callbacks: list | None = None):
+        super().__init__(model=model, api_key=api_key, callbacks=callbacks)
         self.prompt_version = prompt_version
 
     def system_prompt(self) -> str:

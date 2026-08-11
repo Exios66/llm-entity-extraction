@@ -1,0 +1,647 @@
+{
+ "type": "experiment",
+ "task": "contract_entity_extraction",
+ "experiment_name": "qwen3.7-flash_contracts_specialist_v3_extraction",
+ "git": {
+  "commit": "25eaddd",
+  "dirty": true
+ },
+ "model": "qwen/qwen3.7-flash",
+ "prompt_version": "contracts_specialist_v3",
+ "data_source": {
+  "project": "mailroom-eval/mailroom-cuad-contracts",
+  "ground_truth": "cuad_v1_clause_labels",
+  "ground_truth_mode": "cuad_type_aware",
+  "dataset_fingerprint": "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2",
+  "n_samples": 10,
+  "sample_requested": 10,
+  "limit": null,
+  "seed": 42
+ },
+ "parameters": {
+  "temperature": 0.1,
+  "max_tokens": 16384,
+  "max_input_chars": 100000,
+  "reasoning_effort": "none",
+  "max_concurrency": 4,
+  "bt_scores": "overall",
+  "judge": false,
+  "manifest": "data/manifests/extract_live10_v5.jsonl"
+ },
+ "tokens": {
+  "prompt_tokens": 109783,
+  "completion_tokens": 28213,
+  "total_tokens": 137996,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "rows_with_usage": 10
+ },
+ "scores": {
+  "overall_extraction_score": 0.7848,
+  "field_presence": 0.9167,
+  "schema_valid": 1.0,
+  "overall_verified_precision": 1.0,
+  "category_presence": 0.768,
+  "per_field": {
+   "document_name": 1.0,
+   "effective_date": 0.7572,
+   "governing_law": 0.6852,
+   "key_obligations": 0.7181,
+   "parties": 0.8,
+   "renewal_terms": 0.75,
+   "term_length": 0.787,
+   "termination_clauses": 0.5
+  },
+  "entity_list_f1": {
+   "key_obligations": 0.7181,
+   "parties": 0.8,
+   "termination_clauses": 0.5
+  },
+  "verified_precision": {
+   "key_obligations": 1.0,
+   "parties": 1.0,
+   "termination_clauses": 0.75
+  },
+  "hallucination_rate": {
+   "key_obligations": 0.0,
+   "parties": 0.0,
+   "termination_clauses": 0.0
+  }
+ },
+ "n_rows": 10,
+ "n_ok": 10,
+ "n_error": 0,
+ "results": [
+  {
+   "filename": "RitterPharmaceuticalsInc_20200313_S-4A_EX-10.54_12055220_EX-10.54_Development Agreement",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.8482,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.7857,
+    "parties": 1.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.7857142857142857,
+    "parties": 1.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 23,
+     "matched_gt": 20,
+     "verified_in_doc": 23,
+     "true_items": 23,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 4,
+     "matched_gt": 0,
+     "verified_in_doc": 4,
+     "true_items": 4,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 22083,
+    "completion_tokens": 3188,
+    "total_tokens": 25271,
+    "cost": null
+   }
+  },
+  {
+   "filename": "ThriventVariableInsuranceAccountB_20190701_N-6_EX-99.D(IV)_11720968_EX-99.D(IV)_Endorsement Agreement",
+   "status": "completed",
+   "error": null,
+   "overall_score": 1.0,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "key_obligations": 1.0,
+    "parties": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 1.0,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 5,
+     "matched_gt": 1,
+     "verified_in_doc": 5,
+     "true_items": 5,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 1.0,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 2300,
+    "completion_tokens": 472,
+    "total_tokens": 2772,
+    "cost": null
+   }
+  },
+  {
+   "filename": "PhasebioPharmaceuticalsInc_20200330_10-K_EX-10.21_12086810_EX-10.21_Development Agreement",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.5598,
+   "field_presence": 0.8333333333333334,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 0.0,
+    "key_obligations": 0.0625,
+    "parties": 1.0,
+    "term_length": 0.2963
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.0625,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 1,
+     "matched_gt": 1,
+     "verified_in_doc": 1,
+     "true_items": 1,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 2,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.375,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 24212,
+    "completion_tokens": 352,
+    "total_tokens": 24564,
+    "cost": null
+   }
+  },
+  {
+   "filename": "CARDAX,INC_08_19_2014-EX-10.1-COLLABORATION AGREEMENT",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.8344,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 0.5721,
+    "governing_law": 1.0,
+    "key_obligations": 0.6,
+    "parties": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.6,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 32,
+     "matched_gt": 18,
+     "verified_in_doc": 32,
+     "true_items": 32,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8,
+   "ambiguous_fields": [
+    "effective_date",
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 13598,
+    "completion_tokens": 4132,
+    "total_tokens": 17730,
+    "cost": null
+   }
+  },
+  {
+   "filename": "Loop Industries, Inc. - Marketing Agreement",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.8095,
+   "field_presence": 0.8333333333333334,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 0.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.8571,
+    "parties": 1.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.8571428571428571,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 16,
+     "matched_gt": 11,
+     "verified_in_doc": 16,
+     "true_items": 16,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 2,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8571,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 8240,
+    "completion_tokens": 1302,
+    "total_tokens": 9542,
+    "cost": null
+   }
+  },
+  {
+   "filename": "SCOUTCAMINC_05_12_2020-EX-10.22-SERVICES AGREEMENT",
+   "status": "completed",
+   "error": null,
+   "overall_score": 1.0,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 1.0,
+    "parties": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 1.0,
+    "parties": 1.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 12,
+     "matched_gt": 12,
+     "verified_in_doc": 12,
+     "true_items": 12,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 3,
+     "matched_gt": 3,
+     "verified_in_doc": 3,
+     "true_items": 3,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 1.0,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 2851,
+    "completion_tokens": 1127,
+    "total_tokens": 3978,
+    "cost": null
+   }
+  },
+  {
+   "filename": "HealthcareIntegratedTechnologiesInc_20190812_8-K_EX-10.1_11776966_EX-10.1_Reseller Agreement",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.7292,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 0.1667,
+    "key_obligations": 0.6667,
+    "parties": 0.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.6666666666666666,
+    "parties": 0.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 44,
+     "matched_gt": 16,
+     "verified_in_doc": 44,
+     "true_items": 44,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 0,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 3,
+     "matched_gt": 2,
+     "verified_in_doc": 3,
+     "true_items": 3,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.7143,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 5973,
+    "completion_tokens": 3290,
+    "total_tokens": 9263,
+    "cost": null
+   }
+  },
+  {
+   "filename": "DataCallTechnologies_20060918_SB-2A_EX-10.9_944510_EX-10.9_Content License Agreement",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.8286,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 0.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.8,
+    "parties": 1.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.8,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 18,
+     "matched_gt": 10,
+     "verified_in_doc": 18,
+     "true_items": 18,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 4616,
+    "completion_tokens": 1592,
+    "total_tokens": 6208,
+    "cost": null
+   }
+  },
+  {
+   "filename": "GLOBALTECHNOLOGIESLTD_06_08_2020-EX-10.16-CONSULTING AGREEMENT",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.75,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.5,
+    "parties": 0.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.5,
+    "parties": 0.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 44,
+     "matched_gt": 6,
+     "verified_in_doc": 44,
+     "true_items": 44,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 0,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.5,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 5226,
+    "completion_tokens": 2444,
+    "total_tokens": 7670,
+    "cost": null
+   }
+  },
+  {
+   "filename": "PHREESIA,INC_05_28_2019-EX-10.18-STRATEGIC ALLIANCE AGREEMENT",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.4886,
+   "field_presence": 0.5,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 0.0,
+    "key_obligations": 0.9091,
+    "parties": 1.0,
+    "renewal_terms": 0.0,
+    "term_length": 0.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.9090909090909091,
+    "parties": 1.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 84,
+     "matched_gt": 55,
+     "verified_in_doc": 84,
+     "true_items": 84,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 0,
+     "matched_gt": 0,
+     "verified_in_doc": 0,
+     "true_items": 0,
+     "verified_precision": 0.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": false
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8333,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 20684,
+    "completion_tokens": 10314,
+    "total_tokens": 30998,
+    "cost": null
+   }
+  }
+ ],
+ "timestamp": "2026-08-09T22:01:06.299175+00:00"
+}

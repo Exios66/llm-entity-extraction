@@ -1,0 +1,649 @@
+{
+ "type": "experiment",
+ "task": "contract_entity_extraction",
+ "experiment_name": "qwen3.7-flash_contracts_specialist_v3_extraction",
+ "git": {
+  "commit": "25eaddd",
+  "dirty": true
+ },
+ "model": "qwen/qwen3.7-flash",
+ "prompt_version": "contracts_specialist_v3",
+ "data_source": {
+  "project": "mailroom-eval/mailroom-cuad-contracts",
+  "ground_truth": "cuad_v1_clause_labels",
+  "ground_truth_mode": "cuad_type_aware",
+  "dataset_fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
+  "n_samples": 10,
+  "sample_requested": 10,
+  "limit": null,
+  "seed": 42
+ },
+ "parameters": {
+  "temperature": 0.1,
+  "max_tokens": 16384,
+  "max_input_chars": 100000,
+  "reasoning_effort": "none",
+  "max_concurrency": 4,
+  "bt_scores": "overall",
+  "judge": false,
+  "manifest": "data/manifests/extract_live10_v4.jsonl"
+ },
+ "tokens": {
+  "prompt_tokens": 109783,
+  "completion_tokens": 28581,
+  "total_tokens": 138364,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "rows_with_usage": 10
+ },
+ "scores": {
+  "overall_extraction_score": 0.7976,
+  "field_presence": 0.9333,
+  "schema_valid": 1.0,
+  "overall_verified_precision": 1.0,
+  "category_presence": 0.7663,
+  "per_field": {
+   "document_name": 1.0,
+   "effective_date": 0.8299,
+   "governing_law": 0.6852,
+   "key_obligations": 0.7233,
+   "parties": 0.8,
+   "renewal_terms": 0.75,
+   "term_length": 0.787,
+   "termination_clauses": 0.5
+  },
+  "entity_list_f1": {
+   "key_obligations": 0.7233,
+   "parties": 0.8,
+   "termination_clauses": 0.5
+  },
+  "verified_precision": {
+   "key_obligations": 1.0,
+   "parties": 1.0,
+   "termination_clauses": 0.75
+  },
+  "hallucination_rate": {
+   "key_obligations": 0.0,
+   "parties": 0.0,
+   "termination_clauses": 0.0
+  }
+ },
+ "n_rows": 10,
+ "n_ok": 10,
+ "n_error": 0,
+ "results": [
+  {
+   "filename": "document_41",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.8661,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.9286,
+    "parties": 1.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.9285714285714286,
+    "parties": 1.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 46,
+     "matched_gt": 39,
+     "verified_in_doc": 46,
+     "true_items": 46,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 4,
+     "matched_gt": 0,
+     "verified_in_doc": 4,
+     "true_items": 4,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8667,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 22083,
+    "completion_tokens": 5545,
+    "total_tokens": 27628,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_8",
+   "status": "completed",
+   "error": null,
+   "overall_score": 1.0,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "key_obligations": 1.0,
+    "parties": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 1.0,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 5,
+     "matched_gt": 1,
+     "verified_in_doc": 5,
+     "true_items": 5,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 1.0,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 2300,
+    "completion_tokens": 472,
+    "total_tokens": 2772,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_2",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.5598,
+   "field_presence": 0.8333333333333334,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 0.0,
+    "key_obligations": 0.0625,
+    "parties": 1.0,
+    "term_length": 0.2963
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.0625,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 1,
+     "matched_gt": 1,
+     "verified_in_doc": 1,
+     "true_items": 1,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 2,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.375,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 24212,
+    "completion_tokens": 352,
+    "total_tokens": 24564,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_18",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.8344,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 0.5722,
+    "governing_law": 1.0,
+    "key_obligations": 0.6,
+    "parties": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.6,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 52,
+     "matched_gt": 19,
+     "verified_in_doc": 52,
+     "true_items": 52,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8,
+   "ambiguous_fields": [
+    "effective_date",
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 13598,
+    "completion_tokens": 4555,
+    "total_tokens": 18153,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_16",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.9307,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 0.7273,
+    "governing_law": 1.0,
+    "key_obligations": 0.8571,
+    "parties": 1.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.8571428571428571,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 16,
+     "matched_gt": 11,
+     "verified_in_doc": 16,
+     "true_items": 16,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 2,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8571,
+   "ambiguous_fields": [
+    "effective_date"
+   ],
+   "tokens": {
+    "prompt_tokens": 8240,
+    "completion_tokens": 1430,
+    "total_tokens": 9670,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_15",
+   "status": "completed",
+   "error": null,
+   "overall_score": 1.0,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 1.0,
+    "parties": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 1.0,
+    "parties": 1.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 12,
+     "matched_gt": 12,
+     "verified_in_doc": 12,
+     "true_items": 12,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 3,
+     "matched_gt": 3,
+     "verified_in_doc": 3,
+     "true_items": 3,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 1.0,
+   "ambiguous_fields": [],
+   "tokens": {
+    "prompt_tokens": 2851,
+    "completion_tokens": 1126,
+    "total_tokens": 3977,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_9",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.7292,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 0.1667,
+    "key_obligations": 0.6667,
+    "parties": 0.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.6666666666666666,
+    "parties": 0.0,
+    "termination_clauses": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 38,
+     "matched_gt": 17,
+     "verified_in_doc": 38,
+     "true_items": 38,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 0,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 3,
+     "matched_gt": 2,
+     "verified_in_doc": 3,
+     "true_items": 3,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.7143,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 5973,
+    "completion_tokens": 3292,
+    "total_tokens": 9265,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_7",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.8286,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 0.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.8,
+    "parties": 1.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.8,
+    "parties": 1.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 18,
+     "matched_gt": 10,
+     "verified_in_doc": 18,
+     "true_items": 18,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.8,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 4616,
+    "completion_tokens": 1579,
+    "total_tokens": 6195,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_35",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.75,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.5,
+    "parties": 0.0,
+    "term_length": 1.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.5,
+    "parties": 0.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 47,
+     "matched_gt": 6,
+     "verified_in_doc": 47,
+     "true_items": 47,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 0,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.5,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 5226,
+    "completion_tokens": 2586,
+    "total_tokens": 7812,
+    "cost": null
+   }
+  },
+  {
+   "filename": "document_6",
+   "status": "completed",
+   "error": null,
+   "overall_score": 0.4773,
+   "field_presence": 0.5,
+   "schema_valid": 1.0,
+   "field_scores": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 0.0,
+    "key_obligations": 0.8182,
+    "parties": 1.0,
+    "renewal_terms": 0.0,
+    "term_length": 0.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_f1": {
+    "key_obligations": 0.8181818181818182,
+    "parties": 1.0,
+    "termination_clauses": 0.0
+   },
+   "entity_list_audit": {
+    "key_obligations": {
+     "n_predicted": 81,
+     "matched_gt": 51,
+     "verified_in_doc": 81,
+     "true_items": 81,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "parties": {
+     "n_predicted": 2,
+     "matched_gt": 1,
+     "verified_in_doc": 2,
+     "true_items": 2,
+     "verified_precision": 1.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": true
+    },
+    "termination_clauses": {
+     "n_predicted": 0,
+     "matched_gt": 0,
+     "verified_in_doc": 0,
+     "true_items": 0,
+     "verified_precision": 0.0,
+     "hallucinated": 0,
+     "hallucination_rate": 0.0,
+     "doc_verification": false
+    }
+   },
+   "overall_verified_precision": 1.0,
+   "category_presence": 0.75,
+   "ambiguous_fields": [
+    "key_obligations"
+   ],
+   "tokens": {
+    "prompt_tokens": 20684,
+    "completion_tokens": 7644,
+    "total_tokens": 28328,
+    "cost": null
+   }
+  }
+ ],
+ "timestamp": "2026-08-09T21:53:28.344141+00:00"
+}

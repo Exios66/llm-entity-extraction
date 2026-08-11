@@ -628,12 +628,16 @@ def main_with_args(argv: list[str]) -> int:
 
 def log_experiment_to_repo(result, dataset: list[dict], args, experiment_name: str,
                            cost_by_index: dict[int, float], usage_by_index: dict[int, dict],
-                           log_path: Path, md_log_path: Path) -> None:
+                           log_path: Path, md_log_path: Path,
+                           tracing_backend: str = "braintrust",
+                           tracing_meta: dict | None = None) -> None:
     """Append ONE record of this experiment to the repo experiment log.
 
     Carries every score (exact_match, failure rate, cost, per-class
     accuracy), all run parameters, token usage/cost totals, the data source,
-    and every per-row result.
+    and every per-row result. ``tracing_backend`` names where the run was
+    traced (``braintrust`` default, ``langfuse`` for the mirror runner);
+    ``tracing_meta`` carries backend specifics into the record's parameters.
     """
     from src.scorers import normalize_label
 
@@ -699,6 +703,8 @@ def log_experiment_to_repo(result, dataset: list[dict], args, experiment_name: s
             "scorers": args.scorers,
             "no_scorers": args.no_scorers,
             "manifest": str(args.manifest) if args.manifest else None,
+            "tracing_backend": tracing_backend,
+            **({"tracing": tracing_meta} if tracing_meta else {}),
         },
         "tokens": tokens_summary(list(usage_by_index.values())),
         "scores": {

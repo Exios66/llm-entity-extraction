@@ -27,6 +27,7 @@ class StubSpan:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
         self.updates = []
+        self.id = "obs-span"
 
     def update(self, **kwargs):
         self.updates.append(kwargs)
@@ -46,14 +47,19 @@ class StubLangfuse:
         self.scores = []
         self.flush_calls = 0
         self.shutdown_calls = 0
+        self.current_trace_id = "0123456789abcdef0123456789abcdef"
 
     def start_as_current_observation(self, **kwargs):
         span = StubSpan(**kwargs)
+        span.id = f"obs-{len(self.spans)}"
         self.spans.append(span)
         return span
 
     def create_score(self, **kwargs):
         self.scores.append(kwargs)
+
+    def get_current_trace_id(self):
+        return self.current_trace_id
 
     def flush(self):
         self.flush_calls += 1
@@ -121,6 +127,13 @@ def test_deterministic_trace_id():
     assert all(c in "0123456789abcdef" for c in tid)
     assert tid == deterministic_trace_id("Monsanto - Agreement.pdf")
     assert tid != deterministic_trace_id("Other - Agreement.pdf")
+    # Session scoping: the same document in DIFFERENT experiments gets a
+    # DIFFERENT trace id (no cross-experiment observation merging), while the
+    # same experiment stays stable across re-runs.
+    assert deterministic_trace_id("doc_a.txt", "exp_1") == \
+           deterministic_trace_id("doc_a.txt", "exp_1")
+    assert deterministic_trace_id("doc_a.txt", "exp_1") != \
+           deterministic_trace_id("doc_a.txt", "exp_2")
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +154,7 @@ def test_trace_document_captures_output_and_scores(stub_langfuse, lf_env):
     span = stub_langfuse.spans[0]
     assert span.kwargs["as_type"] == "span"
     assert span.kwargs["name"] == "subtype_classification"
-    assert span.kwargs["trace_context"]["trace_id"] == deterministic_trace_id("doc_a.txt")
+    assert span.kwargs["trace_context"]["trace_id"] == deterministic_trace_id("doc_a.txt", "exp_1")
     assert span.kwargs["input"]["filename"] == "doc_a.txt"
     assert span.kwargs["input"]["expected"] == "license"
     assert span.kwargs["input"]["prompt_version"] == "sorter_v5"
@@ -149,7 +162,7 @@ def test_trace_document_captures_output_and_scores(stub_langfuse, lf_env):
 
     assert len(stub_langfuse.scores) == 2
     first = stub_langfuse.scores[0]
-    assert first["trace_id"] == deterministic_trace_id("doc_a.txt")
+    assert first["trace_id"] == deterministic_trace_id("doc_a.txt", "exp_1")
     assert first["name"] == "exact_match"
     assert first["value"] == 1.0
     assert first["data_type"] == "NUMERIC"
@@ -188,6 +201,63 @@ def test_flush_and_shutdown(stub_langfuse, lf_env):
     tracer.shutdown()
     assert stub_langfuse.flush_calls == 1
     assert stub_langfuse.shutdown_calls == 1
+
+
+# ---------------------------------------------------------------------------
+# Per-agent observations (sorter / contracts_specialist designated tasks)
+# ---------------------------------------------------------------------------
+
+
+def test_agent_observation_nests_under_trace(stub_langfuse, lf_env):
+    tracer = LangfuseTracer(config=load_langfuse_config(lf_env))
+    with tracer.trace_document("doc_a.txt", "license") as trace_handle:
+        with tracer.agent_observation("sorter", {"prompt_version": "sorter_v6"}) as agent:
+            assert not agent.disabled
+            assert agent.handler == "stub-handler"
+            agent.set_output({"doc_type": "contract"})
+            agent.score("subtype_accuracy", 1.0)
+            trace_handle.set_output({"composite": True})
+
+    # Root span + one nested agent span.
+    assert len(stub_langfuse.spans) == 2
+    agent_span = stub_langfuse.spans[1]
+    assert agent_span.kwargs["name"] == "sorter"
+    assert agent_span.kwargs["as_type"] == "span"
+    assert agent_span.kwargs["metadata"]["agent"] == "sorter"
+    assert agent_span.kwargs["metadata"]["prompt_version"] == "sorter_v6"
+    assert agent_span.updates[-1] == {"output": {"doc_type": "contract"}}
+
+    # The agent's task score attaches to the AGENT's observation id.
+    score = stub_langfuse.scores[0]
+    assert score["name"] == "subtype_accuracy"
+    assert score["value"] == 1.0
+    assert score["data_type"] == "NUMERIC"
+    assert score["observation_id"] == agent_span.id
+    assert score["trace_id"] == stub_langfuse.current_trace_id
+
+
+def test_agent_observation_disabled_and_failure_are_noops(stub_langfuse, lf_env, monkeypatch):
+    # Client failure inside the agent span degrades to a disabled handle.
+    def boom(**kwargs):
+        raise RuntimeError("client unavailable")
+
+    monkeypatch.setattr("langfuse.langchain.CallbackHandler", boom)
+    tracer = LangfuseTracer(config=load_langfuse_config(lf_env))
+    with tracer.trace_document("doc_b.txt", "license"):
+        with tracer.agent_observation("sorter", {}) as agent:
+            assert agent.disabled
+            agent.set_output({})  # must not raise
+            agent.score("exact_match", 1.0)  # must not raise
+
+    # Disabled tracer: agent observation is a pure no-op.
+    for name in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL"):
+        monkeypatch.setenv(name, "")
+    tracer2 = LangfuseTracer(config=load_langfuse_config(lf_env))
+    assert tracer2.disabled is True
+    with tracer2.trace_document("doc_c.txt", "license"):
+        with tracer2.agent_observation("sorter", {}) as agent:
+            assert agent.disabled
+            agent.score("exact_match", 1.0)  # must not raise
 
 
 # ---------------------------------------------------------------------------

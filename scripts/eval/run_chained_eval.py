@@ -56,6 +56,7 @@ from src.experiment_log import (
     mean,
     tokens_summary,
 )
+from src.cuad_ground_truth import build_subtype_handoff
 from src.field_scoring import (
     get_field_types,
     score_category_presence,
@@ -109,6 +110,12 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--bt-scores", choices=("none", "overall", "full"), default="overall",
                         help="Braintrust scorer registration (default: the cross-experiment "
                              "tracker set for BOTH agents)")
+    parser.add_argument("--handoff-scope", choices=("subtype", "none"), default="subtype",
+                        help="Specialist handoff scope: 'subtype' (default) appends the "
+                             "PREDICTED subtype's CUAD field-group cue (expected schema "
+                             "fields + applicable/never-applicable clause categories) to the "
+                             "extractor context; 'none' reproduces the legacy "
+                             "doc_type+contract_subtype line only")
     parser.add_argument("--experiment-log", type=Path, default=None,
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH)")
     parser.add_argument("--dry-run", action="store_true",
@@ -159,6 +166,7 @@ def main_with_args(argv: list[str]) -> int:
             "model": args.model,
             "sorter_prompt_version": args.sorter_prompt_version,
             "extractor_prompt_version": args.extractor_prompt_version,
+            "handoff_scope": args.handoff_scope,
         })
         manifest.initialize()
 
@@ -228,6 +236,14 @@ def main_with_args(argv: list[str]) -> int:
             f"contract_subtype={sorter_subtype}. Extract this contract's fields "
             f"accordingly, ensuring every clause of this agreement family is captured."
         )
+        if args.handoff_scope == "subtype":
+            # Cue the specialist with the field scope of the PREDICTED subtype —
+            # the narrowed set of expected schema fields and applicable/never-
+            # applicable CUAD clause categories for that family (a pure function
+            # of the subtype; no ground-truth answers are passed).
+            cue = build_subtype_handoff(sorter_subtype)
+            if cue:
+                specialist.handoff_context += f"\n\n{cue}"
         try:
             predicted = specialist.extract(doc_text)
         except Exception as exc:  # noqa: BLE001
@@ -394,6 +410,7 @@ def main_with_args(argv: list[str]) -> int:
             "model": args.model,
             "reasoning_effort": args.reasoning_effort,
             "sorter_reasoning_effort": args.sorter_reasoning_effort,
+            "handoff_scope": args.handoff_scope,
             "task": "chained_sorter_extractor",
             "ground_truth": "cuad_v1_clause_labels",
             "ground_truth_mode": "cuad_type_aware",
@@ -414,8 +431,15 @@ def main_with_args(argv: list[str]) -> int:
 
 
 def log_experiment_to_repo(result, scored_fields, dataset, args, experiment_name,
-                           sorter_usage, extractor_usage, log_path, md_log_path) -> None:
-    """Append ONE experiment-log record for the chained run."""
+                           sorter_usage, extractor_usage, log_path, md_log_path,
+                           tracing_backend: str = "braintrust",
+                           tracing_meta: dict | None = None) -> None:
+    """Append ONE experiment-log record for the chained run.
+
+    ``tracing_backend`` names where the run was traced (``braintrust`` default,
+    ``langfuse`` for the mirror runner); ``tracing_meta`` carries backend
+    specifics (project/environment) into the record's parameters.
+    """
     rows = [r for r in result.results if r.error is None and isinstance(r.output, dict)]
     ok = [r.output for r in rows if isinstance(r.output, dict)]
 
@@ -480,8 +504,11 @@ def log_experiment_to_repo(result, scored_fields, dataset, args, experiment_name
             "sorter_reasoning_effort": args.sorter_reasoning_effort,
             "max_input_chars": args.max_input_chars,
             "max_concurrency": args.max_concurrency,
-            "bt_scores": args.bt_scores,
+            "bt_scores": getattr(args, "bt_scores", "none"),
+            "handoff_scope": getattr(args, "handoff_scope", "none"),
             "manifest": str(args.manifest) if args.manifest else None,
+            "tracing_backend": tracing_backend,
+            **({"tracing": tracing_meta} if tracing_meta else {}),
         },
         "tokens": {
             "sorter": tokens_summary(list(sorter_usage.values())),
