@@ -1,6 +1,7 @@
 # Environment / secrets — never commit real credentials.
 .env
 braintrust.env
+langfuse.env
 *.env.local
 
 # Python

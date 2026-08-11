@@ -266,6 +266,54 @@ Output strict JSON only."""
 
 
 # =============================================================================
+# SORTER PROMPT V6 — derived from v5 (v5 string untouched) with surgical,
+# data-backed rules from the 509-contract full-CUAD run
+# (qwen3.7-flash_sorter_v5_subtype: strict 0.8585, equiv 0.8743, 72 misses):
+#   - 13/72: SEC "Joint Filing Agreement/Statement" (13D/13G) -> "other" or a
+#     non-contract doc_type; the corpus files them under Joint Venture _ Filing.
+#   - 17/72: maintenance (7 "License and Maintenance" hybrids -> license,
+#     5 financial-sense maintenance -> "other", Cardlytics license/customization
+#     schedules -> license/development).
+#   - 10/72: marketing (3 remarketing -> agency, 1 -> "other"; marketing with
+#     resale machinery -> supply/reseller; hybrids -> development/manufacturing).
+#   - 8/72: hosting (3 "License and Hosting" -> license; 3 development-preference
+#     misfires; escrow annex -> "other").
+#   - rule-10 overreach: "Master Development and Manufacturing" -> development
+#     (GT manufacturing), "Joint Development and Marketing" -> development
+#     (GT marketing), "Site Development and Hosting" -> development (GT hosting).
+# =============================================================================
+
+SORTER_PROMPT_V6 = SORTER_PROMPT_V5.replace(
+    "prefer development over the commercial family (distributor/supply/sponsorship), "
+    "even when the commercial machinery occupies more words.",
+    "prefer development over the commercial family (distributor/supply/sponsorship), "
+    "even when the commercial machinery occupies more words — EXCEPT when the "
+    "agreement's operative core is an operating/commercial family (manufacturing "
+    "production and supply commitments, marketing/promotion, hosting provision, "
+    "sponsorship activation): then the operating family wins (e.g. \"Master "
+    "Development and Manufacturing Agreement\" -> manufacturing, \"Joint "
+    "Development and Marketing Agreement\" -> marketing, \"Site Development and "
+    "Hosting Agreement\" -> hosting), because the corpus convention files those "
+    "hybrids under the operating core.",
+).replace(
+    'VALID CONTRACT SUBTYPE KEYS (the ONLY values contract_subtype may take when doc_type is "contract"):',
+    """12. SEC JOINT FILING AGREEMENTS (corpus convention): a "Joint Filing Agreement" or "Joint Filing Statement" (Securities Exchange Act Section 13(d)/13(g) joint filing of a Schedule 13D/13G) IS a contract of the joint_venture family — doc_type "contract", contract_subtype "joint_venture". The CUAD corpus files these under Joint Venture _ Filing and the ground truth follows the folder; do not route them to "other" or to a non-contract doc_type.
+
+13. MAINTENANCE PREFERENCE (corpus convention): when the title names license and maintenance together ("Software License and Maintenance Agreement", "Licence and Maintenance Agreement") and the operative clauses cover BOTH a license grant and maintenance/support, the corpus convention files these under Maintenance — prefer maintenance over license, even when the license grant occupies more words. Financial-sense "maintenance" agreements (capital maintenance, net investment income maintenance, completion and liquidity maintenance) are ALSO maintenance — never "other" for a document whose title names maintenance.
+
+14. HOSTING is not LICENSE and not DEVELOPMENT: an agreement whose core is providing hosted software, platforms, or SaaS access stays hosting even when it grants an access license ("License and Hosting Agreement", "Co-Hosting Agreement" -> hosting). Setup, installation, and site-development milestones within a hosting engagement are provisioning work — the development preference (rule 10) does NOT apply to hosting agreements ("Site Development and Hosting Agreement", "Software Development, Hosting and Management Agreement" -> hosting).
+
+15. REMARKETING is MARKETING: a "Remarketing Agreement" (remarketing of securities, annuities, or receivables — an auction-rate or placement facility) is a marketing/placement arrangement — classify it as marketing, not agency and not "other".
+
+16. MARKETING CORE GUARD: when the title names marketing AND the operative core is sales promotion, branding, and marketing services, the agreement stays marketing even when it also contains purchase/resale/order terms (a "Marketing Agreement" with supply or reseller machinery -> marketing). A distribution or supply mechanism alone does not reclassify a marketing agreement.
+
+17. ANNEX INHERITANCE: a schedule, exhibit, addendum, or rider attached to a parent agreement belongs to the FAMILY OF THE PARENT agreement named in its header or incorporated terms (a "Product License Schedule" or "Customization Schedule" to a "Software License, Customization and Maintenance Agreement" -> maintenance). Do not re-classify the family from a schedule's own title.
+
+VALID CONTRACT SUBTYPE KEYS (the ONLY values contract_subtype may take when doc_type is "contract"):""",
+)
+
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -1634,6 +1682,7 @@ PROMPT_VERSIONS = {
     "sorter_v3": SORTER_PROMPT_V3,
     "sorter_v4": SORTER_PROMPT_V4,
     "sorter_v5": SORTER_PROMPT_V5,
+    "sorter_v6": SORTER_PROMPT_V6,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

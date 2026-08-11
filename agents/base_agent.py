@@ -58,9 +58,18 @@ class BaseAgent(ABC):
 
     agent_name: str
 
-    def __init__(self, model: str | None = None, api_key: str | None = None):
+    def __init__(
+        self,
+        model: str | None = None,
+        api_key: str | None = None,
+        callbacks: list | None = None,
+    ):
         self.model = model or "qwen/qwen3.7-flash"
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
+        # Optional LangChain callback handlers (e.g. the Langfuse
+        # CallbackHandler) attached to every invoke; None keeps the default
+        # (Braintrust setup_langchain) tracing path unchanged.
+        self._callbacks = list(callbacks) if callbacks else None
         self._max_tokens = 4096
         self._max_input_chars = 100_000  # full-document budget; only a hard safety cap
         self._temperature = 0.1
@@ -184,7 +193,10 @@ class BaseAgent(ABC):
         chain = prompt | llm | StrOutputParser()
 
         logger.info("llm_call", agent=self.agent_name, model=self.model)
-        content = chain.invoke({"text": user_message})
+        content = chain.invoke(
+            {"text": user_message},
+            config={"callbacks": self._callbacks} if self._callbacks else None,
+        )
         logger.info("llm_response", agent=self.agent_name, length=len(content))
         return content
 
@@ -230,7 +242,10 @@ class BaseAgent(ABC):
         chain = prompt | structured
 
         logger.info("llm_structured_call", agent=self.agent_name, model=self.model)
-        raw_out: Any = chain.invoke({"text": user_message})
+        raw_out: Any = chain.invoke(
+            {"text": user_message},
+            config={"callbacks": self._callbacks} if self._callbacks else None,
+        )
 
         # include_raw=True returns {"raw": AIMessage, "parsed": ..., "parsing_error": ...}
         if isinstance(raw_out, dict):
@@ -341,7 +356,10 @@ class BaseAgent(ABC):
         messages = [SystemMessage(content=system_prompt), HumanMessage(content=content)]
 
         logger.info("llm_vision_call", agent=self.agent_name, model=self.model, pages=len(images))
-        response = llm.invoke(messages)
+        response = llm.invoke(
+            messages,
+            config={"callbacks": self._callbacks} if self._callbacks else None,
+        )
         raw_content = response.content if isinstance(response.content, str) else str(response.content)
 
         usage = getattr(response, "usage_metadata", None) or (response.response_metadata or {}).get("usage") or {}

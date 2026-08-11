@@ -184,7 +184,7 @@ def test_subtype_option_list_complete_and_precise():
         listed = set(re.findall(r"- (\w+):", section.split("Return a JSON object")[0]))
         assert listed == enum - {"other"}, \
             f"{version}: prompt options {listed} != schema enum minus 'other'"
-    for version in ("sorter_v4", "sorter_v5"):
+    for version in ("sorter_v4", "sorter_v5", "sorter_v6"):
         prompt = SorterAgent(prompt_version=version).system_prompt()
         section = prompt.split("VALID CONTRACT SUBTYPE KEYS")[1]
         listed = set(re.findall(r"- (\w+):", section.split("Return a JSON object")[0]))
@@ -209,3 +209,42 @@ def test_subtype_option_list_complete_and_precise():
     for folder in cuad_folders:
         assert normalize_subtype(folder) in options, \
             f"folder {folder!r} -> {normalize_subtype(folder)!r} not in sorter options"
+
+
+def test_sorter_v6_derived_and_rule_banners():
+    """v6 is a STRICT derivation of v5 (base untouched) that adds the
+    data-backed rules for the 509-contract full-CUAD run's miss clusters."""
+
+    from src.prompts import SORTER_PROMPT_V5, SORTER_PROMPT_V6, get_prompt
+
+    assert SORTER_PROMPT_V6 != SORTER_PROMPT_V5
+    # v5 is never mutated: v6 shares v5's exact opening, keeps every rule the
+    # derivation did NOT touch, and only rewrites the two targeted spans.
+    assert SORTER_PROMPT_V6.startswith(SORTER_PROMPT_V5[:200])
+    assert "VALID CONTRACT SUBTYPE KEYS" in SORTER_PROMPT_V6
+    untouched_rule = SORTER_PROMPT_V5.split("10. DEVELOPMENT PREFERENCE")[0].split(
+        "11. SUBTYPE CONFIDENCE")[0]
+    assert untouched_rule in SORTER_PROMPT_V6
+    # The rule-10 sentence was refined in v6 — so full containment no longer
+    # holds; the original sentence must still exist in the untouched v5.
+    assert "even when the commercial machinery occupies more words." in SORTER_PROMPT_V5
+    assert get_prompt("sorter_v6") is SORTER_PROMPT_V6
+
+    v6 = SORTER_PROMPT_V6
+    for banner in (
+        "12. SEC JOINT FILING AGREEMENTS",
+        "13. MAINTENANCE PREFERENCE",
+        "14. HOSTING is not LICENSE and not DEVELOPMENT",
+        "15. REMARKETING is MARKETING",
+        "16. MARKETING CORE GUARD",
+        "17. ANNEX INHERITANCE",
+        "EXCEPT when the agreement's operative core is an operating/commercial family",
+    ):
+        assert banner in v6, f"missing v6 rule: {banner}"
+
+    # The v5 prompt predates every v6 rule.
+    for banner in ("12. SEC JOINT FILING", "17. ANNEX INHERITANCE"):
+        assert banner not in SORTER_PROMPT_V5
+
+    # The strict key discipline rule survives the derivation (option list intact).
+    assert "STRICT KEY DISCIPLINE" in v6

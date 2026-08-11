@@ -403,8 +403,15 @@ def main_with_args(argv: list[str]) -> int:
 
 
 def log_experiment_to_repo(result, dataset, args, experiment_name,
-                           usage, log_path, md_log_path) -> None:
-    """Append ONE experiment-log record for the subtype-only run."""
+                           usage, log_path, md_log_path,
+                           tracing_backend: str = "braintrust",
+                           tracing_meta: dict | None = None) -> None:
+    """Append ONE experiment-log record for the subtype-only run.
+
+    ``tracing_backend`` names where the run was traced (``braintrust`` default,
+    ``langfuse`` for the mirror runner); ``tracing_meta`` carries backend
+    specifics (project/environment) into the record's parameters.
+    """
     rows = [r for r in result.results if r.error is None and isinstance(r.output, dict)]
     ok = [r.output for r in rows if isinstance(r.output, dict)]
 
@@ -486,8 +493,10 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             "reasoning_effort": args.reasoning_effort,
             "max_input_chars": args.max_input_chars,
             "max_concurrency": args.max_concurrency,
-            "bt_scores": args.bt_scores,
+            "bt_scores": getattr(args, "bt_scores", "none"),
             "manifest": str(args.manifest) if args.manifest else None,
+            "tracing_backend": tracing_backend,
+            **({"tracing": tracing_meta} if tracing_meta else {}),
         },
         "tokens": {"sorter": tokens_summary(list(usage.values())),
                    "total": tokens_summary(list(usage.values()))},
