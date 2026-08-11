@@ -9,11 +9,27 @@
    "label": "extraction",
    "value": 0.6563
   },
+  "breakdown": {
+   "overall_extraction_score": 0.6563,
+   "field_presence": 0.98,
+   "schema_valid": 1.0,
+   "per_field": {
+    "effective_date": 0.8465,
+    "governing_law": 0.9443,
+    "key_obligations": 0.2663,
+    "parties": 0.5334,
+    "renewal_terms": 0.5781,
+    "term_length": 0.9441,
+    "termination_clauses": 0.2857
+   }
+  },
   "n_rows": 10,
   "n_ok": 10,
   "n_error": 0,
   "total_tokens": 111805,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": -26.1,
   "timestamp": "2026-08-09T20:39:28.310699+00:00",
   "git": {
    "commit": "25eaddd",
@@ -33,11 +49,27 @@
    "label": "extraction",
    "value": 0.9128
   },
+  "breakdown": {
+   "overall_extraction_score": 0.9128,
+   "field_presence": 0.98,
+   "schema_valid": 1.0,
+   "per_field": {
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.7144,
+    "parties": 1.0,
+    "renewal_terms": 0.6667,
+    "term_length": 0.9881,
+    "termination_clauses": 1.0
+   }
+  },
   "n_rows": 10,
   "n_ok": 10,
   "n_error": 0,
   "total_tokens": 108573,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": -0.45000000000000595,
   "timestamp": "2026-08-09T20:51:26.683008+00:00",
   "git": {
    "commit": "25eaddd",
@@ -57,11 +89,27 @@
    "label": "extraction",
    "value": 0.9173
   },
+  "breakdown": {
+   "overall_extraction_score": 0.9173,
+   "field_presence": 0.98,
+   "schema_valid": 1.0,
+   "per_field": {
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.7311,
+    "parties": 1.0,
+    "renewal_terms": 0.6667,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   }
+  },
   "n_rows": 10,
   "n_ok": 10,
   "n_error": 0,
   "total_tokens": 106562,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": 0.0,
   "timestamp": "2026-08-09T21:12:22.005966+00:00",
   "git": {
    "commit": "25eaddd",
@@ -81,11 +129,28 @@
    "label": "extraction",
    "value": 0.7976
   },
+  "breakdown": {
+   "overall_extraction_score": 0.7976,
+   "field_presence": 0.9333,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 1.0,
+    "effective_date": 0.8299,
+    "governing_law": 0.6852,
+    "key_obligations": 0.7233,
+    "parties": 0.8,
+    "renewal_terms": 0.75,
+    "term_length": 0.787,
+    "termination_clauses": 0.5
+   }
+  },
   "n_rows": 10,
   "n_ok": 10,
   "n_error": 0,
   "total_tokens": 138364,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": -11.970000000000002,
   "timestamp": "2026-08-09T21:53:28.344141+00:00",
   "git": {
    "commit": "25eaddd",
@@ -105,11 +170,28 @@
    "label": "extraction",
    "value": 0.7848
   },
+  "breakdown": {
+   "overall_extraction_score": 0.7848,
+   "field_presence": 0.9167,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 1.0,
+    "effective_date": 0.7572,
+    "governing_law": 0.6852,
+    "key_obligations": 0.7181,
+    "parties": 0.8,
+    "renewal_terms": 0.75,
+    "term_length": 0.787,
+    "termination_clauses": 0.5
+   }
+  },
   "n_rows": 10,
   "n_ok": 10,
   "n_error": 0,
   "total_tokens": 137996,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": -13.249999999999995,
   "timestamp": "2026-08-09T22:01:06.299175+00:00",
   "git": {
    "commit": "25eaddd",
@@ -126,15 +208,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v1 + contracts_specialist_v4",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.9447,
-   "detail": "sorter 1.0000 / extractor 0.8894"
+   "label": "extractor score",
+   "value": 0.8894,
+   "detail": "extractor 0.8894 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 0.6,
+    "confidence": 0.95
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8894,
+    "field_presence": 0.9667,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.925
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 198097,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -2.7100000000000013,
   "timestamp": "2026-08-09T22:31:17.178312+00:00",
   "git": {
    "commit": "25eaddd",
@@ -151,15 +248,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v2 + contracts_specialist_v5",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.95825,
-   "detail": "sorter 1.0000 / extractor 0.9165"
+   "label": "extractor score",
+   "value": 0.9165,
+   "detail": "extractor 0.9165 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 0.8,
+    "confidence": 0.94
+   },
+   "extractor": {
+    "overall_extraction_score": 0.9165,
+    "field_presence": 0.9667,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.925
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 197528,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": 0.0,
   "timestamp": "2026-08-09T22:39:52.179065+00:00",
   "git": {
    "commit": "25eaddd",
@@ -176,15 +288,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3 + contracts_specialist_v6",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.9458500000000001,
-   "detail": "sorter 1.0000 / extractor 0.8917"
+   "label": "extractor score",
+   "value": 0.8917,
+   "detail": "extractor 0.8917 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.93
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8917,
+    "field_presence": 0.9333,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.8721
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 199716,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -2.4799999999999933,
   "timestamp": "2026-08-10T03:48:54.826791+00:00",
   "git": {
    "commit": "17883de",
@@ -201,15 +328,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3 + contracts_specialist_v7",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.84795,
-   "detail": "sorter 1.0000 / extractor 0.6959"
+   "label": "extractor score",
+   "value": 0.6959,
+   "detail": "extractor 0.6959 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.93
+   },
+   "extractor": {
+    "overall_extraction_score": 0.6959,
+    "field_presence": 0.7333,
+    "overall_verified_precision": 0.8,
+    "category_presence": 0.6971
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 169746,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -22.060000000000002,
   "timestamp": "2026-08-10T03:55:06.685913+00:00",
   "git": {
    "commit": "17883de",
@@ -226,15 +368,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3 + contracts_specialist_v8",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.8497,
-   "detail": "sorter 1.0000 / extractor 0.6994"
+   "label": "extractor score",
+   "value": 0.6994,
+   "detail": "extractor 0.6994 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.93
+   },
+   "extractor": {
+    "overall_extraction_score": 0.6994,
+    "field_presence": 0.7667,
+    "overall_verified_precision": 0.8,
+    "category_presence": 0.6846
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 160698,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -21.709999999999997,
   "timestamp": "2026-08-10T04:00:34.618449+00:00",
   "git": {
    "commit": "17883de",
@@ -251,15 +408,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3 + contracts_specialist_v8",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.94665,
-   "detail": "sorter 1.0000 / extractor 0.8933"
+   "label": "extractor score",
+   "value": 0.8933,
+   "detail": "extractor 0.8933 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.93
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8933,
+    "field_presence": 0.9667,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.8596
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 199217,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -2.32,
   "timestamp": "2026-08-10T04:03:40.942099+00:00",
   "git": {
    "commit": "17883de",
@@ -276,15 +448,28 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.84,
    "detail": "doc_type 0.9600 \u00b7 strict 0.8400"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.96,
+   "subtype_accuracy": 0.84,
+   "subtype_accuracy_equiv": null,
+   "confidence": 0.945,
+   "n_failed": 8,
+   "mode_counts": {
+    "family_confusion": 6,
+    "function_over_form": 2
+   }
+  },
   "n_rows": 50,
   "n_ok": 50,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 497113,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -16.000000000000004,
   "timestamp": "2026-08-10T04:24:09.859126+00:00",
   "git": {
    "commit": "9d5090c",
@@ -301,15 +486,29 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.84,
    "detail": "doc_type 0.9600 \u00b7 strict 0.8400 \u00b7 equiv 0.9400"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.96,
+   "subtype_accuracy": 0.84,
+   "subtype_accuracy_equiv": 0.94,
+   "confidence": 0.947,
+   "n_failed": 8,
+   "mode_counts": {
+    "equivalent_family": 5,
+    "family_confusion": 1,
+    "function_over_form": 2
+   }
+  },
   "n_rows": 50,
   "n_ok": 50,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 497207,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -16.000000000000004,
   "timestamp": "2026-08-10T04:33:31.547973+00:00",
   "git": {
    "commit": "9d5090c",
@@ -326,15 +525,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.8359,
    "detail": "doc_type 0.9846 \u00b7 strict 0.8359 \u00b7 equiv 0.8564"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.9846,
+   "subtype_accuracy": 0.8359,
+   "subtype_accuracy_equiv": 0.8564,
+   "confidence": 0.9343,
+   "n_failed": 32,
+   "mode_counts": {
+    "equivalent_family": 4,
+    "family_confusion": 23,
+    "function_over_form": 3,
+    "other_fallback": 2
+   }
+  },
   "n_rows": 195,
   "n_ok": 195,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 2345481,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -16.410000000000004,
   "timestamp": "2026-08-10T04:51:06.347511+00:00",
   "git": {
    "commit": "9d5090c",
@@ -351,15 +565,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v3",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.7897,
    "detail": "doc_type 0.9744 \u00b7 strict 0.7897 \u00b7 equiv 0.8256"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.9744,
+   "subtype_accuracy": 0.7897,
+   "subtype_accuracy_equiv": 0.8256,
+   "confidence": 0.9436,
+   "n_failed": 41,
+   "mode_counts": {
+    "equivalent_family": 7,
+    "family_confusion": 26,
+    "function_over_form": 5,
+    "other_fallback": 3
+   }
+  },
   "n_rows": 195,
   "n_ok": 195,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 2146666,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -21.030000000000005,
   "timestamp": "2026-08-10T05:15:15.212939+00:00",
   "git": {
    "commit": "9d5090c",
@@ -376,15 +605,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v4",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.8103,
    "detail": "doc_type 0.9795 \u00b7 strict 0.8103 \u00b7 equiv 0.8308"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.9795,
+   "subtype_accuracy": 0.8103,
+   "subtype_accuracy_equiv": 0.8308,
+   "confidence": 0.9354,
+   "n_failed": 37,
+   "mode_counts": {
+    "equivalent_family": 4,
+    "family_confusion": 24,
+    "function_over_form": 4,
+    "other_fallback": 5
+   }
+  },
   "n_rows": 195,
   "n_ok": 195,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 773083,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -18.97,
   "timestamp": "2026-08-10T05:15:15.504518+00:00",
   "git": {
    "commit": "9d5090c",
@@ -401,15 +645,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v5 + contracts_specialist_v10",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.9476,
-   "detail": "sorter 1.0000 / extractor 0.8952"
+   "label": "extractor score",
+   "value": 0.8952,
+   "detail": "extractor 0.8952 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.944
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8952,
+    "field_presence": 1.0,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.6655
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 176883,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -2.1299999999999986,
   "timestamp": "2026-08-10T05:25:23.635602+00:00",
   "git": {
    "commit": "9d5090c",
@@ -426,15 +685,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v5 + contracts_specialist_v11",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.9530000000000001,
-   "detail": "sorter 1.0000 / extractor 0.9060"
+   "label": "extractor score",
+   "value": 0.906,
+   "detail": "extractor 0.9060 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.94
+   },
+   "extractor": {
+    "overall_extraction_score": 0.906,
+    "field_presence": 1.0,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.7226
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 178161,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -1.0499999999999954,
   "timestamp": "2026-08-10T05:29:55.621312+00:00",
   "git": {
    "commit": "9d5090c",
@@ -451,15 +725,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v5",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.8585,
    "detail": "doc_type 0.9843 \u00b7 strict 0.8585 \u00b7 equiv 0.8743"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.9843,
+   "subtype_accuracy": 0.8585,
+   "subtype_accuracy_equiv": 0.8743,
+   "confidence": 0.9404,
+   "n_failed": 72,
+   "mode_counts": {
+    "equivalent_family": 8,
+    "family_confusion": 40,
+    "function_over_form": 8,
+    "other_fallback": 16
+   }
+  },
   "n_rows": 509,
   "n_ok": 509,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 5990357,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -14.149999999999995,
   "timestamp": "2026-08-11T00:47:49.441715+00:00",
   "git": {
    "commit": "3a03d5c",
@@ -476,15 +765,25 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v5",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 1.0,
    "detail": "doc_type 1.0000 \u00b7 strict 1.0000 \u00b7 equiv 1.0000"
   },
+  "breakdown": {
+   "doc_type_accuracy": 1.0,
+   "subtype_accuracy": 1.0,
+   "subtype_accuracy_equiv": 1.0,
+   "confidence": 0.95,
+   "n_failed": 0,
+   "mode_counts": {}
+  },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 87230,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": 0.0,
   "timestamp": "2026-08-11T01:06:04.472500+00:00",
   "git": {
    "commit": "2df190c",
@@ -501,15 +800,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v5",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.841,
    "detail": "doc_type 0.9846 \u00b7 strict 0.8410 \u00b7 equiv 0.8667"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.9846,
+   "subtype_accuracy": 0.841,
+   "subtype_accuracy_equiv": 0.8667,
+   "confidence": 0.9387,
+   "n_failed": 31,
+   "mode_counts": {
+    "equivalent_family": 5,
+    "family_confusion": 19,
+    "function_over_form": 3,
+    "other_fallback": 4
+   }
+  },
   "n_rows": 195,
   "n_ok": 195,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 2381375,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -15.900000000000002,
   "timestamp": "2026-08-11T01:14:39.075624+00:00",
   "git": {
    "commit": "2df190c",
@@ -526,15 +840,29 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.9385,
    "detail": "doc_type 1.0000 \u00b7 strict 0.9385 \u00b7 equiv 0.9436"
   },
+  "breakdown": {
+   "doc_type_accuracy": 1.0,
+   "subtype_accuracy": 0.9385,
+   "subtype_accuracy_equiv": 0.9436,
+   "confidence": 0.9427,
+   "n_failed": 12,
+   "mode_counts": {
+    "equivalent_family": 1,
+    "family_confusion": 10,
+    "other_fallback": 1
+   }
+  },
   "n_rows": 195,
   "n_ok": 195,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 2493366,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -6.15,
   "timestamp": "2026-08-11T01:19:16.285763+00:00",
   "git": {
    "commit": "2df190c",
@@ -551,15 +879,29 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.9436,
    "detail": "doc_type 1.0000 \u00b7 strict 0.9436 \u00b7 equiv 0.9487"
   },
+  "breakdown": {
+   "doc_type_accuracy": 1.0,
+   "subtype_accuracy": 0.9436,
+   "subtype_accuracy_equiv": 0.9487,
+   "confidence": 0.9448,
+   "n_failed": 11,
+   "mode_counts": {
+    "equivalent_family": 1,
+    "family_confusion": 9,
+    "other_fallback": 1
+   }
+  },
   "n_rows": 195,
   "n_ok": 195,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 2489486,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -5.640000000000001,
   "timestamp": "2026-08-11T01:23:35.303736+00:00",
   "git": {
    "commit": "87be75a",
@@ -576,15 +918,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6 + contracts_specialist_v11",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.92485,
-   "detail": "sorter 1.0000 / extractor 0.8497"
+   "label": "extractor score",
+   "value": 0.8497,
+   "detail": "extractor 0.8497 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.968
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8497,
+    "field_presence": 1.0,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.7106
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 181673,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -6.679999999999997,
   "timestamp": "2026-08-11T01:38:44.248343+00:00",
   "git": {
    "commit": "87be75a",
@@ -601,15 +958,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6 + contracts_specialist_v11",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.9333,
-   "detail": "sorter 1.0000 / extractor 0.8666"
+   "label": "extractor score",
+   "value": 0.8666,
+   "detail": "extractor 0.8666 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.95
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8666,
+    "field_presence": 1.0,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.7773
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 183118,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -4.989999999999995,
   "timestamp": "2026-08-11T01:39:52.032973+00:00",
   "git": {
    "commit": "87be75a",
@@ -626,15 +998,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6 + contracts_specialist_v11",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.93435,
-   "detail": "sorter 1.0000 / extractor 0.8687"
+   "label": "extractor score",
+   "value": 0.8687,
+   "detail": "extractor 0.8687 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.95
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8687,
+    "field_presence": 1.0,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.7773
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 182602,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -4.779999999999996,
   "timestamp": "2026-08-11T01:41:01.062780+00:00",
   "git": {
    "commit": "87be75a",
@@ -651,11 +1038,14 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6",
   "headline": {},
+  "breakdown": {},
   "n_rows": 3,
   "n_ok": 3,
   "n_error": 0,
   "total_tokens": 52390,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": null,
   "timestamp": "2026-08-11T01:41:26.996066+00:00",
   "git": {
    "commit": "87be75a",
@@ -675,11 +1065,28 @@
    "label": "extraction",
    "value": 0.8387
   },
+  "breakdown": {
+   "overall_extraction_score": 0.8387,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 0.9593,
+    "effective_date": 0.5583,
+    "governing_law": 0.8116,
+    "key_obligations": 0.554,
+    "parties": 1.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   }
+  },
   "n_rows": 3,
   "n_ok": 3,
   "n_error": 0,
   "total_tokens": 52940,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": -7.86,
   "timestamp": "2026-08-11T01:41:32.800650+00:00",
   "git": {
    "commit": "87be75a",
@@ -696,15 +1103,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6 + contracts_specialist_v11",
   "headline": {
-   "label": "sorter / extractor",
-   "value": 0.92205,
-   "detail": "sorter 1.0000 / extractor 0.8441"
+   "label": "extractor score",
+   "value": 0.8441,
+   "detail": "extractor 0.8441 \u00b7 sorter doc_type 1.0000"
+  },
+  "breakdown": {
+   "sorter": {
+    "exact_match": 1.0,
+    "subtype_accuracy": 1.0,
+    "confidence": 0.956
+   },
+   "extractor": {
+    "overall_extraction_score": 0.8441,
+    "field_presence": 1.0,
+    "overall_verified_precision": 1.0,
+    "category_presence": 0.7773
+   }
   },
   "n_rows": 5,
   "n_ok": 5,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 183551,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -7.240000000000002,
   "timestamp": "2026-08-11T01:44:16.518003+00:00",
   "git": {
    "commit": "a660aea",
@@ -724,11 +1146,28 @@
    "label": "extraction",
    "value": 0.8012
   },
+  "breakdown": {
+   "overall_extraction_score": 0.8012,
+   "field_presence": 0.9444,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 0.9593,
+    "effective_date": 0.3333,
+    "governing_law": 0.8116,
+    "key_obligations": 0.554,
+    "parties": 1.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   }
+  },
   "n_rows": 3,
   "n_ok": 3,
   "n_error": 0,
   "total_tokens": 52957,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": -11.609999999999998,
   "timestamp": "2026-08-11T01:45:31.314472+00:00",
   "git": {
    "commit": "a660aea",
@@ -745,11 +1184,14 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6",
   "headline": {},
+  "breakdown": {},
   "n_rows": 3,
   "n_ok": 3,
   "n_error": 0,
   "total_tokens": 52876,
   "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "delta_best_pp": null,
   "timestamp": "2026-08-11T01:45:56.001912+00:00",
   "git": {
    "commit": "a660aea",
@@ -766,15 +1208,30 @@
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6",
   "headline": {
-   "label": "subtype strict / equiv",
+   "label": "subtype strict",
    "value": 0.9312,
    "detail": "doc_type 0.9961 \u00b7 strict 0.9312 \u00b7 equiv 0.9391"
   },
+  "breakdown": {
+   "doc_type_accuracy": 0.9961,
+   "subtype_accuracy": 0.9312,
+   "subtype_accuracy_equiv": 0.9391,
+   "confidence": 0.944,
+   "n_failed": 35,
+   "mode_counts": {
+    "equivalent_family": 4,
+    "family_confusion": 26,
+    "function_over_form": 2,
+    "other_fallback": 3
+   }
+  },
   "n_rows": 509,
   "n_ok": 509,
-  "n_error": null,
+  "n_error": 0,
   "total_tokens": 6305231,
   "cost_usd": null,
+  "cost_total_usd": 0,
+  "delta_best_pp": -6.879999999999997,
   "timestamp": "2026-08-11T01:52:09.063281+00:00",
   "git": {
    "commit": "a660aea",

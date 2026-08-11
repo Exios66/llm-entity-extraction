@@ -141,6 +141,8 @@ main { max-width: 1080px; margin: 0 auto; padding: 24px; }
 }
 
 .stat .v { font-size: 20px; font-weight: 650; margin-top: 2px; }
+.stat .v a { color: inherit; text-decoration: none; }
+.stat .v a:hover { text-decoration: underline; }
 .stat .d { font-size: 12px; color: var(--text-soft); margin-top: 1px; }
 .stat.best { border-color: #c9d6f5; background: var(--accent-soft); }
 
@@ -228,6 +230,67 @@ table.data th.num { text-align: right; }
 
 .score-cell { white-space: nowrap; }
 .score-cell .label { color: var(--text-soft); font-size: 12px; margin-right: 6px; }
+
+/* headline cell (runs table + run header) */
+.hl { display: inline-flex; flex-direction: column; gap: 1px; max-width: 320px; }
+.hl-row { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.hl-val { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hl-val.good { color: var(--good); }
+.hl-val.warn { color: var(--mid); }
+.hl-val.bad { color: var(--bad); }
+.hl-raw { font-size: 11px; }
+.hl-bar { display: inline-flex; }
+.hl-label { font-size: 11.5px; font-weight: 600; }
+.hl-detail { font-size: 11px; white-space: normal; }
+
+/* band chips */
+.chip {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.chip.good { color: var(--good); background: #eef8f1; border: 1px solid #b7e0c5; }
+.chip.warn { color: #8a6d00; background: #fdf8e8; border: 1px solid #e8d9a0; }
+.chip.bad { color: var(--bad); background: #fdf0f0; border: 1px solid #f2c8c8; }
+
+/* delta vs best */
+.delta { font-weight: 650; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.delta.up { color: var(--good); }
+.delta.down { color: var(--bad); }
+.delta.zero { color: var(--text-faint); }
+
+/* scoring reference card */
+.sg details summary { cursor: pointer; padding: 12px 16px; user-select: none; }
+.sg details summary:hover { background: var(--bg-soft); }
+.sg .body { padding: 16px; }
+.sg h3 { margin: 18px 0 8px; font-size: 13px; }
+.sg p { margin: 6px 0; }
+.band-legend { display: flex; align-items: baseline; gap: 10px; margin: 6px 0; font-size: 12.5px; }
+.sg-task { margin-bottom: 10px; }
+.sg-table td { padding: 6px 10px; font-size: 12.5px; }
+.sg-table td.k { white-space: normal; min-width: 150px; }
+
+/* trace navigation / reasoning */
+.trace-link { font-size: 12.5px; white-space: nowrap; }
+.trace-nav { font-size: 13px; margin-left: 14px; }
+.trace-reasoning {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow-y: auto;
+}
 
 .bar {
   display: inline-block;

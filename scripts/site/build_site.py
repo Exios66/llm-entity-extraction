@@ -71,17 +71,16 @@ def headline_score(record: dict) -> dict:
     if task == "chained_sorter_extractor":
         sorter = scores.get("sorter") or {}
         extractor = scores.get("extractor") or {}
-        sorter_value = sorter.get("exact_match")
         extractor_value = extractor.get("overall_extraction_score")
         if isinstance(extractor_value, (int, float)):
-            value = extractor_value
+            detail = f"extractor {_fmt(extractor_value)}"
+            sorter_value = sorter.get("exact_match")
             if isinstance(sorter_value, (int, float)):
-                value = (sorter_value + extractor_value) / 2
+                detail += f" · sorter doc_type {_fmt(sorter_value)}"
             return {
-                "label": "sorter / extractor",
-                "value": value,
-                "detail": (f"sorter {_fmt(sorter_value)} / "
-                           f"extractor {_fmt(extractor_value)}"),
+                "label": "extractor score",
+                "value": extractor_value,
+                "detail": detail,
             }
     if task == "subtype_classification":
         sorter = scores.get("sorter") or {}
@@ -93,10 +92,51 @@ def headline_score(record: dict) -> dict:
             if isinstance(equiv, (int, float)):
                 detail += f" · equiv {_fmt(equiv)}"
             return {
-                "label": "subtype strict / equiv",
+                "label": "subtype strict",
                 "value": strict,
                 "detail": detail,
             }
+    return {}
+
+
+def breakdown(record: dict) -> dict:
+    """Per-task metric breakdown shown in the dashboard (no per-doc data)."""
+    task = record.get("task")
+    scores = record.get("scores") or {}
+    if task == "contract_entity_extraction":
+        return {
+            "overall_extraction_score": scores.get("overall_extraction_score"),
+            "field_presence": scores.get("field_presence"),
+            "schema_valid": scores.get("schema_valid"),
+            "per_field": scores.get("per_field") or {},
+        }
+    if task == "chained_sorter_extractor":
+        sorter = scores.get("sorter") or {}
+        extractor = scores.get("extractor") or {}
+        return {
+            "sorter": {
+                "exact_match": sorter.get("exact_match"),
+                "subtype_accuracy": sorter.get("subtype_accuracy"),
+                "confidence": sorter.get("confidence"),
+            },
+            "extractor": {
+                "overall_extraction_score": extractor.get("overall_extraction_score"),
+                "field_presence": extractor.get("field_presence"),
+                "overall_verified_precision": extractor.get("overall_verified_precision"),
+                "category_presence": extractor.get("category_presence"),
+            },
+        }
+    if task == "subtype_classification":
+        sorter = scores.get("sorter") or {}
+        failures = sorter.get("failure_insights") or {}
+        return {
+            "doc_type_accuracy": sorter.get("exact_match"),
+            "subtype_accuracy": sorter.get("subtype_accuracy"),
+            "subtype_accuracy_equiv": sorter.get("subtype_accuracy_equiv"),
+            "confidence": sorter.get("confidence"),
+            "n_failed": failures.get("n_failed"),
+            "mode_counts": failures.get("mode_counts") or {},
+        }
     return {}
 
 
@@ -108,32 +148,164 @@ def prompt_string(record: dict) -> str:
     return prompt or "—"
 
 
-def summarize(record: dict, run_id: int) -> dict:
+def summarize(record: dict, run_id: int, best_by_task: dict[str, float]) -> dict:
     """Compact index-row summary used by the site's index table."""
     tokens = record.get("tokens") or {}
     if "total" in tokens:
         total_tokens = (tokens["total"] or {}).get("total_tokens")
+        cost_total = (tokens["total"] or {}).get("cost_total_usd")
     else:
         total_tokens = tokens.get("total_tokens")
+        cost_total = tokens.get("cost_total_usd")
     data_source = record.get("data_source") or {}
+    headline = headline_score(record)
+    task = record.get("task", "")
+    delta = None
+    best = best_by_task.get(task)
+    if headline and best is not None:
+        delta = (headline["value"] - best) * 100  # percentage points
     return {
         "id": run_id,
         "experiment_name": record.get("experiment_name", ""),
-        "task": record.get("task", ""),
+        "task": task,
         "model": record.get("model", ""),
         "prompts": prompt_string(record),
-        "headline": headline_score(record),
+        "headline": headline,
+        "breakdown": breakdown(record),
         "n_rows": record.get("n_rows"),
         "n_ok": record.get("n_ok"),
-        "n_error": record.get("n_error"),
+        "n_error": record.get("n_error") or 0,
         "total_tokens": total_tokens,
         "cost_usd": tokens.get("cost_usd") if tokens else None,
+        "cost_total_usd": cost_total,
+        "delta_best_pp": delta,
         "timestamp": record.get("timestamp"),
         "git": record.get("git"),
         "data_source_project": data_source.get("project"),
         "data_source_n_samples": data_source.get("n_samples"),
         "seed": data_source.get("seed"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Scoring guide — canonical explanations mirrored from SCORING.md (repo root).
+# Rendered verbatim as the reference card on the site index. Keep in sync with
+# SCORING.md; the live repo file remains the source of truth.
+# ---------------------------------------------------------------------------
+
+BANDS = [
+    {"min": 0.85, "label": "Strong", "cls": "good",
+     "meaning": "High confidence result; only minor field/family-level misses."},
+    {"min": 0.60, "label": "Moderate", "cls": "warn",
+     "meaning": "Material misses (this range overlaps the repo's ambiguous band "
+                "[0.5, 0.85] that triggers a judge review pass)."},
+    {"min": 0.0, "label": "Weak", "cls": "bad",
+     "meaning": "Poor result; the model is missing or misclassifying core content."},
+]
+
+SCORING_GUIDE = {
+    "bands": BANDS,
+    "general": (
+        "All scores are deterministic and computed locally — no LLM grading. "
+        "The markdown log, manifests, and this site all read the same numbers. "
+        "Compare runs only on the SAME sample (same dataset, seed, and size): "
+        "accuracy deltas across different samples are meaningless."
+    ),
+    "tasks": {
+        "contract_entity_extraction": {
+            "headline": {"key": "overall_extraction_score", "label": "Overall extraction"},
+            "summary": "How faithfully the contracts-specialist extracted every expected "
+                       "field from the contract text, per field's declared type.",
+            "formula": ("mean of the per-field content scores over expected fields with a "
+                        "non-null ground-truth value"),
+            "conveys": ("End-to-end extraction quality: dates/money exact, names fuzzy-"
+                        "matched, clauses containment-scored, entity lists bipartite-"
+                        "matched against ground truth."),
+            "components": [
+                {"key": "overall_extraction_score", "label": "Overall extraction",
+                 "calculation": "mean of per-field content scores",
+                 "meaning": "Composite content accuracy across all expected fields."},
+                {"key": "field_presence", "label": "Field presence",
+                 "calculation": "share of expected fields the model populated (non-null/non-empty)",
+                 "meaning": "Did the model produce a value at all, regardless of correctness?"},
+                {"key": "schema_valid", "label": "Schema valid",
+                 "calculation": "1.0 iff output is parseable, schema-conformant JSON",
+                 "meaning": "Output-contract conformance — 0 means the row was unusable."},
+                {"key": "per_field", "label": "Per-field scores",
+                 "calculation": ("type-aware: date/money exact; name fuzzy (Jaro-Winkler + "
+                                 "token-set); free_text SQuAD token F1; entity_list optimal "
+                                 "bipartite matching at 0.6 threshold; containment = "
+                                 "expected-token coverage"),
+                 "meaning": "Where exactly quality is gained or lost."},
+            ],
+        },
+        "chained_sorter_extractor": {
+            "headline": {"key": "extractor.overall_extraction_score",
+                         "label": "Extractor score"},
+            "summary": "The full sorter → specialist chain: the sorter classifies the "
+                       "document, then the specialist extracts with that context.",
+            "formula": ("headline = the specialist's overall_extraction_score (same "
+                        "composite as the extraction task); the sorter's doc-type match "
+                        "is shown alongside"),
+            "conveys": "End-to-end pipeline quality — both stages must work.",
+            "components": [
+                {"key": "sorter.exact_match", "label": "Sorter doc-type match",
+                 "calculation": "1.0 iff doc_type == 'contract'",
+                 "meaning": "The sorter sent the document down the contract path."},
+                {"key": "sorter.subtype_accuracy", "label": "Sorter subtype accuracy",
+                 "calculation": "1.0 iff doc_type AND normalized contract subtype match the CUAD folder",
+                 "meaning": "Contract-family routing quality."},
+                {"key": "extractor.overall_extraction_score", "label": "Extractor overall",
+                 "calculation": "mean of per-field content scores (see extraction task)",
+                 "meaning": "Field extraction quality given the sorter's context."},
+                {"key": "extractor.overall_verified_precision", "label": "Verified precision",
+                 "calculation": ("factuality guard: share of predicted items that match a "
+                                 "GT label OR are grounded in the document (token coverage "
+                                 "≥ 0.7)"),
+                 "meaning": "Truthfulness — how much of the output is real, not hallucinated."},
+                {"key": "extractor.category_presence", "label": "Category presence",
+                 "calculation": "share of the document's applicable CUAD presence-categories covered",
+                 "meaning": "Did the extraction cover the labeled clauses that must appear?"},
+                {"key": "extractor.field_presence", "label": "Field presence",
+                 "calculation": "share of expected fields populated",
+                 "meaning": "Completeness of output fields."},
+            ],
+        },
+        "subtype_classification": {
+            "headline": {"key": "sorter.subtype_accuracy", "label": "Subtype accuracy (strict)"},
+            "summary": "The sorter-only task: one call per document that decides the "
+                       "primary class (contract or not) AND the contract-subtype family.",
+            "formula": ("headline = strict subtype accuracy: share of rows whose normalized "
+                        "predicted subtype exactly equals the CUAD ground-truth folder"),
+            "conveys": "Routing quality: strict is the discriminating signal; equiv allows "
+                       "defensible family swaps (reseller↔distributor, maintenance↔license, "
+                       "development↔license, affiliate↔joint_venture).",
+            "components": [
+                {"key": "doc_type_accuracy", "label": "Doc-type accuracy (exact_match)",
+                 "calculation": "share of rows where doc_type == 'contract'",
+                 "meaning": "Primary-class correctness (every CUAD row is a contract)."},
+                {"key": "subtype_accuracy", "label": "Subtype strict",
+                 "calculation": "share of rows where normalized subtype == CUAD folder exactly",
+                 "meaning": "Exact family-level routing."},
+                {"key": "subtype_accuracy_equiv", "label": "Subtype equiv",
+                 "calculation": "strict OR defensible equivalent family",
+                 "meaning": "How often the model routed to a legally-defensible family."},
+                {"key": "confidence", "label": "Confidence",
+                 "calculation": "mean of the model's reported per-row confidence",
+                 "meaning": "Calibration signal — how sure the model claims to be."},
+                {"key": "n_failed", "label": "Failed rows",
+                 "calculation": "rows with subtype_ok == false, broken down by failure mode",
+                 "meaning": ("modes: family_confusion (wrong family), function_over_form "
+                             "(doc_type miss), other_fallback (fell to 'other'), "
+                             "equivalent_family (recovered by equivalence)")},
+            ],
+        },
+    },
+    "references": {
+        "scoring_md": f"{REPO_URL}/blob/main/SCORING.md",
+        "agents_md": f"{REPO_URL}/blob/main/AGENTS.md",
+    },
+}
 
 
 def build_meta(records: list[dict], jsonl_path: Path, out_dir: Path) -> dict:
@@ -170,6 +342,27 @@ def build_meta(records: list[dict], jsonl_path: Path, out_dir: Path) -> dict:
                 "value": headline["value"],
                 "label": headline["label"],
             }
+
+    values_by_task: dict[str, list[tuple[int, float]]] = {}
+    for i, record in enumerate(records, start=1):
+        headline = headline_score(record)
+        if headline:
+            values_by_task.setdefault(record.get("task", ""), []).append(
+                (i, headline["value"]))
+    task_aggregates: dict[str, dict] = {}
+    for task, pairs in values_by_task.items():
+        values = sorted(v for _, v in pairs)
+        n = len(values)
+        median = values[n // 2] if n % 2 else (values[n // 2 - 1] + values[n // 2]) / 2
+        best_pair = max(pairs, key=lambda p: p[1])
+        worst_pair = min(pairs, key=lambda p: p[1])
+        task_aggregates[task] = {
+            "runs": n,
+            "best": {"run_id": best_pair[0], "value": best_pair[1]},
+            "median": median,
+            "worst": {"run_id": worst_pair[0], "value": worst_pair[1]},
+        }
+
     return {
         "built_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "source": str(jsonl_path.relative_to(REPO_ROOT)),
@@ -183,6 +376,8 @@ def build_meta(records: list[dict], jsonl_path: Path, out_dir: Path) -> dict:
         "n_error": n_error,
         "total_tokens": total_tokens,
         "best_per_task": best_by_task,
+        "task_aggregates": task_aggregates,
+        "scoring_guide": SCORING_GUIDE,
     }
 
 
@@ -220,11 +415,19 @@ def main_with_args(argv: list[str]) -> int:
 
     runs_dir = args.out / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
+    best_values: dict[str, float] = {}
+    for i, record in enumerate(records, start=1):
+        headline = headline_score(record)
+        if headline:
+            task = record.get("task", "")
+            current = best_values.get(task)
+            if current is None or headline["value"] > current:
+                best_values[task] = headline["value"]
     summaries = []
     for index, record in enumerate(records, start=1):
         (runs_dir / f"{index:03d}.json").write_text(
             json.dumps(record, indent=1), encoding="utf-8")
-        summaries.append(summarize(record, index))
+        summaries.append(summarize(record, index, best_values))
     (args.out / "index.json").write_text(
         json.dumps(summaries, indent=1), encoding="utf-8")
     (args.out / "meta.json").write_text(
