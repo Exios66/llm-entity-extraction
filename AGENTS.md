@@ -369,8 +369,8 @@ semver; every release maps to ONE tagged commit (`vX.Y.Z`).
 - **CUAD ground truth is type-aware**: expected fields derive from the
   contract's CUAD folder via `build_expected_fields`; don't assume all 41
   categories apply to every document.
-- **Packaging**: the flat top-level layout (`agents`/`src`/`config`) is what
-  llm-mailroom imports; after adding a new module, confirm it is covered by
+- **Packaging**: the layout (`llm-mailroom/src/{agents,config,...}` with `src/` on the
+  import path) is what llm-mailroom imports; after adding a new module, confirm it is covered by
   `pip install -e .` (setuptools `packages` list) and the out-of-repo import
   still works.
 

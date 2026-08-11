@@ -358,7 +358,7 @@ SCORING_GUIDE = {
         },
         "legalbench_binary_answer": {
             "headline": {"key": "accuracy", "label": "QA accuracy"},
-            "summary": ("LegalBench suite (llm-mailroom/legalbench/) — CUAD contract-QA "
+            "summary": ("LegalBench suite (llm-mailroom/src/legalbench/) — CUAD contract-QA "
                         "binary-answer task: yes/no questions over contracts with "
                         "evidence spans, scored against the CUAD annotations."),
             "formula": "headline = share of questions answered correctly (predicted yes/no == annotation)",
@@ -383,7 +383,7 @@ SCORING_GUIDE = {
         },
         "legalbench_multiclass_classification": {
             "headline": {"key": "accuracy", "label": "Family accuracy (strict)"},
-            "summary": ("LegalBench suite (llm-mailroom/legalbench/) — CUAD contract-family "
+            "summary": ("LegalBench suite (llm-mailroom/src/legalbench/) — CUAD contract-family "
                         "classification: assign one of the 25 contract families (+ other) "
                         "to each contract, scored against the family derived from the "
                         "CUAD folder/title taxonomy."),

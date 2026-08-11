@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-11T02:53:59.178394+00:00",
+ "built_at": "2026-08-11T03:01:25.065863+00:00",
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
  "run_count": 38,
@@ -247,7 +247,7 @@
      "key": "accuracy",
      "label": "QA accuracy"
     },
-    "summary": "LegalBench suite (llm-mailroom/legalbench/) \u2014 CUAD contract-QA binary-answer task: yes/no questions over contracts with evidence spans, scored against the CUAD annotations.",
+    "summary": "LegalBench suite (llm-mailroom/src/legalbench/) \u2014 CUAD contract-QA binary-answer task: yes/no questions over contracts with evidence spans, scored against the CUAD annotations.",
     "formula": "headline = share of questions answered correctly (predicted yes/no == annotation)",
     "conveys": "Contract-comprehension accuracy on a large, real legal QA corpus.",
     "components": [
@@ -288,7 +288,7 @@
      "key": "accuracy",
      "label": "Family accuracy (strict)"
     },
-    "summary": "LegalBench suite (llm-mailroom/legalbench/) \u2014 CUAD contract-family classification: assign one of the 25 contract families (+ other) to each contract, scored against the family derived from the CUAD folder/title taxonomy.",
+    "summary": "LegalBench suite (llm-mailroom/src/legalbench/) \u2014 CUAD contract-family classification: assign one of the 25 contract families (+ other) to each contract, scored against the family derived from the CUAD folder/title taxonomy.",
     "formula": "headline = strict family accuracy; equiv additionally accepts defensible family swaps (same SUBTYPE_EQUIVALENCES as the sorter)",
     "conveys": "Multiclass legal-routing accuracy with a defensible-equivalence lens.",
     "components": [
