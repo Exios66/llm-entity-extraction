@@ -125,3 +125,47 @@ def test_contracts_v12_field_accuracy_and_rescan_rules():
     v11 = CONTRACTS_SPECIALIST_PROMPT_V11
     assert "RE-SCAN DUTY" not in v11
     assert "VERBATIM and IN FULL" not in v11
+
+
+def test_contracts_v18_family_fidelity_catalog():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V17,
+        CONTRACTS_SPECIALIST_PROMPT_V18,
+    )
+
+    # v18 is a strict derivation of v17: the base is untouched, the derived
+    # prompt replaces the terse family list with the shape-level catalog and
+    # narrows the exclusion rule. The v17 grain (length-anchored, 10-25
+    # words) is kept unchanged.
+    assert CONTRACTS_SPECIALIST_PROMPT_V18 != CONTRACTS_SPECIALIST_PROMPT_V17
+    assert CONTRACTS_SPECIALIST_PROMPT_V18.startswith(CONTRACTS_SPECIALIST_PROMPT_V17[:300])
+    assert "contracts_specialist_v18" in PROMPT_VERSIONS
+
+    v18 = CONTRACTS_SPECIALIST_PROMPT_V18
+    # The 26-item CUAD-mirroring catalog with operative shapes is present.
+    assert "mirroring the CUAD clause categories 1:1" in v18
+    for family in ("Anti-Assignment", "Change Of Control", "Exclusivity", "Non-Compete",
+                   "No-Solicit Of Customers", "No-Solicit Of Employees",
+                   "Non-Disparagement", "Most-Favored-Nation", "ROFR/ROFO/ROFN",
+                   "Revenue/Profit Sharing", "Price Restrictions", "Minimum Commitment",
+                   "Volume Restriction", "IP Ownership Assignment",
+                   "Joint IP Ownership", "License Grant", "Source Code Escrow",
+                   "Post-Termination Services", "Audit Rights", "Uncapped Liability",
+                   "Cap On Liability", "Liquidated Damages", "Insurance",
+                   "Covenant Not To Sue", "Third Party Beneficiary"):
+        assert f"{family}:" in v18, f"v18 missing catalog entry {family}"
+    # Data-backed shapes for the families the 50-doc decomposition missed.
+    assert "in no event shall either party be liable" in v18
+    assert "elects not to prosecute or maintain" in v18
+    assert "Change in Control" in v18
+    # Family-term definitions are items even though general definitions are not.
+    assert "definitions ARE the category's" in v18
+    assert "operative text, even though general definitions are not items" in v18
+    # Exclusion rule narrowed: family clauses inside indemnity/damages sections count.
+    assert "never excluded because of WHERE it sits" in v18
+    assert "pure indemnification obligations" in v18
+    # The v17 length-anchored grain is intact.
+    assert "typically 10-25 words" in v18
+    # v17 predates the catalog.
+    v17 = CONTRACTS_SPECIALIST_PROMPT_V17
+    assert "mirroring the CUAD clause categories 1:1" not in v17

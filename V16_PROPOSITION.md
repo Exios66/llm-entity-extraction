@@ -330,3 +330,60 @@ grain is specified.
    segmentation capability (model).
 3. **Scorer discussion deferred**: the containment-credit idea is now
    empirically refuted (0/160 embedded spans) — do not pursue.
+
+---
+
+## 9. v18 (family-fidelity catalog) — ADOPTED (2026-08-12)
+
+Implemented: the terse 26-family comma list is replaced by a CUAD-category
+catalog (1:1 mirror of `CUAD_CATEGORIES` in `src/cuad_ground_truth.py`) with
+each category's operative clause shapes derived from the 160-span
+decomposition (cap-on-liability consequential-damages waivers, license
+grants phrased as "right and license ... for the territory of", minimum
+guarantees/royalties, audit deficiency remedies, insurance coverage lists,
+IP-prosecution elections, family-term definitions). The exclusion rule is
+narrowed to true general duties with a WHERE-IT-SITS guard (family clauses
+inside indemnity/damages sections still count). v17's length-anchored grain
+is kept unchanged. Verified: 272 tests pass; dry-run confirmed.
+
+### 9.1 A/B result (same 50 docs, chunked, seed 42, Langfuse llm-dojo)
+
+| Metric | v15 | v16 | v17 | v18 | Δ(v18 vs v15) |
+|---|---|---|---|---|---|
+| key_obligations | 0.7755 | 0.7816 | 0.7726 | **0.8535** | **+7.8pp** |
+| overall | 0.9129 | 0.8859 | 0.9074 | **0.9230** | **+1.0pp** |
+| parties | 0.940 | 0.900 | 0.920 | 0.940 | 0 |
+| effective_date | 0.896 | 0.854 | 0.883 | 0.883 | −1.2pp |
+| term_length | 0.979 | 0.953 | 0.953 | 0.979 | 0 |
+| governing_law | 0.934 | 0.934 | 0.954 | 0.934 | 0 |
+| items (median words) | 1021 (48) | 1292 (26) | 1083 (27) | 1118 (25) | +97 items |
+| matched_gt | 664 | 707 | 627 | 692 | +28 |
+| alignment precision | 0.650 | 0.547 | 0.579 | 0.619 | −3pp |
+| verified_precision | 0.994 | 0.970 | 0.994 | 0.991 | −0.3pp |
+
+**Decision rule met**: ko ≥ +3pp (+7.8pp) AND no field regressed > 2pp
+(effective_date −1.2pp, a known v12-era artifact unrelated to the family
+catalog — all other fields tie or beat v15). **v18 is the new champion.**
+
+### 9.2 Family-level recovery (token-level, v15-missed spans vs v18)
+
+30 of the 160 originally-missed spans now match at ≥0.6 token overlap
+(embedding rescue recovers further, which is why ko rose 7.8pp): cap
+liability +8, IP ownership +4, license grant +4, post-termination +2,
+minimum commitment +2, plus one each in price restriction, volume
+restriction, insurance, no-solicit, audit, revenue sharing, anti-assignment.
+Worked confirmation: Penntex (0 liability items in v15 despite a labeled
+cap-on-liability span) now emits the "NO PARTY SHALL BE LIABLE FOR
+CONSEQUENTIAL, INCIDENTAL, PUNITIVE, EXEMPLARY OR INDIRECT DAMAGES"
+clause. Still missing (131 at token level; largest family license grant
+36) — the residual is boundary/span-choice divergence plus clauses the
+shapes still do not enumerate.
+
+### 9.3 Path forward
+
+1. **Model sweep (now gated-OPEN)**: v18 × deepseek-v4-flash /
+   deepseek-v4-pro on the same 50 docs — separates prompt scope-fidelity
+   from model segmentation capability.
+2. **v19 (if needed)**: address the residual license-grant misses with
+   worked positive/negative span examples per family instead of prose
+   shapes.

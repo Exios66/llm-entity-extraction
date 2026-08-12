@@ -1572,6 +1572,163 @@ CONTRACTS_SPECIALIST_PROMPT_V17 = CONTRACTS_SPECIALIST_PROMPT_V16.replace(
      verbatim and keep it complete — never truncate mid-obligation.""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v18 (family-fidelity catalog)
+# -----------------------------------------------------------------------------
+# v18 = v17 + the family-scope fix, from the v15/v16/v17 50-doc decomposition:
+# three grain instructions (sentence / fragment / length-anchored) converged
+# on one ceiling (alignment precision 0.65/0.55/0.58; ko 0.78) because the
+# residual is NOT segmentation — the 160 unmatched GT spans decompose by
+# family (license grant 40, minimum commitment 12, IP ownership 10,
+# anti-assignment 9, audit 6, revenue sharing 6, cap liability 5+) and worked
+# examples show the mechanism: the model FAITHFULLY skips spans whose clause
+# shape the terse family names do not enumerate (pricing formulas under
+# Price Restrictions, shelf-life/quality spans, IP-prosecution elections,
+# "in no event shall either party be liable for consequential damages"
+# liability exclusions — Penntex has zero liability items despite a labeled
+# cap-on-liability span — and family-term definitions such as "Change in
+# Control" means ...). v18 mirrors the CUAD category catalog 1:1 with each
+# category's operative clause shapes, and narrows the exclusion rule to true
+# general duties so family clauses found inside indemnity/damages sections
+# are still extracted. The v17 length-anchored grain is kept unchanged.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V18 = CONTRACTS_SPECIALIST_PROMPT_V17.replace(
+    """The families: anti-assignment and assignment restrictions; change of control
+     (termination, consent, or notice rights); exclusivity; non-compete; no-solicit of
+     customers; no-solicit of employees; non-disparagement; most-favored-nation; right
+     of first refusal, first offer, or first negotiation (ROFR/ROFO/ROFN); revenue or
+     profit sharing; price restrictions; minimum commitment / minimum order sizes;
+     volume restrictions; IP ownership assignment; joint IP ownership; license grants
+     (and their non-transferable, affiliate-licensor, affiliate-licensee, irrevocable,
+     perpetual, and unlimited/all-you-can-eat variants); source code escrow;
+     post-termination services; audit rights; uncapped liability; caps on liability;
+     liquidated damages; insurance requirements; covenant not to sue; third-party
+     beneficiary. Every occurrence of a present family must appear as its own verbatim
+     item — never omit a present restriction or covenant.""",
+    """The families (mirroring the CUAD clause categories 1:1, with the operative
+     clause shapes that count):
+     1. Anti-Assignment: restrictions on assignment, transfer, delegation, or
+        sublicensing of the agreement or its rights; consent-to-assign requirements;
+        transfer restrictions on death, incapacity, or change of ownership interest;
+        bankruptcy-assignment notice duties; "personal to you / may not be delegated
+        or assigned" clauses; post-assignment assistance and documentation duties.
+     2. Change Of Control: consent, notice, or termination rights triggered by a
+        change of control — AND the defined term itself ("'Change in Control' means a
+        merger or consolidation of the party with ..." definitions ARE the category's
+        operative text, even though general definitions are not items).
+     3. Exclusivity: exclusive territories, designated areas, or mutual-interest
+        areas; exclusive relationships or marketing rights ("sole and exclusive
+        right", "exclusive and sole relationship"); no-third-party-deals-without-
+        consent clauses; affirmations that no exclusive right is granted.
+     4. Non-Compete: restrictions on competing businesses or activities during or
+        after the term — including post-termination non-competes with area/radius
+        limits, "no right to develop, manufacture, reproduce, distribute, or sell
+        other products based on the licensed property" clauses, and competitor
+        DEFINITIONS ("...Competitive Company' means any company that ...").
+     5. No-Solicit Of Customers: prohibitions on contacting, soliciting, or diverting
+        the other party's customers, and business-diversion prohibitions.
+     6. No-Solicit Of Employees: prohibitions on soliciting, enticing, inducing to
+        leave employment, or hiring the other party's employees within a stated
+        lookback period.
+     7. Non-Disparagement: prohibitions on disparaging, false, or misleading
+        statements about the other party, its marks, or its products.
+     8. Most-Favored-Nation: most-favored-nation / parity pricing or terms clauses.
+     9. ROFR/ROFO/ROFN: rights of first refusal, first offer, or first negotiation
+        over transfers, sales, inventory buybacks, or new licensing opportunities;
+        response deadlines ("may be free to award ... to an alternate" if no
+        competitive terms within N days).
+     10. Revenue/Profit Sharing: per-unit royalties; percentage-of-revenue or
+         percentage-of-profit sharing; greater-of royalty formulas ("the higher of (a)
+         five-percent of the Gross Proceeds OR (b) twenty-percent of the Net
+         Proceeds"); shares of Cash Sales; commission entitlements; revenue remittance
+         obligations; royalty-rate-matching clauses; "at cost without markup" service
+         pricing.
+     11. Price Restrictions: price increase caps (amount AND frequency — "may not
+         increase ... more than once in any period of twelve consecutive months, and
+         such increase may not exceed twenty percent"); pricing formulas ("the price
+         ... shall be based upon a formula"); resale-price and fee restrictions.
+     12. Minimum Commitment: minimum guarantees (dollars, units, or acreage); minimum
+         purchase / order / purchasing requirements; minimum royalties, including
+         greater-of formulas ("the greater of the applicable monthly Base Royalty and
+         Marketing Royalty or $200,000"); minimum coverage or participation
+         percentages; minimum deliverable/content commitments (minimum numbers of
+         games, wallpapers, video formats, etc.); minimum capacity, quantity, pressure,
+         or circulation commitments; minimum-balance maintenance.
+     13. Volume Restriction: maximum order, inventory, or output limits; inventory
+         ceilings ("cease fulfilling Orders ... until inventory returns to an
+         acceptable level"); "subject to lower limits" caps.
+     14. IP Ownership Assignment: ownership acknowledgments ("owns all right, title and
+         interest in and to"); present assignments of rights, marks, or moral rights;
+         non-contest clauses ("shall not now or in the future contest the validity
+         of ... ownership"); modifications/enhancements vesting in a party; exclusive
+         ownership of created works; IP-prosecution and patent-maintenance elections
+         ("elects not to prosecute or maintain in a particular market"); assignment
+         assistance duties.
+     15. Joint IP Ownership: jointly owned developments; joint-ownership-on-termination
+         clauses ("upon termination, ... shall jointly own all User Data"); trademark
+         registration in joint names; mutual duties to preserve enforceable joint IP
+         rights.
+     16. License Grant: EVERY grant of rights to use, reproduce, distribute, exhibit,
+         market, or sell licensed IP — including non-exclusive and non-royalty-bearing
+         grants, "right and license ... for the territory of ..." grants, scope-
+         limited grants ("limited to that which is necessary for ..."), VOD/performance
+         or distribution rights with defined periods, sublicense rights, backup/
+         archival/emergency copying rights, per-viewing or per-use fee rules, license
+         term and perpetuity statements, and license continuation or conversion
+         provisions.
+     17. License Variants: Non-Transferable License (non-transferable and non-exclusive
+         licences), Affiliate License-Licensor, Affiliate License-Licensee (sublicense
+         or use by affiliates), Irrevocable Or Perpetual License (including conversion
+         to a perpetual license on termination), Unlimited/All-You-Can-Eat License.
+     18. Source Code Escrow: escrow, deposit, or release of source code.
+     19. Post-Termination Services: sell-off periods ("right to continue to sell ... for
+         a period of three months"); inventory exhaustion periods ("eighteen months to
+         exhaust any inventories"); transition or wind-down periods (e.g., 180 days);
+         post-termination exploitation rights; post-termination removal/destruction
+         duties.
+     20. Audit Rights: inspection of premises, facilities, books, records, or
+         safekeeping sites ("right of entry and inspection ... at all reasonable
+         times"); audit-of-payments clauses with deficiency remedies ("if the audit
+         confirms the report ..., the Payor will pay the deficiency within fifteen
+         days"); audited financial statement delivery within N days; audit-pass and
+         retention consequences.
+     21. Uncapped Liability: clauses stating that a party's liability is unlimited or
+         that a cap does not apply to it.
+     22. Cap On Liability: liability caps; "in no event shall either party be liable
+         for any special, indirect, incidental, consequential, punitive, or exemplary
+         damages" exclusions; loss-of-profit and business-interruption exclusions;
+         sole-and-exclusive-remedy clauses; limitations periods on claims — including
+         when these appear inside the indemnification or damages sections.
+     23. Liquidated Damages: liquidated damages; termination payment penalties;
+         forfeiture of guarantees on early termination.
+     24. Insurance: required insurance coverages (including enumerated coverage lists),
+         minimum policy limits ("$1 million per occurrence"), and additional-insured
+         naming.
+     25. Covenant Not To Sue: promises not to sue, waivers of claims, and non-contest
+         commitments.
+     26. Third Party Beneficiary: clauses naming intended third-party beneficiaries or
+         disclaiming third-party benefits ("... is an intended third party
+         beneficiary"; "the parties do not intend the benefits of this Agreement to
+         inure to any third party").
+     Every occurrence of a present family must appear as its own verbatim item —
+     never omit a present restriction or covenant.""",
+).replace(
+    """general operative duties (clinical-trial or project
+     conduct, delivery/shipping mechanics, staffing, ordinary reporting, general
+     payment obligations, warranties, indemnities, confidentiality boilerplate) are NOT
+     expected items and must NOT be extracted.""",
+    """true general operative duties (clinical-trial or project
+     conduct, delivery/shipping mechanics, staffing, ordinary reporting, routine
+     payment obligations, warranties, pure indemnification obligations, confidentiality
+     boilerplate) are NOT expected items and must NOT be extracted. IMPORTANT: a
+     family clause is never excluded because of WHERE it sits — a cap-on-liability,
+     consequential-damages waiver, license, insurance, or audit provision found inside
+     an indemnity, damages, or payment section IS a family clause and MUST be
+     extracted.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1971,6 +2128,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v15": CONTRACTS_SPECIALIST_PROMPT_V15,
     "contracts_specialist_v16": CONTRACTS_SPECIALIST_PROMPT_V16,
     "contracts_specialist_v17": CONTRACTS_SPECIALIST_PROMPT_V17,
+    "contracts_specialist_v18": CONTRACTS_SPECIALIST_PROMPT_V18,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

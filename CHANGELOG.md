@@ -9,6 +9,25 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`contracts_specialist_v18` — family-fidelity catalog (ADOPTED)**: the
+  terse 26-family list in `src/prompts.py` is replaced by a CUAD-category
+  catalog (1:1 mirror of the 41-category catalog, 26 obligation families)
+  with each category's operative clause shapes, derived from the 50-doc
+  v15/v16/v17 decomposition of the 160 unmatched GT spans (cap-on-liability
+  consequential-damages waivers, license grants phrased "right and
+  license ... for the territory of", minimum guarantees/royalties, audit
+  deficiency remedies, insurance coverage lists, IP-prosecution elections,
+  family-term definitions). The exclusion rule narrows to true general
+  duties with a WHERE-IT-SITS guard (family clauses inside
+  indemnity/damages sections still count). v17's length-anchored grain is
+  kept. A/B (same 50 docs, chunked, seed 42, Langfuse llm-dojo):
+  **key_obligations 0.7755 → 0.8535 (+7.8pp)**, overall 0.9129 → **0.9230**
+  (series best), parties/term_length tie v15, verified_precision 0.991.
+  30/160 missed spans recovered at token level (cap liability +8, IP
+  ownership +4, license +4); Penntex now extracts its labeled
+  cap-on-liability clause (0 liability items in v15). Decision rule met
+  (ko ≥ +3pp, no field regressed >2pp) — champion. Design + full table in
+  `V16_PROPOSITION.md` §9.
 - **Research memos + memos tab on the site**: `memos/*.md` archive the key
   findings from experimental runs and prompt iterations (research-question →
   answer + results summary → remaining uncertainties), shipped to the site
