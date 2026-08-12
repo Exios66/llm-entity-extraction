@@ -8,7 +8,23 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Fixed
+- **Benchmarks view showed "OPENROUTER_API_KEY not set" despite a configured
+  key**: `build_site.py` never loaded the repo's credential files
+  (`braintrust.env` / `.env`), so the benchmarks fetch silently reported
+  unavailable. It now calls `src.env_utils.load_env()` like the eval runners
+  — rebuilt with the configured key, the site ships **1387 live benchmark
+  rows** (133 Artificial Analysis + 1021 Design Arena, as-of 2026-08-12) in
+  `docs/data/benchmarks.json`. Pricing rendering handles both `$X/1M`
+  strings and per-token decimals (`$X/token`).
+
 ### Added
+- **Real-browser audit of the GH Pages site** (`tests/test_browser_audit.py`
+  + `tests/assets/browser_audit.mjs`, skipped without Chrome/node): serves
+  docs/ and drives headless Chrome via the DevTools Protocol over every
+  route, asserting zero console errors/exceptions, no layout overflow, and
+  that each view renders — catching silent errors, visual breakage, and
+  uncaught issues the stubbed-DOM audit cannot see.
 - **OpenRouter benchmarks on the experiment-log site**: a dedicated
   `#/benchmarks` navigation tab rendering Artificial Analysis
   (intelligence/coding/agentic index rankings with per-model pricing) and

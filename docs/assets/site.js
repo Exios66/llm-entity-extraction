@@ -1590,6 +1590,16 @@ function renderNav(meta) {
 
 /* ---------- openrouter benchmarks view ---------- */
 
+/* OpenRouter pricing may arrive as $/1M strings ("$0.03") or per-token
+ * decimals ("0.0000055") — format both honestly. */
+function fmtPrice(v) {
+  if (v == null) return "—";
+  const n = Number(String(v).replace(/[^0-9.+-]/g, ""));
+  if (isNaN(n)) return esc(v);
+  if (String(v).includes("$") || n >= 1) return `$${n}/1M`;
+  return `$${n.toExponential(2)}/token`;
+}
+
 async function renderBenchmarks() {
   if (!state.benchmarks) {
     try { state.benchmarks = await fetchJson("data/benchmarks.json"); }
@@ -1653,7 +1663,7 @@ async function renderBenchmarks() {
       const barRows = ranked.map((r, i) => {
         const v = byTask(r);
         const price = r.pricing
-          ? `<span class="faint" style="font-size:11px">\$${r.pricing.prompt}/1M in · \$${r.pricing.completion}/1M out</span>` : "";
+          ? `<span class="faint" style="font-size:11px">${fmtPrice(r.pricing.prompt)} in · ${fmtPrice(r.pricing.completion)} out</span>` : "";
         return `<div class="bm-row"><span class="bm-rank">${i + 1}</span>
           <span class="bm-name"><b>${esc(r.display_name)}</b>
             <span class="faint mono">${esc(r.model_permaslug)}</span> ${price}</span>

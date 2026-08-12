@@ -38,6 +38,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))  # noqa: E402 - allow src.* imports
 from src.cost_models import estimate_for_record  # noqa: E402
+
+# The eval runners read credentials from braintrust.env then .env — the site
+# builder must do the same or the benchmarks fetch silently reports
+# "OPENROUTER_API_KEY not set" despite a configured key.
+try:  # noqa: E402
+    from src.env_utils import load_env
+
+    load_env()
+except Exception:  # pragma: no cover - env loading is best-effort
+    pass
 DEFAULT_JSONL = REPO_ROOT / "reports" / "experiment_log.jsonl"
 DEFAULT_OUT = REPO_ROOT / "docs" / "data"
 REPO_URL = "https://github.com/Exios66/llm-entity-extraction"
