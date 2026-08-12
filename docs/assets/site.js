@@ -162,6 +162,7 @@ function parseHash() {
   if (m) return { view: "group", kind: m[1], key: decodeURIComponent(m[2]) };
   if (window.location.hash.match(/^#\/prompts/)) return { view: "prompts" };
   if (window.location.hash.match(/^#\/benchmarks/)) return { view: "benchmarks" };
+  if (window.location.hash.match(/^#\/memos/)) return { view: "memos" };
   return { view: "index" };
 }
 
@@ -172,6 +173,7 @@ async function route() {
   else if (r.view === "group") await renderGroup(r.kind, r.key);
   else if (r.view === "prompts") await renderPrompts();
   else if (r.view === "benchmarks") await renderBenchmarks();
+  else if (r.view === "memos") await renderMemos();
   else await renderIndex();
 }
 
@@ -1720,6 +1722,127 @@ async function renderBenchmarks() {
     srcEl.addEventListener("change", apply);
     taskEl.addEventListener("change", apply);
   };
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- research memos view ---------- */
+
+/* Minimal markdown renderer for the memo subset (headings, bold/italic,
+ * inline code, links, tables, lists, blockquotes, hr). Input is escaped
+ * first, then structured transforms apply. */
+function renderMd(src) {
+  const escMd = (s) => esc(s)
+    .replace(/^\s*#+\s+(.*)$/gm, (m, h) => {
+      const level = Math.min(6, (m.match(/^#+/) || [""])[0].length);
+      return `</p><h${level} class="memo-h${level}">${h}</h${level}><p>`;
+    })
+    .replace(/^---\s*$/gm, '</p><hr class="memo-hr"><p>');
+  let html = `<div class="memo-body">${escMd(src)}</div>`;
+  html = html.replace(/^\s*\|.*\|\s*$/gm, (tbl) => {
+    const rows = tbl.split("\n").filter((l) => l.trim().startsWith("|"));
+    const cell = (c) => c.trim().replace(/^\|/, "").replace(/\|$/, "").trim();
+    const split = (r) => r.split("|").slice(1, -1).map((c) => cell(c));
+    const head = split(rows[0]);
+    const isSep = (r) => /^\|\s*:?-{3,}/.test(r.trim());
+    const body = rows.slice(2).filter((r) => !isSep(r));
+    const tr = (cells, tag) => `<tr>${cells.map((c) => `<${tag}>${c}</${tag}>`).join("")}</tr>`;
+    return `<table class="data memo-tbl"><thead>${tr(head, "th")}</thead><tbody>${
+      body.map((r) => tr(split(r), "td")).join("")}</tbody></table>`;
+  });
+  const block = (lines, tag, cls) => `<${tag} class="${cls}">${lines.join("<br>")}</${tag}>`;
+  const lines = html.split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^\s*$/.test(l)) { i++; continue; }
+    if (/^<h[1-6]/.test(l)) { out.push(l); i++; continue; }
+    if (/^<table/.test(l)) { out.push(l); i++; continue; }
+    if (/^<hr/.test(l)) { out.push(l); i++; continue; }
+    const li = l.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/);
+    if (li) {
+      const items = [li[1]];
+      while (i + 1 < lines.length && /^\s*(?:[-*]|\d+\.)\s+/.test(lines[i + 1])) { items.push(lines[i + 1].replace(/^\s*(?:[-*]|\d+\.)\s+/, "")); i++; }
+      out.push(`<ul class="memo-ul">${items.map((x) => `<li>${x}</li>`).join("")}</ul>`);
+      i++;
+      continue;
+    }
+    const quote = l.match(/^>\s*(.*)$/);
+    if (quote) {
+      const qs = [quote[1]];
+      while (i + 1 < lines.length && /^>\s*/.test(lines[i + 1])) { qs.push(lines[i + 1].replace(/^>\s*/, "")); i++; }
+      out.push(block(qs, "blockquote", "memo-quote"));
+      i++;
+      continue;
+    }
+    const para = [l];
+    while (i + 1 < lines.length && lines[i + 1].trim() && !/^<h[1-6]/.test(lines[i + 1]) && !/^<table/.test(lines[i + 1]) && !/^\s*(?:[-*]|\d+\.)\s+/.test(lines[i + 1]) && !/^>\s*/.test(lines[i + 1])) { para.push(lines[i + 1]); i++; }
+    out.push(`<p>${para.join(" ")}</p>`);
+    i++;
+  }
+  // Inline pass (content is already HTML-escaped): links first, then code,
+  // then bold, then italic — so `**bold**`, *emphasis*, `code`, and
+  // [links](target) actually render instead of leaking literal markers.
+  const inline = out.join("\n")
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label, href) => {
+      if (/^(https?:|\/)/.test(href)) {
+        return `<a href="${href}" target="_blank" rel="noopener">${label}</a>`;
+      }
+      if (/^[\w.-]+\.md$/.test(href)) {
+        return `<a href="#" class="memo-link" data-memo="${esc(href)}">${label}</a>`;
+      }
+      return `<a href="${href}">${label}</a>`;
+    })
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*]+)\*(?![*])/g, "$1<em>$2</em>");
+  return `<div class="memo">${inline}</div>`;
+}
+
+async function renderMemos() {
+  if (!state.memos) {
+    try { state.memos = await fetchJson("data/memos.json"); }
+    catch (e) { state.memos = { memos: [] }; }
+  }
+  const memos = state.memos.memos || [];
+  if (!memos.length) {
+    $("#view").innerHTML = `<a class="back" href="#/">← All runs</a>
+      <div class="detail-head"><h2>Research memos</h2>
+        <div class="meta-line">archive of experimental findings</div></div>
+      <div class="card"><div class="body"><div class="empty">No memos shipped yet — run
+        <span class="mono">python scripts/site/build_site.py</span> after adding memos/*.md.</div></div></div>`;
+    return;
+  }
+  const pair = state.memoPair || [memos[0].file, memos.length > 1 ? memos[1].file : memos[0].file];
+  $("#view").innerHTML = `
+    <a class="back" href="#/">← All runs</a>
+    <div class="detail-head"><h2>Research memos</h2>
+      <div class="meta-line">key findings from experimental runs and prompt iterations — archived for collaborators and presentation</div></div>
+    <div class="card">
+      <div class="filters">
+        <label class="soft">Memo: <select id="mm-a">${memos.map((m) => `<option ${m.file === pair[0] ? "selected" : ""} value="${esc(m.file)}">${esc(m.title)}</option>`).join("")}</select></label>
+      </div>
+      <div class="body" id="mm-body"></div>
+    </div>`;
+  const render = () => {
+    const file = document.getElementById("mm-a").value;
+    state.memoPair = [file, file];
+    const memo = memos.find((m) => m.file === file);
+    document.getElementById("mm-body").innerHTML = memo ? renderMd(memo.markdown) : '<div class="empty">memo not found</div>';
+    document.querySelectorAll(".memo-link").forEach((a) => {
+      a.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        const target = a.dataset.memo;
+        const sel = document.getElementById("mm-a");
+        if (sel && memos.some((m) => m.file === target)) {
+          sel.value = target;
+          render();
+        }
+      });
+    });
+  };
+  document.getElementById("mm-a").addEventListener("change", render);
   render();
   window.scrollTo(0, 0);
 }

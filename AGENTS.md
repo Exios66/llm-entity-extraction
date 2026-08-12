@@ -483,6 +483,19 @@ changing any agent/graph code.
   `./wiki/sync-wiki.sh` — run it after wiki edits and after major releases.
   The wiki is NOT a mirror of docs/; each lives its own life.
 
+## Research memos
+
+`memos/*.md` are the archived research memoranda — key findings from
+experimental runs and prompt iterations, written for collaborators and
+presentation. Format: **Research question** opener, **Companions** links,
+`## Answer, Response, + Summary of Results` with a **Short answer**, data
+tables (with same-surface identity + bootstrap CIs where applicable), an
+`### Interpretation` numbered list, `*Sources:*`, and a closing
+`## What questions or uncertainties remain?`. The site ships them under the
+**memos** tab (`build_site.py` emits `docs/data/memos.json`; the viewer
+renders the markdown subset). Add a memo in the same commit as the finding
+it archives.
+
 ## Issue & PR templates
 
 `.github/ISSUE_TEMPLATE/` (bug_report, feature_request, experiment_report +

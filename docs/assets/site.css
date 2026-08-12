@@ -692,3 +692,17 @@ a:focus-visible, button:focus-visible, .nav-group-trigger:focus-visible {
 .bm-track i { display: block; height: 100%; background: var(--grad); }
 :root[data-theme="dark"] .bm-track i { background: linear-gradient(90deg, #7c9bff, #38e0d6); box-shadow: 0 0 6px rgba(124, 155, 255, 0.5); }
 .bm-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; }
+
+/* ---- research memos view ---- */
+.memo-body p { margin: 0 0 10px; }
+.memo-h1 { font-size: 20px; margin: 6px 0 14px; }
+.memo-h2 { font-size: 15px; margin: 18px 0 8px; }
+.memo-h3 { font-size: 13px; margin: 14px 0 6px; color: var(--text-soft); }
+.memo-hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.memo-ul { margin: 0 0 10px; padding-left: 20px; }
+.memo-ul li { margin: 4px 0; }
+.memo-quote { border-left: 3px solid var(--accent); background: var(--bg-soft); padding: 8px 12px; margin: 10px 0; border-radius: 0 6px 6px 0; color: var(--text-soft); }
+.memo-tbl { margin: 10px 0 14px; }
+.memo-tbl th, .memo-tbl td { padding: 6px 10px; }
+.memo code { font-family: var(--mono); font-size: 12px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; }
+.memo strong { font-weight: 700; }

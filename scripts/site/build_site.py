@@ -836,6 +836,8 @@ def main_with_args(argv: list[str]) -> int:
         json.dumps(prompts, indent=1), encoding="utf-8")
     (args.out / "benchmarks.json").write_text(
         json.dumps(build_benchmarks(args.benchmarks_key), indent=1), encoding="utf-8")
+    (args.out / "memos.json").write_text(
+        json.dumps(build_memos(), indent=1), encoding="utf-8")
     print(f"Site data rebuilt: {len(records)} records -> {args.out} "
           f"({len(prompts)} prompts, {len(meta.get('surfaces', []))} surfaces)")
     return 0
@@ -878,6 +880,28 @@ def build_trends(records: list[dict], summaries: list[dict]) -> dict:
             entry["ablation"] = scores.get("ablation")
         by_task.setdefault(task, []).append(entry)
     return {"tasks": by_task}
+
+
+def build_memos() -> dict:
+    """Research memos (memos/*.md) shipped to the site's memos tab — the
+    archive of findings for collaborators and presentation."""
+    import re as _re
+
+    memos_dir = REPO_ROOT / "memos"
+    out = []
+    if not memos_dir.is_dir():
+        return {"memos": []}
+    for path in sorted(memos_dir.glob("*.md")):
+        if path.name == "README.md":
+            continue
+        text = path.read_text(encoding="utf-8")
+        title_match = _re.match(r"^#\s+(.+)$", text, _re.M)
+        out.append({
+            "file": path.name,
+            "title": title_match.group(1).strip() if title_match else path.stem,
+            "markdown": text,
+        })
+    return {"memos": out}
 
 
 def build_benchmarks(api_key: str | None = None) -> dict:

@@ -253,3 +253,80 @@ examples) instead of a bare number.
 5. **Roll into llm-mailroom** once adopted: vendored
    `contracts_specialist_v16` prompt + (optionally) the chunked
    `extract_chunked` path, with the existing MAILROOM PATCH plumbing.
+
+---
+
+## 8. A/B results — v16 and v17 (executed 2026-08-12)
+
+Both iterations were implemented and run on the same 50-doc chunked sample
+(seed 42, Langfuse llm-dojo, 30 traces/arm verified).
+
+### 8.1 v16 (fragment-granularity) — NOT adopted
+
+| Metric | v15 | v16 | Δ |
+|---|---|---|---|
+| key_obligations | 0.7755 | 0.7816 | +0.6pp (below the +3pp bar) |
+| overall | 0.9129 | 0.8859 | **−2.7pp** |
+| parties | 0.940 | 0.900 | **−4.0pp** |
+| effective_date | 0.896 | 0.854 | **−4.2pp** |
+| term_length | 0.979 | 0.953 | **−2.6pp** |
+| items (median words) | 1021 (48) | 1292 (26) | over-fragmentation |
+| alignment precision | 0.650 | **0.547** | worse |
+
+The fragment instruction halved item length (correct direction: +43 more
+matched spans) but over-fragmented — 1292 items vs 826 GT spans (+56%) and
+alignment precision FELL. **Rejected per the decision rule (ko < +3pp AND
+multiple fields regressed > 2pp).**
+
+### 8.2 v17 (length-anchored grain, 10–25 words) — NOT adopted
+
+ko 0.7726 (−0.3pp vs v15), overall −0.6pp, parties −2.0pp, effective_date
+−1.2pp, term_length −2.6pp; items 1083 (median 27 words); alignment
+precision 0.579 — **worse on matched spans than v15 (627 vs 664)**.
+
+### 8.3 The decisive finding — three grain instructions, one ceiling
+
+| Prompt grain | median words | items | matched | align-precision |
+|---|---|---|---|---|
+| v15 sentences | 48 | 1021 | 664 | 0.650 |
+| v16 fragments | 26 | 1292 | 707 | 0.547 |
+| v17 length-anchored | 27 | 1083 | 627 | 0.579 |
+
+**The segmentation lever is exhausted at the prompt layer.** The model's
+boundary choices do not converge on the annotator's regardless of how the
+grain is specified.
+
+### 8.4 What the misses actually are (post-hoc audit, v15)
+
+- **Containment hypothesis REFUTED**: 0 of 160 unmatched GT spans are
+  token-contained (≥0.7) in any predicted item — these are genuine content
+  omissions, not embedded-fragment artifacts.
+- **Family breakdown of the 160 unmatched spans:** license grant **40**,
+  minimum commitment 12, IP ownership 10, anti-assignment 9, audit rights 6,
+  revenue sharing 6, cap liability 5, post-termination 5, exclusivity 5,
+  insurance 4, other 51.
+- **Root cause: family-scope mismatch + partial family coverage.** Worked
+  examples: pricing-formula spans ("The price that Sekisui shall pay for the
+  Reagent Kits Products shall be based upon a formula…"), shelf-life/quality
+  spans, and IP-prosecution-election spans ("In the event that Qualigen
+  elects not to prosecute or maintain…") are all present in CUAD GT but the
+  prompt's terse family names ("price restrictions", "IP ownership") don't
+  enumerate those operative shapes — the model faithfully excludes them per
+  the "general payment obligations are NOT expected items" rule. This is
+  scope-fidelity, not segmentation.
+
+### 8.5 Revised path forward
+
+1. **v18 = family-fidelity**: rewrite the family enumeration to mirror the
+   CUAD category definitions 1:1 — each of the ~20 categories gets its
+   operative clause shapes (pricing formulas under Price Restrictions,
+   quality/shelf-life under the applicable category, IP prosecution
+   elections under IP Ownership, audit-pass and retention provisions under
+   Audit Rights), with the exclusion rule tightened to target only true
+   general operative duties. Scope-first, grain second (keep v17's
+   length-anchored item contract).
+2. **Model sweep (gated)**: v18 × {qwen3.7-flash, deepseek-v4-pro,
+   nemotron-3} on the same 50 docs — separates scope-fidelity (prompt) from
+   segmentation capability (model).
+3. **Scorer discussion deferred**: the containment-credit idea is now
+   empirically refuted (0/160 embedded spans) — do not pursue.

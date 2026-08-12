@@ -8,6 +8,16 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Added
+- **Research memos + memos tab on the site**: `memos/*.md` archive the key
+  findings from experimental runs and prompt iterations (research-question →
+  answer + results summary → remaining uncertainties), shipped to the site
+  under a new **memos** navigation tab (`build_site.py` emits
+  `docs/data/memos.json`; the viewer renders the markdown subset with
+  tables, inline formatting, and cross-memo links). Initial memos:
+  subtype-classification improvements (sorter v3→v6) and entity-extraction
+  improvements (specialist v2→v15 incl. the chunking enhancement).
+
 ### Fixed
 - **Runs table sorts chronologically by default**: the `id` column (the
   chronological run number) fell through to a lexicographic string compare,
