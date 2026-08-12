@@ -47,6 +47,16 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
   factuality audit with hallucination counts, CUAD category presence,
   ambiguous fields, and the raw predicted extraction), with prev/next
   navigation.
+- **Cost accounting** — real billed totals from an **OpenRouter activity-log
+  export** (Settings → Activity Logs): every generation under the eval key
+  (qwen + text-embedding-3-small) is attributed to the run whose completion
+  timestamp is the next boundary after the generation time. The dashboard
+  shows a cumulative-cost card (with export window), a **Cost** column
+  (total + avg $/document + call counts) in the runs table, per-run billing
+  in the Tokens & cost card, and group-view cost aggregates; runs outside
+  the export window are explicitly marked "—" with instructions to export a
+  fresh CSV. Ingest with:
+  `python scripts/site/build_site.py --openrouter-csv <activity.csv>`
 - **Dark mode** — light and dark themes share the same markup; the dark
   "gradient night" theme adds radial glows, gradient score bars and title,
   and tuned chips/tables. `?theme=light|dark` forces a theme (shareable).
@@ -57,8 +67,10 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
 `reports/experiment_log.md` — never hand-edit it. After every run:
 
 ```bash
-python scripts/site/build_site.py                 # regenerate docs/data/
-python scripts/site/build_site.py --check         # verify it is current
+python scripts/site/build_site.py                              # regenerate docs/data/
+python scripts/site/build_site.py --openrouter-csv openrouter_activity_2026-08-11.csv \
+                                                                 # also bill costs from the activity export
+python scripts/site/build_site.py --check                      # verify it is current
 ```
 
 The index view is served by `data/index.json` (small); detail pages lazy-load

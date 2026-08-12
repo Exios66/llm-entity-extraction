@@ -435,6 +435,10 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             per_subtype[expected]["equiv"] += 1
         confusion[expected][predicted] += 1
 
+    def _bootstrap_ci(values):
+        from src.bootstrap import bootstrap_ci as _bci
+        return _bci(values)
+
     per_row = []
     for r in result.results:
         output = r.output if isinstance(r.output, dict) else {}
@@ -503,7 +507,9 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
         "scores": {
             "sorter": {
                 "exact_match": _mean("doc_type_ok"),
+                "exact_match_ci": _bootstrap_ci([(o.get("sorter") or {}).get("doc_type_ok") for o in ok]),
                 "subtype_accuracy": _mean("subtype_ok"),
+                "subtype_accuracy_ci": _bootstrap_ci([(o.get("sorter") or {}).get("subtype_ok") for o in ok]),
                 "subtype_accuracy_equiv": _mean("subtype_ok_equiv"),
                 "confidence": _mean("confidence"),
                 "equiv_recovered": [s.get("contract_subtype")

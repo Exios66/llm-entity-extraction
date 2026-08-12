@@ -88,6 +88,8 @@ def _summarize(tasks: list[dict]) -> dict:
         "exact_match": round(correct / total, 4) if total else 0.0,
         "per_class": per_class,
         "total_cost": total_cost,
+        # Issue #1: per-row correctness for the bootstrap delta CI.
+        "correct_flags": [normalize_label(t["output"]) == t["expected"] for t in valid],
     }
 
 
@@ -119,6 +121,20 @@ def print_comparison(summary_a: dict, summary_b: dict, name_a: str, name_b: str)
     delta = summary_b["exact_match"] - summary_a["exact_match"]
     verdict = "B wins" if delta > 0.001 else ("A wins" if delta < -0.001 else "tie")
     print(f"\ndelta exact_match (B - A): {delta:+.4f}  ->  {verdict}")
+
+    # Issue #1: bootstrap CI on the delta — a raw +0.03 gap on 10 rows is a
+    # CI overlap, not a win.
+    from src.bootstrap import delta_significance
+
+    ds = delta_significance(summary_a.get("correct_flags") or [],
+                            summary_b.get("correct_flags") or [],
+                            seed=42)
+    if ds is None:
+        print("delta significance: not computable (need >= 2 scored rows per side)")
+    else:
+        ci_txt = f"[{ds['ci_lo']:.4f}, {ds['ci_hi']:.4f}]"
+        sig = "SIGNIFICANT at 95%" if ds["significant"] else "NOT significant (CI spans zero)"
+        print(f"delta significance: {ci_txt}  ->  {sig}")
 
 
 def main() -> int:

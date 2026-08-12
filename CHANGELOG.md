@@ -6,6 +6,44 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Bootstrap confidence intervals (GitHub issue #1)**: `src/bootstrap.py` —
+  percentile-bootstrap 95% CIs over per-document scores (`bootstrap_ci`) and
+  two-sample bootstrap delta tests with significance verdicts
+  (`delta_significance`, min-detectable-effect guard for A/Bs). Wired into
+  all four eval runners: `scores.*_ci` (`overall_extraction_score_ci`,
+  `subtype_accuracy_ci`, `exact_match_ci`, …) land in every experiment record;
+  `evaluate_prompt_version.py` prints the delta CI + significance for A/Bs.
+- **Chained error-propagation ablation (`--handoff-scope ground_truth`)**:
+  the specialist now ALSO extracts the same docs with the ground-truth-subtype
+  handoff; `scores.ablation` records predicted-vs-GT handoff scores and the
+  sorter routing loss (pp) — isolates sorter error from specialist error
+  instead of attributing it "mostly by inference" (both chained runners).
+- **Judge-calibration tracker**: extraction `--judge` rows are persisted to
+  `data/judgments/<experiment>.jsonl` (`kind: calibration` with the
+  deterministic score + judge labels) and aggregated into
+  `scores.judge_calibration` — agree rate vs the deterministic scorer plus a
+  lenient/strict lean signal (strong ≥ 0.85 / weak ≤ 0.5 bands).
+- **Cross-model matrix runner (`scripts/eval/run_model_matrix.py`)**: runs a
+  fixed sample (same dataset/seed/size) across a model x prompt grid using
+  the existing runners and prints a score (+CI) x cost matrix.
+- **Site — same-surface guardrail**: every index row carries
+  `fingerprint`/`seed`/`sample_key`; `delta_best_pp` is computed only against
+  the best run on the SAME surface (dataset fingerprint + seed + sample size),
+  and the frontend refuses to color deltas across different surfaces — the
+  v0.13.0 "regression" class of misread is now structurally impossible.
+- **Site — trend charts, cost-vs-quality scatter, failure-mode stacked bars,
+  prompt diff viewer**: `docs/data/trends.json` (per-task series with
+  headline/cost/sample-key/failure-mode counts) and `docs/data/prompts.json`
+  (full prompt text per version); the task view renders an SVG score-trend
+  line per prompt version, a cost-vs-quality scatter, and (subtype) stacked
+  failure-mode bars; a `#/prompts` prompt-diff view shows a side-by-side line
+  diff between two prompt versions with their score delta.
+- CI for older records falls back to resampling the per-doc arrays already in
+  `results[]`, then Wilson (site backend `_record_ci`).
+
 ## [v0.13.0] - 2026-08-11
 
 ### Fixed

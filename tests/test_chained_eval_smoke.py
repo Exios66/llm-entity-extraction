@@ -157,3 +157,51 @@ def test_chained_loop_wiring(fake_chained_eval, monkeypatch, tmp_path):
     assert row["extractor"]["category_presence"] == 1.0  # anti-assignment clause covered
     assert row["extractor"]["field_presence"] == 1.0
     # The handoff context was asserted inside fake_extract.
+
+
+def test_chained_ground_truth_ablation(fake_chained_eval, monkeypatch, tmp_path):
+    """Issue #1: --handoff-scope ground_truth runs the specialist TWICE per
+    doc (predicted-subtype cue + ground-truth-subtype cue) and records the
+    sorter-vs-specialist loss split under scores.ablation."""
+    import json as _json
+
+    import scripts.eval.run_chained_eval as runner
+
+    dataset = {
+        "input": {"doc_text": "This Agreement between Acme and Beta is a license agreement.",
+                  "filename": "cuad_doc_01.txt", "expected": "contract",
+                  "expected_fields": {}, "metadata": {"category": "License_Agreements"}},
+        "expected": "contract",
+        "filename": "cuad_doc_01.txt",
+        "expected_output": {"doc_type": "contract", "clause_labels": CUAD_LABELS},
+        "doc_text": "This Agreement between Acme and Beta is a license agreement.",
+        "metadata": {"category": "License_Agreements"},
+    }
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    monkeypatch.setattr("scripts.eval.run_chained_eval.load_braintrust_dataset",
+                        lambda *a, **k: [dict(dataset)])
+
+    rc = runner.main_with_args([
+        "--dataset", "mailroom-cuad-contracts",
+        "--sorter-prompt-version", "sorter_v1",
+        "--extractor-prompt-version", "contracts_specialist_v4",
+        "--handoff-scope", "ground_truth",
+        "--experiment-name", "smoke_chained_gt",
+        "--project-id", "proj-test-0000",
+    ])
+    assert rc == 0
+
+    # Both handoff passes ran on the single document.
+    assert fake_chained_eval.calls["extractor"] == 2
+
+    # The log record carries the ablation split.
+    from pathlib import Path
+    import os
+    log = Path(os.environ.get("EXPERIMENT_LOG_PATH", tmp_path / "log.jsonl"))
+    records = [_json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+    record = records[-1]
+    assert record["experiment_name"] == "smoke_chained_gt"
+    assert record["scores"]["ablation"]["n_docs"] == 1
+    assert record["scores"]["ablation"]["sorter_loss_pp"] is not None
+    assert "extractor_gt_scores" in record["results"][0]
+    assert record["parameters"]["handoff_scope"] == "ground_truth"

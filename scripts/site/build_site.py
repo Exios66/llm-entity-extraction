@@ -17,6 +17,9 @@ Layout produced:
 
 Usage:
     python scripts/site/build_site.py                              # rebuild docs/data
+    python scripts/site/build_site.py --openrouter-csv \
+        openrouter_activity_2026-08-11.csv                         # also attribute real
+                                                                   # OpenRouter costs + averages
     python scripts/site/build_site.py --jsonl /tmp/log.jsonl \
         --out /tmp/site-data                                      # custom paths
     python scripts/site/build_site.py --check                      # verify data is current
@@ -25,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
 import datetime as dt
 import json
 import math
@@ -32,9 +36,146 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))  # noqa: E402 - allow src.bootstrap import
 DEFAULT_JSONL = REPO_ROOT / "reports" / "experiment_log.jsonl"
 DEFAULT_OUT = REPO_ROOT / "docs" / "data"
 REPO_URL = "https://github.com/Exios66/llm-entity-extraction"
+
+# Models billed under the eval OpenRouter key that constitute eval traffic.
+EVAL_MODELS = {
+    "qwen/qwen3.7-flash-20260727": "chat",
+    "openai/text-embedding-3-small": "embeddings",
+}
+
+
+def _parse_ts(value: str) -> dt.datetime:
+    """Parse an ISO-ish timestamp; naive values are treated as UTC."""
+    parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed
+
+
+def load_openrouter_costs(csv_path: Path, records: list[dict],
+                          key: str = "Laptop v3") -> dict:
+    """Attribute OpenRouter activity-log generations to experiment runs.
+
+    The activity CSV (Settings -> Activity Logs export) contains one row per
+    LLM generation. Rows billed to the eval key (``api_key_name``) for the
+    eval models are assigned to the experiment whose completion timestamp is
+    the first run boundary at-or-after the generation time (runs are sorted
+    by ``timestamp``, so every generation lands in exactly one window).
+    Generations outside all windows are reported as ``unattributed``.
+
+    Returns a dict with per-run cost data keyed by run id (1-based), export
+    metadata, and aggregates; runs with no rows in the export window get
+    ``{"covered": false}``.
+    """
+    if not csv_path.exists():
+        raise FileNotFoundError(f"OpenRouter activity CSV not found: {csv_path}")
+    rows = []
+    with csv_path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if row.get("api_key_name") != key:
+                continue
+            model = row.get("model_permaslug")
+            if model not in EVAL_MODELS:
+                continue
+            rows.append(row)
+    rows.sort(key=lambda r: r.get("created_at", ""))
+
+    ordered = sorted(records, key=lambda r: r.get("timestamp", ""))
+    bounds = [(_parse_ts(r["timestamp"]), r) for r in ordered]
+    times = [b[0] for b in bounds]
+
+    def window_index(gen_time: dt.datetime) -> int | None:
+        """First run boundary at-or-after the generation time."""
+        if not times:
+            return None
+        lo, hi = 0, len(times)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if times[mid] < gen_time:
+                lo = mid + 1
+            else:
+                hi = mid
+        if lo >= len(times):
+            return None
+        return lo
+
+    per_run: dict[int, dict] = {}
+    unattributed = {"rows": 0, "cost_total_usd": 0.0}
+    for row in rows:
+        try:
+            gen_time = _parse_ts(row.get("created_at", ""))
+        except ValueError:
+            continue
+        idx = window_index(gen_time)
+        kind = EVAL_MODELS[row["model_permaslug"]]
+        cost = float(row.get("cost_total") or 0) or 0.0
+        if idx is None:
+            unattributed["rows"] += 1
+            unattributed["cost_total_usd"] += cost
+            continue
+        run_id = idx + 1  # 1-based as in index.json
+        entry = per_run.setdefault(run_id, {
+            "covered": True,
+            "calls": {"chat": 0, "embeddings": 0},
+            "tokens": {"prompt": 0, "completion": 0, "cached": 0},
+            "cost_total_usd": 0.0,
+        })
+        entry["calls"][kind] += 1
+        entry["tokens"]["prompt"] += int(row.get("tokens_prompt") or 0)
+        entry["tokens"]["completion"] += int(row.get("tokens_completion") or 0)
+        entry["tokens"]["cached"] += int(row.get("tokens_cached") or 0)
+        entry["cost_total_usd"] += cost
+
+    export_start = rows[0]["created_at"][:19] if rows else None
+    export_end = rows[-1]["created_at"][:19] if rows else None
+    all_tokens = sum(e["tokens"]["prompt"] + e["tokens"]["completion"]
+                     for e in per_run.values())
+    covered_cost = sum(e["cost_total_usd"] for e in per_run.values())
+    per_task: dict[str, float] = {}
+    per_prompt: dict[str, float] = {}
+    for idx, (_, rec) in enumerate(bounds):
+        entry = per_run.get(idx + 1)
+        if not entry:
+            continue
+        task = rec.get("task", "")
+        per_task[task] = per_task.get(task, 0.0) + entry["cost_total_usd"]
+        prompt = (rec.get("prompt_version")
+                  or " + ".join(str(v) for v in (rec.get("prompt_versions") or {}).values())
+                  or "—")
+        per_prompt[prompt] = per_prompt.get(prompt, 0.0) + entry["cost_total_usd"]
+
+    # Per-document averages (headline docs = run n_rows).
+    for run_id, entry in per_run.items():
+        n_rows = next(rec[1]["n_rows"] for idx, rec in enumerate(bounds)
+                      if idx + 1 == run_id) or 1
+        entry["cost_avg_per_doc_usd"] = entry["cost_total_usd"] / n_rows
+        entry["tokens_avg_per_doc"] = (
+            entry["tokens"]["prompt"] + entry["tokens"]["completion"]) / n_rows
+        entry["calls"]["total"] = entry["calls"]["chat"] + entry["calls"]["embeddings"]
+
+    return {
+        "source": str(csv_path.name),
+        "api_key": key,
+        "export": {"start": export_start, "end": export_end},
+        "per_run": per_run,
+        "unattributed": unattributed,
+        "totals": {
+            "calls": {
+                "chat": sum(e["calls"]["chat"] for e in per_run.values()),
+                "embeddings": sum(e["calls"]["embeddings"] for e in per_run.values()),
+            },
+            "tokens": all_tokens,
+            "cost_total_usd": covered_cost,
+        },
+        "per_task": per_task,
+        "per_prompt": per_prompt,
+        "covered_runs": len(per_run),
+        "total_runs": len(records),
+    }
 
 
 def _fmt(value: float) -> str:
@@ -203,7 +344,81 @@ def wilson_ci(p: float | None, n: int | None, z: float = 1.96) -> dict | None:
     }
 
 
-def summarize(record: dict, run_id: int, best_by_task: dict[str, float]) -> dict:
+def _record_ci(record: dict) -> dict | None:
+    """Bootstrap CI for a run's headline: prefer the runner-computed *_ci,
+    else resample the per-document scores stored in results[], else Wilson
+    (the historical fallback). Never fabricate precision on n=1 runs."""
+    scores = record.get("scores") or {}
+    task = record.get("task", "")
+    ci_keys = {
+        "contract_entity_extraction": ["overall_extraction_score_ci"],
+        "chained_sorter_extractor": ["extractor", "overall_extraction_score_ci"],
+        "subtype_classification": ["sorter", "subtype_accuracy_ci"],
+        "sorter_classification": ["exact_match_ci"],
+        "legalbench_binary_answer": ["accuracy_ci"],
+        "legalbench_multiclass_classification": ["accuracy_ci"],
+    }
+    keys = ci_keys.get(task)
+    if keys:
+        node = scores
+        for key in keys:
+            node = (node or {}).get(key)
+            if not isinstance(node, dict):
+                node = None
+                break
+        if isinstance(node, dict) and node.get("lo") is not None:
+            return node
+
+    values = _results_values(record)
+    if values is not None:
+        try:
+            from src.bootstrap import bootstrap_ci
+
+            ci = bootstrap_ci(values, seed=42)
+            if ci:
+                ci["source"] = "results-bootstrap"
+                return ci
+        except ImportError:  # pragma: no cover
+            pass
+    headline = headline_score(record)
+    if headline and headline.get("value") is not None:
+        wilson = wilson_ci(headline["value"], record.get("n_rows"))
+        if wilson:
+            wilson["source"] = "wilson"
+            return wilson
+    return None
+
+
+def _results_values(record: dict) -> list | None:
+    """Per-document score arrays for the headline tracker, by task."""
+    results = record.get("results") or []
+    task = record.get("task", "")
+    if task in ("contract_entity_extraction", "legalbench_binary_answer",
+                "legalbench_multiclass_classification", "sorter_classification"):
+        if task == "contract_entity_extraction":
+            return [r.get("overall_score") for r in results if r.get("overall_score") is not None]
+        return [1.0 if r.get("correct") else 0.0 for r in results if r.get("status") == "ok"]
+    if task == "chained_sorter_extractor":
+        return [r.get("extractor_scores", {}).get("overall_score")
+                for r in results if r.get("extractor_scores", {}).get("overall_score") is not None]
+    if task == "subtype_classification":
+        return [1.0 if r.get("sorter", {}).get("subtype_ok") else 0.0
+                for r in results if "subtype_ok" in (r.get("sorter") or {})]
+    return None
+
+
+def _sample_key(record: dict) -> str:
+    """Same-surface identity: dataset fingerprint + seed + sample size. Deltas
+    are only meaningful between runs sharing a key (issue #1 guardrail)."""
+    ds = record.get("data_source") or {}
+    fp = str(ds.get("dataset_fingerprint") or "?")
+    seed = str(ds.get("seed") or ds.get("sample_seed") or "?")
+    n = str(ds.get("n_samples") or record.get("n_rows") or "?")
+    return f"{fp}:{seed}:{n}"
+
+
+def summarize(record: dict, run_id: int, best_by_task: dict[str, float],
+              surface_best: dict[str, float]) -> dict:
     """Compact index-row summary used by the site's index table."""
     tokens = record.get("tokens") or {}
     if "total" in tokens:
@@ -215,10 +430,16 @@ def summarize(record: dict, run_id: int, best_by_task: dict[str, float]) -> dict
     data_source = record.get("data_source") or {}
     headline = headline_score(record)
     task = record.get("task", "")
+    # Issue #1 same-surface guardrail: the delta is computed against the best
+    # run on the SAME dataset fingerprint + seed + sample size, never against
+    # a differently-sampled run (that is how the v0.13.0 "regression" got
+    # misread). When no same-surface run exists, delta stays null.
+    sample_key = _sample_key(record)
     delta = None
     best = best_by_task.get(task)
-    if headline and best is not None:
-        delta = (headline["value"] - best) * 100  # percentage points
+    surface = surface_best.get((task, sample_key))
+    if headline and surface is not None:
+        delta = (headline["value"] - surface) * 100  # percentage points
     return {
         "id": run_id,
         "experiment_name": record.get("experiment_name", ""),
@@ -226,7 +447,7 @@ def summarize(record: dict, run_id: int, best_by_task: dict[str, float]) -> dict
         "model": record.get("model", ""),
         "prompts": prompt_string(record),
         "headline": headline,
-        "ci95": wilson_ci(headline["value"], record.get("n_rows")) if headline else None,
+        "ci95": _record_ci(record),
         "breakdown": breakdown(record),
         "n_rows": record.get("n_rows"),
         "n_ok": record.get("n_ok"),
@@ -234,6 +455,11 @@ def summarize(record: dict, run_id: int, best_by_task: dict[str, float]) -> dict
         "total_tokens": total_tokens,
         "cost_usd": tokens.get("cost_usd") if tokens else None,
         "cost_total_usd": cost_total,
+        "fingerprint": data_source.get("dataset_fingerprint"),
+        "seed": data_source.get("seed"),
+        "sample_key": sample_key,
+        "global_best_pp": ((headline["value"] - best) * 100
+                           if headline and best is not None else None),
         "delta_best_pp": delta,
         "timestamp": record.get("timestamp"),
         "git": record.get("git"),
@@ -419,9 +645,11 @@ def build_meta(records: list[dict], jsonl_path: Path, out_dir: Path) -> dict:
     models: dict[str, int] = {}
     prompts: dict[str, int] = {}
     n_rows = n_ok = n_error = total_tokens = 0
+    surfaces: set[str] = set()
     for record in records:
         task = record.get("task", "")
         tasks[task] = tasks.get(task, 0) + 1
+        surfaces.add(_sample_key(record))
         model = record.get("model", "")
         models[model] = models.get(model, 0) + 1
         prompt = prompt_string(record)
@@ -476,6 +704,7 @@ def build_meta(records: list[dict], jsonl_path: Path, out_dir: Path) -> dict:
 
     return {
         "built_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "surfaces": sorted(surfaces),
         "source": str(jsonl_path.relative_to(REPO_ROOT)),
         "repo_url": REPO_URL,
         "run_count": len(records),
@@ -502,6 +731,12 @@ def main_with_args(argv: list[str]) -> int:
                         help=f"JSONL experiment log (default: {DEFAULT_JSONL})")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT,
                         help=f"Site data output dir (default: {DEFAULT_OUT})")
+    parser.add_argument("--openrouter-csv", type=Path, default=None,
+                        help="OpenRouter activity-log CSV (Settings -> Activity Logs). "
+                             "When given, per-run costs and averages are attributed from it")
+    parser.add_argument("--openrouter-key", default="Laptop v3",
+                        help="api_key_name in the CSV that carries eval traffic "
+                             "(default: 'Laptop v3')")
     parser.add_argument("--check", action="store_true",
                         help="Verify docs/data matches the JSONL; exit 1 if stale")
     args = parser.parse_args(argv)
@@ -524,28 +759,105 @@ def main_with_args(argv: list[str]) -> int:
         print(f"Site data is current ({len(current)} runs).")
         return 0
 
+    costs = None
+    if args.openrouter_csv:
+        costs = load_openrouter_costs(args.openrouter_csv, records, args.openrouter_key)
+        print(f"OpenRouter costs attributed from {args.openrouter_csv.name}: "
+              f"{costs['covered_runs']}/{costs['total_runs']} runs covered, "
+              f"${costs['totals']['cost_total_usd']:.4f} total.")
+
     runs_dir = args.out / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
     best_values: dict[str, float] = {}
+    surface_best: dict[tuple[str, str], float] = {}
     for i, record in enumerate(records, start=1):
         headline = headline_score(record)
         if headline:
             task = record.get("task", "")
-            current = best_values.get(task)
-            if current is None or headline["value"] > current:
-                best_values[task] = headline["value"]
+            best_values[task] = max(headline["value"],
+                                    best_values.get(task, float("-inf")))
+            key = (task, _sample_key(record))
+            surface_best[key] = max(headline["value"],
+                                    surface_best.get(key, float("-inf")))
     summaries = []
     for index, record in enumerate(records, start=1):
         (runs_dir / f"{index:03d}.json").write_text(
             json.dumps(record, indent=1), encoding="utf-8")
-        summaries.append(summarize(record, index, best_values))
+        summary = summarize(record, index, best_values, surface_best)
+        if costs:
+            summary["cost"] = costs["per_run"].get(index, {"covered": False})
+        summaries.append(summary)
     (args.out / "index.json").write_text(
         json.dumps(summaries, indent=1), encoding="utf-8")
+    meta = build_meta(records, args.jsonl, args.out)
+    if costs:
+        meta["costs"] = costs
     (args.out / "meta.json").write_text(
-        json.dumps(build_meta(records, args.jsonl, args.out), indent=1),
-        encoding="utf-8")
-    print(f"Site data rebuilt: {len(records)} records -> {args.out}")
+        json.dumps(meta, indent=1), encoding="utf-8")
+    (args.out / "trends.json").write_text(
+        json.dumps(build_trends(records, summaries), indent=1), encoding="utf-8")
+    prompts = build_prompts()
+    (args.out / "prompts.json").write_text(
+        json.dumps(prompts, indent=1), encoding="utf-8")
+    print(f"Site data rebuilt: {len(records)} records -> {args.out} "
+          f"({len(prompts)} prompts, {len(meta.get('surfaces', []))} surfaces)")
     return 0
+
+
+def build_trends(records: list[dict], summaries: list[dict]) -> dict:
+    """Per-task series for the site's trend charts (issue #1 display).
+
+    One entry per run: headline value + label, cost, prompt(s), model, the
+    same-surface key, and per-run failure-mode counts (subtype runs) so the
+    frontend can draw trend lines, the cost-vs-quality scatter, and the
+    failure-mode stacked bars from ONE payload.
+    """
+    by_task: dict[str, list[dict]] = {}
+    for i, (record, summary) in enumerate(zip(records, summaries), start=1):
+        task = record.get("task", "")
+        headline = summary.get("headline") or {}
+        value = headline.get("value")
+        if not isinstance(value, (int, float)):
+            continue
+        entry = {
+            "id": i,
+            "experiment_name": record.get("experiment_name", ""),
+            "timestamp": record.get("timestamp"),
+            "model": record.get("model", ""),
+            "prompts": prompt_string(record),
+            "headline_value": round(float(value), 4),
+            "headline_label": headline.get("label", ""),
+            "cost_total_usd": summary.get("cost_total_usd"),
+            "n_rows": record.get("n_rows"),
+            "seed": summary.get("seed"),
+            "sample_key": summary.get("sample_key"),
+        }
+        scores = record.get("scores") or {}
+        if task == "subtype_classification":
+            entry["mode_counts"] = (scores.get("sorter") or {}).get(
+                "failure_insights", {}).get("mode_counts")
+        elif task == "chained_sorter_extractor":
+            entry["ablation"] = scores.get("ablation")
+        by_task.setdefault(task, []).append(entry)
+    return {"tasks": by_task}
+
+
+def build_prompts() -> dict:
+    """Emit every registered prompt version's full text (issue #1 prompt diff
+    viewer). Versions whose text can't be resolved are skipped."""
+    try:
+        from src.prompts import PROMPT_VERSIONS, get_prompt
+    except ImportError:  # pragma: no cover
+        return {}
+    out: dict[str, str] = {}
+    for version in PROMPT_VERSIONS:
+        try:
+            text = get_prompt(version)
+        except KeyError:
+            continue
+        if isinstance(text, str) and text.strip():
+            out[version] = text
+    return out
 
 
 if __name__ == "__main__":

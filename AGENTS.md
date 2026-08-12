@@ -67,6 +67,11 @@ python scripts/eval/run_chained_eval.py --dataset mailroom-cuad-contracts \
     --sorter-prompt-version sorter_v5 --extractor-prompt-version contracts_specialist_v11 \
     --manifest data/manifests/chained_5.jsonl                      # sorter -> extractor
 python scripts/eval/run_chained_eval.py ... --handoff-scope none   # legacy handoff (no subtype cue)
+python scripts/eval/run_chained_eval.py ... --handoff-scope ground_truth  # error-propagation ablation:
+                            # specialist ALSO runs with the GT-subtype handoff; scores.ablation
+                            # splits sorter routing loss from specialist error
+python scripts/eval/run_model_matrix.py --task subtype --models qwen/qwen3.7-flash,deepseek/deepseek-v4-flash \
+                            --prompts sorter_v5,sorter_v6 --sample 10 --seed 42  # cross-model matrix
 python scripts/eval/run_subtype_eval.py --dataset mailroom-cuad-contracts-full \
     --stratified 200 --seed 42 --sorter-prompt-version sorter_v5   # sorter-only, even across classes
 python scripts/eval/evaluate_prompt_version.py --dataset mailroom-cuad-contracts \
@@ -81,8 +86,10 @@ python scripts/eval/run_langfuse_extraction_eval.py --prompt-version contracts_s
 python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_v6
 
 # Site data (derived from the experiment log; never hand-edit docs/data)
-python scripts/site/build_site.py          # regenerate docs/data/
+python scripts/site/build_site.py          # regenerate docs/data/ (index, meta, runs/, trends.json, prompts.json)
 python scripts/site/build_site.py --check  # verify it is current
+# Note: docs/assets/site.js + index.html are HAND-maintained (trend charts,
+# cost-vs-quality scatter, failure-mode stacked bars, #/prompts diff view).
 
 # Reporting (all offline except the two Braintrust fetchers)
 python scripts/reporting/report_generator.py --experiment <name>        # fetches Braintrust

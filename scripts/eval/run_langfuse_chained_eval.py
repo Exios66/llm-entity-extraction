@@ -109,7 +109,7 @@ def main_with_args(argv: list[str]) -> int:
                         help="Experiment name (default: {model-slug}_{sorter}+{extractor}_chained_langfuse)")
     parser.add_argument("--manifest", type=Path, default=Path("data/manifests/chained_langfuse.jsonl"),
                         help="JSONL checkpoint manifest for resuming an interrupted run")
-    parser.add_argument("--handoff-scope", choices=("subtype", "none"), default="subtype",
+    parser.add_argument("--handoff-scope", choices=("subtype", "none", "ground_truth"), default="subtype",
                         help="Specialist handoff scope: 'subtype' (default) appends the "
                              "PREDICTED subtype's CUAD field-group cue to the extractor "
                              "context; 'none' reproduces the legacy handoff line only")
@@ -284,12 +284,13 @@ def main_with_args(argv: list[str]) -> int:
                     f"contract_subtype={sorter_subtype}. Extract this contract's fields "
                     f"accordingly, ensuring every clause of this agreement family is captured."
                 )
-                if args.handoff_scope == "subtype":
+                if args.handoff_scope in ("subtype", "ground_truth"):
                     cue = build_subtype_handoff(sorter_subtype)
                     if cue:
                         specialist.handoff_context += f"\n\n{cue}"
                 try:
                     predicted = specialist.extract(doc_text)
+
                 except Exception as exc:  # noqa: BLE001
                     print(f"ERROR {filename}: {type(exc).__name__}: {exc}", file=sys.stderr)
                     composite = {
@@ -355,6 +356,51 @@ def main_with_args(argv: list[str]) -> int:
                         "truncated": bool(specialist._last_truncated),
                     },
                 }
+
+                # ---- Issue #1: error-propagation ablation -------------------
+                # ground_truth scope: same doc, same model, but the specialist is
+                # cued with the GROUND-TRUTH subtype — the score gap vs the
+                # predicted-handoff pass isolates sorter routing error from
+                # specialist error.
+                if args.handoff_scope == "ground_truth":
+                    gt_specialist = ContractsSpecialist(
+                        model=args.model, api_key=openrouter_key,
+                        prompt_version=args.extractor_prompt_version,
+                        callbacks=[specialist_handle.handler] if specialist_handle.handler else None)
+                    gt_specialist._max_input_chars = args.max_input_chars
+                    gt_specialist._max_tokens = args.max_tokens
+                    gt_specialist._reasoning_effort = args.reasoning_effort
+                    gt_specialist.handoff_context = (
+                        f"Sorter classification: doc_type={sorter_doc_type} "
+                        f"contract_subtype={expected_subtype}. Extract this contract's fields "
+                        f"accordingly, ensuring every clause of this agreement family is captured."
+                    )
+                    gt_cue = build_subtype_handoff(expected_subtype)
+                    if gt_cue:
+                        gt_specialist.handoff_context += f"\n\n{gt_cue}"
+                    try:
+                        gt_predicted = gt_specialist.extract(doc_text)
+                        gt_result = score_extraction("contract", field_types, gt_predicted,
+                                                     expected_fields, doc_text=doc_text)
+                        gt_populated = sum(
+                            1 for k, v in expected_fields.items()
+                            if gt_predicted.get(k) not in (None, "", []))
+                        gt_presence, _ = score_category_presence(
+                            gt_predicted, input_data.get("expected_presence") or {}, field_types)
+                        composite["extractor_gt"] = {
+                            "handoff_subtype": expected_subtype,
+                            "overall_score": gt_result.overall_score or 0.0,
+                            "field_presence": (gt_populated / len(expected_fields)
+                                               if expected_fields else 0.0),
+                            "category_presence": gt_presence,
+                            "overall_verified_precision": gt_result.overall_verified_precision or 0.0,
+                            "ambiguous_fields": gt_result.ambiguous_fields,
+                        }
+                    except Exception as exc:  # noqa: BLE001
+                        composite["extractor_gt"] = {
+                            "handoff_subtype": expected_subtype,
+                            "overall_score": 0.0, "category_presence": 0.0,
+                            "error": str(exc)}
 
                 specialist_handle.set_output({
                     "overall_score": composite["extractor"]["overall_score"],

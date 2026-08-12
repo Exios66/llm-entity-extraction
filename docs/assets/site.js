@@ -65,7 +65,8 @@ function ciText(run) {
   const ci = run.ci95;
   if (!ci) return "";
   const n = run.n_rows;
-  return `<span class="hl-sample faint mono" title="Wilson 95% score interval — width shrinks with sample size">` +
+  const src = ci.source === "wilson" ? "Wilson 95% interval" : "bootstrap 95% CI (percentile, 2000 resamples)";
+  return `<span class="hl-sample faint mono" title="${esc(src)} — width shrinks with sample size">` +
     `n=${fmt.int(n)} · 95% CI ${(ci.lo * 100).toFixed(1)}–${(ci.hi * 100).toFixed(1)}%</span>`;
 }
 
@@ -123,17 +124,25 @@ function headlineCell(h, run) {
   </span>`;
 }
 
-/* Δ vs best — colored only when statistically significant (95%). */
+/* Δ vs best — colored only when statistically significant at 95% AND the two
+ * runs share the same evaluation surface (dataset fingerprint + seed + sample
+ * size). The backend already computes delta_best_pp against the same-surface
+ * best; this cell additionally refuses to color across different surfaces. */
 function deltaCell(run, bestRun) {
-  if (run.delta_best_pp == null) return '<span class="faint">—</span>';
+  if (run.delta_best_pp == null) {
+    if (bestRun && run.sample_key && run.sample_key !== bestRun.sample_key) {
+      return `<span class="delta ns" title="No same-surface comparison: this run's sample (${esc(run.sample_key)}) differs from the best run's (${esc(bestRun.sample_key)}). Deltas across different samples are not meaningful.">≈ Δ surface</span>`;
+    }
+    return '<span class="faint">—</span>';
+  }
   if (run.delta_best_pp === 0) return '<span class="delta zero">best</span>';
-  const se = bestRun ? pooledSEpp(run, bestRun) : null;
+  const se = bestRun && bestRun.sample_key === run.sample_key ? pooledSEpp(run, bestRun) : null;
   const d = run.delta_best_pp;
   const label = `${d > 0 ? "+" : ""}${d.toFixed(1)}pp`;
   if (se != null && Math.abs(d) < 1.96 * se) {
     return `<span class="delta ns" title="Difference ${label} is NOT statistically significant at 95% (two-proportion test): n=${fmt.int(run.n_rows)} vs ${fmt.int(bestRun.n_rows)} — CI overlap">≈ ${label}</span>`;
   }
-  return `<span class="delta ${d > 0 ? "up" : "down"}" title="Statistically significant vs best (two-proportion z-test, 95%): n=${fmt.int(run.n_rows)} vs ${fmt.int(bestRun?.n_rows ?? "—")}">${label}</span>`;
+  return `<span class="delta ${d > 0 ? "up" : "down"}" title="Statistically significant vs best on the SAME sample surface (two-proportion z-test, 95%): n=${fmt.int(run.n_rows)} vs ${fmt.int(bestRun?.n_rows ?? "—")}">${label}</span>`;
 }
 
 /* ---------- routing ---------- */
@@ -151,6 +160,7 @@ function parseHash() {
   if (m) return { view: "run", id: Number(m[1]) };
   m = window.location.hash.match(/^#\/(task|prompt|model)\/(.+)/);
   if (m) return { view: "group", kind: m[1], key: decodeURIComponent(m[2]) };
+  if (window.location.hash.match(/^#\/prompts/)) return { view: "prompts" };
   return { view: "index" };
 }
 
@@ -159,6 +169,7 @@ async function route() {
   if (r.view === "doc") await renderDoc(r.id, r.doc);
   else if (r.view === "run") await renderRun(r.id);
   else if (r.view === "group") await renderGroup(r.kind, r.key);
+  else if (r.view === "prompts") await renderPrompts();
   else await renderIndex();
 }
 
@@ -192,6 +203,15 @@ function statCards() {
     { k: "Models", v: fmt.int(Object.keys(m.models || {}).length),
       d: Object.keys(m.models || {}).join(", ") },
   ];
+  const costs = m.costs;
+  if (costs) {
+    cards.push({
+      k: "Cumulative cost (OpenRouter)",
+      v: `$${costs.totals.cost_total_usd.toFixed(4)}`,
+      d: `${costs.covered_runs}/${costs.total_runs} runs in export window · ${fmt.int(costs.totals.calls.chat)} chat + ${fmt.int(costs.totals.calls.embeddings)} embedding calls`,
+      note: `activity export ${costs.export.start} → ${costs.export.end} UTC (key ${costs.api_key})`,
+    });
+  }
   for (const task of Object.keys(aggs).sort()) {
     const a = aggs[task];
     cards.push({
@@ -261,11 +281,34 @@ function scoringCard() {
           size) are directly comparable.
         </div>
         ${tasks}
+        <h3>Cost accounting</h3>
+        ${costAccountingNote()}
         <p class="soft" style="margin-top:12px">Full formula-level reference:
           <a href="${esc(refs.scoring_md || "")}" target="_blank" rel="noopener">SCORING.md</a> ·
           <a href="${esc(refs.agents_md || "")}" target="_blank" rel="noopener">AGENTS.md scoring model</a></p>
       </div>
     </details>
+  </div>`;
+}
+
+function costAccountingNote() {
+  const c = state.meta.costs;
+  if (!c) return `<div class="note">No OpenRouter activity export ingested — rebuild with
+    <span class="mono">build_site.py --openrouter-csv &lt;activity.csv&gt;</span> to attach real billed costs.</div>`;
+  const perTask = Object.entries(c.per_task)
+    .map(([t, v]) => `<span class="mono">${esc(t.replace(/_/g, " "))}</span> $${v.toFixed(4)}`).join(" · ");
+  return `<div class="note">
+    Costs are the <strong>actual billed totals from the OpenRouter activity log</strong>
+    (<span class="mono">${esc(c.source)}</span>, key <span class="mono">${esc(c.api_key)}</span>), not the
+    $0.00 usage fields the eval runners recorded (Langfuse/OpenRouter billing isn't captured per-row).
+    Every generation under that key for the eval models (qwen/qwen3.7-flash, text-embedding-3-small) is
+    attributed to the run whose completion timestamp is the next boundary after the generation time.
+    The export covers <strong>${c.export.start} → ${c.export.end} UTC</strong> —
+    ${c.covered_runs} of ${c.total_runs} runs; runs outside the window show “—” (export a fresh
+    activity CSV and rerun <span class="mono">build_site.py --openrouter-csv</span> to extend coverage).
+    Cumulative: <strong>$${c.totals.cost_total_usd.toFixed(4)}</strong> across
+    ${fmt.int(c.totals.calls.chat)} chat + ${fmt.int(c.totals.calls.embeddings)} embedding calls
+    (${fmt.tokens(c.totals.tokens)} tokens). Per task: ${perTask}.
   </div>`;
 }
 
@@ -283,6 +326,23 @@ function bestRunFor(task) {
   return state.index.find((r) => r.id === b.run_id) || null;
 }
 
+/* OpenRouter-attributed cost cell for the runs table / detail header. */
+function costCell(run) {
+  const c = run.cost;
+  if (!c || !c.covered) {
+    const exp = state.meta.costs?.export;
+    const tip = exp
+      ? `No generations for this run in the exported OpenRouter activity window (${exp.start} → ${exp.end} UTC) — export a fresh activity CSV and rebuild`
+      : "No OpenRouter activity data";
+    return `<span class="faint" title="${esc(tip)}">—</span>`;
+  }
+  const tip = `${fmt.int(c.calls.total)} calls in the OpenRouter activity log (${fmt.int(c.calls.chat)} chat + ${fmt.int(c.calls.embeddings)} embeddings)`;
+  return `<span class="mono" title="${esc(tip)}">
+    $${c.cost_total_usd.toFixed(4)}
+    <div class="faint" style="font-size:11px">$${c.cost_avg_per_doc_usd.toFixed(4)}/doc · ${fmt.int(c.calls.total)} calls</div>
+  </span>`;
+}
+
 function indexTable(rows) {
   if (!rows.length) return '<div class="empty">No runs match the current filters.</div>';
   const key = state.sortKey;
@@ -290,6 +350,7 @@ function indexTable(rows) {
   const sorted = [...rows].sort((a, b) => {
     const va = a[key], vb = b[key];
     if (key === "headline") return ((va?.value ?? -1) - (vb?.value ?? -1)) * dir;
+    if (key === "cost") return ((a.cost?.cost_total_usd ?? -1) - (b.cost?.cost_total_usd ?? -1)) * dir;
     if (key === "total_tokens" || key === "n_rows" || key === "n_error" || key === "delta_best_pp")
       return ((va ?? -1) - (vb ?? -1)) * dir;
     return String(va ?? "").localeCompare(String(vb ?? "")) * dir;
@@ -299,7 +360,7 @@ function indexTable(rows) {
     ["Model", "model"], ["Prompt(s)", "prompts"], ["Score", "headline"],
     ["Δ vs best", "delta_best_pp", true], ["Rows", "n_rows", true],
     ["Errors", "n_error", true], ["Tokens", "total_tokens", true],
-    ["Run at", "timestamp"],
+    ["Cost", "cost", true], ["Run at", "timestamp"],
   ];
   const arrow = (k) => (key === k ? `<span class="arrow">${state.sortDir === "asc" ? "▲" : "▼"}</span>` : "");
   const head = cols
@@ -320,6 +381,7 @@ function indexTable(rows) {
         <td class="num">${fmt.int(r.n_rows)}</td>
         <td class="num">${err > 0 ? `<span class="delta down">${err}</span>` : `<span class="faint">0</span>`}</td>
         <td class="num">${fmt.tokens(r.total_tokens)}</td>
+        <td class="num" style="white-space:nowrap">${costCell(r)}</td>
         <td class="num faint" style="white-space:nowrap">${fmt.date(r.timestamp)}</td>
       </tr>`;
     })
@@ -367,7 +429,7 @@ function bindFilters() {
       state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
     } else {
       state.sortKey = k;
-      state.sortDir = ["id", "headline", "delta_best_pp", "n_rows", "n_error", "total_tokens"].includes(k)
+      state.sortDir = ["id", "headline", "delta_best_pp", "n_rows", "n_error", "total_tokens", "cost"].includes(k)
         ? "desc" : "asc";
     }
     applyFilters();
@@ -436,6 +498,8 @@ function groupStats(kind, key, runs) {
   const best = values.length ? Math.max(...values) : null;
   const worst = values.length ? Math.min(...values) : null;
   const bestRun = runs.find((r) => r.headline?.value === best);
+  const covered = runs.filter((r) => r.cost?.covered);
+  const costTotal = covered.reduce((s, r) => s + (r.cost.cost_total_usd || 0), 0);
   const cards = [
     { k: "Runs", v: fmt.int(runs.length) },
     { k: "Documents", v: fmt.int(docs) },
@@ -444,6 +508,13 @@ function groupStats(kind, key, runs) {
     { k: "Median", v: fmt.pct(median) },
     { k: "Worst", v: fmt.pct(worst) },
   ];
+  if (state.meta.costs) {
+    cards.push({
+      k: "Cost (covered)",
+      v: costTotal > 0 ? `$${costTotal.toFixed(4)}` : "—",
+      d: `${covered.length}/${runs.length} runs in export window`,
+    });
+  }
   return `<div class="stats">${cards.map((c) =>
     `<div class="stat"><div class="k">${esc(c.k)}</div><div class="v">${c.href ? `<a href="${c.href}">${esc(c.v)}</a>` : esc(c.v)}</div></div>`).join("")}</div>`;
 }
@@ -488,6 +559,21 @@ function groupByTable(kind, runs) {
     </div></div>`;
 }
 
+async function issue1Charts(kind, key) {
+  /* Issue #1 display: trend line, cost-vs-quality scatter, failure-mode
+   * stacked bars — only on the per-task view. */
+  if (kind !== "task") return "";
+  if (!state.trends) {
+    try { state.trends = await fetchJson("data/trends.json"); }
+    catch (e) { state.trends = { tasks: {} }; }
+  }
+  const series = (state.trends.tasks || {})[key] || [];
+  if (!series.length) return "";
+  const parts = [trendChartHtml(series, key), scatterChartHtml(series)];
+  if (key === "subtype_classification") parts.push(failureModeBarsHtml(series));
+  return parts.join("");
+}
+
 async function renderGroup(kind, key) {
   if (!state.meta) {
     const [meta, index] = await Promise.all([
@@ -507,6 +593,7 @@ async function renderGroup(kind, key) {
     ${groupHeader(kind, key)}
     ${groupStats(kind, key, runs)}
     ${groupByTable(kind, runs)}
+    ${await issue1Charts(kind, key)}
     <div class="card"><h2>Runs</h2>
       <div class="filters">
         <input type="search" id="q" placeholder="Filter these runs…" />
@@ -712,6 +799,7 @@ function confusionMatrix(cm) {
 
 async function renderRun(id) {
   const run = await fetchJson(`data/runs/${String(id).padStart(3, "0")}.json`);
+  const summary = state.index.find((r) => r.id === id) || null;
   const task = run.task;
   const tokens = run.tokens || {};
   const total = tokens.total || tokens;
@@ -746,6 +834,38 @@ async function renderRun(id) {
   sections.push(`<div class="score-grid">${cards.join("")}</div>`);
   sections.push(compositionCard(run));
 
+  /* Issue #1: judge-calibration tracker (extraction --judge runs) and the
+   * chained error-propagation ablation (--handoff-scope ground_truth). */
+  if (scores.judge_calibration) {
+    const jc = scores.judge_calibration;
+    const agree = jc.agree_rate == null ? "—" : fmt.pct(jc.agree_rate);
+    const lean = jc.judge_lenient > jc.judge_strict ? "judge leans LENIENT"
+      : jc.judge_strict > jc.judge_lenient ? "judge leans STRICT" : "no lean";
+    sections.push(kvCard("Judge calibration (issue #1)", `
+      <table class="kv">${kvRowsTyped({
+        "rows judged": jc.n_judged,
+        "rows scored": jc.n_scored,
+        "agree rate (judge vs deterministic)": agree,
+        "judge strict (det strong, judge inaccurate)": jc.judge_strict,
+        "judge lenient (det weak, judge accurate)": jc.judge_lenient,
+        lean,
+        "bands": `strong ≥ ${jc.bands?.strong_ge} · weak ≤ ${jc.bands?.weak_le}`,
+        "judgments file": jc.judgments_file,
+      })}</table>
+      <div class="note">Deterministic-vs-LLM-judge agreement over the rows the judge actually reviewed (the ambiguous band). A systematic lean means trusting the judge more broadly needs calibration, not confidence.</div>`));
+  }
+  if (scores.ablation) {
+    const ab = scores.ablation;
+    sections.push(kvCard("Error-propagation ablation (issue #1)", `
+      <table class="kv">${kvRowsTyped({
+        "extractor score — predicted-subtype handoff": ab.predicted_handoff_overall,
+        "extractor score — ground-truth-subtype handoff": ab.ground_truth_handoff_overall,
+        "sorter routing loss (pp)": ab.sorter_loss_pp,
+        "docs compared": ab.n_docs,
+      })}</table>
+      <div class="note">Same documents, same model/prompt — only the subtype handoff differs. The gap is the sorter's routing error; the rest of the chained loss is the specialist's.</div>`));
+  }
+
   sections.push(kvCard("Run metadata", `
     <table class="kv">${kvRowsTyped({
       timestamp: run.timestamp,
@@ -764,6 +884,18 @@ async function renderRun(id) {
   sections.push(kvCard("Parameters", `<table class="kv">${kvRowsTyped(run.parameters)}</table>`));
 
   const costZero = (total.cost_total_usd || 0) === 0;
+  const runCost = summary?.cost;
+  const costBlock = runCost?.covered
+    ? `<div class="note"><strong>OpenRouter billing (from activity log ${esc(state.meta.costs?.source || "")}):</strong>
+        total <strong>$${runCost.cost_total_usd.toFixed(4)}</strong> · avg <strong>$${runCost.cost_avg_per_doc_usd.toFixed(4)}/document</strong>
+        · avg ${fmt.int(runCost.tokens_avg_per_doc)} tokens/document · ${fmt.int(runCost.calls.total)} calls
+        (${fmt.int(runCost.calls.chat)} chat + ${fmt.int(runCost.calls.embeddings)} embeddings;
+        ${fmt.int(runCost.tokens.prompt)} prompt + ${fmt.int(runCost.tokens.completion)} completion tokens).</div>`
+    : state.meta.costs
+      ? `<div class="note faint">No generations for this run in the exported OpenRouter activity window
+         (${esc(state.meta.costs.export.start)} → ${esc(state.meta.costs.export.end)} UTC) — export a fresh activity CSV
+         and rerun <span class="mono">build_site.py --openrouter-csv</span> to bill this run.</div>`
+      : "";
   sections.push(kvCard("Tokens & cost", `
     <table class="kv">${kvRowsTyped({
       "prompt tokens": total.prompt_tokens,
@@ -773,7 +905,8 @@ async function renderRun(id) {
       "total cost (usd)": total.cost_total_usd,
       "rows with usage": total.rows_with_usage,
     })}</table>
-    ${costZero ? `<div class="note">Costs are $0.00 — rows carried no OpenRouter usage billing (manifest-replayed and Langfuse-traced rows are unpriced by design; see SCORING.md §7).</div>` : ""}`));
+    ${costZero && !runCost?.covered ? `<div class="note">Costs are $0.00 — rows carried no OpenRouter usage billing (manifest-replayed and Langfuse-traced rows are unpriced by design; see SCORING.md §7). Real billed costs come from the OpenRouter activity log.</div>` : ""}
+    ${costBlock}`));
 
   if (task === "contract_entity_extraction") {
     sections.push(kvCard("Per-field content scores", `
@@ -825,7 +958,6 @@ async function renderRun(id) {
 
   sections.push(kvCard(`Per-document results (${fmt.int(run.n_rows)})`, resultsTable(run, id)));
 
-  const summary = state.index.find((r) => r.id === id) || null;
   const headline = headlineCell(summary?.headline, summary);
   $("#view").innerHTML = `
     <a class="back" href="#/">← All runs</a>
@@ -1023,6 +1155,198 @@ async function renderDoc(runId, docIndex) {
     </div>
     ${sections.join("")}`;
   window.scrollTo(0, 0);
+}
+
+/* ---------- issue #1: prompt diff viewer ---------- */
+
+function lineDiff(aText, bText) {
+  /* Classic LCS line diff — returns rows of {kind: add|del|same, a, b}. */
+  const a = aText.split("\n"), b = bText.split("\n");
+  const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--)
+    for (let j = b.length - 1; j >= 0; j--)
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const rows = [];
+  let i = 0, j = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { rows.push({ kind: "same", a: a[i], b: b[j] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { rows.push({ kind: "del", a: a[i] }); i++; }
+    else { rows.push({ kind: "add", b: b[j] }); j++; }
+  }
+  while (i < a.length) { rows.push({ kind: "del", a: a[i] }); i++; }
+  while (j < b.length) { rows.push({ kind: "add", b: b[j] }); j++; }
+  return rows;
+}
+
+function promptDiffHtml(aVer, bVer, prompts) {
+  if (!aVer || !bVer || aVer === bVer) return "";
+  const rows = lineDiff(prompts[aVer] || "", prompts[bVer] || "");
+  const MAX = 4000;
+  const visible = rows.length > MAX ? rows.slice(0, MAX) : rows;
+  const body = visible
+    .map((r) => {
+      const no = r.kind === "del" ? "-" : r.kind === "add" ? "+" : " ";
+      const text = r.kind === "del" ? r.a : r.b;
+      return `<div class="diff-line ${r.kind}"><span class="diff-mark">${no}</span><span class="diff-text">${esc(text || " ")}</span></div>`;
+    })
+    .join("");
+  return `<div class="diff">${body}
+    ${rows.length > MAX ? `<div class="faint" style="padding:6px">… ${rows.length - MAX} more lines not shown</div>` : ""}</div>`;
+}
+
+function promptScoreDelta(aVer, bVer) {
+  /* Best headline per prompt version + same-surface note. */
+  const pick = (v) => {
+    const rs = state.index.filter((r) => r.prompts === v && r.headline?.value != null);
+    if (!rs.length) return null;
+    return rs.sort((x, y) => y.headline.value - x.headline.value)[0];
+  };
+  const ra = pick(aVer), rb = pick(bVer);
+  if (!ra || !rb) return "";
+  const same = ra.sample_key === rb.sample_key;
+  const d = (rb.headline.value - ra.headline.value) * 100;
+  const cls = !same ? "ns" : Math.abs(d) < 1.96 * (pooledSEpp(ra, rb) || 0) ? "ns" : d > 0 ? "up" : "down";
+  return `<div class="note">Best run with <b>${esc(aVer)}</b>: <a href="#/run/${ra.id}">#${ra.id}</a> ${fmt.pct(ra.headline.value)}
+    · best with <b>${esc(bVer)}</b>: <a href="#/run/${rb.id}">#${rb.id}</a> ${fmt.pct(rb.headline.value)}
+    → Δ ${d >= 0 ? "+" : ""}${d.toFixed(1)}pp
+    <span class="delta ${cls}">${same ? (Math.abs(d) < 1.96 * (pooledSEpp(ra, rb) || 0) ? "not significant" : "significant") : "different sample surfaces — not comparable"}</span>
+    <span class="faint" style="font-size:11px">(${esc(ra.sample_key)})</span></div>`;
+}
+
+async function renderPrompts() {
+  if (!state.prompts) {
+    state.prompts = await fetchJson("data/prompts.json");
+  }
+  const versions = Object.keys(state.prompts).sort();
+  const pair = state.promptPair || [versions[0], versions[1]];
+  $("#view").innerHTML = `
+    <a class="back" href="#/">← All runs</a>
+    <div class="detail-head"><h2>Prompt diff viewer</h2>
+      <div class="meta-line">side-by-side what changed between two prompt versions — and what it bought you</div></div>
+    <div class="card">
+      <div class="filters">
+        <label class="soft">A: <select id="pd-a">${versions.map((v) => `<option ${v === pair[0] ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></label>
+        <label class="soft">B: <select id="pd-b">${versions.map((v) => `<option ${v === pair[1] ? "selected" : ""}>${esc(v)}</option>`).join("")}</select></label>
+      </div>
+      <div id="pd-delta"></div>
+      <div id="pd-diff"></div>
+    </div>`;
+  const render = () => {
+    const a = $("#pd-a").value, b = $("#pd-b").value;
+    state.promptPair = [a, b];
+    $("#pd-delta").innerHTML = promptScoreDelta(a, b);
+    $("#pd-diff").innerHTML = promptDiffHtml(a, b, state.prompts);
+  };
+  $("#pd-a").addEventListener("change", render);
+  $("#pd-b").addEventListener("change", render);
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- issue #1: SVG charts (trend / scatter / failure-mode stacks) ---------- */
+
+function svgChart(opts) {
+  const { w = 860, h = 260, series, xLabel, yLabel, valueOf, xOf, colorOf, yMax = 1 } = opts;
+  const pad = { l: 46, r: 14, t: 14, b: 34 };
+  const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+  const all = series.flatMap((s) => s.points);
+  const xMax = Math.max(1, ...all.map((p) => xOf(p)));
+  const px = (x) => pad.l + (x / xMax) * iw;
+  const py = (y) => pad.t + (1 - Math.min(1, Math.max(0, y)) / yMax) * ih;
+  const grid = [0, 0.25, 0.5, 0.75, 1]
+    .map((g) => `<line x1="${pad.l}" y1="${py(g)}" x2="${w - pad.r}" y2="${py(g)}" class="grid"/>
+      <text x="${pad.l - 6}" y="${py(g) + 3}" class="axis">${(g * 100).toFixed(0)}%</text>`)
+    .join("");
+  const traces = series.map((s) => {
+    const pts = s.points.map((p) => `${px(xOf(p)).toFixed(1)},${py(valueOf(p)).toFixed(1)}`).join(" ");
+    const dots = s.points.map((p) =>
+      `<circle cx="${px(xOf(p)).toFixed(1)}" cy="${py(valueOf(p)).toFixed(1)}" r="3" class="dot" fill="${colorOf(p)}"><title>${esc(s.label + " · " + (p.tooltip || ""))}</title></circle>`).join("");
+    return `<polyline points="${pts}" fill="none" stroke="${colorOf(s.points[0])}" stroke-width="1.6"/>${dots}`;
+  }).join("");
+  const legend = series.map((s) =>
+    `<span class="chart-legend-item"><i style="background:${colorOf(s.points[0])}"></i>${esc(s.label)}</span>`).join("");
+  return `<div class="chart">
+    <svg viewBox="0 0 ${w} ${h}" class="chart-svg" role="img">
+      ${grid}
+      ${traces}
+      <text x="${pad.l + iw / 2}" y="${h - 6}" class="axis" text-anchor="middle">${esc(xLabel)}</text>
+      <text x="10" y="${pad.t + ih / 2}" class="axis" transform="rotate(-90 10 ${pad.t + ih / 2})" text-anchor="middle">${esc(yLabel)}</text>
+    </svg>
+    <div class="chart-legend">${legend}</div>
+  </div>`;
+}
+
+function chartColor(prompt) {
+  let h = 0;
+  for (const c of prompt) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return `hsl(${h} 65% 55%)`;
+}
+
+function trendChartHtml(series, task) {
+  /* One polyline per prompt version across runs (x = run id, y = headline). */
+  const groups = new Map();
+  for (const e of series) {
+    if (e.headline_value == null) continue;
+    if (!groups.has(e.prompts)) groups.set(e.prompts, []);
+    groups.get(e.prompts).push({ x: e.id, y: e.headline_value, tooltip: `${e.experiment_name} (run ${e.id})` });
+  }
+  const traces = [...groups.entries()]
+    .map(([prompt, points]) => ({ label: prompt, points: points.sort((a, b) => a.x - b.x), color: chartColor(prompt) }))
+    .filter((s) => s.points.length);
+  if (!traces.length) return "";
+  return `<div class="card"><h2>${esc(task.replace(/_/g, " "))} — score trend across runs</h2>
+    ${svgChart({ series: traces, xLabel: "run (chronological id)", yLabel: "headline score" })}
+    <div class="note">One line per prompt version, one point per run. Points on different sample surfaces (fingerprint/seed/size) are NOT directly comparable — check each run's sample key.</div>
+  </div>`;
+}
+
+function scatterChartHtml(series) {
+  /* Cost-vs-quality: x = total cost $, y = headline score, colored per prompt. */
+  const points = series
+    .filter((e) => e.headline_value != null && typeof e.cost_total_usd === "number")
+    .map((e) => ({
+      x: e.cost_total_usd,
+      y: e.headline_value,
+      tooltip: `${e.experiment_name} — $${e.cost_total_usd.toFixed(4)}`,
+    }));
+  if (points.length < 2) return "";
+  const byPrompt = new Map();
+  series.forEach((e) => {
+    if (e.headline_value == null || typeof e.cost_total_usd !== "number") return;
+    if (!byPrompt.has(e.prompts)) byPrompt.set(e.prompts, []);
+    byPrompt.get(e.prompts).push({ x: e.cost_total_usd, y: e.headline_value, tooltip: `${e.experiment_name} — $${e.cost_total_usd.toFixed(4)}` });
+  });
+  const traces2 = [...byPrompt.entries()].map(([prompt, pts]) => ({ label: prompt, points: pts, color: chartColor(prompt) }));
+  return `<div class="card"><h2>Cost vs quality</h2>
+    ${svgChart({ series: traces2, xLabel: "total cost (USD)", yLabel: "headline score" })}
+    <div class="note">Each point is one run: score against total billed cost (OpenRouter export). Runs with no cost attribution are omitted — rebuild with <span class="mono">--openrouter-csv</span> to fill gaps.</div>
+  </div>`;
+}
+
+function failureModeBarsHtml(series) {
+  /* Subtype runs only: stacked bars of failure_mode counts across runs. */
+  const MODES = ["function_over_form", "other_fallback", "equivalent_family", "family_confusion"];
+  const rows = series
+    .filter((e) => e.mode_counts && Object.keys(e.mode_counts).length)
+    .map((e) => ({ label: `${e.prompts} · run ${e.id}`, e }));
+  if (!rows.length) return "";
+  const MODE_COLORS = { function_over_form: "#d9a866", other_fallback: "#659099", equivalent_family: "#8fd0a0", family_confusion: "#e26863" };
+  const maxTotal = Math.max(1, ...rows.map((r) => Object.values(r.e.mode_counts).reduce((a, b) => a + (b || 0), 0)));
+  const bars = rows.map((r) => {
+    const total = Object.values(r.e.mode_counts).reduce((a, b) => a + (b || 0), 0);
+    const segs = MODES.filter((m) => (r.e.mode_counts[m] || 0) > 0)
+      .map((m) => `<div class="stack-seg" style="width:${((r.e.mode_counts[m] / maxTotal) * 100).toFixed(1)}%;background:${MODE_COLORS[m]}" title="${esc(m)}: ${r.e.mode_counts[m]}"></div>`)
+      .join("");
+    return `<div class="stack-row"><span class="stack-label">${esc(r.label)}</span>
+      <span class="stack-track"><span class="stack-fill">${segs}</span></span>
+      <span class="stack-num">${total}</span></div>`;
+  }).join("");
+  const legend = MODES.map((m) => `<span class="chart-legend-item"><i style="background:${MODE_COLORS[m]}"></i>${esc(m)}</span>`).join("");
+  return `<div class="card"><h2>Failure-mode stacked bars</h2>
+    <div class="stack">${bars}</div>
+    <div class="chart-legend">${legend}</div>
+    <div class="note">Trend of how sorter failures break down (function_over_form / other_fallback / equivalent_family / family_confusion) — did a prompt version actually shrink <i>family_confusion</i> specifically?</div>
+  </div>`;
 }
 
 /* ---------- boot ---------- */

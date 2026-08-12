@@ -235,3 +235,80 @@ def test_extraction_eval_rejects_rows_without_truth(monkeypatch, tmp_path):
                         lambda *a, **k: [dict(dataset)])
     with pytest.raises(SystemExit):
         runner.main_with_args(["--dataset", "mailroom-cuad-contracts", "--dry-run"])
+
+
+def test_judge_calibration_tracker(fake_extraction_eval, monkeypatch, tmp_path):
+    """Issue #1: --judge rows are persisted to data/judgments/<exp>.jsonl and
+    aggregated into scores.judge_calibration (judge-vs-deterministic lean)."""
+    import json as _json
+    import os
+    from pathlib import Path
+
+    import scripts.eval.run_extraction_eval as runner
+
+    # Redirect the judgments dir so the test never writes into the repo.
+    import src.experiment_log as experiment_log_mod
+    monkeypatch.setattr(experiment_log_mod, "JUDGMENTS_DIR", tmp_path / "judgments")
+
+    calls = {"correctness": 0, "completeness": 0}
+
+    def fake_correctness(self, doc_type, extracted, doc_text):
+        calls["correctness"] += 1
+        return {"extraction_correctness_label": "accurate",
+                "extraction_correctness": 1.0, "reasoning": "matches the source"}
+
+    def fake_completeness(self, doc_type, extracted, doc_text):
+        calls["completeness"] += 1
+        return {"completeness_label": "complete", "completeness": 1.0}
+
+    monkeypatch.setattr("agents.judge_agent.JudgeAgent.judge_extraction_correctness",
+                        fake_correctness)
+    monkeypatch.setattr("agents.judge_agent.JudgeAgent.judge_completeness",
+                        fake_completeness)
+
+    dataset = {
+        "input": {
+            "doc_text": "This Agreement is governed by the laws of the State of Delaware.",
+            "filename": "cuad_doc_01.txt",
+            "expected": "contract",
+            "expected_fields": {},
+        },
+        "expected": "contract",
+        "filename": "cuad_doc_01.txt",
+        "expected_output": {"doc_type": "contract", "clause_labels": CUAD_LABELS},
+        "doc_text": "This Agreement is governed by the laws of the State of Delaware.",
+        "metadata": {},
+    }
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    monkeypatch.setattr("scripts.eval.run_extraction_eval.load_braintrust_dataset",
+                        lambda *a, **k: [dict(dataset)])
+
+    rc = runner.main_with_args([
+        "--dataset", "mailroom-cuad-contracts",
+        "--prompt-version", "contracts_specialist_v2",
+        "--experiment-name", "smoke_extraction_judge",
+        "--judge",
+        "--project-id", "proj-test-0000",
+    ])
+    assert rc == 0
+
+    # The judge ran on the ambiguous row (parties entity-list F1 = 0.5 lands
+    # in the [0.5, 0.85] band -> needs_judge_review).
+    assert calls["correctness"] == 1
+    assert calls["completeness"] == 1
+
+    # Persisted calibration row.
+    jpath = tmp_path / "judgments" / "smoke_extraction_judge.jsonl"
+    assert jpath.exists()
+    row = _json.loads(jpath.read_text().splitlines()[0])
+    assert row["kind"] == "calibration"
+    assert row["correctness_label"] == "accurate"
+    assert row["deterministic_overall_score"] is not None
+
+    # Record aggregate.
+    log = Path(os.environ.get("EXPERIMENT_LOG_PATH", tmp_path / "log.jsonl"))
+    record = _json.loads(log.read_text().splitlines()[-1])
+    jc = record["scores"]["judge_calibration"]
+    assert jc["n_judged"] == 1
+    assert jc["agree_rate"] is not None
+    assert record["parameters"]["judge"] is True

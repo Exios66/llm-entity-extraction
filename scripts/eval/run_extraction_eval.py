@@ -213,6 +213,18 @@ def main_with_args(argv: list[str]) -> int:
 
     prompt_text = get_prompt(args.prompt_version)
 
+    def _persist_calibration_judgment(experiment_name: str, entry: dict) -> None:
+        """Append one judge-vs-deterministic row to data/judgments/<exp>.jsonl
+        (Issue #1 judge-calibration tracker: lets us measure whether the LLM
+        judge systematically leans lenient/strict against the deterministic
+        scorer before trusting it more broadly)."""
+        from src.experiment_log import JUDGMENTS_DIR
+
+        path = JUDGMENTS_DIR / f"{experiment_name}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, default=str) + "\n")
+
     def _run_judge(filename, doc_text, predicted, expected_fields, ambiguous) -> dict:
         from agents.judge_agent import JudgeAgent
 
@@ -370,8 +382,18 @@ def main_with_args(argv: list[str]) -> int:
         }
 
         if args.judge and result.needs_judge_review:
-            span_meta["judge"] = _run_judge(filename, doc_text, predicted,
-                                            expected_fields, result.ambiguous_fields)
+            verdict = _run_judge(filename, doc_text, predicted,
+                                 expected_fields, result.ambiguous_fields)
+            span_meta["judge"] = verdict
+            _persist_calibration_judgment(experiment_name, {
+                "kind": "calibration",
+                "filename": filename,
+                "deterministic_overall_score": round(result.overall_score or 0.0, 4),
+                "ambiguous_fields": result.ambiguous_fields,
+                "correctness_label": (verdict.get("correctness") or {}).get("extraction_correctness_label"),
+                "correctness_error": verdict.get("correctness_error"),
+                "completeness_label": (verdict.get("completeness") or {}).get("completeness_label"),
+            })
 
         if manifest:
             manifest.append({"filename": filename, "status": "completed",
@@ -555,6 +577,52 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
         values = [float(o.get(key) or 0.0) for o in outputs if o.get(key) is not None]
         return round(mean(values), 4) if values else None
 
+    def _judge_calibration(experiment_name: str) -> dict:
+        """Judge-vs-deterministic-scorer agreement over the rows the judge
+        actually reviewed (ambiguous band). Bands mirror the scoring guide:
+        strong >= 0.85, weak <= 0.5. Lean signals:
+        judge_strict = deterministic strong but judge says inaccurate,
+        judge_lenient = deterministic weak but judge says accurate."""
+        import json as _json
+        from src.experiment_log import JUDGMENTS_DIR
+
+        path = JUDGMENTS_DIR / f"{experiment_name}.jsonl"
+        if not path.exists():
+            return {}
+        rows = [_json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+                if line.strip()]
+        rows = [r for r in rows if r.get("kind") == "calibration"]
+        if not rows:
+            return {}
+        agree = judge_strict = judge_lenient = n_scored = 0
+        for r in rows:
+            label = r.get("correctness_label")
+            score = r.get("deterministic_overall_score")
+            if label is None or not isinstance(score, (int, float)):
+                continue
+            n_scored += 1
+            if score >= 0.85 and label == "accurate":
+                agree += 1
+            elif score <= 0.5 and label == "inaccurate":
+                agree += 1
+            elif score >= 0.85 and label == "inaccurate":
+                judge_strict += 1
+            elif score <= 0.5 and label == "accurate":
+                judge_lenient += 1
+        return {
+            "n_judged": len(rows),
+            "n_scored": n_scored,
+            "agree_rate": round(agree / n_scored, 4) if n_scored else None,
+            "judge_strict": judge_strict,
+            "judge_lenient": judge_lenient,
+            "bands": {"strong_ge": 0.85, "weak_le": 0.5},
+            "judgments_file": str(path),
+        }
+
+    def _bootstrap_ci(values):
+        from src.bootstrap import bootstrap_ci as _bci
+        return _bci(values)
+
     def _mean_field(outputs: list[dict], bucket: str, field: str) -> float | None:
         values = [
             float((o.get(bucket) or {}).get(field) or 0.0)
@@ -636,7 +704,11 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
         },
         "tokens": tokens_summary(list(usage_by_index.values())),
         "scores": {
+            **({"judge_calibration": _judge_calibration(experiment_name)}
+               if getattr(args, "judge", False) else {}),
             "overall_extraction_score": _mean_over(ok_outputs, "overall_score"),
+            "overall_extraction_score_ci": _bootstrap_ci(
+                [o.get("overall_score") for o in ok_outputs]),
             "field_presence": _mean_over(ok_outputs, "field_presence"),
             "schema_valid": _mean_over(ok_outputs, "schema_valid"),
             "overall_verified_precision": _mean_over(ok_outputs, "overall_verified_precision"),

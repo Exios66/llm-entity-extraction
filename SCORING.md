@@ -127,3 +127,16 @@ existing experiments without re-running.
   excluded from cost summaries.
 - `cost_usd` = mean per-row cost; `cost_total_usd` = sum. Chained runs report
   sorter/extractor/total stage rows separately.
+
+## Bootstrap confidence intervals & delta significance (issue #1)
+
+- Every run's headline carries a **95% bootstrap CI** (percentile method,
+  2000 resamples, seed 42) over its per-document scores — computed by the
+  runner and stored as `scores.*_ci`; the site falls back to resampling the
+  stored `results[]` arrays, then Wilson, for older records.
+- **A/B deltas** (same surface only) get a two-sample bootstrap CI on the
+  difference (`src/bootstrap.delta_significance`): "significant" means the CI
+  excludes zero. A 5-doc 0.94-vs-0.88 gap is a CI overlap, not a win.
+- **Same-surface rule enforced end-to-end**: a run's "Δ vs best" is only
+  computed/colored against the best run with the same dataset fingerprint +
+  seed + sample size; the site refuses to compare across surfaces.

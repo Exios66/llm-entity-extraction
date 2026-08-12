@@ -641,6 +641,10 @@ def log_experiment_to_repo(result, dataset: list[dict], args, experiment_name: s
     """
     from src.scorers import normalize_label
 
+    def _bootstrap_ci(values):
+        from src.bootstrap import bootstrap_ci as _bci
+        return _bci(values)
+
     per_class: dict[str, list[bool]] = defaultdict(list)
     failed = 0
     costs: list[float] = []
@@ -709,6 +713,8 @@ def log_experiment_to_repo(result, dataset: list[dict], args, experiment_name: s
         "tokens": tokens_summary(list(usage_by_index.values())),
         "scores": {
             "exact_match": round(exact, 4),
+            "exact_match_ci": _bootstrap_ci(
+                [1.0 if row["correct"] else 0.0 for row in per_row if row["status"] == "completed"]),
             "failure": round(failure_rate, 4),
             "cost_total_usd": round(sum(costs), 6),
             "cost_mean_usd": round(mean(costs), 6),

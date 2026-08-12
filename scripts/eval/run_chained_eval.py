@@ -112,12 +112,15 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--bt-scores", choices=("none", "overall", "full"), default="overall",
                         help="Braintrust scorer registration (default: the cross-experiment "
                              "tracker set for BOTH agents)")
-    parser.add_argument("--handoff-scope", choices=("subtype", "none"), default="subtype",
+    parser.add_argument("--handoff-scope", choices=("subtype", "none", "ground_truth"), default="subtype",
                         help="Specialist handoff scope: 'subtype' (default) appends the "
                              "PREDICTED subtype's CUAD field-group cue (expected schema "
                              "fields + applicable/never-applicable clause categories) to the "
                              "extractor context; 'none' reproduces the legacy "
-                             "doc_type+contract_subtype line only")
+                             "doc_type+contract_subtype line only; 'ground_truth' is the "
+                             "error-propagation ablation — the specialist ALSO runs with the "
+                             "GROUND-TRUTH subtype handoff on the same docs, and the "
+                             "sorter-vs-specialist loss split is recorded under scores.ablation")
     parser.add_argument("--experiment-log", type=Path, default=None,
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH)")
     parser.add_argument("--dry-run", action="store_true",
@@ -238,7 +241,7 @@ def main_with_args(argv: list[str]) -> int:
             f"contract_subtype={sorter_subtype}. Extract this contract's fields "
             f"accordingly, ensuring every clause of this agreement family is captured."
         )
-        if args.handoff_scope == "subtype":
+        if args.handoff_scope in ("subtype", "ground_truth"):
             # Cue the specialist with the field scope of the PREDICTED subtype —
             # the narrowed set of expected schema fields and applicable/never-
             # applicable CUAD clause categories for that family (a pure function
@@ -293,6 +296,51 @@ def main_with_args(argv: list[str]) -> int:
         category_presence, presence_detail = score_category_presence(
             predicted, input_data.get("expected_presence") or {}, field_types)
 
+        # ---- Issue #1: error-propagation ablation -------------------------
+        # With --handoff-scope ground_truth the specialist ALSO extracts the
+        # same document with the GROUND-TRUTH subtype handoff. Both passes use
+        # the same model/prompt/temperature; only the subtype cue differs, so
+        # the score gap isolates sorter routing error from specialist error.
+        extractor_gt: dict = {}
+        if args.handoff_scope == "ground_truth":
+            gt_specialist = ContractsSpecialist(
+                model=args.model, api_key=openrouter_key,
+                prompt_version=args.extractor_prompt_version)
+            gt_specialist._max_input_chars = args.max_input_chars
+            gt_specialist._max_tokens = args.max_tokens
+            gt_specialist._reasoning_effort = args.reasoning_effort
+            gt_specialist.handoff_context = (
+                f"Sorter classification: doc_type={sorter_doc_type} "
+                f"contract_subtype={expected_subtype}. Extract this contract's fields "
+                f"accordingly, ensuring every clause of this agreement family is captured."
+            )
+            gt_cue = build_subtype_handoff(expected_subtype)
+            if gt_cue:
+                gt_specialist.handoff_context += f"\n\n{gt_cue}"
+            try:
+                gt_predicted = gt_specialist.extract(doc_text)
+                gt_result = score_extraction("contract", field_types, gt_predicted,
+                                             expected_fields, doc_text=doc_text)
+                gt_populated = sum(
+                    1 for k, v in expected_fields.items()
+                    if gt_predicted.get(k) not in (None, "", []))
+                gt_presence, _ = score_category_presence(
+                    gt_predicted, input_data.get("expected_presence") or {}, field_types)
+                extractor_gt = {
+                    "handoff_subtype": expected_subtype,
+                    "overall_score": gt_result.overall_score or 0.0,
+                    "field_presence": (gt_populated / len(expected_fields)
+                                       if expected_fields else 0.0),
+                    "category_presence": gt_presence,
+                    "overall_verified_precision": gt_result.overall_verified_precision or 0.0,
+                    "ambiguous_fields": gt_result.ambiguous_fields,
+                    "truncated": bool(gt_specialist._last_truncated),
+                }
+            except Exception as exc:  # noqa: BLE001
+                extractor_gt = {"handoff_subtype": expected_subtype,
+                                "overall_score": 0.0, "category_presence": 0.0,
+                                "error": str(exc)}
+
         composite = {
             "sorter": {"doc_type": sorter_doc_type, "contract_subtype": sorter_subtype,
                        "expected_subtype": expected_subtype, "confidence": sorter_confidence,
@@ -315,12 +363,14 @@ def main_with_args(argv: list[str]) -> int:
                 # clauses in the omitted middle are unrecoverable).
                 "truncated": bool(specialist._last_truncated),
             },
+            **({"extractor_gt": extractor_gt} if extractor_gt else {}),
         }
 
         span_meta = {
             "filename": filename,
             "sorter": composite["sorter"],
             "extractor_scores": composite["extractor"],
+            "extractor_gt_scores": composite.get("extractor_gt") or {},
             "expected_fields": expected_fields,
             "composite": composite,
             "sorter_usage": sorter._last_usage or {},
@@ -469,6 +519,15 @@ def log_experiment_to_repo(result, scored_fields, dataset, args, experiment_name
         "category_presence": _mean("category_presence", "extractor"),
     }
 
+    # Issue #1: bootstrap CIs over the per-document scores so small-sample
+    # deltas carry their honest uncertainty (a 5-doc 0.94 vs 0.88 gap is a
+    # CI overlap, not a win).
+    from src.bootstrap import bootstrap_ci
+    sorter_stats["subtype_accuracy_ci"] = bootstrap_ci(
+        [(o.get("sorter") or {}).get("subtype_ok") for o in ok])
+    extractor_stats["overall_extraction_score_ci"] = bootstrap_ci(
+        [(o.get("extractor") or {}).get("overall_score") for o in ok])
+
     per_row = []
     for r in result.results:
         output = r.output if isinstance(r.output, dict) else {}
@@ -479,9 +538,32 @@ def log_experiment_to_repo(result, scored_fields, dataset, args, experiment_name
             "error": r.error,
             "sorter": (output.get("sorter") or {}),
             "extractor_scores": (output.get("extractor") or {}),
+            "extractor_gt_scores": (output.get("extractor_gt") or {}),
             "sorter_tokens": sorter_usage.get(index) or {},
             "extractor_tokens": extractor_usage.get(index) or {},
         })
+
+    def _ablation_stats(rows: list[dict]) -> dict:
+        """Predicted-handoff vs ground-truth-handoff extractor scores on the
+        SAME docs: the gap is the sorter's routing loss (error propagation)."""
+        gt, pred = [], []
+        for row in rows:
+            ex = row.get("extractor_scores") or {}
+            gt_row = row.get("extractor_gt_scores") or {}
+            if (isinstance(ex.get("overall_score"), (int, float))
+                    and isinstance(gt_row.get("overall_score"), (int, float))):
+                pred.append(float(ex["overall_score"]))
+                gt.append(float(gt_row["overall_score"]))
+        if not pred:
+            return {}
+        mean_pred = sum(pred) / len(pred)
+        mean_gt = sum(gt) / len(gt)
+        return {
+            "predicted_handoff_overall": round(mean_pred, 4),
+            "ground_truth_handoff_overall": round(mean_gt, 4),
+            "sorter_loss_pp": round((mean_gt - mean_pred) * 100, 2),
+            "n_docs": len(pred),
+        }
 
     record = {
         "type": "experiment",
@@ -523,7 +605,11 @@ def log_experiment_to_repo(result, scored_fields, dataset, args, experiment_name
                 list(sorter_usage.values()) + list(extractor_usage.values())
             ),
         },
-        "scores": {"sorter": sorter_stats, "extractor": extractor_stats},
+        "scores": {
+            "sorter": sorter_stats,
+            "extractor": extractor_stats,
+            **({"ablation": _ablation_stats(per_row)} if getattr(args, "handoff_scope", None) == "ground_truth" else {}),
+        },
         "n_rows": len(result.results),
         "n_ok": len(ok),
         "results": per_row,
