@@ -9,6 +9,14 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **LangChain + LangGraph skills installed for all agents** (from
+  github.com/langchain-ai/langchain-skills): `langchain-fundamentals`,
+  `langchain-python-quickstart`, `langchain-dependencies`,
+  `langchain-middleware`, `langchain-rag`, `langgraph-fundamentals`,
+  `langgraph-python-quickstart`, `langgraph-cli`, `langgraph-persistence`,
+  `langgraph-human-in-the-loop`, `ecosystem-primer`, and `eval-engineering`
+  — project skills covering the full agent/graph stack the repo builds on
+  and evaluates. AGENTS.md documents the skill set.
 - **Langfuse skill installed for all agents**: `.opencode/skills/langfuse/`
   (SKILL.md + 11 reference files, from github.com/langfuse/skills) — a
   project skill, available to every agent in this repo, granting langfuse-cli

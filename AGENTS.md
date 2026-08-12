@@ -442,17 +442,33 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   `pip install -e .` (setuptools `packages` list) and the out-of-repo import
   still works.
 
-## Langfuse skill (all agents)
+## Skills (all agents)
 
-The **langfuse** skill lives at `.opencode/skills/langfuse/` (SKILL.md +
-references/, from github.com/langfuse/skills). It is a project skill, so it
-is available to EVERY agent working in this repo — it covers CLI-based
-Langfuse API access (`npx langfuse-cli`), documentation retrieval, prompt
-migration, trace debugging, and evaluation setup. Its `allowed-tools`
-frontmatter grants the langfuse-cli + docs domains when the skill is loaded.
-The Langfuse mirror runners (`run_langfuse_*_eval.py`, `src/langfuse_tracing.py`)
-are the repo's own integration; consult the skill before touching Langfuse
-data (queries, score configs, prompts, dashboards).
+Project skills under `.opencode/skills/` are available to EVERY agent in this
+repo (opencode auto-loads `SKILL.md` per skill; `allowed-tools` frontmatter
+grants tool access when loaded):
+
+- **langfuse** (from github.com/langfuse/skills) — CLI-based Langfuse API
+  access, docs retrieval, prompt migration, trace debugging, evaluation
+  setup. Consult before touching Langfuse data (queries, score configs,
+  prompts, dashboards); the repo's own integration is the
+  `run_langfuse_*_eval.py` mirror + `src/langfuse_tracing.py`.
+- **langchain-\*** (from github.com/langchain-ai/langchain-skills) —
+  `langchain-fundamentals` (create_agent, tools, middleware),
+  `langchain-python-quickstart`, `langchain-dependencies` (version pinning),
+  `langchain-middleware` (callbacks/instrumentation/HITL), `langchain-rag`.
+- **langgraph-\*** (same upstream) — `langgraph-fundamentals` (StateGraph,
+  nodes, edges, Command/Send, streaming), `langgraph-python-quickstart`,
+  `langgraph-cli`, `langgraph-persistence` (checkpointers — llm-mailroom uses
+  SqliteSaver), `langgraph-human-in-the-loop` (review/interrupt nodes).
+- **ecosystem-primer** — how LangChain/LangGraph/LangSmith fit together.
+- **eval-engineering** — Harbor-style eval design references (task design,
+  verifier design, harness, multi-turn simulation) — complementary to this
+  repo's own deterministic eval loop.
+
+The agents under test and the llm-mailroom pipeline under evaluation are
+built on LangChain + LangGraph — invoke the matching skill before writing or
+changing any agent/graph code.
 
 ## Docs & READMEs
 
