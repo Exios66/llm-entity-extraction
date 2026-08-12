@@ -9,6 +9,13 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **Research memo on the v17→v18 contract-specialist findings**
+  (`memos/contracts_specialist_v17_v18_enhancements.md`): documents the
+  grain-vs-scope experiment — v16 fragment contract (+0.6pp ko, −2.7pp
+  overall, over-fragmentation), v17 length anchor (627 matched spans,
+  below v15), the refuted containment hypothesis (0/160 spans embedded),
+  and the adopted v18 family-fidelity catalog (ko 0.7755→0.8535 +7.8pp,
+  overall 0.9230, series best). Ships on the site's memos tab.
 - **`contracts_specialist_v18` — family-fidelity catalog (ADOPTED)**: the
   terse 26-family list in `src/prompts.py` is replaced by a CUAD-category
   catalog (1:1 mirror of the 41-category catalog, 26 obligation families)
