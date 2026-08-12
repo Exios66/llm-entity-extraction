@@ -88,6 +88,12 @@ python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_
 # Site data (derived from the experiment log; never hand-edit docs/data)
 python scripts/site/build_site.py          # regenerate docs/data/ (index, meta, runs/, trends.json, prompts.json)
 python scripts/site/build_site.py --check  # verify it is current
+node tests/assets/site_render_audit.js     # headless render audit of EVERY view (after any site.js edit)
+
+# Releases (mechanical steps automated; the commit/tag are always explicit)
+python scripts/release.py --check                     # validate state (version == changelog header, site data, tests, audit)
+python scripts/release.py --bump minor --note "<summary>"   # move [Unreleased] -> [vX.Y.Z], bump pyproject, print commands
+python scripts/release.py --bump patch --note "<summary>" --dry-run
 # Note: docs/assets/site.js + index.html are HAND-maintained (trend charts,
 # cost-vs-quality scatter, failure-mode stacked bars, #/prompts diff view).
 # Charts: log-scale cost axis, Catmull-Rom smoothing, curated palette/dashes,
@@ -215,6 +221,27 @@ markdown log is DERIVED — after every completed run:
 
 ```bash
 python scripts/reporting/render_experiment_log.py   # rebuild reports/experiment_log.md
+python scripts/site/build_site.py                   # rebuild docs/data (the GH Pages site data)
+```
+
+Then commit + push — **GitHub Pages serves `/docs` from `main`**, so the
+experiment-log site updates on every push:
+
+```bash
+git add reports/experiment_log.jsonl reports/experiment_log.md docs/data
+git commit -m "EXPERIMENT: <experiment_name>"
+git push origin main
+```
+
+**Mirror sync into llm-mailroom** (the synced copy at
+`docs/reports/experiments/experiment_log.md` + its own GH Pages sync):
+
+```bash
+cd ../llm-mailroom
+PYTHONPATH=src python -c "from legalbench.experiment_log import regenerate, default_log_path; regenerate(default_log_path())"
+git add docs/reports/experiments/experiment_log.md
+git commit -m "DOCS SYNC: experiment log re-synced"
+git push origin main
 ```
 
 Verify the record is COMPLETE before moving on:
@@ -236,31 +263,58 @@ Verify the record is COMPLETE before moving on:
 ## Release workflow (semantic versioning + tag)
 
 The changelog follows [Keep a Changelog](https://keepachangelog.com/) and
-semver; every release maps to ONE tagged commit (`vX.Y.Z`).
+semver; every release maps to ONE tagged commit (`vX.Y.Z`), and the tag must
+match the CHANGELOG header exactly. The mechanical steps are automated by
+`scripts/release.py` — the commit/tag are always explicit git commands.
 
-1. **Update `CHANGELOG.md`** — convert `## [Unreleased]` into the new
-   `## [vX.Y.Z] - <date>` section; `### Added` / `### Changed` / `### Fixed`
-   entries that name files, prompt versions, and the data-backed results that
-   motivated them (accuracy numbers, sample sizes, seeds). Add the
-   `[vX.Y.Z]:` link at the bottom. Bump per semver:
-   - major: breaking architecture/output-contract changes;
-   - minor: new features (new prompt versions, new eval runners, new
-     dataset modes);
-   - patch: bug fixes (scoring guards, prompt regressions).
-2. **Update `README.md`** after any significant structural, architectural,
-   or functional change: layout tree (new scripts), prompt version tables,
-   setup/install steps, command examples, scoring notes, test counts.
-3. **Regenerate derived artifacts** — `render_experiment_log.py` (new runs),
-   any stale reports.
-4. **Run the full suite** — `python -m pytest tests/ -q` (network-free).
-5. **Commit** — one commit covering changelog + docs + code, message
-   `vX.Y.Z: <summary>`.
-6. **Tag and push**:
+### Changelog discipline (automatic, per commit)
+
+- **Every behavior-changing commit carries its `[Unreleased]` entry in the
+  SAME commit** — `### Added` / `### Changed` / `### Fixed` bullets naming
+  files, prompt versions, and the data-backed results that motivated them
+  (accuracy numbers, sample sizes, seeds). Docs-only and derived-artifact
+  regenerations (log/site timestamps) do not need entries.
+- Structure bullets exactly like the existing history: bold lead-in,
+  backticked file/flag names, and concrete numbers where they exist.
+- Bump rules (semver): **major** = breaking architecture/output-contract
+  changes; **minor** = new features (new prompt versions, new eval runners,
+  new dataset modes, new site capabilities); **patch** = bug fixes (scoring
+  guards, prompt regressions, site display fixes).
+
+### Release steps (vX.Y.Z)
+
+1. **Update `CHANGELOG.md`** — `scripts/release.py --bump <patch|minor|major>
+   --note "<summary>"` converts the accumulated `[Unreleased]` entries into
+   `## [vX.Y.Z] - <date>`, adds the `[vX.Y.Z]:` release link, and keeps an
+   empty `[Unreleased]` placeholder for future entries. `--dry-run` previews
+   without writing; the script refuses to run on a dirty tree.
+2. **Bump `pyproject.toml`** — the script does this automatically; the
+   version MUST equal the latest CHANGELOG header (`release.py --check`
+   enforces it).
+3. **Update repository documentation when the change touches it** —
+   `README.md` (layout tree, command examples, prompt tables, the Website
+   section), `docs/README.md` (the site's own doc), `SCORING.md` (formula/
+   metric changes), and this `AGENTS.md` itself (workflow/architecture
+   changes). Never skip docs that describe the thing that changed.
+4. **Regenerate derived artifacts** — `render_experiment_log.py` (new runs)
+   + `scripts/site/build_site.py` (site data) + the headless render audit
+   (`node tests/assets/site_render_audit.js`).
+5. **Run the full suite** — `python -m pytest tests/ -q` (network-free) and
+   `python scripts/release.py --check` (version/changelog consistency, site
+   data freshness, tests, render audit).
+6. **Commit** — one commit covering changelog + docs + pyproject + derived
+   artifacts, message `vX.Y.Z: <summary>`.
+7. **Tag and push** — annotated tag matching the changelog header exactly;
+   pushing main updates the GH Pages site (`/docs` served from `main`):
    ```bash
-   git tag vX.Y.Z
+   git tag -a vX.Y.Z -m "vX.Y.Z — <summary>"
    git push origin main --tags
    ```
-7. Verify the tag exists on GitHub and the README/CHANGELOG render correctly.
+8. **Mirror sync into llm-mailroom** (synced experiment log + its docs):
+   run the llm-mailroom `legalbench.experiment_log.regenerate()` command from
+   the "After every run" section, then commit + push there.
+9. Verify the tag exists on GitHub and the README/CHANGELOG/site render
+   correctly (https://exios66.github.io/llm-entity-extraction/).
 
 ## Experiment log mechanics
 

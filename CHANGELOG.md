@@ -6,6 +6,24 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Release automation (`scripts/release.py`)**: `--bump <patch|minor|major>
+  --note "<summary>"` converts the accumulated `[Unreleased]` entries into
+  `## [vX.Y.Z] - <date>` (keeping the empty placeholder), bumps
+  `pyproject.toml` in lockstep, and prints the exact commit/tag/GH-Pages-push/
+  llm-mailroom-sync commands; `--check` validates version == changelog
+  header, site-data freshness (`build_site.py --check`), the full suite, and
+  the headless render audit; `--dry-run` previews without writing; refuses on
+  a dirty tree.
+- **AGENTS.md release workflow codified**: changelog entries land in the SAME
+  commit as every behavior-changing change ([Unreleased] discipline), docs
+  (README/docs/SCORING/AGENTS) are updated when the change touches them,
+  pyproject.toml must equal the changelog header, tags must match the header
+  exactly, and the post-run GH Pages sync (render → build_site → audit →
+  push) plus the llm-mailroom mirror sync are the expected pipeline.
+
 ## [v0.14.0] - 2026-08-11
 
 ### Added
