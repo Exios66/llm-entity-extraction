@@ -757,6 +757,11 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--openrouter-key", default="Laptop v3",
                         help="api_key_name in the CSV that carries eval traffic "
                              "(default: 'Laptop v3')")
+    parser.add_argument("--benchmarks-key", default=None,
+                        help="OpenRouter API key for the Benchmarks view (default: "
+                             "$OPENROUTER_API_KEY; benchmarks.json is written with "
+                             "available=false when absent or unreachable — the site "
+                             "still renders with a rebuild hint)")
     parser.add_argument("--check", action="store_true",
                         help="Verify docs/data matches the JSONL; exit 1 if stale")
     args = parser.parse_args(argv)
@@ -819,6 +824,8 @@ def main_with_args(argv: list[str]) -> int:
     prompts = build_prompts()
     (args.out / "prompts.json").write_text(
         json.dumps(prompts, indent=1), encoding="utf-8")
+    (args.out / "benchmarks.json").write_text(
+        json.dumps(build_benchmarks(args.benchmarks_key), indent=1), encoding="utf-8")
     print(f"Site data rebuilt: {len(records)} records -> {args.out} "
           f"({len(prompts)} prompts, {len(meta.get('surfaces', []))} surfaces)")
     return 0
@@ -861,6 +868,45 @@ def build_trends(records: list[dict], summaries: list[dict]) -> dict:
             entry["ablation"] = scores.get("ablation")
         by_task.setdefault(task, []).append(entry)
     return {"tasks": by_task}
+
+
+def build_benchmarks(api_key: str | None = None) -> dict:
+    """OpenRouter unified benchmarks (Artificial Analysis + Design Arena) for
+    the site's Benchmarks tab — model-selection evidence for anyone choosing
+    models to test in their eval pipelines.
+
+    Best-effort: needs a valid OpenRouter API key (--benchmarks-key or
+    $OPENROUTER_API_KEY); when absent/unreachable the view renders a rebuild
+    hint instead of failing the build. Citation metadata (meta.as_of,
+    source_url) is preserved per the OpenRouter skill's reporting guidance.
+    """
+    import os
+    import urllib.error
+    import urllib.request
+
+    key = api_key or os.environ.get("OPENROUTER_API_KEY")
+    if not key:
+        return {"available": False,
+                "error": "OPENROUTER_API_KEY not set — rebuild with "
+                         "--benchmarks-key or the env var to fetch live benchmarks",
+                "data": [], "meta": {"version": "v1"}}
+    url = "https://openrouter.ai/api/v1/benchmarks"
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {key}",
+        "User-Agent": "llm-entity-extraction/site-builder",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError) as exc:
+        return {"available": False, "error": str(exc)[:300],
+                "data": [], "meta": {"version": "v1"}}
+    meta = payload.get("meta") or {}
+    meta.setdefault("version", "v1")
+    print(f"Benchmarks fetched: {len(payload.get('data') or [])} rows "
+          f"(as_of {meta.get('as_of')}, source {meta.get('source')})")
+    return {"available": True, "error": None,
+            "data": payload.get("data") or [], "meta": meta}
 
 
 def build_prompts() -> dict:

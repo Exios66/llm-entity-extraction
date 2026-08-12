@@ -161,6 +161,7 @@ function parseHash() {
   m = window.location.hash.match(/^#\/(task|prompt|model)\/(.+)/);
   if (m) return { view: "group", kind: m[1], key: decodeURIComponent(m[2]) };
   if (window.location.hash.match(/^#\/prompts/)) return { view: "prompts" };
+  if (window.location.hash.match(/^#\/benchmarks/)) return { view: "benchmarks" };
   return { view: "index" };
 }
 
@@ -170,6 +171,7 @@ async function route() {
   else if (r.view === "run") await renderRun(r.id);
   else if (r.view === "group") await renderGroup(r.kind, r.key);
   else if (r.view === "prompts") await renderPrompts();
+  else if (r.view === "benchmarks") await renderBenchmarks();
   else await renderIndex();
 }
 
@@ -1584,6 +1586,129 @@ function renderNav(meta) {
   document.addEventListener("click", (ev) => {
     if (!ev.target.closest("#nav-tasks")) close();
   });
+}
+
+/* ---------- openrouter benchmarks view ---------- */
+
+async function renderBenchmarks() {
+  if (!state.benchmarks) {
+    try { state.benchmarks = await fetchJson("data/benchmarks.json"); }
+    catch (e) { state.benchmarks = { available: false, error: "benchmarks.json not built", data: [], meta: {} }; }
+  }
+  const b = state.benchmarks;
+  const meta = b.meta || {};
+  if (!b.available) {
+    $("#view").innerHTML = `
+      <a class="back" href="#/">← All runs</a>
+      <div class="detail-head"><h2>OpenRouter benchmarks</h2>
+        <div class="meta-line">model-selection evidence — Artificial Analysis + Design Arena</div></div>
+      <div class="card"><div class="body">
+        <div class="empty">Benchmarks are unavailable.<br>
+          <span class="soft">${esc(b.error || "no data")}</span></div>
+        <div class="note">Rebuild with a valid key:
+          <span class="mono">python scripts/site/build_site.py --benchmarks-key $OPENROUTER_API_KEY</span>
+          (or export <span class="mono">OPENROUTER_API_KEY</span> and rebuild).</div>
+      </div></div>`;
+    return;
+  }
+  const rows = b.data || [];
+  const aa = rows.filter((r) => r.source === "artificial-analysis");
+  const da = rows.filter((r) => r.source === "design-arena");
+  const state2 = { source: "all", task: "intelligence", q: "" };
+
+  const render = () => {
+    let aaFiltered = aa;
+    let daFiltered = da;
+    if (state2.q) {
+      const q = state2.q.toLowerCase();
+      aaFiltered = aaFiltered.filter((r) =>
+        (r.display_name + " " + r.model_permaslug).toLowerCase().includes(q));
+      daFiltered = daFiltered.filter((r) =>
+        (r.display_name + " " + (r.category || "")).toLowerCase().includes(q));
+    }
+    let html = `<a class="back" href="#/">← All runs</a>
+      <div class="detail-head"><h2>OpenRouter benchmarks</h2>
+        <div class="meta-line">model-selection evidence — Artificial Analysis + Design Arena ·
+          <span class="faint">as of ${esc(meta.as_of || "?")}</span></div></div>
+      <div class="filters">
+        <input type="search" id="bm-q" placeholder="Search models / categories…" value="${esc(state2.q)}" />
+        <select id="bm-source">
+          <option value="all"${state2.source === "all" ? " selected" : ""}>all sources</option>
+          <option value="aa"${state2.source === "aa" ? " selected" : ""}>artificial-analysis</option>
+          <option value="da"${state2.source === "da" ? " selected" : ""}>design-arena</option>
+        </select>
+        <select id="bm-task">
+          <option value="intelligence"${state2.task === "intelligence" ? " selected" : ""}>intelligence index</option>
+          <option value="coding"${state2.task === "coding" ? " selected" : ""}>coding index</option>
+          <option value="agentic"${state2.task === "agentic" ? " selected" : ""}>agentic index</option>
+        </select>
+        <span class="count">${aaFiltered.length} AA · ${daFiltered.length} DA rows</span>
+      </div>`;
+
+    if (state2.source !== "da") {
+      const byTask = (r) => r[`${state2.task}_index`];
+      const ranked = aaFiltered.filter((r) => byTask(r) != null)
+        .sort((a, b2) => byTask(b2) - byTask(a)).slice(0, 25);
+      const max = Math.max(1, ...ranked.map(byTask));
+      const barRows = ranked.map((r, i) => {
+        const v = byTask(r);
+        const price = r.pricing
+          ? `<span class="faint" style="font-size:11px">\$${r.pricing.prompt}/1M in · \$${r.pricing.completion}/1M out</span>` : "";
+        return `<div class="bm-row"><span class="bm-rank">${i + 1}</span>
+          <span class="bm-name"><b>${esc(r.display_name)}</b>
+            <span class="faint mono">${esc(r.model_permaslug)}</span> ${price}</span>
+          <span class="bm-track"><i style="width:${((v / max) * 100).toFixed(1)}%"></i></span>
+          <span class="bm-val">${v != null ? v.toFixed(1) : "—"}</span></div>`;
+      }).join("");
+      html += `<div class="card"><h2>Artificial Analysis — ${esc(state2.task)} index (top 25)</h2>
+        <div class="body">${barRows || '<div class="empty">No rows for this filter.</div>'}</div></div>`;
+    }
+    if (state2.source !== "aa") {
+      const daSorted = daFiltered.filter((r) => r.elo != null)
+        .sort((a, b2) => b2.elo - a.elo).slice(0, 50);
+      const rowsHtml = daSorted.map((r) => {
+        const ts = r.tournament_stats || {};
+        return `<tr><td class="mono"><b>${esc(r.display_name)}</b>
+          <div class="faint mono">${esc(r.model_permaslug)}</div></td>
+          <td>${esc(r.category || "—")}</td>
+          <td class="num"><b>${r.elo != null ? Math.round(r.elo) : "—"}</b></td>
+          <td class="num">${r.win_rate != null ? (r.win_rate * 100).toFixed(1) + "%" : "—"}</td>
+          <td class="num">${r.avg_generation_time_ms != null ? Math.round(r.avg_generation_time_ms) + " ms" : "—"}</td>
+          <td class="num faint">${[ts.first_place, ts.second_place, ts.third_place, ts.fourth_place]
+            .filter((v) => v != null).join(" / ") || "—"}</td></tr>`;
+      }).join("");
+      html += `<div class="card"><h2>Design Arena — ELO ranking</h2>
+        <div class="table-wrap"><table class="data"><thead><tr>
+          <th>Model</th><th>Category</th><th class="num">ELO</th><th class="num">Win rate</th>
+          <th class="num">Avg gen time</th><th class="num">1st/2nd/3rd/4th</th>
+        </tr></thead><tbody>${rowsHtml || '<tr><td colspan="6"><div class="empty">No rows for this filter.</div></td></tr>'}</tbody></table></div></div>`;
+    }
+    html += `<div class="card"><div class="body"><div class="note">
+      <b>Treat benchmark rows as evidence, not proof of availability.</b> Benchmark
+      <span class="mono">model_permaslug</span> values can differ from routable model ids —
+      before adopting a leader, verify it in the OpenRouter models API (pricing, context,
+      provider endpoints, uptime). Source: ${esc(meta.source_url || "OpenRouter Benchmarks API")} ·
+      citation: ${esc(meta.citation || "—")}.</div>
+      <div class="note faint">The models this pipeline already evaluates: qwen/qwen3.7-flash,
+      deepseek/deepseek-v4-flash, deepseek/deepseek-v4-pro — benchmarks here let you compare
+      candidates on the same evidence before running the eval loop.</div>
+    </div></div>`;
+    $("#view").innerHTML = html;
+    const qEl = document.getElementById("bm-q");
+    const srcEl = document.getElementById("bm-source");
+    const taskEl = document.getElementById("bm-task");
+    const apply = () => {
+      state2.q = qEl.value;
+      state2.source = srcEl.value;
+      state2.task = taskEl.value;
+      render();
+    };
+    qEl.addEventListener("input", apply);
+    srcEl.addEventListener("change", apply);
+    taskEl.addEventListener("change", apply);
+  };
+  render();
+  window.scrollTo(0, 0);
 }
 
 /* ---------- boot ---------- */

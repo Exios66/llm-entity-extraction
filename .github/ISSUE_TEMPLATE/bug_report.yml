@@ -1,0 +1,90 @@
+name: Bug report
+description: Report a bug in the eval loop, agents, scoring, the experiment log, or the site
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thanks for reporting a bug!
+
+        This repo is the prompt-experiment loop for llm-mailroom. Bugs live in
+        the runners (`scripts/eval/`), scoring (`src/field_scoring.py`,
+        `src/bootstrap.py`, `src/cost_models.py`), the experiment log
+        (`reports/experiment_log.{jsonl,md}`), or the GH Pages site
+        (`scripts/site/build_site.py`, `docs/assets/`). The more surface
+        context you give, the faster this gets diagnosed.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Where does the bug live?
+      options:
+        - eval runner (classification / subtype / extraction / chained)
+        - scoring / metrics
+        - experiment log (jsonl / markdown)
+        - site / visualization (docs/ + build_site.py)
+        - release tooling (release.py / changelog)
+        - other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: The changelog version or git commit you are on
+      placeholder: "e.g. v0.14.0 or 3e70fee"
+    validations:
+      required: true
+  - type: input
+    id: experiment
+    attributes:
+      label: Experiment name (if a specific run)
+      description: The `experiment_name` from the log, e.g. `qwen3.7-flash_contracts_specialist_v11_extraction`
+      placeholder: "qwen3.7-flash_…"
+  - type: textarea
+    id: surface
+    attributes:
+      label: Evaluation surface (same-surface identity)
+      description: Dataset project/name, dataset fingerprint, seed, and sample size — deltas are only meaningful on the same surface.
+      placeholder: |
+        dataset: mailroom-eval/mailroom-cuad-contracts-full
+        fingerprint: <from data_source in the JSONL record>
+        seed: 42
+        n_samples: 5
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact command(s) run (flags included)
+      placeholder: |
+        python scripts/eval/run_chained_eval.py --dataset … --sorter-prompt-version sorter_v6 …
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include error output, scores, CIs, or what the site/log shows
+    validations:
+      required: true
+  - type: textarea
+    id: trace
+    attributes:
+      label: Trace / record references
+      description: Langfuse trace id, Braintrust experiment, or the JSONL line index — anything that correlates the run
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I verified the bug against the latest main
+        - label: I checked the experiment log + site for the affected run
+        - label: I can reproduce with `--dry-run` / mock where applicable

@@ -1,0 +1,71 @@
+name: Experiment report
+description: Log an eval run observation, failure pattern, or a proposed same-surface comparison
+title: "[Experiment]: "
+labels: ["experiment"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Experiment report
+
+        For anything learned from a run that should inform the next prompt
+        version, runner, or model choice — including findings that only make
+        sense alongside the **same-surface identity** (dataset fingerprint +
+        seed + sample size).
+  - type: input
+    id: experiment
+    attributes:
+      label: Experiment name
+      placeholder: "qwen3.7-flash_sorter_v6_subtype"
+    validations:
+      required: true
+  - type: dropdown
+    id: task
+    attributes:
+      label: Task
+      options:
+        - classification
+        - subtype
+        - extraction
+        - chained
+        - cross-model matrix
+        - langfuse mirror
+    validations:
+      required: true
+  - type: textarea
+    id: surface
+    attributes:
+      label: Same-surface identity
+      placeholder: |
+        dataset_fingerprint: …
+        seed: 42
+        n_samples: …
+        model: qwen/qwen3.7-flash
+        prompt version(s): …
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: Headline scores + bootstrap CIs + cost; per-field/per-family breakdown where relevant
+    validations:
+      required: true
+  - type: textarea
+    id: findings
+    attributes:
+      label: Findings / failure patterns
+      description: What the data shows — failure modes, judge calibration, sorter-vs-specialist loss, cost-vs-quality tradeoffs
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed next step
+      description: New prompt version, model to evaluate (check OpenRouter benchmarks first), scorer change, or further analysis
+  - type: checkboxes
+    id: artifacts
+    attributes:
+      label: Artifacts
+      options:
+        - label: JSONL record verified complete (tokens, cost_estimated_usd, scores, results)
+        - label: markdown log + site regenerated
+        - label: render audit passed

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Experiment-log site
+    url: https://exios66.github.io/llm-entity-extraction/
+    about: Browse runs, trends, cost-vs-quality, prompt diffs, and benchmarks
+  - name: Wiki
+    url: https://github.com/Exios66/llm-entity-extraction/wiki
+    about: Getting started, architecture, scoring, release process
+  - name: llm-mailroom (the pipeline under test)
+    url: https://github.com/Exios66/llm-mailroom
+    about: The LangGraph pipeline this repo's prompt experiments feed

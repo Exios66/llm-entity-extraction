@@ -9,6 +9,21 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **OpenRouter benchmarks on the experiment-log site**: a dedicated
+  `#/benchmarks` navigation tab rendering Artificial Analysis
+  (intelligence/coding/agentic index rankings with per-model pricing) and
+  Design Arena (ELO, win-rate, avg generation time, tournament stats) —
+  fetched best-effort at build time (`build_site.py --benchmarks-key` or
+  `$OPENROUTER_API_KEY`) into `docs/data/benchmarks.json`, with citation
+  metadata preserved and the "benchmarks are evidence, not proof of
+  availability" caveat surfaced in the view. Unavailable builds render a
+  rebuild hint instead of failing; the headless render audit covers the view.
+- **Issue & PR templates (YAML forms)**: `.github/ISSUE_TEMPLATE/`
+  (`bug_report`, `feature_request`, `experiment_report`, `config.yml`) and
+  `.github/PULL_REQUEST_TEMPLATE/pull_request.yml` enforcing this repo's
+  discipline — same-surface identity on every bug/experiment report, the
+  changelog-in-the-same-commit rule, derived-artifact regeneration, the
+  render audit, and the `release.py --check` gate.
 - **LangChain + LangGraph skills installed for all agents** (from
   github.com/langchain-ai/langchain-skills): `langchain-fundamentals`,
   `langchain-python-quickstart`, `langchain-dependencies`,

@@ -1,0 +1,63 @@
+name: Pull request
+description: Standard PR form aligned with the repo's changelog/docs/release discipline
+title: "[PR]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Before opening
+
+        - **Changelog discipline**: every behavior-changing change carries its
+          `[Unreleased]` entry in the SAME commit (`### Added` / `### Changed`
+          / `### Fixed`).
+        - **Docs**: update README.md / docs/README.md / SCORING.md / wiki/
+          when the change touches what they describe.
+        - **Derived artifacts**: regenerated (`render_experiment_log.py`,
+          `build_site.py`) and the headless render audit green.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What this PR does, and why (cite data/experiment evidence where relevant)
+    validations:
+      required: true
+  - type: input
+    id: related
+    attributes:
+      label: Related issues
+      description: "e.g. #1, closes #2"
+  - type: dropdown
+    id: bump
+    attributes:
+      label: Semver impact
+      description: What should `scripts/release.py --bump …` use at release time?
+      options:
+        - patch (bug fixes)
+        - minor (new features: prompt versions, runners, site capabilities)
+        - major (breaking architecture/output-contract changes)
+        - n/a (docs / derived artifacts only)
+    validations:
+      required: true
+  - type: textarea
+    id: changelog
+    attributes:
+      label: Changelog entry (draft)
+      description: The [Unreleased] bullet(s) this PR adds — matching the repo's format (bold lead-in, backticked names, concrete numbers)
+      render: markdown
+  - type: checkboxes
+    id: verification
+    attributes:
+      label: Verification
+      options:
+        - label: "python -m pytest tests/ -q passes"
+        - label: "node tests/assets/site_render_audit.js → ALL VIEWS RENDER CLEANLY (if site JS/HTML changed)"
+        - label: "python scripts/site/build_site.py --check passes (if site data changed)"
+        - label: "python scripts/release.py --check passes (if pyproject/changelog changed)"
+        - label: "Same-surface eval run included when behavior changed (dataset + seed + n stated)"
+        - label: "CHANGELOG entry included in this PR (same-commit discipline)"
+  - type: textarea
+    id: notes
+    attributes:
+      label: Reviewer notes
+      description: Anything the reviewer should focus on — edge cases, follow-ups, risk

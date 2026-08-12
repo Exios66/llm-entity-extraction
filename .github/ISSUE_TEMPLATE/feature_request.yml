@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a new prompt version, eval runner, scoring metric, or site capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature request
+
+        Ideas usually fall into: a new **prompt version** (the version key IS
+        the experiment identity — never mutate an existing prompt), a new
+        **eval runner / dataset mode**, a **scoring or metric** change, or a
+        **site/visualization** capability. Say which.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - new prompt version
+        - new eval runner / dataset mode
+        - scoring / metrics
+        - site / visualization
+        - release tooling / workflow
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What data or problem motivates this? Cite the experiment log / site evidence if it comes from a failure pattern.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: The concrete plan — new files/flags, prompt version key, metric formula, site view
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches and why they were rejected (including "already native to LangGraph/Langfuse" if that applies)
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we know this is done — tests, same-surface eval plan (dataset/seed/sample), changelog entry, docs/site updates
+      placeholder: |
+        - [ ] unit/smoke test added
+        - [ ] same-surface pilot plan defined (dataset, seed, n)
+        - [ ] changelog entry in the same commit
+        - [ ] README/docs/wiki updated if user-facing

@@ -681,3 +681,14 @@ a:focus-visible, button:focus-visible, .nav-group-trigger:focus-visible {
 
 .stack-row { cursor: pointer; }
 .stack-row:hover .stack-label { color: var(--gold, #f7d156); }
+
+/* ---- openrouter benchmarks view ---- */
+.bm-row { display: grid; grid-template-columns: 28px minmax(0, 1.6fr) minmax(0, 2fr) 64px; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.bm-row:last-child { border-bottom: none; }
+.bm-rank { color: var(--text-faint); font-variant-numeric: tabular-nums; text-align: right; }
+.bm-name { display: flex; flex-direction: column; overflow: hidden; }
+.bm-name .mono { font-size: 10.5px; }
+.bm-track { height: 10px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.bm-track i { display: block; height: 100%; background: var(--grad); }
+:root[data-theme="dark"] .bm-track i { background: linear-gradient(90deg, #7c9bff, #38e0d6); box-shadow: 0 0 6px rgba(124, 155, 255, 0.5); }
+.bm-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; }

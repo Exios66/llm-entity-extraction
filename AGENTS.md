@@ -89,8 +89,9 @@ python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_
 ./wiki/sync-wiki.sh                     # push wiki/ -> https://github.com/Exios66/llm-entity-extraction/wiki
 
 # Site data (derived from the experiment log; never hand-edit docs/data)
-python scripts/site/build_site.py          # regenerate docs/data/ (index, meta, runs/, trends.json, prompts.json)
+python scripts/site/build_site.py          # regenerate docs/data/ (index, meta, runs/, trends.json, prompts.json, benchmarks.json)
 python scripts/site/build_site.py --check  # verify it is current
+python scripts/site/build_site.py --benchmarks-key $OPENROUTER_API_KEY  # include live OpenRouter benchmarks (best-effort)
 node tests/assets/site_render_audit.js     # headless render audit of EVERY view (after any site.js edit)
 
 # Releases (mechanical steps automated; the commit/tag are always explicit)
@@ -481,6 +482,15 @@ changing any agent/graph code.
   Release-Process, Taxonomy, FAQ) and pushed to the public GitHub wiki with
   `./wiki/sync-wiki.sh` — run it after wiki edits and after major releases.
   The wiki is NOT a mirror of docs/; each lives its own life.
+
+## Issue & PR templates
+
+`.github/ISSUE_TEMPLATE/` (bug_report, feature_request, experiment_report +
+config.yml contact links) and `.github/PULL_REQUEST_TEMPLATE/pull_request.yml`
+are YAML forms enforcing this repo's discipline: same-surface identity on
+every bug/experiment report, the [Unreleased]-in-the-same-commit changelog
+rule, derived-artifact regeneration, the render audit, and the
+`release.py --check` gate.
 
 ## Useful one-liners
 

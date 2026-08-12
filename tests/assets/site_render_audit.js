@@ -40,6 +40,7 @@ global.fetch = async (url) => ({ ok: true, json: async () => {
   if (url.includes("index.json")) return index;
   if (url.includes("trends.json")) return trends;
   if (url.includes("prompts.json")) return prompts;
+  if (url.includes("benchmarks.json")) return JSON.parse(fs.readFileSync(path.join(ROOT, "docs/data/benchmarks.json"), "utf8"));
   const m = url.match(/runs\/(\d+)\.json/);
   if (m) return read(`docs/data/runs/${m[1].padStart(3, "0")}.json`);
   throw new Error("unexpected fetch " + url);
@@ -47,7 +48,7 @@ global.fetch = async (url) => ({ ok: true, json: async () => {
 
 const src = fs.readFileSync(path.join(ROOT, "docs/assets/site.js"), "utf8")
   .replace('document.addEventListener("DOMContentLoaded", boot);', "");
-const api = new Function(src + "; return {route, renderIndex, renderGroup, renderRun, renderPrompts, renderDoc, boot, state, parseHash};")();
+const api = new Function(src + "; return {route, renderIndex, renderGroup, renderRun, renderPrompts, renderDoc, renderBenchmarks, boot, state, parseHash};")();
 const state = api.state;
 
 (async () => {
@@ -96,6 +97,7 @@ const state = api.state;
   views.push(`docs ${docs} OK`);
   // 6) prompts diff view
   try { await api.renderPrompts(); views.push("prompts OK"); } catch (e) { failures.push("prompts: " + e.message); }
+  try { await api.renderBenchmarks(); views.push("benchmarks OK"); } catch (e) { failures.push("benchmarks: " + e.message); }
 
   console.log(views.join(" | "));
   if (failures.length) { console.log("FAILURES:"); failures.forEach((f) => console.log("  - " + f)); process.exit(1); }

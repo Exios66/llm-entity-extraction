@@ -47,6 +47,12 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
   factuality audit with hallucination counts, CUAD category presence,
   ambiguous fields, and the raw predicted extraction), with prev/next
   navigation.
+- **OpenRouter benchmarks** — a dedicated `#/benchmarks` view with
+  Artificial Analysis (intelligence/coding/agentic index rankings with
+  pricing) and Design Arena (ELO/win-rate by category) data, fetched
+  best-effort at build time (`--benchmarks-key`), with citation metadata and
+  the availability caveat — so model candidates can be compared on benchmark
+  evidence before running the eval loop.
 - **Cost accounting** — real billed totals from an **OpenRouter activity-log
   export** (Settings → Activity Logs): every generation under the eval key
   (qwen + text-embedding-3-small) is attributed to the run whose completion
