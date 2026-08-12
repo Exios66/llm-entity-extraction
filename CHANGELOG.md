@@ -9,6 +9,34 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **v18 model sweep — scope-fidelity is model-agnostic, segmentation is
+  model-bound**: v18 × {deepseek-v4-flash, deepseek-v4-pro} on the same
+  50-doc surface (seed 42, chunked, Langfuse llm-dojo). Every model gains
+  +6.0 to +11.5pp on key_obligations from v15 to v18; **deepseek-v4-pro ×
+  v18 is the series champion — ko 0.7755 → 0.8907 (+11.5pp), overall 0.9289
+  (series best), verified_precision 1.000 (zero hallucinations), alignment
+  precision 0.685 (best)**, at an estimated $0.053 for the 50-doc surface.
+  deepseek-v4-flash over-produces (1735 items, +56% over the GT sample;
+  alignment precision 0.549) and lands ko 0.8358 (+6.0pp). The catalog
+  fixed a prompt-layer scope defect, not a model quirk. Full table +
+  interpretation in `memos/model_sweep_v18.md`; runs 047–048 in the
+  experiment log.
+- **`SCORING.md` §4/§8 — post-hoc scoring logic synthesized**: the
+  per-row `entity_list_audit` artifact (`n_predicted`, `matched_gt`,
+  `verified_in_doc`, `true_items`, `verified_precision`, `hallucinated`,
+  `hallucination_rate`, `doc_verification`) is documented as the canonical
+  post-hoc analysis record, with the derived post-hoc metrics (item count,
+  matched GT spans, alignment precision = Σmatched/Σpredicted, verified
+  precision) and the chunked-extraction scoring semantics (list union with
+  normalized dedupe, scalar first-non-null, confidence max, failed-chunk
+  skip). New §8 documents the sanctioned span-level miss-attribution
+  chain: unmatched-span extraction → containment test → family
+  decomposition → recovery check.
+- **Research memo `memos/model_sweep_v18.md`**: the dedicated sweep memo
+  (research question → answer + results tables → interpretation →
+  remaining uncertainties) with same-surface identity and bootstrap-CI
+  discipline, linked from the memos README and shipped on the site's
+  memos tab.
 - **Research memo on the v17→v18 contract-specialist findings**
   (`memos/contracts_specialist_v17_v18_enhancements.md`): documents the
   grain-vs-scope experiment — v16 fragment contract (+0.6pp ko, −2.7pp

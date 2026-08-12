@@ -90,6 +90,33 @@ scorers are lookups on it:
 | `{field}_precision` (`--bt-scores full`) | over-extraction guard: `matched_gt / n_predicted` (raw precision). |
 | `{field}_verified_precision` (`--bt-scores full`) | truth guard: share of predicted items that match a GT label OR are grounded in the document text. |
 
+**The `entity_list_audit` artifact** — the canonical post-hoc analysis record.
+Every result row carries `entity_list_audit.<field>` (one entry per list
+field, and for scalars too) with the exact numbers behind the trackers:
+
+```
+{
+  "n_predicted": <items the model returned>,
+  "matched_gt": <items matched to a GT label via bipartite matching ≥ 0.6>,
+  "verified_in_doc": <matched_gt + items grounded in the source document>,
+  "true_items": <n_predicted − hallucinated>,
+  "verified_precision": true_items / n_predicted,
+  "hallucinated": n_predicted − true_items,
+  "hallucination_rate": hallucinated / n_predicted,
+  "doc_verification": <bool — whether the doc-grounding pass ran>
+}
+```
+
+Post-hoc analysis is performed on these numbers directly (summed over rows),
+never on recomputed scores. The A/B-series metrics derive from them:
+
+| Post-hoc metric | Definition |
+|---|---|
+| item count | `Σ n_predicted` over `key_obligations` audits (per-doc median words in the raw items) |
+| matched GT spans | `Σ matched_gt` — the recall numerator over the partial GT labels |
+| **alignment precision** | `Σ matched_gt / Σ n_predicted` — how many of the model's items actually line up with an annotator span (the `{field}_precision` tracker, summed) |
+| verified precision | `Σ true_items / Σ n_predicted` (the `overall_verified_precision` tracker) |
+
 **Factuality audit** — every predicted item/value must be TRUE: it either
 matches a ground-truth label (element scorer ≥ 0.6) or its content is present
 in the source document (normalized token coverage ≥ `token_coverage` 0.7;
@@ -100,6 +127,16 @@ Items that are neither are hallucinations:
 verified_precision = (GT-matched + doc-grounded) / n_predicted
 hallucination_rate  = (n_predicted - true_items) / n_predicted
 ```
+
+**Chunked extraction scoring** (`--chunked`, the v15+ architecture): the
+document is split on paragraph boundaries into overlapping windows (90k
+chars, 8k overlap); each window is extracted in its own call and the passes
+are merged — list fields union with normalized dedupe (a clause crossing the
+cut is quoted on both sides and deduped), scalars keep the first non-null
+value, confidence takes the max. Nothing is truncated, so the merged output
+is scored against the full expected field set exactly like a single-pass
+output; a chunk that fails to parse is skipped, not fatal. `n_chunks` and
+`chunked` are stored per row for audit.
 
 ## 5. Chained eval metrics (`run_chained_eval.py`)
 
@@ -140,3 +177,30 @@ existing experiments without re-running.
 - **Same-surface rule enforced end-to-end**: a run's "Δ vs best" is only
   computed/colored against the best run with the same dataset fingerprint +
   seed + sample size; the site refuses to compare across surfaces.
+
+## 8. Post-hoc span-level diagnostics (miss attribution)
+
+When a list field's score plateaus, the score alone cannot say WHY. The
+sanctioned diagnostic chain (used for the v15→v18 family-fidelity work)
+operates on the stored rows + the eval manifest's expected spans:
+
+1. **Unmatched-span extraction** — for each GT span, compute its best
+   predicted-item similarity as the scorer would: string token coverage
+   first, then the embedding rescue (`max(string_score, embed_sim)`, 0.6
+   threshold). Spans below threshold on every item are the score's residual.
+2. **Containment test** — check whether an unmatched span is nonetheless
+   token-contained (≥ 0.7) in some longer predicted item. If yes, the miss
+   is a boundary/segmentation artifact (fixable by grain); if no, the miss
+   is a genuine content omission (fixable by scope). This test empirically
+   refuted the containment hypothesis on the 50-doc sample: 0/160 unmatched
+   spans were embedded — the residual was scope, not segmentation.
+3. **Family decomposition** — classify the unmatched spans into the CUAD
+   clause categories by keyword/verbatim shapes and tabulate. The category
+   with the largest miss count is where the prompt's family enumeration is
+   incomplete or its exclusion rule over-broad. The v15 50-doc miss table
+   (license grant 40, minimum commitment 12, IP ownership 10,
+   anti-assignment 9, audit 6, revenue sharing 6, cap liability 5, ...)
+   motivated the v18 family-fidelity catalog.
+4. **Recovery check** — re-run the same unmatched-span extraction against
+   the candidate prompt's rows to quantify exactly which spans and which
+   families a change recovered, before trusting the composite delta.
