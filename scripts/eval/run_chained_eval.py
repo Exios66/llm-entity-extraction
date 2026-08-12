@@ -599,10 +599,11 @@ def log_experiment_to_repo(result, scored_fields, dataset, args, experiment_name
             **({"tracing": tracing_meta} if tracing_meta else {}),
         },
         "tokens": {
-            "sorter": tokens_summary(list(sorter_usage.values())),
-            "extractor": tokens_summary(list(extractor_usage.values())),
+            "sorter": tokens_summary(list(sorter_usage.values()), model=args.model),
+            "extractor": tokens_summary(list(extractor_usage.values()), model=args.model),
             "total": tokens_summary(
-                list(sorter_usage.values()) + list(extractor_usage.values())
+                list(sorter_usage.values()) + list(extractor_usage.values()),
+                model=args.model
             ),
         },
         "scores": {

@@ -702,7 +702,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "tracing_backend": tracing_backend,
             **({"tracing": tracing_meta} if tracing_meta else {}),
         },
-        "tokens": tokens_summary(list(usage_by_index.values())),
+        "tokens": tokens_summary(list(usage_by_index.values()), model=args.model),
         "scores": {
             **({"judge_calibration": _judge_calibration(experiment_name)}
                if getattr(args, "judge", False) else {}),

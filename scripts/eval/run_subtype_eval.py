@@ -502,8 +502,8 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             "tracing_backend": tracing_backend,
             **({"tracing": tracing_meta} if tracing_meta else {}),
         },
-        "tokens": {"sorter": tokens_summary(list(usage.values())),
-                   "total": tokens_summary(list(usage.values()))},
+        "tokens": {"sorter": tokens_summary(list(usage.values()), model=args.model),
+                   "total": tokens_summary(list(usage.values()), model=args.model)},
         "scores": {
             "sorter": {
                 "exact_match": _mean("doc_type_ok"),

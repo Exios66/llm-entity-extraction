@@ -44,7 +44,8 @@
   "total_tokens": 52390,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
-  "rows_with_usage": 3
+  "rows_with_usage": 3,
+  "cost_estimated_usd": 0.001815
  },
  "scores": {
   "exact_match": 1.0,

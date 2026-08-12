@@ -36,7 +36,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT))  # noqa: E402 - allow src.bootstrap import
+sys.path.insert(0, str(REPO_ROOT))  # noqa: E402 - allow src.* imports
+from src.cost_models import estimate_for_record  # noqa: E402
 DEFAULT_JSONL = REPO_ROOT / "reports" / "experiment_log.jsonl"
 DEFAULT_OUT = REPO_ROOT / "docs" / "data"
 REPO_URL = "https://github.com/Exios66/llm-entity-extraction"
@@ -427,6 +428,10 @@ def summarize(record: dict, run_id: int, best_by_task: dict[str, float],
     else:
         total_tokens = tokens.get("total_tokens")
         cost_total = tokens.get("cost_total_usd")
+    # Issue #1 cost scoring: every run gets a deterministic token x price
+    # estimate (usage payloads carry no cost field); the OpenRouter-CSV
+    # "billed" figure, when covered, remains the ground truth to prefer.
+    cost_estimate = estimate_for_record(record)
     data_source = record.get("data_source") or {}
     headline = headline_score(record)
     task = record.get("task", "")
@@ -455,6 +460,12 @@ def summarize(record: dict, run_id: int, best_by_task: dict[str, float],
         "total_tokens": total_tokens,
         "cost_usd": tokens.get("cost_usd") if tokens else None,
         "cost_total_usd": cost_total,
+        "cost_estimated_usd": cost_estimate.get("cost_estimated_usd"),
+        "cost_estimated_per_doc_usd": cost_estimate.get("per_doc_usd"),
+        "cost_price_source": cost_estimate.get("price_source") and
+            {"model": cost_estimate.get("model"),
+             "in_per_1m": cost_estimate["price_source"][0],
+             "out_per_1m": cost_estimate["price_source"][1]},
         "fingerprint": data_source.get("dataset_fingerprint"),
         "seed": data_source.get("seed"),
         "sample_key": sample_key,
@@ -828,6 +839,7 @@ def build_trends(records: list[dict], summaries: list[dict]) -> dict:
             "headline_value": round(float(value), 4),
             "headline_label": headline.get("label", ""),
             "cost_total_usd": summary.get("cost_total_usd"),
+            "cost_estimated_usd": summary.get("cost_estimated_usd"),
             "n_rows": record.get("n_rows"),
             "seed": summary.get("seed"),
             "sample_key": summary.get("sample_key"),

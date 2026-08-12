@@ -710,7 +710,7 @@ def log_experiment_to_repo(result, dataset: list[dict], args, experiment_name: s
             "tracing_backend": tracing_backend,
             **({"tracing": tracing_meta} if tracing_meta else {}),
         },
-        "tokens": tokens_summary(list(usage_by_index.values())),
+        "tokens": tokens_summary(list(usage_by_index.values()), model=args.model),
         "scores": {
             "exact_match": round(exact, 4),
             "exact_match_ci": _bootstrap_ci(

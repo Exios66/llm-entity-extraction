@@ -32,7 +32,8 @@ def _record(task="subtype_classification", fingerprint="fp-x", seed=42, n=10,
         "prompt_versions": {"sorter": "sorter_v5"} if task == "chained_sorter_extractor" else None,
         "data_source": {"dataset_fingerprint": fingerprint, "seed": seed, "n_samples": n},
         "parameters": {"handoff_scope": "subtype"},
-        "tokens": {"total_tokens": 1000, "cost_usd": cost / n, "cost_total_usd": cost},
+        "tokens": {"prompt_tokens": 1000, "completion_tokens": 500, "total_tokens": 1500,
+                   "cost_usd": cost / n, "cost_total_usd": cost},
         "scores": score_dict,
         "n_rows": n, "n_ok": n, "n_error": 0,
         "timestamp": "2026-08-11T00:00:00+00:00",
@@ -56,6 +57,10 @@ class TestSameSurfaceGuardrail:
                                        {("subtype_classification", "fp-x:42:10"): 0.8})
         assert summary["sample_key"] == "fp-x:42:10"
         assert summary["fingerprint"] == "fp-x"
+        # Issue #1 cost scoring: every run gets the deterministic estimate
+        # (0.03/1M in, 0.13/1M out on 1000 prompt + 500 completion tokens).
+        assert summary["cost_estimated_usd"] == pytest.approx(0.03 * 1000 / 1e6 + 0.13 * 500 / 1e6)
+        assert summary["cost_price_source"]["model"] == "qwen/qwen3.7-flash"
         assert summary["ci95"]["method"] == "percentile-bootstrap"
         assert summary["ci95"]["source"] == "results-bootstrap"
         # headline is the recorded aggregate; the CI comes from the per-doc

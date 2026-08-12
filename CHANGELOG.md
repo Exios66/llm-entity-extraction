@@ -9,6 +9,29 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **Cost scoring for every run (GitHub issue #1)**: OpenRouter usage payloads
+  carry no cost field, so every run previously recorded `cost_total_usd =
+  0.0` despite ~30M real tokens. New `src/cost_models.py` scores cost
+  deterministically from the recorded prompt/completion token counts x
+  verified per-model prices (qwen $0.03/$0.13 per 1M, deepseek-v4-flash
+  $0.05/$0.25, deepseek-v4-pro $0.435/$0.87; unknown models resolve by prefix
+  or honestly report None). `tokens_summary()` now takes `model=` and stamps
+  `cost_estimated_usd` on every future record; a documented one-time backfill
+  (`scripts/backfill_cost_estimates.py`, append-only-log exception) scored
+  all 38 historical records / 81 token buckets (est. $2.28 total). The site
+  shows billed (OpenRouter CSV) when covered and the estimate otherwise —
+  in the runs table, run detail (with price source), the cost-vs-quality
+  scatter (hollow points = estimated), and trends.
+- **Headless render audit for the site**: `tests/assets/site_render_audit.js`
+  + `tests/test_site_render.py` exercise EVERY view (index, all task/prompt/
+  model groups, all 38 runs, 114 document traces, prompt diff) against the
+  real built data with a stubbed DOM and assert zero rendering errors
+  (skipped when node is absent).
+- **Site navigation + visualization polish**: the nav now renders one entry
+  per task dynamically from `meta.tasks` (new tasks can't rot out of the
+  navigation); the confusion matrix is sorted by expected-class frequency
+  (desc) with a Σ row-total column, per-class accuracy on each row label,
+  and hover tooltips per cell — explorable from every run's trace view.
 - **Bootstrap confidence intervals (GitHub issue #1)**: `src/bootstrap.py` —
   percentile-bootstrap 95% CIs over per-document scores (`bootstrap_ci`) and
   two-sample bootstrap delta tests with significance verdicts

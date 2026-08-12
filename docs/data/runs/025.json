@@ -40,7 +40,8 @@
    "total_tokens": 90410,
    "cost_usd": 0.0,
    "cost_total_usd": 0,
-   "rows_with_usage": 5
+   "rows_with_usage": 5,
+   "cost_estimated_usd": 0.003145
   },
   "extractor": {
    "prompt_tokens": 86579,
@@ -48,7 +49,8 @@
    "total_tokens": 92708,
    "cost_usd": 0.0,
    "cost_total_usd": 0,
-   "rows_with_usage": 5
+   "rows_with_usage": 5,
+   "cost_estimated_usd": 0.003394
   },
   "total": {
    "prompt_tokens": 172658,
@@ -56,7 +58,8 @@
    "total_tokens": 183118,
    "cost_usd": 0.0,
    "cost_total_usd": 0,
-   "rows_with_usage": 10
+   "rows_with_usage": 10,
+   "cost_estimated_usd": 0.00654
   }
  },
  "scores": {

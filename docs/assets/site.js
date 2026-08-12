@@ -326,21 +326,28 @@ function bestRunFor(task) {
   return state.index.find((r) => r.id === b.run_id) || null;
 }
 
-/* OpenRouter-attributed cost cell for the runs table / detail header. */
+/* Cost cell: the OpenRouter-CSV BILLED total when covered (ground truth),
+ * else the deterministic token x price ESTIMATE (every run is scored). */
 function costCell(run) {
   const c = run.cost;
-  if (!c || !c.covered) {
-    const exp = state.meta.costs?.export;
-    const tip = exp
-      ? `No generations for this run in the exported OpenRouter activity window (${exp.start} → ${exp.end} UTC) — export a fresh activity CSV and rebuild`
-      : "No OpenRouter activity data";
-    return `<span class="faint" title="${esc(tip)}">—</span>`;
+  if (c && c.covered) {
+    const tip = `${fmt.int(c.calls.total)} calls in the OpenRouter activity log (${fmt.int(c.calls.chat)} chat + ${fmt.int(c.calls.embeddings)} embeddings)`;
+    return `<span class="mono" title="${esc(tip)}">
+      $${c.cost_total_usd.toFixed(4)}
+      <div class="faint" style="font-size:11px">$${c.cost_avg_per_doc_usd.toFixed(4)}/doc · billed</div>
+    </span>`;
   }
-  const tip = `${fmt.int(c.calls.total)} calls in the OpenRouter activity log (${fmt.int(c.calls.chat)} chat + ${fmt.int(c.calls.embeddings)} embeddings)`;
-  return `<span class="mono" title="${esc(tip)}">
-    $${c.cost_total_usd.toFixed(4)}
-    <div class="faint" style="font-size:11px">$${c.cost_avg_per_doc_usd.toFixed(4)}/doc · ${fmt.int(c.calls.total)} calls</div>
-  </span>`;
+  if (run.cost_estimated_usd != null) {
+    const src = run.cost_price_source;
+    const tip = src
+      ? `Deterministic estimate: ${fmt.tokens(run.total_tokens)} tokens x ${esc(src.model)} ($${src.in_per_1m}/1M in · $${src.out_per_1m}/1M out)`
+      : "Deterministic estimate from recorded tokens";
+    return `<span class="mono faint" title="${esc(tip)}">
+      $${run.cost_estimated_usd.toFixed(4)}
+      <div class="faint" style="font-size:11px">$${(run.cost_estimated_per_doc_usd ?? 0).toFixed(4)}/doc · est.</div>
+    </span>`;
+  }
+  return `<span class="faint" title="No token data / unknown model price">—</span>`;
 }
 
 function indexTable(rows) {
@@ -772,29 +779,39 @@ function resultsTable(run, runId) {
 }
 
 function confusionMatrix(cm) {
+  /* Expected x predicted counts, rows sorted by expected frequency (desc) so
+   * the classes that matter most lead the matrix; every row carries its
+   * total + per-class accuracy (diagonal / total). */
   const subtypes = Object.keys(cm || {}).sort();
   if (!subtypes.length) return "";
-  const cells = subtypes
-    .map(
-      (expected) =>
-        `<tr><td class="mono">${esc(expected)}</td>` +
-        subtypes
-          .map((predicted) => {
-            const count = cm[expected][predicted] || 0;
-            const isDiag = expected === predicted;
-            const cls = isDiag
-              ? count > 0 ? 'style="background:#eef8f1;color:var(--good)"' : ""
-              : count > 0 ? 'style="background:#fdf0f0;color:var(--bad)"' : "";
-            return `<td class="num" ${cls}>${count || "·"}</td>`;
-          })
-          .join("") +
-        `</tr>`
-    )
+  const rows = subtypes.map((expected) => {
+    const row = subtypes.map((predicted) => cm[expected][predicted] || 0);
+    const total = row.reduce((a, b) => a + b, 0);
+    return { expected, row, total };
+  }).sort((a, b) => b.total - a.total || a.expected.localeCompare(b.expected));
+  const ordered = rows.map((r) => r.expected);
+  const cells = rows
+    .map(({ expected, row, total }) => {
+      const diag = row[ordered.indexOf(expected)] || 0;
+      const acc = total ? (diag / total) : null;
+      return `<tr>
+        <td class="mono" title="${esc(expected)}">${esc(expected)}${acc != null ? ` <span class="faint" style="font-size:10px">(${fmt.pct(acc)})</span>` : ""}</td>` +
+        row.map((count, j) => {
+          const isDiag = ordered[j] === expected;
+          const cls = isDiag
+            ? count > 0 ? 'style="background:#eef8f1;color:var(--good)"' : ""
+            : count > 0 ? 'style="background:#fdf0f0;color:var(--bad)"' : "";
+          const tip = isDiag ? `${esc(expected)} correctly classified` : `expected ${esc(expected)} → predicted ${esc(ordered[j])}`;
+          return `<td class="num" ${cls} title="${tip}">${count || "·"}</td>`;
+        }).join("") +
+        `<td class="num faint" title="total expected rows">${total}</td></tr>`;
+    })
     .join("");
-  const head = subtypes.map((s) => `<th class="mono">${esc(s)}</th>`).join("");
+  const head = ordered.map((s) => `<th class="mono" title="predicted ${esc(s)}">${esc(s)}</th>`).join("");
   return `<div class="table-wrap" style="max-height:420px;overflow:auto"><table class="data">
-    <thead><tr><th class="mono">expected \\ predicted</th>${head}</tr></thead>
-    <tbody>${cells}</tbody></table></div>`;
+    <thead><tr><th class="mono">expected \\ predicted</th>${head}<th class="num mono" title="rows expected">Σ</th></tr></thead>
+    <tbody>${cells}</tbody></table>
+    <div class="faint" style="font-size:11px;margin-top:4px">Rows sorted by expected frequency; accuracy = diagonal / row total.</div>`;
 }
 
 async function renderRun(id) {
@@ -896,16 +913,27 @@ async function renderRun(id) {
          (${esc(state.meta.costs.export.start)} → ${esc(state.meta.costs.export.end)} UTC) — export a fresh activity CSV
          and rerun <span class="mono">build_site.py --openrouter-csv</span> to bill this run.</div>`
       : "";
+  const est = summary?.cost_estimated_usd;
+  const estBlock = est != null
+    ? `<div class="note"><strong>Deterministic cost estimate:</strong> <strong>$${est.toFixed(4)}</strong>
+        total · <strong>$${(summary.cost_estimated_per_doc_usd ?? 0).toFixed(4)}/document</strong>
+        (${fmt.tokens(total.total_tokens)} tokens × ${summary?.cost_price_source?.model
+          ? `<span class="mono">${esc(summary.cost_price_source.model)}</span> $${summary.cost_price_source.in_per_1m}/1M in · $${summary.cost_price_source.out_per_1m}/1M out`
+          : "recorded prices"}) — OpenRouter usage payloads carry no cost, so every run is scored
+        from its token counts (see src/cost_models.py).</div>`
+    : `<div class="note faint">No cost estimate — no recorded tokens or unknown model price.</div>`;
   sections.push(kvCard("Tokens & cost", `
     <table class="kv">${kvRowsTyped({
       "prompt tokens": total.prompt_tokens,
       "completion tokens": total.completion_tokens,
       "total tokens": total.total_tokens,
-      "mean cost (usd)": total.cost_usd,
-      "total cost (usd)": total.cost_total_usd,
+      "mean cost (usd, from usage)": total.cost_usd,
+      "total cost (usd, from usage)": total.cost_total_usd,
+      "cost estimate (usd, tokens x price)": est,
       "rows with usage": total.rows_with_usage,
     })}</table>
-    ${costZero && !runCost?.covered ? `<div class="note">Costs are $0.00 — rows carried no OpenRouter usage billing (manifest-replayed and Langfuse-traced rows are unpriced by design; see SCORING.md §7). Real billed costs come from the OpenRouter activity log.</div>` : ""}
+    ${estBlock}
+    ${costZero && !runCost?.covered ? `<div class="note">The usage-recorded cost is $0.00 (OpenRouter usage payloads carry no cost) — the estimate above scores this run; real billed totals come from the OpenRouter activity log CSV (rebuild with <span class="mono">--openrouter-csv</span>).</div>` : ""}
     ${costBlock}`));
 
   if (task === "contract_entity_extraction") {
@@ -1246,7 +1274,10 @@ async function renderPrompts() {
 /* ---------- issue #1: SVG charts (trend / scatter / failure-mode stacks) ---------- */
 
 function svgChart(opts) {
-  const { w = 860, h = 260, series, xLabel, yLabel, valueOf, xOf, colorOf, yMax = 1 } = opts;
+  const { w = 860, h = 260, series, xLabel, yLabel, yMax = 1 } = opts;
+  const valueOf = (p) => p.y;
+  const xOf = (p) => p.x;
+  const colorOf = (p) => p.color;
   const pad = { l: 46, r: 14, t: 14, b: 34 };
   const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
   const all = series.flatMap((s) => s.points);
@@ -1258,13 +1289,14 @@ function svgChart(opts) {
       <text x="${pad.l - 6}" y="${py(g) + 3}" class="axis">${(g * 100).toFixed(0)}%</text>`)
     .join("");
   const traces = series.map((s) => {
-    const pts = s.points.map((p) => `${px(xOf(p)).toFixed(1)},${py(valueOf(p)).toFixed(1)}`).join(" ");
-    const dots = s.points.map((p) =>
-      `<circle cx="${px(xOf(p)).toFixed(1)}" cy="${py(valueOf(p)).toFixed(1)}" r="3" class="dot" fill="${colorOf(p)}"><title>${esc(s.label + " · " + (p.tooltip || ""))}</title></circle>`).join("");
-    return `<polyline points="${pts}" fill="none" stroke="${colorOf(s.points[0])}" stroke-width="1.6"/>${dots}`;
+    const colored = s.points.map((p) => ({ ...p, color: p.color || s.color }));
+    const pts = colored.map((p) => `${px(xOf(p)).toFixed(1)},${py(valueOf(p)).toFixed(1)}`).join(" ");
+    const dots = colored.map((p) =>
+      `<circle cx="${px(xOf(p)).toFixed(1)}" cy="${py(valueOf(p)).toFixed(1)}" r="3" class="dot" fill="${colorOf(p)}" ${p.billed === false ? 'stroke-dasharray="2 1.5"' : ""}><title>${esc(s.label + " · " + (p.tooltip || ""))}</title></circle>`).join("");
+    return `<polyline points="${pts}" fill="none" stroke="${s.color || colorOf(s.points[0])}" stroke-width="1.6"/>${dots}`;
   }).join("");
   const legend = series.map((s) =>
-    `<span class="chart-legend-item"><i style="background:${colorOf(s.points[0])}"></i>${esc(s.label)}</span>`).join("");
+    `<span class="chart-legend-item"><i style="background:${s.color || colorOf(s.points[0])}"></i>${esc(s.label)}</span>`).join("");
   return `<div class="chart">
     <svg viewBox="0 0 ${w} ${h}" class="chart-svg" role="img">
       ${grid}
@@ -1349,6 +1381,25 @@ function failureModeBarsHtml(series) {
   </div>`;
 }
 
+/* ---------- navigation: dynamic from the live task set ---------- */
+
+function renderNav(meta) {
+  /* Every task recorded in the log gets a nav entry (extraction, chained,
+   * subtype, classification, legalbench, ...) — hardcoded links rot as
+   * tasks are added. The prompt-diff view stays pinned. */
+  const nav = document.querySelector(".nav");
+  if (!nav) return;
+  nav.querySelectorAll("a[data-task]").forEach((a) => a.remove());
+  const repoLink = nav.querySelector('a[href^="https://github.com"]');
+  for (const task of Object.keys(meta.tasks || {}).sort()) {
+    const a = document.createElement("a");
+    a.href = `#/task/${encodeURIComponent(task)}`;
+    a.dataset.task = task;
+    a.textContent = task.replace(/_/g, " ");
+    nav.insertBefore(a, repoLink);
+  }
+}
+
 /* ---------- boot ---------- */
 
 async function boot() {
@@ -1362,6 +1413,7 @@ async function boot() {
     state.index = index;
     const built = new Date(meta.built_at).toISOString().replace("T", " ").slice(0, 16);
     $("#build-time").textContent = `generated ${built} UTC from ${meta.source} · `;
+    renderNav(meta);
     window.addEventListener("hashchange", route);
     await route();
   } catch (err) {

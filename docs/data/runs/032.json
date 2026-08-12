@@ -46,7 +46,8 @@
    "total_tokens": 6305231,
    "cost_usd": 0.0,
    "cost_total_usd": 0,
-   "rows_with_usage": 509
+   "rows_with_usage": 509,
+   "cost_estimated_usd": 0.245092
   },
   "total": {
    "prompt_tokens": 5745881,
@@ -54,7 +55,8 @@
    "total_tokens": 6305231,
    "cost_usd": 0.0,
    "cost_total_usd": 0,
-   "rows_with_usage": 509
+   "rows_with_usage": 509,
+   "cost_estimated_usd": 0.245092
   }
  },
  "scores": {

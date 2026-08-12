@@ -34,7 +34,8 @@
   "total_tokens": 138364,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
-  "rows_with_usage": 10
+  "rows_with_usage": 10,
+  "cost_estimated_usd": 0.007009
  },
  "scores": {
   "overall_extraction_score": 0.7976,

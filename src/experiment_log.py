@@ -73,12 +73,17 @@ def mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
-def tokens_summary(usage_records: list[dict]) -> dict:
+def tokens_summary(usage_records: list[dict], model: str | None = None) -> dict:
     """Aggregate per-row usage dicts into one tokens/cost summary.
 
     Each usage record comes from the agent's ``_last_usage``:
     ``{prompt_tokens, completion_tokens, total_tokens, cost}``. Rows replayed
     from a manifest carry no usage (they were paid for in the original run).
+
+    ``model`` enables deterministic cost scoring (issue #1): OpenRouter usage
+    payloads carry no cost, so ``cost_estimated_usd`` is computed from the
+    token counts x the model's verified per-token prices (see
+    ``src/cost_models.py``) — None when the model's price is unknown.
     """
     prompt = completion = total = 0
     cost_values: list[float] = []
@@ -93,12 +98,18 @@ def tokens_summary(usage_records: list[dict]) -> dict:
         if isinstance(cost, (int, float)):
             cost_values.append(float(cost))
         rows += 1
+    cost_estimated = None
+    if model:
+        from .cost_models import estimate_cost
+
+        cost_estimated = estimate_cost(prompt, completion, model)
     return {
         "prompt_tokens": prompt,
         "completion_tokens": completion,
         "total_tokens": total,
         "cost_usd": round(mean(cost_values), 6),
         "cost_total_usd": round(sum(cost_values), 6),
+        "cost_estimated_usd": cost_estimated,
         "rows_with_usage": rows,
     }
 

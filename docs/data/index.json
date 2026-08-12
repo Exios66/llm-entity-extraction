@@ -39,6 +39,13 @@
   "total_tokens": 111805,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.007351,
+  "cost_estimated_per_doc_usd": 0.000735,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -92,6 +99,13 @@
   "total_tokens": 108573,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.00673,
+  "cost_estimated_per_doc_usd": 0.000673,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -145,6 +159,13 @@
   "total_tokens": 106562,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006469,
+  "cost_estimated_per_doc_usd": 0.000647,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -199,6 +220,13 @@
   "total_tokens": 138364,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.007009,
+  "cost_estimated_per_doc_usd": 0.000701,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -253,6 +281,13 @@
   "total_tokens": 137996,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006961,
+  "cost_estimated_per_doc_usd": 0.000696,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2",
   "seed": 42,
   "sample_key": "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
@@ -306,6 +341,13 @@
   "total_tokens": 198097,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.010215,
+  "cost_estimated_per_doc_usd": 0.002043,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -359,6 +401,13 @@
   "total_tokens": 197528,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.00993,
+  "cost_estimated_per_doc_usd": 0.001986,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -412,6 +461,13 @@
   "total_tokens": 199716,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.010019,
+  "cost_estimated_per_doc_usd": 0.002004,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -465,6 +521,13 @@
   "total_tokens": 169746,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.008384,
+  "cost_estimated_per_doc_usd": 0.001677,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -518,6 +581,13 @@
   "total_tokens": 160698,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.007257,
+  "cost_estimated_per_doc_usd": 0.001451,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -571,6 +641,13 @@
   "total_tokens": 199217,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.00999,
+  "cost_estimated_per_doc_usd": 0.001998,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -622,6 +699,13 @@
   "total_tokens": 497113,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.015586,
+  "cost_estimated_per_doc_usd": 0.000312,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4",
   "seed": 42,
   "sample_key": "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
@@ -674,6 +758,13 @@
   "total_tokens": 497207,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.015599,
+  "cost_estimated_per_doc_usd": 0.000312,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4",
   "seed": 42,
   "sample_key": "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
@@ -727,6 +818,13 @@
   "total_tokens": 2345481,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.093051,
+  "cost_estimated_per_doc_usd": 0.000477,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5",
   "seed": 42,
   "sample_key": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
@@ -780,6 +878,13 @@
   "total_tokens": 2146666,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.067166,
+  "cost_estimated_per_doc_usd": 0.000344,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5",
   "seed": 42,
   "sample_key": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
@@ -833,6 +938,13 @@
   "total_tokens": 773083,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.029,
+  "cost_estimated_per_doc_usd": 0.000149,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5",
   "seed": 42,
   "sample_key": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
@@ -886,6 +998,13 @@
   "total_tokens": 176883,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006469,
+  "cost_estimated_per_doc_usd": 0.001294,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -939,6 +1058,13 @@
   "total_tokens": 178161,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.00656,
+  "cost_estimated_per_doc_usd": 0.001312,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -992,6 +1118,13 @@
   "total_tokens": 5990357,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.236124,
+  "cost_estimated_per_doc_usd": 0.000464,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406",
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
@@ -1040,6 +1173,13 @@
   "total_tokens": 87230,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.003069,
+  "cost_estimated_per_doc_usd": 0.000614,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
@@ -1093,6 +1233,13 @@
   "total_tokens": 2381375,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.093856,
+  "cost_estimated_per_doc_usd": 0.000481,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5",
   "seed": 42,
   "sample_key": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
@@ -1145,6 +1292,13 @@
   "total_tokens": 2493366,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.096169,
+  "cost_estimated_per_doc_usd": 0.000493,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5",
   "seed": 42,
   "sample_key": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
@@ -1197,6 +1351,13 @@
   "total_tokens": 2489486,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.095665,
+  "cost_estimated_per_doc_usd": 0.000491,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5",
   "seed": 42,
   "sample_key": "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
@@ -1250,6 +1411,13 @@
   "total_tokens": 181673,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006484,
+  "cost_estimated_per_doc_usd": 0.001297,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
@@ -1303,6 +1471,13 @@
   "total_tokens": 183118,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.00654,
+  "cost_estimated_per_doc_usd": 0.001308,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
@@ -1356,6 +1531,13 @@
   "total_tokens": 182602,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006472,
+  "cost_estimated_per_doc_usd": 0.001294,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
@@ -1384,6 +1566,13 @@
   "total_tokens": 52390,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.001815,
+  "cost_estimated_per_doc_usd": 0.000605,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": null,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
@@ -1438,6 +1627,13 @@
   "total_tokens": 52940,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.001932,
+  "cost_estimated_per_doc_usd": 0.000644,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": 42,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
@@ -1491,6 +1687,13 @@
   "total_tokens": 183551,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006596,
+  "cost_estimated_per_doc_usd": 0.001319,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
@@ -1545,6 +1748,13 @@
   "total_tokens": 52957,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.001934,
+  "cost_estimated_per_doc_usd": 0.000645,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": 42,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
@@ -1573,6 +1783,13 @@
   "total_tokens": 52876,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.001878,
+  "cost_estimated_per_doc_usd": 0.000626,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": null,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
@@ -1626,6 +1843,13 @@
   "total_tokens": 6305231,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.245092,
+  "cost_estimated_per_doc_usd": 0.000482,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406",
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
@@ -1679,6 +1903,13 @@
   "total_tokens": 214465,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.007751,
+  "cost_estimated_per_doc_usd": 0.00155,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -1732,6 +1963,13 @@
   "total_tokens": 213163,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.007712,
+  "cost_estimated_per_doc_usd": 0.001542,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -1786,6 +2024,13 @@
   "total_tokens": 106866,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.00395,
+  "cost_estimated_per_doc_usd": 0.00079,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -1839,6 +2084,13 @@
   "total_tokens": 196202,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006976,
+  "cost_estimated_per_doc_usd": 0.001395,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
@@ -1892,6 +2144,13 @@
   "total_tokens": 195971,
   "cost_usd": null,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.006946,
+  "cost_estimated_per_doc_usd": 0.001389,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
@@ -1946,6 +2205,13 @@
   "total_tokens": 99172,
   "cost_usd": 0.0,
   "cost_total_usd": 0,
+  "cost_estimated_usd": 0.003687,
+  "cost_estimated_per_doc_usd": 0.000737,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
