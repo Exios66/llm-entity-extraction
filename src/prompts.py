@@ -1470,6 +1470,62 @@ CONTRACTS_SPECIALIST_PROMPT_V15 = CONTRACTS_SPECIALIST_PROMPT_V14.replace(
      when the neighboring chunk holds the rest.""",
 )
 
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v16 (fragment-granularity)
+# -----------------------------------------------------------------------------
+# v16 = v15 + the key_obligations FRAGMENT contract, from the v15 50-doc
+# decomposition: truncation, hallucination, and coverage are solved (995
+# predicted items, 0 hallucinated, +20% over the 826 GT spans), so the
+# residual ~22% ko loss is pure span-SEGMENTATION MISALIGNMENT — the model
+# emits full-sentence items (22-97 words) while the CUAD GT holds short
+# operative fragments (10-25 words). Token-overlap matching then caps the
+# similarity of an embedded fragment below the 0.6 threshold (worked example:
+# Impresse ko 0.50 — a 97-word assignment sentence whose joint-ownership
+# fragment overlaps its GT span at only 0.43). v16 itemizes at ATOMIC
+# FRAGMENT grain (4-20 words), strips preamble/riders/cross-references, and
+# decomposes compound sentences per operative right — anchored with a
+# fragment-vs-sentence example. Scoped to key_obligations only:
+# termination_clauses keeps full-provision quoting (its GT spans are full
+# provisions and it already scores 0.94), as do scalar/containment fields.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V16 = CONTRACTS_SPECIALIST_PROMPT_V15.replace(
+    """Itemize at OPERATIVE-REQUIREMENT
+     granularity: one verbatim item per distinct restriction, covenant, or commitment —
+     and NEVER merge separate requirements into one item. When a sentence bundles
+     several (a license grant plus a sublicense prohibition plus a transfer
+     restriction; an exclusivity clause with territory, term, and renewal
+     limitations; a compound "shall not assign, sublicense, or transfer"), emit each
+     operative requirement as its OWN verbatim item. The ground truth holds individual
+     clause spans, so a merged summary sentence covers fewer spans and scores lower.
+     Quote the operative language VERBATIM as written — no "Section N:" prefixes, no
+     paraphrases, no clause headings. NEVER include document titles, recitals, or
+     definitions.""",
+    """key_obligations items are ATOMIC FRAGMENTS, not sentences: emit the
+     smallest verbatim span that states the operative restriction or covenant —
+     typically 4-20 words (subject + operative verb + object/qualifier). The
+     ground truth stores exactly this grain, and each item is matched against a
+     ground-truth span by token overlap: an item that merely CONTAINS the span
+     still scores as a miss because its extra words dilute the similarity below
+     the match threshold. STRIP sentence preamble and riders — "During the Term
+     of this Agreement,", "Except as otherwise set forth herein,", "Subject to
+     Section N,", "Nothing in this Agreement is intended to ...", and
+     cross-references are NOT part of the fragment. When one sentence states
+     several obligations, emit each operative right as its OWN fragment: a
+     compound "shall not assign, sublicense, or transfer" clause yields one
+     fragment per right; an exclusivity clause with territory/term/renewal
+     limitations yields one fragment per distinct limitation. EXAMPLE of the
+     required grain — the ground truth holds "Licensee shall not sublicense the
+     Software"; do NOT emit "Except as otherwise set forth herein, during the
+     Term of this Agreement Licensee shall not sublicense, sell, or otherwise
+     transfer the Software or any portion thereof to any third party without
+     the prior written consent of Licensor." — the fragment, not the sentence,
+     is the item. Quote each fragment verbatim and keep it complete — never
+     truncate mid-obligation. NEVER include document titles, recitals, or
+     definitions. (This fragment rule applies to key_obligations only;
+     termination_clauses keep their full-provision quoting.)""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1867,6 +1923,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v13": CONTRACTS_SPECIALIST_PROMPT_V13,
     "contracts_specialist_v14": CONTRACTS_SPECIALIST_PROMPT_V14,
     "contracts_specialist_v15": CONTRACTS_SPECIALIST_PROMPT_V15,
+    "contracts_specialist_v16": CONTRACTS_SPECIALIST_PROMPT_V16,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

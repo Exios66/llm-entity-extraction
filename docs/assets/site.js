@@ -368,8 +368,11 @@ function indexTable(rows) {
     const va = a[key], vb = b[key];
     if (key === "headline") return ((va?.value ?? -1) - (vb?.value ?? -1)) * dir;
     if (key === "cost") return ((a.cost?.cost_total_usd ?? -1) - (b.cost?.cost_total_usd ?? -1)) * dir;
-    if (key === "total_tokens" || key === "n_rows" || key === "n_error" || key === "delta_best_pp")
-      return ((va ?? -1) - (vb ?? -1)) * dir;
+    // Numeric columns sort NUMERICALLY — id is the chronological run number,
+    // so it must never fall through to the lexicographic string compare
+    // (which put "9" before "43" and buried the newest runs mid-table).
+    if (key === "id" || key === "total_tokens" || key === "n_rows" || key === "n_error" || key === "delta_best_pp")
+      return ((Number(va) ?? -1) - (Number(vb) ?? -1)) * dir;
     return String(va ?? "").localeCompare(String(vb ?? "")) * dir;
   });
   const cols = [

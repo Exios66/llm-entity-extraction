@@ -9,6 +9,12 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Fixed
+- **Runs table sorts chronologically by default**: the `id` column (the
+  chronological run number) fell through to a lexicographic string compare,
+  so the default newest-first sort produced a garbled order ("9" before
+  "43", newest runs buried mid-table). `id` now sorts numerically in every
+  view's runs table; the default remains id desc (newest first), and the
+  header click toggles numeric asc/desc correctly.
 - **Stylized graph favicon for the site**: the GH Pages favicon is now a
   directed-graph motif (four nodes on the site's accent gradient with a
   highlighted vertex) replacing the placeholder "E" — matching the
