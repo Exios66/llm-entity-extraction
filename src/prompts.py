@@ -1400,6 +1400,46 @@ CONTRACTS_SPECIALIST_PROMPT_V13 = CONTRACTS_SPECIALIST_PROMPT_V12.replace(
      missed spans: split them.""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v14 (truncation resilience +
+# source truth)
+# -----------------------------------------------------------------------------
+# v14 = v13 + the truncation and correctness fixes measured on the 50-doc A/B
+# sample (v13 vs v14, Langfuse llm-dojo project). The 30-doc v13 A/B showed
+# key_obligations +6.4pp from span-granularity itemization, but the truncated
+# docs still lagged (ko 0.41 vs 0.64 for untruncated at the 150k cap) — the
+# longest agreements (up to 335k chars) carry the richest obligation sets and
+# are exactly the ones cut. v14:
+#   - treats the truncation marker as a window boundary, not the document
+#     end: the closing portion is where the term/termination/renewal and
+#     obligation families concentrate, and every family occurrence there must
+#     be extracted (the 50-doc eval raises the input cap 150k -> 250k,
+#     halving the truncated rows; this duty recovers the rest);
+#   - adds the SOURCE TRUTH duty: extract only what the text states — the
+#     eval harness never exposes ground truth (expected_fields feeds the
+#     post-hoc scorer only), so any inference beyond the text is a model
+#     error, not information the prompt can rely on.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V14 = CONTRACTS_SPECIALIST_PROMPT_V13.replace(
+    """unrecoverable — never fabricate a clause for it.""",
+    """unrecoverable — never fabricate a clause for it. Never treat the truncation
+     marker as the end of the document: the closing portion after the marker carries
+     the deal-critical sections AND often the restriction/covenant families
+     (anti-assignment, license grants, caps on liability, audit rights, exclusivity,
+     non-compete, post-termination services, IP ownership, change of control) — scan
+     it section by section and extract every family occurrence found there.""",
+).replace(
+    """     missed spans: split them.""",
+    """     missed spans: split them.
+   - SOURCE TRUTH: extract every item from the document text ALONE — never infer,
+     paraphrase, or invent an obligation from the agreement's title, recitals, the
+     parties' names, or the document type. A family clause that is present must
+     appear; a clause that is absent must not. The list must be a faithful, verbatim
+     inventory of what the text actually states.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1795,6 +1835,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v11": CONTRACTS_SPECIALIST_PROMPT_V11,
     "contracts_specialist_v12": CONTRACTS_SPECIALIST_PROMPT_V12,
     "contracts_specialist_v13": CONTRACTS_SPECIALIST_PROMPT_V13,
+    "contracts_specialist_v14": CONTRACTS_SPECIALIST_PROMPT_V14,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

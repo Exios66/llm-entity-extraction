@@ -1,0 +1,8 @@
+{
+ "available": false,
+ "error": "OPENROUTER_API_KEY not set \u2014 rebuild with --benchmarks-key or the env var to fetch live benchmarks",
+ "data": [],
+ "meta": {
+  "version": "v1"
+ }
+}

@@ -55,7 +55,7 @@ def _dataset_row():
     return {
         "input": {"doc_text": "This Agreement between Acme and Beta is a license agreement.",
                   "filename": "cuad_doc_01.txt", "expected": "contract",
-                  "expected_fields": {}, "metadata": {"category": "License_Agreements"}},
+                  "expected_fields": {"key_obligations": ["GT-SENTINEL-secret-obligation"]}, "metadata": {"category": "License_Agreements"}},
         "expected": "contract",
         "filename": "cuad_doc_01.txt",
         "expected_output": {"doc_type": "contract", "clause_labels": CUAD_LABELS},
@@ -115,3 +115,41 @@ def test_langfuse_extraction_dry_run(fake_langfuse_extraction, monkeypatch, tmp_
     rc = runner.main_with_args(["--dataset", "mailroom-cuad-contracts", "--dry-run"])
     assert rc == 0
     assert fake_langfuse_extraction.calls["extractor"] == 0
+
+
+def test_langfuse_extraction_gt_never_leaks_to_model(fake_langfuse_extraction, monkeypatch, tmp_path):
+    """Ground truth must never reach the model: expected_fields feeds the
+    post-hoc scorer ONLY — the specialist receives raw doc_text and nothing
+    else, so no GT content can be copied or parroted."""
+    import scripts.eval.run_langfuse_extraction_eval as runner
+
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    monkeypatch.setattr("scripts.eval.run_langfuse_extraction_eval.load_braintrust_dataset",
+                        lambda *a, **k: [_dataset_row()])
+    received = []
+
+    def spy_extract(self, doc_text):
+        received.append(doc_text)
+        return {
+            "document_name": "Content License Agreement",
+            "parties": ["Acme Technologies, Inc.", "Beta Holdings Corp."],
+            "effective_date": "2024-01-15",
+            "term_length": "two (2) years",
+            "termination_clauses": [],
+            "governing_law": "State of Delaware",
+            "key_obligations": ["Acme shall not assign this Agreement."],
+            "contract_value": None,
+            "renewal_terms": None,
+            "confidence": 0.8,
+        }
+
+    monkeypatch.setattr("agents.specialist_agents.ContractsSpecialist.extract", spy_extract)
+    rc = runner.main_with_args(["--dataset", "mailroom-cuad-contracts",
+                                "--sample", "1", "--seed", "42",
+                                "--manifest", str(tmp_path / "m.jsonl"),
+                                "--experiment-log", str(tmp_path / "exp.jsonl")])
+    assert rc == 0
+    assert received, "specialist was never called"
+    for text in received:
+        assert "GT-SENTINEL" not in text
+        assert "expected_fields" not in text
