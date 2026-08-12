@@ -85,6 +85,9 @@ python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
 python scripts/eval/run_langfuse_extraction_eval.py --prompt-version contracts_specialist_v11
 python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_v6
 
+# Wiki (version-controlled here, pushed to the public GitHub wiki)
+./wiki/sync-wiki.sh                     # push wiki/ -> https://github.com/Exios66/llm-entity-extraction/wiki
+
 # Site data (derived from the experiment log; never hand-edit docs/data)
 python scripts/site/build_site.py          # regenerate docs/data/ (index, meta, runs/, trends.json, prompts.json)
 python scripts/site/build_site.py --check  # verify it is current
@@ -438,6 +441,18 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   import path) is what llm-mailroom imports; after adding a new module, confirm it is covered by
   `pip install -e .` (setuptools `packages` list) and the out-of-repo import
   still works.
+
+## Docs & READMEs
+
+- Per-directory READMEs are the map: `src/README.md`, `agents/README.md`,
+  `config/README.md`, `scripts/README.md`, `tests/README.md`,
+  `reports/README.md`, `docs/README.md` (site), plus the root `README.md` —
+  keep them current when the layout or a module's contract changes.
+- The project **wiki** is version-controlled in `wiki/` (Home,
+  Getting-Started, Architecture, Eval-Runners, Experiment-Log, Scoring, Site,
+  Release-Process, Taxonomy, FAQ) and pushed to the public GitHub wiki with
+  `./wiki/sync-wiki.sh` — run it after wiki edits and after major releases.
+  The wiki is NOT a mirror of docs/; each lives its own life.
 
 ## Useful one-liners
 

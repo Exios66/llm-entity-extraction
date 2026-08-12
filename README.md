@@ -87,7 +87,9 @@ agents/                  LangChain agents (sorter, specialists, judge)
   specialist_agents.py   per-class field extraction + shared JSON schemas
   judge_agent.py         LLM-as-a-judge (classification/completeness/correctness)
 config/taxonomy.yaml     doc classes, field types, agent->model mapping, thresholds
-src/
+src/                     core modules (see src/README.md)
+  bootstrap.py           percentile-bootstrap CIs + two-sample delta significance
+  cost_models.py         verified per-model prices + deterministic cost estimation
   braintrust_config.py   loads braintrust.env / .env (org, project, model, api base)
   braintrust_utils.py    Braintrust HTTP, dataset load/upload, experiment fetch
   classifier.py          label/confidence/reasoning parsers (RVL-CDIP style)
@@ -98,6 +100,10 @@ src/
   field_scoring.py       deterministic field-type-aware content scoring + factuality audit
   image_utils.py         PDF/TIFF -> 1024x1024 grayscale PNG helpers
   llm_chain.py           LangChain chain factory for eval loops
+scripts/                 ops + evals + reporting + site + releases (see scripts/README.md)
+tests/                   network-free suite + headless site render audit (see tests/README.md)
+reports/                 the experiment log: experiment_log.{jsonl,md} (see reports/README.md)
+wiki/                    this wiki's pages + wiki/sync-wiki.sh (pushes the GitHub wiki)
   openrouter_utils.py    OpenRouter constants + vision message builders
   prompts.py             ALL agent prompts, versioned
   scorers.py             deterministic Braintrust scorers (exact_match, failure, cost)
@@ -196,6 +202,8 @@ served by GitHub Pages — **no Actions runners**:
 
 - Enabling Pages is a one-time repo setting: **Settings → Pages → Deploy from
   a branch → `main` → `/docs`**.
+- The project **wiki** (https://github.com/Exios66/llm-entity-extraction/wiki)
+  is version-controlled in `wiki/` and pushed with `./wiki/sync-wiki.sh`.
 
 ## Setup
 

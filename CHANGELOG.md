@@ -9,6 +9,21 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **Complete documentation pass**: per-directory READMEs added where missing —
+  `src/README.md` (core modules incl. `bootstrap.py`/`cost_models.py`),
+  `agents/README.md` (agent roster), `config/README.md` (taxonomy.yaml),
+  `scripts/README.md` (ops/evals/reporting/site/releases), `tests/README.md`
+  (conventions + render audit), `reports/README.md` (the experiment log) —
+  and the root `README.md` layout + Website sections updated to reference
+  them. AGENTS.md gained a "Docs & READMEs" convention.
+- **Public GitHub wiki fully expanded** (`wiki/`, pushed by
+  `./wiki/sync-wiki.sh` to https://github.com/Exios66/llm-entity-extraction/wiki):
+  Home, Getting-Started, Architecture, Eval-Runners, Experiment-Log, Scoring
+  (expanded from the previous Experiment-Scoring-Breakdown), Site, Release-
+  Process, Taxonomy, FAQ, plus _Sidebar/_Footer — covering setup, every eval
+  runner, the JSONL/md/site pipeline, all metrics (bootstrap CIs, judge
+  calibration, ablation, cost scoring), the visualization site, and the
+  release workflow.
 - **Release automation (`scripts/release.py`)**: `--bump <patch|minor|major>
   --note "<summary>"` converts the accumulated `[Unreleased]` entries into
   `## [vX.Y.Z] - <date>` (keeping the empty placeholder), bumps
