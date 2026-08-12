@@ -1440,6 +1440,36 @@ CONTRACTS_SPECIALIST_PROMPT_V14 = CONTRACTS_SPECIALIST_PROMPT_V13.replace(
      inventory of what the text actually states.""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v15 (chunked extraction pass)
+# -----------------------------------------------------------------------------
+# v15 = v14 + the CHUNK DUTY for the chunked extraction architecture
+# (``extract_chunked`` on the specialist). The 50-doc v14 A/B measured the
+# truncation ceiling: at the 250k cap, 3 of 50 docs still truncate and their
+# key_obligations averaged 0.47 vs 0.69 untruncated — the 335k-char
+# agreements carry the richest obligation sets and the omitted middle is
+# unrecoverable in a single call. v15 runs in overlapping windows (90k chars,
+# 8k overlap), so nothing is truncated: every chunk extracts all family
+# occurrences it can see, boundary clauses are re-quoted by the overlap and
+# deduped at merge, and the union is the completeness guarantee. The single-
+# pass path (no chunk header) behaves exactly like v14.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V15 = CONTRACTS_SPECIALIST_PROMPT_V14.replace(
+    """     inventory of what the text actually states.""",
+    """     inventory of what the text actually states.
+   - CHUNK DUTY: the document may arrive in overlapping CHUNKS, each labeled
+     "EXTRACTION CHUNK N OF M". Extract every family occurrence present in the chunk
+     you see — a visible family clause is never skippable because it looks
+     incomplete. A clause may begin before the chunk or continue past it (the
+     overlap window re-quotes the boundary); quote the VISIBLE operative language
+     faithfully and stop at what you can see — never fabricate a clause that is
+     not in your chunk, and never guess at the omitted text between chunks. Your
+     items are merged across chunks, so a boundary-truncated clause still counts
+     when the neighboring chunk holds the rest.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1836,6 +1866,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v12": CONTRACTS_SPECIALIST_PROMPT_V12,
     "contracts_specialist_v13": CONTRACTS_SPECIALIST_PROMPT_V13,
     "contracts_specialist_v14": CONTRACTS_SPECIALIST_PROMPT_V14,
+    "contracts_specialist_v15": CONTRACTS_SPECIALIST_PROMPT_V15,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

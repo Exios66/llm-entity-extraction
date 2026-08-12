@@ -670,6 +670,8 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "category_presence": output.get("category_presence"),
             "ambiguous_fields": output.get("ambiguous_fields"),
             "truncated": output.get("truncated"),
+            "chunked": output.get("chunked"),
+            "n_chunks": output.get("n_chunks"),
             "tokens": usage_by_index.get(index) or {},
         })
 
@@ -698,6 +700,9 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "max_concurrency": args.max_concurrency,
             "bt_scores": getattr(args, "bt_scores", "none"),
             "judge": getattr(args, "judge", False),
+            "chunked": bool(getattr(args, "chunked", False)),
+            "chunk_chars": getattr(args, "chunk_chars", None),
+            "chunk_overlap": getattr(args, "chunk_overlap", None),
             "manifest": str(args.manifest) if args.manifest else None,
             "tracing_backend": tracing_backend,
             **({"tracing": tracing_meta} if tracing_meta else {}),

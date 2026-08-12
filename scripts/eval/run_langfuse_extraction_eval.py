@@ -92,6 +92,16 @@ def main_with_args(argv: list[str]) -> int:
                         help="Hard safety cap on document text fed to the model "
                              "(150k default: the full corpus's largest contracts run "
                              "106-122k chars; head+tail window when exceeded)")
+    parser.add_argument("--chunked", action="store_true",
+                        help="Chunked extraction pass (v15 architecture): split the "
+                             "document into overlapping windows, extract each in its "
+                             "own call, merge (list fields union with dedupe, scalars "
+                             "first-non-null, confidence max) — nothing is truncated")
+    parser.add_argument("--chunk-chars", type=int, default=90_000,
+                        help="Chunk window size for --chunked (default: 90000 chars)")
+    parser.add_argument("--chunk-overlap", type=int, default=8_000,
+                        help="Overlap carried between chunks for --chunked "
+                             "(default: 8000 chars — re-quotes boundary clauses)")
     parser.add_argument("--max-concurrency", type=int, default=8, help="Concurrent API calls")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{prompt-version}_extraction_langfuse)")
@@ -142,6 +152,8 @@ def main_with_args(argv: list[str]) -> int:
     if args.dry_run:
         print(f"Dry run: {len(with_truth)} contracts -> experiment '{experiment_name}'")
         print(f"  prompt_version={args.prompt_version} model={args.model}")
+        if args.chunked:
+            print(f"  mode=chunked windows={args.chunk_chars} overlap={args.chunk_overlap}")
         print(f"  fields scored: {scored_fields}")
         print(f"  tracing=langfuse session={experiment_name} trace_name={args.lf_trace_name}")
         return 0
@@ -219,7 +231,11 @@ def main_with_args(argv: list[str]) -> int:
                 specialist._max_tokens = args.max_tokens
                 specialist._reasoning_effort = args.reasoning_effort
                 try:
-                    predicted = specialist.extract(doc_text)
+                    if args.chunked:
+                        predicted = specialist.extract_chunked(
+                            doc_text, args.chunk_chars, args.chunk_overlap)
+                    else:
+                        predicted = specialist.extract(doc_text)
                 except Exception as exc:  # noqa: BLE001 - one bad row must not abort
                     print(f"ERROR {filename}: {type(exc).__name__}: {exc}", file=sys.stderr)
                     composite = {"predicted": {}, "error": str(exc), "schema_valid": 0.0,
@@ -274,6 +290,8 @@ def main_with_args(argv: list[str]) -> int:
                     "overall_verified_precision": result.overall_verified_precision or 0.0,
                     "ambiguous_fields": result.ambiguous_fields,
                     "truncated": bool(specialist._last_truncated),
+                    "chunked": bool(args.chunked),
+                    "n_chunks": int(getattr(specialist, "_last_n_chunks", 0) or 0),
                 }
 
                 specialist_handle.set_output({
