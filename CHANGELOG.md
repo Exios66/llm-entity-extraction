@@ -9,6 +9,10 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Fixed
+- **Stylized graph favicon for the site**: the GH Pages favicon is now a
+  directed-graph motif (four nodes on the site's accent gradient with a
+  highlighted vertex) replacing the placeholder "E" — matching the
+  experiment-log/LangGraph identity. Also adds a Safari `mask-icon`.
 - **Benchmarks view showed "OPENROUTER_API_KEY not set" despite a configured
   key**: `build_site.py` never loaded the repo's credential files
   (`braintrust.env` / `.env`), so the benchmarks fetch silently reported
