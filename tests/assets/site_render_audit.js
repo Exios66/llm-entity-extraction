@@ -61,6 +61,17 @@ const state = api.state;
     try { await api.renderGroup("task", task); views.push(`task/${task} OK`); }
     catch (e) { failures.push(`task/${task}: ${e.message}`); }
   }
+  // 2.5) charts must be interactive: every task view's charts carry
+  //      data-run-id hooks (hover tooltip + click-to-run navigation)
+  for (const task of Object.keys(meta.tasks)) {
+    await api.renderGroup("task", task);
+    const html = els.view?._html || "";
+    // tasks with trend series must render interactive chart points
+    if ((trends.tasks || {})[task] && (trends.tasks[task] || []).length) {
+      const hooks = (html.match(/data-run-id=/g) || []).length;
+      if (!hooks) failures.push(`task/${task}: no interactive chart points`);
+    }
+  }
   // 3) prompt + model groups
   const somePrompt = index.find((r) => r.prompts && r.prompts !== "—")?.prompts;
   const someModel = index[0]?.model;

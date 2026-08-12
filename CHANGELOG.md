@@ -8,6 +8,27 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Changed
+- **Charts are legible, inspectable, and navigable (issue #1 polish)**:
+  - cost-vs-quality scatter now uses a **log-scale x axis** (runs span ~4
+    orders of magnitude; the linear axis piled every point on the y axis),
+    with $ grid ticks (0.001 → 10) and filled (billed) vs hollow (estimated)
+    points;
+  - trend lines are **smoothed** (Catmull-Rom splines) with the raw points
+    drawn on top, drawn from a **curated 10-color palette with dash
+    patterns** (no hue-rotation collisions); hovering a series dims the
+    others so overlapping lines stay distinguishable;
+  - **every chart point is hover-inspectable** — a tooltip panel shows the
+    run's experiment name, run id, model, prompt, headline, cost (billed vs
+    estimate), n rows, sample key, and timestamp — and **clicking a point
+    navigates to the coordinated run** (`#/run/{id}`); failure-mode stack
+    rows are clickable too;
+  - `sorter_classification` finally got a headline handler (exact_match +
+    per-class detail), so its runs chart like every other task.
+- **Navigation grouped**: the nav bar now has a single **"tasks" dropdown**
+  populated from `meta.tasks` (the hardcoded per-task links that duplicated
+  the dynamic ones are gone) — runs | tasks ▾ | prompt diff | repo | theme.
+
 ### Added
 - **Cost scoring for every run (GitHub issue #1)**: OpenRouter usage payloads
   carry no cost field, so every run previously recorded `cost_total_usd =

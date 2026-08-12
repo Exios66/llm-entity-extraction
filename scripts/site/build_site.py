@@ -239,6 +239,15 @@ def headline_score(record: dict) -> dict:
                 "value": strict,
                 "detail": detail,
             }
+    if task == "sorter_classification":
+        value = scores.get("exact_match")
+        if isinstance(value, (int, float)):
+            detail = f"failure {_fmt(scores.get('failure') or 0)}"
+            per_class = scores.get("per_class_accuracy") or {}
+            if per_class:
+                detail += " · " + " ".join(
+                    f"{k} {_fmt(v)}" for k, v in sorted(per_class.items())[:4])
+            return {"label": "classification", "value": value, "detail": detail}
     if task == "legalbench_binary_answer":
         value = scores.get("accuracy")
         if isinstance(value, (int, float)):

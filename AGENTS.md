@@ -90,6 +90,10 @@ python scripts/site/build_site.py          # regenerate docs/data/ (index, meta,
 python scripts/site/build_site.py --check  # verify it is current
 # Note: docs/assets/site.js + index.html are HAND-maintained (trend charts,
 # cost-vs-quality scatter, failure-mode stacked bars, #/prompts diff view).
+# Charts: log-scale cost axis, Catmull-Rom smoothing, curated palette/dashes,
+# hover tooltips + click-to-run on every point; nav tasks live under the
+# single "tasks" dropdown (populated from meta.tasks). Run
+# `node tests/assets/site_render_audit.js` after any site.js edit.
 
 # Reporting (all offline except the two Braintrust fetchers)
 python scripts/reporting/report_generator.py --experiment <name>        # fetches Braintrust

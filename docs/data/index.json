@@ -1557,8 +1557,17 @@
   "task": "sorter_classification",
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6",
-  "headline": {},
-  "ci95": null,
+  "headline": {
+   "label": "classification",
+   "value": 1.0,
+   "detail": "failure 0.0000 \u00b7 contract 1.0000"
+  },
+  "ci95": {
+   "lo": 0.43849391955098227,
+   "hi": 1.0,
+   "half_pp": 28.075304022450887,
+   "source": "wilson"
+  },
   "breakdown": {},
   "n_rows": 3,
   "n_ok": 3,
@@ -1576,8 +1585,8 @@
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": null,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
-  "global_best_pp": null,
-  "delta_best_pp": null,
+  "global_best_pp": 0.0,
+  "delta_best_pp": 0.0,
   "timestamp": "2026-08-11T01:41:26.996066+00:00",
   "git": {
    "commit": "87be75a",
@@ -1774,8 +1783,17 @@
   "task": "sorter_classification",
   "model": "qwen/qwen3.7-flash",
   "prompts": "sorter_v6",
-  "headline": {},
-  "ci95": null,
+  "headline": {
+   "label": "classification",
+   "value": 1.0,
+   "detail": "failure 0.0000 \u00b7 contract 1.0000"
+  },
+  "ci95": {
+   "lo": 0.43849391955098227,
+   "hi": 1.0,
+   "half_pp": 28.075304022450887,
+   "source": "wilson"
+  },
   "breakdown": {},
   "n_rows": 3,
   "n_ok": 3,
@@ -1793,8 +1811,8 @@
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": null,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
-  "global_best_pp": null,
-  "delta_best_pp": null,
+  "global_best_pp": 0.0,
+  "delta_best_pp": 0.0,
   "timestamp": "2026-08-11T01:45:56.001912+00:00",
   "git": {
    "commit": "a660aea",

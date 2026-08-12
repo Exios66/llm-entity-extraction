@@ -622,6 +622,7 @@ async function renderGroup(kind, key) {
     const tr = e.target.closest("tr[data-id]");
     if (tr) window.location.hash = `#/run/${tr.dataset.id}`;
   });
+  wireChartInteractions($("#view"));
   localFilter();
   window.scrollTo(0, 0);
 }
@@ -1271,87 +1272,234 @@ async function renderPrompts() {
   window.scrollTo(0, 0);
 }
 
-/* ---------- issue #1: SVG charts (trend / scatter / failure-mode stacks) ---------- */
+/* ---------- issue #1: SVG charts (trend / scatter / failure-mode stacks) ----------
+ * Legibility rules (issue #1 polish):
+ *  - curated palette + dash patterns so overlapping prompt series stay
+ *    distinguishable (no hue-rotation collisions);
+ *  - Catmull-Rom smoothing on trend lines (raw points still drawn as dots);
+ *  - log-scale x axis for cost (runs span ~4 orders of magnitude — a linear
+ *    axis piles every point on the y axis);
+ *  - every point is hover-inspectable (tooltip panel) and click-navigates to
+ *    the coordinated run (data-run-id + chartOpenRun).
+ */
+
+const CHART_PALETTE = [
+  "#7d97b5", "#d9a866", "#5f9e6e", "#e26863", "#8f7dd9",
+  "#4fb3b3", "#d98a5f", "#7fae4f", "#c96bd6", "#5f9ea8",
+];
+const CHART_DASHES = [null, "5 3", "1.5 3", "9 3 3 3", "3 3 1 3"];
+
+function chartColor(prompt, index) {
+  /* Stable per-prompt color from the curated palette (hash-based index). */
+  let h = 0;
+  for (const c of prompt) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return CHART_PALETTE[h % CHART_PALETTE.length];
+}
+
+/* Points -> smooth SVG path (Catmull-Rom to cubic bezier). Keeps the line
+ * legible across few, noisy runs; the raw dots remain on top. */
+function smoothPath(pts, px, py) {
+  if (pts.length < 3) {
+    return `M ${pts.map((p) => `${px(p.x).toFixed(1)} ${py(p.y).toFixed(1)}`).join(" L ")}`;
+  }
+  let d = `M ${px(pts[0].x).toFixed(1)} ${py(pts[0].y).toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${px(c1x).toFixed(1)} ${py(c1y).toFixed(1)} ${px(c2x).toFixed(1)} ${py(c2y).toFixed(1)} ${px(p2.x).toFixed(1)} ${py(p2.y).toFixed(1)}`;
+  }
+  return d;
+}
+
+/* Runs are the inspection unit on every chart: keep their detail handy for
+ * the hover tooltip + click navigation. */
+const CHART_RUNS = {};
+
+function chartRunTip(runId) {
+  const e = CHART_RUNS[runId];
+  if (!e) return "";
+  const cost = (typeof e.cost_total_usd === "number" && e.cost_total_usd > 0)
+    ? `<b>$${e.cost_total_usd.toFixed(4)}</b> billed`
+    : (e.cost_estimated_usd != null ? `<b>$${e.cost_estimated_usd.toFixed(4)}</b> est.` : "cost —");
+  const headline = e.headline_value != null ? `${(e.headline_value * 100).toFixed(1)}%` : "—";
+  return `<div class="chart-tip-title">${esc(e.experiment_name)}</div>
+    <div class="chart-tip-row">run <b>#${runId}</b> · ${esc(e.model || "")}</div>
+    <div class="chart-tip-row">${esc(e.prompts || "")}</div>
+    <div class="chart-tip-row">headline <b>${headline}</b> · ${cost}</div>
+    <div class="chart-tip-row faint">${fmt.int(e.n_rows)} rows · ${esc(e.sample_key || "")}</div>
+    <div class="chart-tip-row faint">${esc(fmt.date(e.timestamp))}</div>
+    <div class="chart-tip-open">open run →</div>`;
+}
+
+function chartTooltip(evt, runId) {
+  const tip = document.getElementById("chart-tip");
+  if (!tip) return;
+  const html = chartRunTip(runId);
+  if (!html) return;
+  tip.innerHTML = html;
+  tip.hidden = false;
+  const x = evt.clientX + 14;
+  const y = evt.clientY + 10;
+  tip.style.left = Math.min(x, window.innerWidth - 280) + "px";
+  tip.style.top = Math.min(y, window.innerHeight - 190) + "px";
+}
+
+function chartHideTip() {
+  const tip = document.getElementById("chart-tip");
+  if (tip) tip.hidden = true;
+}
+
+function chartOpenRun(runId) {
+  if (runId != null) window.location.hash = `#/run/${runId}`;
+}
 
 function svgChart(opts) {
-  const { w = 860, h = 260, series, xLabel, yLabel, yMax = 1 } = opts;
+  const { w = 860, h = 260, series, xLabel, yLabel, yMax = 1, logX = false, smooth = false } = opts;
   const valueOf = (p) => p.y;
   const xOf = (p) => p.x;
-  const colorOf = (p) => p.color;
-  const pad = { l: 46, r: 14, t: 14, b: 34 };
+  const pad = { l: 54, r: 18, t: 16, b: 38 };
   const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
   const all = series.flatMap((s) => s.points);
-  const xMax = Math.max(1, ...all.map((p) => xOf(p)));
-  const px = (x) => pad.l + (x / xMax) * iw;
+  let xMin = Math.min(...all.map((p) => xOf(p)));
+  let xMax = Math.max(...all.map((p) => xOf(p)));
+  let xTicks = [];
+  let xTickLabel = (v) => fmtIntX(v);
+  const fmtIntX = (v) => (Math.abs(v) >= 1000 ? fmt.tokens(v) : String(v));
+  if (logX) {
+    const lo = Math.pow(10, Math.floor(Math.log10(Math.max(xMin, 1e-5))));
+    const hi = Math.pow(10, Math.ceil(Math.log10(Math.max(xMax, 1e-4))));
+    xMin = lo; xMax = hi;
+    for (let v = lo; v <= hi * 1.001; v *= 10) xTicks.push(v);
+    xTickLabel = (v) => (v >= 1 ? `$${v}` : `$${v.toFixed(v < 0.001 ? 4 : 3)}`);
+  } else {
+    const step = Math.max(1, Math.ceil(xMax / 6));
+    for (let v = 0; v <= xMax + 1e-9; v += step) xTicks.push(v);
+  }
+  const px = (x) => logX
+    ? pad.l + ((Math.log10(Math.max(x, 1e-9)) - Math.log10(xMin)) / (Math.log10(xMax) - Math.log10(xMin))) * iw
+    : pad.l + ((x - xMin) / Math.max(1, xMax - xMin)) * iw;
   const py = (y) => pad.t + (1 - Math.min(1, Math.max(0, y)) / yMax) * ih;
-  const grid = [0, 0.25, 0.5, 0.75, 1]
+
+  const gridY = [0, 0.25, 0.5, 0.75, 1]
     .map((g) => `<line x1="${pad.l}" y1="${py(g)}" x2="${w - pad.r}" y2="${py(g)}" class="grid"/>
-      <text x="${pad.l - 6}" y="${py(g) + 3}" class="axis">${(g * 100).toFixed(0)}%</text>`)
+      <text x="${pad.l - 8}" y="${py(g) + 3}" class="axis">${(g * 100).toFixed(0)}%</text>`)
     .join("");
-  const traces = series.map((s) => {
-    const colored = s.points.map((p) => ({ ...p, color: p.color || s.color }));
-    const pts = colored.map((p) => `${px(xOf(p)).toFixed(1)},${py(valueOf(p)).toFixed(1)}`).join(" ");
-    const dots = colored.map((p) =>
-      `<circle cx="${px(xOf(p)).toFixed(1)}" cy="${py(valueOf(p)).toFixed(1)}" r="3" class="dot" fill="${colorOf(p)}" ${p.billed === false ? 'stroke-dasharray="2 1.5"' : ""}><title>${esc(s.label + " · " + (p.tooltip || ""))}</title></circle>`).join("");
-    return `<polyline points="${pts}" fill="none" stroke="${s.color || colorOf(s.points[0])}" stroke-width="1.6"/>${dots}`;
+  const gridX = xTicks
+    .map((v) => `<line x1="${px(v)}" y1="${pad.t}" x2="${px(v)}" y2="${h - pad.b}" class="grid-v"/>
+      <text x="${px(v)}" y="${h - pad.b + 14}" class="axis" text-anchor="middle">${esc(xTickLabel(v))}</text>`)
+    .join("");
+
+  const traces = series.map((s, si) => {
+    const color = s.color || chartColor(s.label, si);
+    const dash = (s.dash || CHART_DASHES[si % CHART_DASHES.length]) || undefined;
+    const sorted = [...s.points].sort((a, b) => a.x - b.x);
+    for (const pt of sorted) CHART_RUNS[pt.runId] = pt.run;
+    const path = smooth
+      ? smoothPath(sorted, px, py)
+      : `M ${sorted.map((p) => `${px(p.x).toFixed(1)} ${py(p.y).toFixed(1)}`).join(" L ")}`;
+    const dots = sorted.map((p) =>
+      `<circle data-run-id="${p.runId}" class="dot${p.billed === false ? " est" : ""}" cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="4" fill="${color}" stroke="${color}"><title>${esc(s.label + " · " + (p.tooltip || ""))}</title></circle>`).join("");
+    return `<g class="series" data-series="${esc(s.label)}" style="color:${color}">
+      <path class="line" d="${path}" fill="none" stroke="${color}" stroke-width="2" ${dash ? `stroke-dasharray="${dash}"` : ""}/>
+      ${dots}
+    </g>`;
   }).join("");
-  const legend = series.map((s) =>
-    `<span class="chart-legend-item"><i style="background:${s.color || colorOf(s.points[0])}"></i>${esc(s.label)}</span>`).join("");
+
+  const legend = series.map((s, si) =>
+    `<span class="chart-legend-item" data-series="${esc(s.label)}"><i style="background:${s.color || chartColor(s.label, si)}${s.dash ? `;background-image:repeating-linear-gradient(90deg, transparent 0 3px, #141416 3px 6px)` : ""}"></i>${esc(s.label)}</span>`).join("");
+
   return `<div class="chart">
     <svg viewBox="0 0 ${w} ${h}" class="chart-svg" role="img">
-      ${grid}
+      ${gridY}
+      ${gridX}
       ${traces}
-      <text x="${pad.l + iw / 2}" y="${h - 6}" class="axis" text-anchor="middle">${esc(xLabel)}</text>
+      <text x="${pad.l + iw / 2}" y="${h - 8}" class="axis" text-anchor="middle">${esc(xLabel)}</text>
       <text x="10" y="${pad.t + ih / 2}" class="axis" transform="rotate(-90 10 ${pad.t + ih / 2})" text-anchor="middle">${esc(yLabel)}</text>
     </svg>
     <div class="chart-legend">${legend}</div>
+    <div id="chart-tip" class="chart-tip mono" hidden></div>
   </div>`;
 }
 
-function chartColor(prompt) {
-  let h = 0;
-  for (const c of prompt) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return `hsl(${h} 65% 55%)`;
+/* Event wiring for chart interaction — delegated once per chart container. */
+function wireChartInteractions(container) {
+  container.addEventListener("pointerover", (ev) => {
+    const node = ev.target.closest("[data-run-id]");
+    if (!node) return;
+    if (ev.target.closest(".series")) {
+      container.querySelectorAll(".series").forEach((g) =>
+        g.classList.toggle("dimmed", g !== ev.target.closest(".series")));
+    }
+    chartTooltip(ev, node.dataset.runId);
+  });
+  container.addEventListener("pointerout", (ev) => {
+    if (ev.target.closest("[data-run-id]")) chartHideTip();
+    if (ev.target.closest(".series")) {
+      container.querySelectorAll(".series").forEach((g) => g.classList.remove("dimmed"));
+    }
+  });
+  container.addEventListener("pointerleave", () => {
+    chartHideTip();
+    container.querySelectorAll(".series").forEach((g) => g.classList.remove("dimmed"));
+  });
+  container.addEventListener("click", (ev) => {
+    const node = ev.target.closest("[data-run-id]");
+    if (node) chartOpenRun(node.dataset.runId);
+  });
 }
 
 function trendChartHtml(series, task) {
-  /* One polyline per prompt version across runs (x = run id, y = headline). */
+  /* One smoothed line per prompt version across runs (x = run id, y = headline). */
   const groups = new Map();
   for (const e of series) {
     if (e.headline_value == null) continue;
     if (!groups.has(e.prompts)) groups.set(e.prompts, []);
-    groups.get(e.prompts).push({ x: e.id, y: e.headline_value, tooltip: `${e.experiment_name} (run ${e.id})` });
+    groups.get(e.prompts).push({
+      x: e.id, y: e.headline_value, runId: e.id, run: e,
+      tooltip: `${e.experiment_name} (run ${e.id})`,
+    });
   }
   const traces = [...groups.entries()]
-    .map(([prompt, points]) => ({ label: prompt, points: points.sort((a, b) => a.x - b.x), color: chartColor(prompt) }))
+    .map(([prompt, points]) => ({ label: prompt, points, color: chartColor(prompt) }))
     .filter((s) => s.points.length);
   if (!traces.length) return "";
   return `<div class="card"><h2>${esc(task.replace(/_/g, " "))} — score trend across runs</h2>
-    ${svgChart({ series: traces, xLabel: "run (chronological id)", yLabel: "headline score" })}
-    <div class="note">One line per prompt version, one point per run. Points on different sample surfaces (fingerprint/seed/size) are NOT directly comparable — check each run's sample key.</div>
+    ${svgChart({ series: traces, xLabel: "run (chronological id)", yLabel: "headline score", smooth: true })}
+    <div class="note">One line per prompt version, one point per run — hover a point to inspect the run, click to open it. Points on different sample surfaces (fingerprint/seed/size) are NOT directly comparable — check each run's sample key.</div>
   </div>`;
 }
 
 function scatterChartHtml(series) {
-  /* Cost-vs-quality: x = total cost $, y = headline score, colored per prompt. */
-  const points = series
-    .filter((e) => e.headline_value != null && typeof e.cost_total_usd === "number")
-    .map((e) => ({
-      x: e.cost_total_usd,
-      y: e.headline_value,
-      tooltip: `${e.experiment_name} — $${e.cost_total_usd.toFixed(4)}`,
-    }));
-  if (points.length < 2) return "";
+  /* Cost-vs-quality: x = total cost $ (LOG scale — runs span ~4 orders of
+   * magnitude; a linear axis piles every point on the y axis), y = headline,
+   * colored per prompt. Filled = billed (OpenRouter CSV), hollow = estimate. */
   const byPrompt = new Map();
+  const xOf = (e) => (typeof e.cost_total_usd === "number" && e.cost_total_usd > 0)
+    ? e.cost_total_usd : e.cost_estimated_usd;
+  let nPoints = 0;
   series.forEach((e) => {
-    if (e.headline_value == null || typeof e.cost_total_usd !== "number") return;
+    const x = xOf(e);
+    if (e.headline_value == null || typeof x !== "number" || x <= 0) return;
+    nPoints++;
     if (!byPrompt.has(e.prompts)) byPrompt.set(e.prompts, []);
-    byPrompt.get(e.prompts).push({ x: e.cost_total_usd, y: e.headline_value, tooltip: `${e.experiment_name} — $${e.cost_total_usd.toFixed(4)}` });
+    byPrompt.get(e.prompts).push({
+      x, y: e.headline_value, runId: e.id, run: e,
+      billed: x === e.cost_total_usd,
+      tooltip: `${e.experiment_name} — ${x === e.cost_total_usd
+        ? `billed $${e.cost_total_usd.toFixed(4)}` : `est. $${e.cost_estimated_usd.toFixed(4)}`}`,
+    });
   });
-  const traces2 = [...byPrompt.entries()].map(([prompt, pts]) => ({ label: prompt, points: pts, color: chartColor(prompt) }));
+  if (nPoints < 2) return "";
+  const traces = [...byPrompt.entries()].map(([prompt, pts]) => ({ label: prompt, points: pts, color: chartColor(prompt) }));
   return `<div class="card"><h2>Cost vs quality</h2>
-    ${svgChart({ series: traces2, xLabel: "total cost (USD)", yLabel: "headline score" })}
-    <div class="note">Each point is one run: score against total billed cost (OpenRouter export). Runs with no cost attribution are omitted — rebuild with <span class="mono">--openrouter-csv</span> to fill gaps.</div>
+    ${svgChart({ series: traces, xLabel: "total cost (USD, log scale)", yLabel: "headline score", logX: true })}
+    <div class="note">Each point is one run: score against cost. Filled = billed OpenRouter totals (activity-log CSV); hollow = deterministic token × price estimate. Hover to inspect, click to open the run.</div>
   </div>`;
 }
 
@@ -1369,7 +1517,7 @@ function failureModeBarsHtml(series) {
     const segs = MODES.filter((m) => (r.e.mode_counts[m] || 0) > 0)
       .map((m) => `<div class="stack-seg" style="width:${((r.e.mode_counts[m] / maxTotal) * 100).toFixed(1)}%;background:${MODE_COLORS[m]}" title="${esc(m)}: ${r.e.mode_counts[m]}"></div>`)
       .join("");
-    return `<div class="stack-row"><span class="stack-label">${esc(r.label)}</span>
+    return `<div class="stack-row" data-run-id="${r.e.id}"><span class="stack-label">${esc(r.label)}</span>
       <span class="stack-track"><span class="stack-fill">${segs}</span></span>
       <span class="stack-num">${total}</span></div>`;
   }).join("");
@@ -1377,27 +1525,43 @@ function failureModeBarsHtml(series) {
   return `<div class="card"><h2>Failure-mode stacked bars</h2>
     <div class="stack">${bars}</div>
     <div class="chart-legend">${legend}</div>
-    <div class="note">Trend of how sorter failures break down (function_over_form / other_fallback / equivalent_family / family_confusion) — did a prompt version actually shrink <i>family_confusion</i> specifically?</div>
+    <div class="note">Trend of how sorter failures break down (function_over_form / other_fallback / equivalent_family / family_confusion) — did a prompt version actually shrink <i>family_confusion</i> specifically? Click a row to open its run.</div>
   </div>`;
 }
 
-/* ---------- navigation: dynamic from the live task set ---------- */
+/* ---------- navigation: task links grouped under one dropdown ---------- */
 
 function renderNav(meta) {
-  /* Every task recorded in the log gets a nav entry (extraction, chained,
-   * subtype, classification, legalbench, ...) — hardcoded links rot as
-   * tasks are added. The prompt-diff view stays pinned. */
+  /* Task links are GROUPED under a single "tasks" dropdown so the nav bar
+   * never repeats per-task names; the menu is populated from the live
+   * meta.tasks set (new tasks appear automatically, nothing rots). */
   const nav = document.querySelector(".nav");
   if (!nav) return;
-  nav.querySelectorAll("a[data-task]").forEach((a) => a.remove());
-  const repoLink = nav.querySelector('a[href^="https://github.com"]');
-  for (const task of Object.keys(meta.tasks || {}).sort()) {
-    const a = document.createElement("a");
-    a.href = `#/task/${encodeURIComponent(task)}`;
-    a.dataset.task = task;
-    a.textContent = task.replace(/_/g, " ");
-    nav.insertBefore(a, repoLink);
+  let group = document.getElementById("nav-tasks");
+  if (!group) {
+    group = document.createElement("span");
+    group.id = "nav-tasks";
+    group.className = "nav-group";
+    group.innerHTML = `<a href="#/" class="nav-group-trigger" data-nav-stop>tasks <span class="nav-caret">▾</span></a>
+      <div class="nav-group-menu"></div>`;
+    const repoLink = nav.querySelector('a[href^="https://github.com"]');
+    nav.insertBefore(group, repoLink);
   }
+  const menu = group.querySelector(".nav-group-menu");
+  menu.innerHTML = Object.keys(meta.tasks || {}).sort()
+    .map((task) => `<a href="#/task/${encodeURIComponent(task)}" data-nav-stop>${esc(task.replace(/_/g, " "))}</a>`)
+    .join("");
+  const trigger = group.querySelector(".nav-group-trigger");
+  const close = () => group.classList.remove("open");
+  trigger.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    group.classList.toggle("open");
+  });
+  menu.addEventListener("click", () => close());
+  document.addEventListener("click", (ev) => {
+    if (!ev.target.closest("#nav-tasks")) close();
+  });
 }
 
 /* ---------- boot ---------- */

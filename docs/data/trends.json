@@ -581,6 +581,36 @@
      "other_fallback": 3
     }
    }
+  ],
+  "sorter_classification": [
+   {
+    "id": 27,
+    "experiment_name": "pilot_langfuse_classification_v6",
+    "timestamp": "2026-08-11T01:41:26.996066+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v6",
+    "headline_value": 1.0,
+    "headline_label": "classification",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.001815,
+    "n_rows": 3,
+    "seed": null,
+    "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3"
+   },
+   {
+    "id": 31,
+    "experiment_name": "pilot_langfuse_classification_v6_2",
+    "timestamp": "2026-08-11T01:45:56.001912+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v6",
+    "headline_value": 1.0,
+    "headline_label": "classification",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.001878,
+    "n_rows": 3,
+    "seed": null,
+    "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3"
+   }
   ]
  }
 }
