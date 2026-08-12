@@ -126,6 +126,20 @@
     "n_rows": 5,
     "seed": 42,
     "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5"
+   },
+   {
+    "id": 39,
+    "experiment_name": "qwen3.7-flash_contracts_specialist_v12_extraction_langfuse",
+    "timestamp": "2026-08-12T17:47:52.474951+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "contracts_specialist_v12",
+    "headline_value": 0.8947,
+    "headline_label": "extraction",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.015206,
+    "n_rows": 30,
+    "seed": 42,
+    "sample_key": "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30"
    }
   ],
   "chained_sorter_extractor": [

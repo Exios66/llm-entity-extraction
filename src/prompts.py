@@ -1357,6 +1357,49 @@ CONTRACTS_SPECIALIST_PROMPT_V12 = CONTRACTS_SPECIALIST_PROMPT_V11.replace(
     "unrecoverable — never fabricate a clause for it.",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v13 (span-granularity recall fix)
+# -----------------------------------------------------------------------------
+# v13 = v12 + the key_obligations RECALL fix, measured on the 30-doc A/B sample
+# (v12 vs v13, Langfuse llm-dojo project). Every prior version since v10 lost
+# recall to span MERGING: the model emits whole-sentence verbatim quotes, while
+# the CUAD ground truth holds individual clause spans — one merged sentence
+# covers 1-2 GT spans, so matched_gt/n_expected drags the score down with zero
+# hallucinations (verified_precision stayed 1.0 across all chained runs;
+# NANOPHASE 6 pred vs 11 GT, Antares 4 vs 7, NETGEAR 15-16 vs ~17). The
+# fix: itemize at operative-requirement granularity (split compound sentences
+# into one verbatim item per distinct restriction/covenant/commitment) and
+# calibrate the expected list size against the GT distribution (mean 7.4,
+# max 22 spans) as a sanity check, not a quota.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V13 = CONTRACTS_SPECIALIST_PROMPT_V12.replace(
+    """expected items and must NOT be extracted. One list item per present clause
+     occurrence, quoting the operative language VERBATIM as written — no "Section N:"
+     prefixes, no paraphrases, no clause headings. NEVER include document titles,
+     recitals, or definitions.""",
+    """expected items and must NOT be extracted. Itemize at OPERATIVE-REQUIREMENT
+     granularity: one verbatim item per distinct restriction, covenant, or commitment —
+     and NEVER merge separate requirements into one item. When a sentence bundles
+     several (a license grant plus a sublicense prohibition plus a transfer
+     restriction; an exclusivity clause with territory, term, and renewal
+     limitations; a compound "shall not assign, sublicense, or transfer"), emit each
+     operative requirement as its OWN verbatim item. The ground truth holds individual
+     clause spans, so a merged summary sentence covers fewer spans and scores lower.
+     Quote the operative language VERBATIM as written — no "Section N:" prefixes, no
+     paraphrases, no clause headings. NEVER include document titles, recitals, or
+     definitions.""",
+).replace(
+    """unrecoverable — never fabricate a clause for it.""",
+    """unrecoverable — never fabricate a clause for it.
+   - SIZE CALIBRATION: the ground truth averages 7.4 obligation spans per contract and
+     reaches 22 (min 1); an agreement dense with restrictions yields 20+. Use this only
+     as a sanity check that your items are at span granularity — never as a quota to
+     pad or cap the list. A list of a few long merged sentences is the symptom of
+     missed spans: split them.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1751,6 +1794,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v10": CONTRACTS_SPECIALIST_PROMPT_V10,
     "contracts_specialist_v11": CONTRACTS_SPECIALIST_PROMPT_V11,
     "contracts_specialist_v12": CONTRACTS_SPECIALIST_PROMPT_V12,
+    "contracts_specialist_v13": CONTRACTS_SPECIALIST_PROMPT_V13,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

@@ -442,6 +442,18 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   `pip install -e .` (setuptools `packages` list) and the out-of-repo import
   still works.
 
+## Langfuse skill (all agents)
+
+The **langfuse** skill lives at `.opencode/skills/langfuse/` (SKILL.md +
+references/, from github.com/langfuse/skills). It is a project skill, so it
+is available to EVERY agent working in this repo — it covers CLI-based
+Langfuse API access (`npx langfuse-cli`), documentation retrieval, prompt
+migration, trace debugging, and evaluation setup. Its `allowed-tools`
+frontmatter grants the langfuse-cli + docs domains when the skill is loaded.
+The Langfuse mirror runners (`run_langfuse_*_eval.py`, `src/langfuse_tracing.py`)
+are the repo's own integration; consult the skill before touching Langfuse
+data (queries, score configs, prompts, dashboards).
+
 ## Docs & READMEs
 
 - Per-directory READMEs are the map: `src/README.md`, `agents/README.md`,

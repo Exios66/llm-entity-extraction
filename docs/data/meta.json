@@ -1,26 +1,27 @@
 {
- "built_at": "2026-08-12T05:03:14.289309+00:00",
+ "built_at": "2026-08-12T17:50:08.139476+00:00",
  "surfaces": [
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
   "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
   "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
   "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
+  "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30",
   "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
   "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5"
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 38,
+ "run_count": 39,
  "tasks": {
-  "contract_entity_extraction": 9,
+  "contract_entity_extraction": 10,
   "chained_sorter_extractor": 16,
   "subtype_classification": 11,
   "sorter_classification": 2
  },
  "models": {
-  "qwen/qwen3.7-flash": 38
+  "qwen/qwen3.7-flash": 39
  },
  "prompts": {
   "contracts_specialist_v2": 1,
@@ -39,12 +40,12 @@
   "sorter_v6 + contracts_specialist_v11": 6,
   "contracts_specialist_v11": 3,
   "sorter_v6 + contracts_specialist_v12": 2,
-  "contracts_specialist_v12": 1
+  "contracts_specialist_v12": 2
  },
- "n_rows": 2445,
- "n_ok": 2445,
+ "n_rows": 2475,
+ "n_ok": 2475,
  "n_error": 0,
- "total_tokens": 30057887,
+ "total_tokens": 30447511,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 35,
@@ -69,18 +70,18 @@
  },
  "task_aggregates": {
   "contract_entity_extraction": {
-   "runs": 9,
+   "runs": 10,
    "best": {
     "run_id": 35,
     "value": 0.9399
    },
-   "median": 0.8387,
+   "median": 0.8609,
    "worst": {
     "run_id": 1,
     "value": 0.6563
    },
-   "documents": 66,
-   "tokens": 915235
+   "documents": 96,
+   "tokens": 1304859
   },
   "chained_sorter_extractor": {
    "runs": 16,

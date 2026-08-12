@@ -9,6 +9,10 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **Langfuse skill installed for all agents**: `.opencode/skills/langfuse/`
+  (SKILL.md + 11 reference files, from github.com/langfuse/skills) — a
+  project skill, available to every agent in this repo, granting langfuse-cli
+  API access + docs retrieval when loaded. AGENTS.md documents it.
 - **Complete documentation pass**: per-directory READMEs added where missing —
   `src/README.md` (core modules incl. `bootstrap.py`/`cost_models.py`),
   `agents/README.md` (agent roster), `config/README.md` (taxonomy.yaml),
