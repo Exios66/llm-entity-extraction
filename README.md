@@ -176,6 +176,16 @@ served by GitHub Pages — **no Actions runners**:
   dependency-free single-page viewer with a filterable/searchable runs index,
   per-run detail pages (scores, per-field breakdowns, per-document results,
   confusion matrices, failure insights), and lazy-loaded run data.
+- **Every run is cost-scored**: OpenRouter usage payloads carry no cost, so
+  the site computes deterministic token × price estimates per run (and shows
+  billed OpenRouter totals when the activity CSV is ingested).
+- **Visualization (v0.14.0)**: per-task score-trend charts (smoothed,
+  per-prompt lines), a cost-vs-quality scatter (log-scale cost axis), and
+  subtype failure-mode stacked bars — every chart point is hover-inspectable
+  (run detail tooltip) and click-navigates to its run. A `#/prompts` diff
+  view compares prompt versions side by side with their score deltas, and
+  the same-surface guardrail (dataset fingerprint + seed + sample size)
+  keeps "Δ vs best" honest across runs.
 - `docs/data/` is DERIVED from `reports/experiment_log.jsonl` via
   `scripts/site/build_site.py` — never hand-edit it. After every run:
 

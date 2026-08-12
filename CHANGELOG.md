@@ -6,87 +6,102 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
-
-### Changed
-- **Charts are legible, inspectable, and navigable (issue #1 polish)**:
-  - cost-vs-quality scatter now uses a **log-scale x axis** (runs span ~4
-    orders of magnitude; the linear axis piled every point on the y axis),
-    with $ grid ticks (0.001 → 10) and filled (billed) vs hollow (estimated)
-    points;
-  - trend lines are **smoothed** (Catmull-Rom splines) with the raw points
-    drawn on top, drawn from a **curated 10-color palette with dash
-    patterns** (no hue-rotation collisions); hovering a series dims the
-    others so overlapping lines stay distinguishable;
-  - **every chart point is hover-inspectable** — a tooltip panel shows the
-    run's experiment name, run id, model, prompt, headline, cost (billed vs
-    estimate), n rows, sample key, and timestamp — and **clicking a point
-    navigates to the coordinated run** (`#/run/{id}`); failure-mode stack
-    rows are clickable too;
-  - `sorter_classification` finally got a headline handler (exact_match +
-    per-class detail), so its runs chart like every other task.
-- **Navigation grouped**: the nav bar now has a single **"tasks" dropdown**
-  populated from `meta.tasks` (the hardcoded per-task links that duplicated
-  the dynamic ones are gone) — runs | tasks ▾ | prompt diff | repo | theme.
+## [v0.14.0] - 2026-08-11
 
 ### Added
-- **Cost scoring for every run (GitHub issue #1)**: OpenRouter usage payloads
-  carry no cost field, so every run previously recorded `cost_total_usd =
-  0.0` despite ~30M real tokens. New `src/cost_models.py` scores cost
-  deterministically from the recorded prompt/completion token counts x
-  verified per-model prices (qwen $0.03/$0.13 per 1M, deepseek-v4-flash
-  $0.05/$0.25, deepseek-v4-pro $0.435/$0.87; unknown models resolve by prefix
-  or honestly report None). `tokens_summary()` now takes `model=` and stamps
-  `cost_estimated_usd` on every future record; a documented one-time backfill
-  (`scripts/backfill_cost_estimates.py`, append-only-log exception) scored
-  all 38 historical records / 81 token buckets (est. $2.28 total). The site
-  shows billed (OpenRouter CSV) when covered and the estimate otherwise —
-  in the runs table, run detail (with price source), the cost-vs-quality
-  scatter (hollow points = estimated), and trends.
-- **Headless render audit for the site**: `tests/assets/site_render_audit.js`
-  + `tests/test_site_render.py` exercise EVERY view (index, all task/prompt/
-  model groups, all 38 runs, 114 document traces, prompt diff) against the
-  real built data with a stubbed DOM and assert zero rendering errors
-  (skipped when node is absent).
-- **Site navigation + visualization polish**: the nav now renders one entry
-  per task dynamically from `meta.tasks` (new tasks can't rot out of the
-  navigation); the confusion matrix is sorted by expected-class frequency
-  (desc) with a Σ row-total column, per-class accuracy on each row label,
-  and hover tooltips per cell — explorable from every run's trace view.
 - **Bootstrap confidence intervals (GitHub issue #1)**: `src/bootstrap.py` —
   percentile-bootstrap 95% CIs over per-document scores (`bootstrap_ci`) and
   two-sample bootstrap delta tests with significance verdicts
   (`delta_significance`, min-detectable-effect guard for A/Bs). Wired into
-  all four eval runners: `scores.*_ci` (`overall_extraction_score_ci`,
-  `subtype_accuracy_ci`, `exact_match_ci`, …) land in every experiment record;
+  all four eval runners as `scores.*_ci` (`overall_extraction_score_ci`,
+  `subtype_accuracy_ci`, `exact_match_ci`, …) in every experiment record;
   `evaluate_prompt_version.py` prints the delta CI + significance for A/Bs.
+  Older records get CIs too — the site resamples the per-doc arrays already
+  stored in `results[]`, then falls back to Wilson (`_record_ci`).
 - **Chained error-propagation ablation (`--handoff-scope ground_truth`)**:
   the specialist now ALSO extracts the same docs with the ground-truth-subtype
   handoff; `scores.ablation` records predicted-vs-GT handoff scores and the
-  sorter routing loss (pp) — isolates sorter error from specialist error
-  instead of attributing it "mostly by inference" (both chained runners).
+  sorter routing loss (pp) — chained loss is split into sorter error vs
+  specialist error instead of being attributed "mostly by inference" (both
+  chained runners).
 - **Judge-calibration tracker**: extraction `--judge` rows are persisted to
   `data/judgments/<experiment>.jsonl` (`kind: calibration` with the
   deterministic score + judge labels) and aggregated into
   `scores.judge_calibration` — agree rate vs the deterministic scorer plus a
   lenient/strict lean signal (strong ≥ 0.85 / weak ≤ 0.5 bands).
 - **Cross-model matrix runner (`scripts/eval/run_model_matrix.py`)**: runs a
-  fixed sample (same dataset/seed/size) across a model x prompt grid using
-  the existing runners and prints a score (+CI) x cost matrix.
+  fixed sample (same dataset/seed/size — one surface) across a model x prompt
+  grid using the existing runners and prints a score (+bootstrap CI) x cost
+  matrix.
+- **Cost scoring for every run**: OpenRouter usage payloads carry no cost
+  field, so every run previously recorded `cost_total_usd = 0.0` despite
+  ~30M real tokens. `src/cost_models.py` scores cost deterministically from
+  the recorded prompt/completion token counts x verified per-model prices
+  (qwen $0.03/$0.13 per 1M, deepseek-v4-flash $0.05/$0.25, deepseek-v4-pro
+  $0.435/$0.87; unknown models resolve by prefix or honestly report None).
+  `tokens_summary()` now takes `model=` and stamps `cost_estimated_usd` on
+  every future record; a documented one-time backfill
+  (`scripts/backfill_cost_estimates.py`, append-only-log exception) scored
+  all 38 historical records / 81 token buckets (est. $2.28 total). The site
+  shows billed (OpenRouter CSV) when covered and the estimate otherwise —
+  runs table, run detail (with price source), cost-vs-quality scatter, and
+  trends.
 - **Site — same-surface guardrail**: every index row carries
   `fingerprint`/`seed`/`sample_key`; `delta_best_pp` is computed only against
-  the best run on the SAME surface (dataset fingerprint + seed + sample size),
-  and the frontend refuses to color deltas across different surfaces — the
-  v0.13.0 "regression" class of misread is now structurally impossible.
-- **Site — trend charts, cost-vs-quality scatter, failure-mode stacked bars,
-  prompt diff viewer**: `docs/data/trends.json` (per-task series with
-  headline/cost/sample-key/failure-mode counts) and `docs/data/prompts.json`
-  (full prompt text per version); the task view renders an SVG score-trend
-  line per prompt version, a cost-vs-quality scatter, and (subtype) stacked
-  failure-mode bars; a `#/prompts` prompt-diff view shows a side-by-side line
-  diff between two prompt versions with their score delta.
-- CI for older records falls back to resampling the per-doc arrays already in
-  `results[]`, then Wilson (site backend `_record_ci`).
+  the best run on the SAME surface (dataset fingerprint + seed + sample
+  size), and the frontend refuses to color deltas across different surfaces
+  — the v0.13.0 "regression" class of misread is now structurally
+  impossible.
+- **Site — trends, scatter, stacked bars, prompt diff**: `docs/data/trends.json`
+  (per-task series with headline/cost/sample-key/failure-mode counts) and
+  `docs/data/prompts.json` (full prompt text per version); the task view
+  renders an SVG score-trend chart per prompt version, a cost-vs-quality
+  scatter, and (subtype) failure-mode stacked bars; a `#/prompts` prompt-diff
+  view shows a side-by-side line diff between two versions with their score
+  delta.
+- **Headless render audit for the site**: `tests/assets/site_render_audit.js`
+  + `tests/test_site_render.py` exercise EVERY view (index, all task/prompt/
+  model groups, all 38 runs, 114 document traces, prompt diff) against the
+  real built data with a stubbed DOM and assert zero rendering errors
+  (skipped when node is absent).
+- `sorter_classification` gained a headline handler (exact_match + per-class
+  detail), so its runs chart like every other task.
+
+### Changed
+- **Charts are legible, inspectable, and navigable**: the cost-vs-quality
+  scatter uses a **log-scale x axis** (runs span ~4 orders of magnitude; the
+  linear axis piled every point on the y axis) with $ grid ticks and filled
+  (billed) vs hollow (estimated) points; trend lines are **smoothed**
+  (Catmull-Rom splines) with raw points on top, from a **curated palette
+  with dash patterns**; hovering a series dims the others. Every chart point
+  is **hover-inspectable** (tooltip panel: experiment name, run id, model,
+  prompt, headline, cost, n rows, sample key, timestamp) and **click-
+  navigates to the coordinated run**; failure-mode stack rows are clickable
+  too.
+- **Navigation grouped**: task links live under a single **"tasks" dropdown**
+  populated from `meta.tasks` (hardcoded per-task links removed — the nav no
+  longer repeats task names twice): runs | tasks ▾ | prompt diff | repo |
+  theme.
+- **Site polish**: dynamic nav + confusion matrices sorted by expected-class
+  frequency (Σ totals, per-class accuracy, cell tooltips); index gains a
+  "Total cost (est.)" stat card; focus-visible outlines and
+  `prefers-reduced-motion` support.
+
+### Fixed
+- **Chart tooltip overflow**: tooltip rows now wrap long unbroken strings
+  (trace IDs, experiment names, sample keys) — nothing spills out of the box.
+- **Chart panel + gridlines were invisible**: chart/nav/tooltip CSS
+  referenced undefined vars (`--panel`/`--line`/`--ink`/`--gold`) — defined
+  as theme-aware aliases in `:root`; charts now render on a panel surface
+  with visible gridlines in both themes.
+- **Hollow (estimated-cost) scatter points were invisible**: a global
+  `.dot{stroke:var(--bg)}` rule overrode the per-point color presentation
+  attribute — removed; hollow points render with their colored ring (crisp
+  at any scale via `vector-effect: non-scaling-stroke`).
+- **Tasks dropdown was transparent** (undefined `--panel` background) — now a
+  proper surface that right-aligns to the viewport on mobile.
+- Long kv labels (ablation/judge-calibration cards) no longer force table
+  overflow.
 
 ## [v0.13.0] - 2026-08-11
 
@@ -503,6 +518,7 @@ history of the repository's tags. Format follows
 - Repository bootstrap: `.gitattributes`, initial `README.md` scaffold.
 
 [Unreleased]: https://github.com/Exios66/llm-entity-extraction
+[v0.14.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.14.0
 [v0.13.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.13.0
 [v0.12.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.12.0
 [v0.11.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.11.0
