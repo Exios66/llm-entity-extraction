@@ -21,6 +21,12 @@
   --chip-warn-bg: #fdf8e8;   --chip-warn-bd: #e8d9a0;   --chip-warn-fg: #8a6d00;
   --chip-bad-bg: #fdf0f0;    --chip-bad-bd: #f2c8c8;
   --mono: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  /* Aliases so chart/nav/tooltip components resolve in both themes:
+     --panel = card surface, --line = hairline borders, --ink = solid dark. */
+  --panel: var(--bg-soft);
+  --line: var(--border);
+  --ink: #141416;
+  --gold: var(--mid);
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 }
@@ -474,7 +480,8 @@ table.data th.num { text-align: right; }
   color: var(--text-soft);
   width: 40%;
   padding-right: 12px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .kv td.v { word-break: break-word; }
@@ -572,20 +579,48 @@ footer .divider { border-top: 1px solid var(--border); padding-top: 14px; }
   color: var(--text-soft);
 }
 
+main #view { min-height: 40vh; }
+
+a:focus-visible, button:focus-visible, .nav-group-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  html { scroll-behavior: auto; }
+}
+
 @media (max-width: 720px) {
   .masthead .nav { margin-left: 0; }
   .score-row .name { width: 45%; }
   .group-row { grid-template-columns: 1fr 1fr; }
+  .nav-group-menu { left: auto; right: 0; }
 }
 
 /* ---- issue #1: charts + prompt diff + failure-mode stacks ---- */
 .chart { margin: 10px 0 6px; }
-.chart-svg { width: 100%; height: auto; max-height: 340px; background: var(--panel); border: 1px solid var(--line); }
-.chart-svg .grid { stroke: var(--line); stroke-dasharray: 3 3; }
+.chart-svg {
+  width: 100%; height: auto;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  user-select: none;
+}
+.chart-svg .grid { stroke: var(--border); stroke-dasharray: 3 3; }
+.chart-svg .grid-v { stroke: var(--border); stroke-dasharray: 2 3; }
 .chart-svg .axis { fill: var(--text-faint); font-size: 10px; font-family: ui-monospace, "SF Mono", monospace; }
-.chart-svg .dot { stroke: var(--bg); stroke-width: 1; }
+.chart-svg .series .line { vector-effect: non-scaling-stroke; }
+.chart-svg .series .dot { cursor: pointer; opacity: 0.95; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.chart-svg .series .dot:hover { opacity: 1; stroke-width: 2.5; }
+.chart-svg .series .dot.est { fill: transparent; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; font-size: 11px; }
-.chart-legend-item i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; border-radius: 2px; }
+.chart-legend-item { display: inline-flex; align-items: center; gap: 5px; cursor: default; }
+.chart-legend-item i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; }
+.chart-legend-item.dimmed { opacity: 0.3; }
+.stack { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; background: var(--bg-soft); }
+.score-rows { display: flex; flex-direction: column; }
 .stack-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) 40px; gap: 8px; align-items: center; margin: 4px 0; }
 .stack-label { font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stack-track { display: flex; height: 16px; background: var(--line); border-radius: 2px; overflow: hidden; }
@@ -605,17 +640,17 @@ footer .divider { border-top: 1px solid var(--border); padding-top: 14px; }
 .nav-group-trigger { cursor: pointer; user-select: none; }
 .nav-caret { font-size: 9px; opacity: 0.7; }
 .nav-group-menu {
-  position: absolute; top: 100%; left: 0; min-width: 230px; z-index: 90;
+  position: absolute; top: calc(100% + 6px); left: 0; min-width: 240px; z-index: 90;
   display: none; flex-direction: column; gap: 2px; padding: 6px;
-  background: var(--panel); border: 1px solid var(--line);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.4);
 }
 .nav-group.open .nav-group-menu { display: flex; }
 .nav-group-menu a {
-  padding: 5px 9px; font-size: 11px; letter-spacing: 0.04em; color: var(--text);
-  text-transform: capitalize; white-space: nowrap;
+  padding: 6px 10px; font-size: 11px; letter-spacing: 0.04em; color: var(--text);
+  text-transform: capitalize; white-space: nowrap; border-radius: 5px;
 }
-.nav-group-menu a:hover { background: var(--line); color: var(--text-strong, var(--text)); }
+.nav-group-menu a:hover { background: var(--accent-soft); color: var(--text); text-decoration: none; }
 
 .chart-svg .grid-v { stroke: var(--line); stroke-dasharray: 2 3; }
 .chart-svg .series { transition: opacity 0.15s ease; }
@@ -626,15 +661,23 @@ footer .divider { border-top: 1px solid var(--border); padding-top: 14px; }
 .chart-svg .series .dot.est { fill: transparent; }
 
 .chart-tip {
-  position: fixed; z-index: 100; max-width: 260px; padding: 8px 10px;
-  background: var(--ink, #141416); border: 1px solid var(--line);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.45); font-size: 11px; line-height: 1.45;
-  pointer-events: none;
+  position: fixed; z-index: 100; max-width: 300px; padding: 9px 11px;
+  background: var(--ink); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); font-size: 11px; line-height: 1.5;
+  color: var(--text); pointer-events: none;
 }
-.chart-tip-title { font-weight: 700; margin-bottom: 4px; overflow-wrap: anywhere; }
-.chart-tip-row { color: var(--text); }
+.chart-tip-title {
+  font-weight: 700; margin-bottom: 4px;
+  overflow-wrap: anywhere; word-break: break-word;
+}
+.chart-tip-row {
+  color: var(--text);
+  overflow-wrap: anywhere; word-break: break-word;
+  white-space: normal;
+}
 .chart-tip-row.faint { color: var(--text-faint); }
-.chart-tip-open { margin-top: 5px; color: var(--gold, #f7d156); }
+.chart-tip-open { margin-top: 5px; color: var(--gold); }
 
 .stack-row { cursor: pointer; }
 .stack-row:hover .stack-label { color: var(--gold, #f7d156); }

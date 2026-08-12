@@ -203,6 +203,14 @@ function statCards() {
     { k: "Models", v: fmt.int(Object.keys(m.models || {}).length),
       d: Object.keys(m.models || {}).join(", ") },
   ];
+  const estTotal = state.index.reduce((s, r) => s + (r.cost_estimated_usd || 0), 0);
+  if (estTotal > 0) {
+    cards.push({
+      k: "Total cost (est.)",
+      v: `$${estTotal.toFixed(4)}`,
+      d: "deterministic token × price across all runs — billed OpenRouter totals shown when the activity CSV is ingested",
+    });
+  }
   const costs = m.costs;
   if (costs) {
     cards.push({
@@ -1404,15 +1412,22 @@ function svgChart(opts) {
       ? smoothPath(sorted, px, py)
       : `M ${sorted.map((p) => `${px(p.x).toFixed(1)} ${py(p.y).toFixed(1)}`).join(" L ")}`;
     const dots = sorted.map((p) =>
-      `<circle data-run-id="${p.runId}" class="dot${p.billed === false ? " est" : ""}" cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="4" fill="${color}" stroke="${color}"><title>${esc(s.label + " · " + (p.tooltip || ""))}</title></circle>`).join("");
+      `<circle data-run-id="${p.runId}" class="dot${p.billed === false ? " est" : ""}" cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="4" fill="${color}" stroke="${color}"></circle>`).join("");
     return `<g class="series" data-series="${esc(s.label)}" style="color:${color}">
       <path class="line" d="${path}" fill="none" stroke="${color}" stroke-width="2" ${dash ? `stroke-dasharray="${dash}"` : ""}/>
       ${dots}
     </g>`;
   }).join("");
 
+  const swatch = (s, si) => {
+    const color = s.color || chartColor(s.label, si);
+    const dash = s.dash || CHART_DASHES[si % CHART_DASHES.length];
+    return dash
+      ? `<i style="background:repeating-linear-gradient(90deg, ${color} 0 6px, transparent 6px 9px)"></i>`
+      : `<i style="background:${color}"></i>`;
+  };
   const legend = series.map((s, si) =>
-    `<span class="chart-legend-item" data-series="${esc(s.label)}"><i style="background:${s.color || chartColor(s.label, si)}${s.dash ? `;background-image:repeating-linear-gradient(90deg, transparent 0 3px, #141416 3px 6px)` : ""}"></i>${esc(s.label)}</span>`).join("");
+    `<span class="chart-legend-item" data-series="${esc(s.label)}">${swatch(s, si)}${esc(s.label)}</span>`).join("");
 
   return `<div class="chart">
     <svg viewBox="0 0 ${w} ${h}" class="chart-svg" role="img">
@@ -1429,24 +1444,31 @@ function svgChart(opts) {
 
 /* Event wiring for chart interaction — delegated once per chart container. */
 function wireChartInteractions(container) {
+  const dimOthers = (keep) => {
+    container.querySelectorAll(".series").forEach((g) =>
+      g.classList.toggle("dimmed", Boolean(keep) && g !== keep));
+    container.querySelectorAll(".chart-legend-item").forEach((li) =>
+      li.classList.toggle("dimmed", Boolean(keep) && li.dataset.series !== keep.dataset.series));
+  };
   container.addEventListener("pointerover", (ev) => {
-    const node = ev.target.closest("[data-run-id]");
-    if (!node) return;
-    if (ev.target.closest(".series")) {
-      container.querySelectorAll(".series").forEach((g) =>
-        g.classList.toggle("dimmed", g !== ev.target.closest(".series")));
+    const seriesEl = ev.target.closest(".series");
+    if (seriesEl) dimOthers(seriesEl);
+    const legendItem = ev.target.closest(".chart-legend-item[data-series]");
+    if (legendItem) {
+      const match = Array.from(container.querySelectorAll(".series"))
+        .find((g) => g.dataset.series === legendItem.dataset.series) || null;
+      dimOthers(match);
     }
-    chartTooltip(ev, node.dataset.runId);
+    const node = ev.target.closest("[data-run-id]");
+    if (node) chartTooltip(ev, node.dataset.runId);
   });
   container.addEventListener("pointerout", (ev) => {
     if (ev.target.closest("[data-run-id]")) chartHideTip();
-    if (ev.target.closest(".series")) {
-      container.querySelectorAll(".series").forEach((g) => g.classList.remove("dimmed"));
-    }
+    dimOthers(null);
   });
   container.addEventListener("pointerleave", () => {
     chartHideTip();
-    container.querySelectorAll(".series").forEach((g) => g.classList.remove("dimmed"));
+    dimOthers(null);
   });
   container.addEventListener("click", (ev) => {
     const node = ev.target.closest("[data-run-id]");
