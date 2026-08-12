@@ -1526,6 +1526,52 @@ CONTRACTS_SPECIALIST_PROMPT_V16 = CONTRACTS_SPECIALIST_PROMPT_V15.replace(
      termination_clauses keep their full-provision quoting.)""",
 )
 
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v17 (length-anchored grain)
+# -----------------------------------------------------------------------------
+# v17 = v16 + the length anchor, from the v16 50-doc A/B: the fragment
+# contract halved item length (median 48 -> 26 words) and recovered +43 GT
+# spans (ko 0.7755 -> 0.7816), but over-fragmented — 1292 items vs 826 GT
+# spans (+56%) and alignment precision FELL 0.650 -> 0.547, because items at
+# 26 words still sit ~2x above the GT span grain (~10-25 words) and the
+# "strip everything" framing pushed boundaries past the annotator's. v17
+# anchors the grain to the GROUND-TRUTH SPAN LENGTH itself: items mirror the
+# annotator's fragment (10-25 words, target ~15-20) — strip preamble and
+# riders but KEEP the obligation's core + its operative qualifiers; never
+# split a right below the span grain.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V17 = CONTRACTS_SPECIALIST_PROMPT_V16.replace(
+    """typically 4-20 words (subject + operative verb + object/qualifier). The
+     ground truth stores exactly this grain, and each item is matched against a
+     ground-truth span by token overlap: an item that merely CONTAINS the span
+     still scores as a miss because its extra words dilute the similarity below
+     the match threshold.""",
+    """typically 10-25 words — the SAME length as the ground-truth spans (target
+     ~15-20 words: subject + operative verb + object/qualifiers). The ground
+     truth stores exactly this grain, and each item is matched against a
+     ground-truth span by token overlap: an item much longer than the span
+     dilutes the similarity below the match threshold, and an item much
+     shorter than the span cannot reach it either — mirror the span's length.""",
+).replace(
+    """EXAMPLE of the
+     required grain — the ground truth holds "Licensee shall not sublicense the
+     Software"; do NOT emit "Except as otherwise set forth herein, during the
+     Term of this Agreement Licensee shall not sublicense, sell, or otherwise
+     transfer the Software or any portion thereof to any third party without
+     the prior written consent of Licensor." — the fragment, not the sentence,
+     is the item. Quote each fragment verbatim and keep it complete — never
+     truncate mid-obligation.""",
+    """EXAMPLE of the required
+     grain — the ground truth holds "Licensee shall not sublicense, sell, or
+     otherwise transfer the Software to any third party without the prior
+     written consent of Licensor" (15 words). Do NOT emit the 60-word sentence
+     with its "Except as otherwise set forth herein" preamble, and do NOT emit
+     the 5-word sliver "shall not sublicense" alone — keep the obligation core
+     with its operative qualifiers, at the span's length. Quote each fragment
+     verbatim and keep it complete — never truncate mid-obligation.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -1924,6 +1970,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v14": CONTRACTS_SPECIALIST_PROMPT_V14,
     "contracts_specialist_v15": CONTRACTS_SPECIALIST_PROMPT_V15,
     "contracts_specialist_v16": CONTRACTS_SPECIALIST_PROMPT_V16,
+    "contracts_specialist_v17": CONTRACTS_SPECIALIST_PROMPT_V17,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,
