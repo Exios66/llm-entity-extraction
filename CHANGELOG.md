@@ -67,6 +67,13 @@ history of the repository's tags. Format follows
   experiment cycle: `build` → human review/annotation in the Langfuse UI →
   annotations feed the next prompt iteration. `--dry-run` scans without
   writing; 10 network-free tests (`tests/test_annotation_queue.py`).
+  Live-setup hardening: the queue auto-creates its own `annotation-verdict`
+  categorical score config (correct/partial/incorrect) when none is passed
+  (the API requires ≥1 config id); 429 rate-limit retries honor the
+  server's `retryAfterSeconds`; `status` reads scores via the bulk v3
+  scores endpoint (cursor-paginated, `subject` field group) instead of one
+  request per trace; the queue's review URL is printed. Live on llm-dojo:
+  queue `entity-extraction-low-performers` with 137 PENDING items.
 - **`contracts_specialist_v21` — the merge arm, ADOPTED as the production
   arm**: v20's prompt text (v19 ko content + the four field rules) at
   **reasoning_effort=none**, same 50 docs, seed 42, chunked, Langfuse

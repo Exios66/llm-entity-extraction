@@ -85,6 +85,17 @@ class FakeLangfuse:
             rows = [i for i in self.items if i.get("queueId") == queue_id
                     and (status is None or i.get("status") == status)]
             return {"data": rows, "meta": {"totalItems": len(rows)}}
+        if parts[0] == "v3" and parts[1] == "scores":
+            name = (params or {}).get("name")
+            rows = []
+            for trace in self.traces:
+                out = trace.get("output") or {}
+                if name and out:
+                    rows.append({"traceId": trace["id"], "name": name,
+                                 "value": out.get("overall_extraction_score"
+                                                  if name == "overall_extraction_score"
+                                                  else name, 0)})
+            return {"data": rows, "meta": {"totalItems": len(rows)}}
         if parts[0] == "score-configs" and method == "GET":
             return {"data": self.score_configs}
         if parts[0] == "score-configs" and method == "POST":

@@ -240,6 +240,37 @@ class AnnotationQueueClient:
         inp = trace.get("input") or {}
         return str(inp.get(field) or "")
 
+    def score_map_by_name(self, name: str) -> dict[str, float]:
+        """Bulk trace-score map for one score name (v3 scores endpoint).
+
+        One or two paginated reads (cursor-based) replace N per-trace
+        calls; used by the ``status`` subcommand where queue items only
+        carry trace ids.
+        """
+        out: dict[str, float] = {}
+        cursor: str | None = None
+        for _ in range(500):
+            params: dict[str, Any] = {"name": name, "fields": "subject"}
+            if cursor:
+                params["cursor"] = cursor
+            body = self._request("GET", "v3/scores", params=params)
+            rows = body.get("data", [])
+            for row in rows:
+                subject = row.get("subject") or {}
+                trace_id = subject.get("traceId") or row.get("traceId")
+                value = row.get("value")
+                if not trace_id or value is None:
+                    continue
+                try:
+                    out[trace_id] = float(value)
+                except (TypeError, ValueError):
+                    continue
+            meta = body.get("meta") or {}
+            cursor = meta.get("nextCursor") or meta.get("cursor")
+            if not rows or not cursor:
+                break
+        return out
+
     # ------------------------------------------------------------------
     # Annotation queues
     # ------------------------------------------------------------------
@@ -439,14 +470,12 @@ def queue_status(args: argparse.Namespace) -> int:
         print(f"queue not found: {args.queue_name}")
         return 1
     items = client.list_queue_items(queue["id"])
-    scores = {}
-    for item in items:
-        tid = item.get("objectId")
-        if tid not in scores:
-            trace = client._request("GET", f"traces/{tid}", params={"fields": "core,io,scores"})
-            scores[tid] = (client.score_value(trace, args.score_name),
-                           trace_input_name(trace),
-                           (trace.get("input") or {}).get("prompt_version") or "")
+    scores = client.score_map_by_name(args.score_name)
+    # id -> (filename, prompt_version) from the bulk traces list (no per-trace reads)
+    meta: dict[str, tuple[str, str]] = {}
+    for trace in client.list_extraction_traces(TRACE_NAME, None, args.session_contains):
+        meta[trace["id"]] = (trace_input_name(trace),
+                             str((trace.get("input") or {}).get("prompt_version") or ""))
     pending = [i for i in items if i.get("status") == "PENDING"]
     processed = [i for i in items if i.get("status") == "PROCESSED"]
     project_id = client.project_id(config.project)
@@ -455,13 +484,15 @@ def queue_status(args: argparse.Namespace) -> int:
     if project_id:
         print(f"review at      : {config.base_url}/project/{project_id}/annotation-queues/{queue['id']}")
     for item in sorted(items, key=lambda i: (i.get("status") != "PENDING",
-                                             scores.get(i.get("objectId"), (None, "", ""))[0] or 0)):
-        score, filename, version = scores.get(item.get("objectId"), (None, "", ""))
+                                             scores.get(i.get("objectId")) or 0)):
+        tid = item.get("objectId")
+        score = scores.get(tid)
+        filename, version = meta.get(tid, ("", ""))
         score_text = "n/a" if score is None else f"{score:.4f}"
         print(f"  [{item.get('status'):<9}] {score_text:>7}  "
-              f"{(version or '')[:28]:<28} {filename[:60]}")
+              f"{version[:28]:<28} {filename[:60]}")
         if project_id:
-            print(f"      {trace_review_url(config.base_url, project_id, item['objectId'])}")
+            print(f"      {trace_review_url(config.base_url, project_id, tid)}")
     return 0
 
 
@@ -476,6 +507,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="dotenv file with LANGFUSE_* keys (default: langfuse.env)")
     common.add_argument("--score-name", default=DEFAULT_SCORE_NAME,
                         help=f"trace score to rank on (default: {DEFAULT_SCORE_NAME})")
+    common.add_argument("--session-contains", default=DEFAULT_SESSION_CONTAINS,
+                        help="session-id substring that marks extraction runs")
 
     p_build = sub.add_parser("build", parents=[common],
                              help="scan extraction traces and enqueue low performers")
@@ -485,8 +518,6 @@ def build_parser() -> argparse.ArgumentParser:
                          help="max traces to enqueue (worst first)")
     p_build.add_argument("--since-days", type=int, default=30,
                          help="only traces newer than N days (default: 30)")
-    p_build.add_argument("--session-contains", default=DEFAULT_SESSION_CONTAINS,
-                         help="session-id substring that marks extraction runs")
     p_build.add_argument("--include-unscored", action="store_true",
                          help="also enqueue traces missing the score (old runs)")
     p_build.add_argument("--score-config-ids", default=None,
