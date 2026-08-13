@@ -118,6 +118,9 @@ scripts/
     run_classification_eval.py      one prompt, text/vision/task modes, local PDFs
     run_extraction_eval.py          contracts specialist vs CUAD ground truth
     run_chained_eval.py             sorter -> extractor end-to-end pipeline eval
+    run_annotation_queue.py         HITL annotation queues (llm-dojo mirror): enqueue
+                                    low-performing extraction traces / failed sorter
+                                    classifications for human review, then audit the queue
     run_binary_class_eval.py        binary question precision/recall/F1
     run_multiclass_eval.py          all-class eval with per-class accuracy
     run_subtype_eval.py             sorter-only contract-subtype eval (one call per PDF)
@@ -127,11 +130,13 @@ scripts/
     confusion_matrix.py             PNG + CSV confusion matrix from Braintrust
     score_extraction_manifest.py    post-hoc extraction scoring from a manifest
     render_experiment_log.py        rebuild the markdown log from the JSONL source
+    rescore_manifests.py            re-score extraction manifests with the CURRENT scorer
+                                    (immune to scorer drift; --auto-50 covers the 50-doc series)
     judge_experiment.py             post-hoc JudgeAgent review of failed classifications
     backfill_subtype_reasoning.py   one-time enrichment: full failure reasoning from spans
   site/
     build_site.py                   rebuild docs/ (GitHub Pages) data from the JSONL
-tests/                   unit tests (183, no network)
+tests/                   unit tests (303, no network)
 ```
 
 ## Experiment log
@@ -185,11 +190,12 @@ served by GitHub Pages — **no Actions runners**:
 - **Every run is cost-scored**: OpenRouter usage payloads carry no cost, so
   the site computes deterministic token × price estimates per run (and shows
   billed OpenRouter totals when the activity CSV is ingested).
-- **Visualization (v0.14.0)**: per-task score-trend charts (smoothed,
+- **Visualization (v0.15.0)**: per-task score-trend charts (smoothed,
   per-prompt lines), a cost-vs-quality scatter (log-scale cost axis), and
   subtype failure-mode stacked bars — every chart point is hover-inspectable
   (run detail tooltip) and click-navigates to its run. A `#/prompts` diff
-  view compares prompt versions side by side with their score deltas, and
+  view compares prompt versions side by side with their score deltas, a
+  `#/memos` tab renders the archived research memos (`memos/*.md`), and
   the same-surface guardrail (dataset fingerprint + seed + sample size)
   keeps "Δ vs best" honest across runs.
 - `docs/data/` is DERIVED from `reports/experiment_log.jsonl` via
@@ -400,7 +406,7 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 | Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3`, `sorter_v4`, `sorter_v5`, `sorter_v6` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
-| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v12` |
+| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v23` |
 | Other specialists | `corporate_records_specialist`, `due_diligence_specialist`, `correspondence_specialist`, `compliance_specialist`, `court_opinions_specialist` |
 | Agents / judges | `boss`, `reporter`, `judge`, `judge-classification`, `judge-correctness` |
 | PDF | `pdf_transcriber` |
@@ -413,17 +419,23 @@ so every `ChatPromptTemplate -> ChatOpenAI -> parser` chain invocation inside
 the eval task is traced as a nested span under the Braintrust experiment row —
 prompt, response, tokens, latency are all visible in the UI.
 
-### Langfuse mirror (separate environment, per-agent tasks)
+### Langfuse mirror (two projects, two purposes)
 
 The `run_langfuse_*_eval.py` runners execute the SAME datasets, tasks, and
 deterministic logic scorers as their Braintrust counterparts, but trace into a
-SEPARATE Langfuse project — `llm-mailroom-experiments` (keys in gitignored
-`langfuse.env`, `langfuse.env.example` in-repo). Every trace carries
-`environment=llm-mailroom-experiments` and a session-scoped deterministic
+SEPARATE Langfuse project — **llm-dojo** by default (keys in gitignored
+`langfuse.env`, `langfuse.env.example` in-repo): this repo's prompt
+iterations run and are reviewed there. A second project
+(`llm-mailroom-experiments`) is EXCLUSIVELY for testing the full mailroom
+pipeline in the llm-mailroom repo; insights flow llm-dojo → llm-mailroom,
+never the reverse (see AGENTS.md "Langfuse projects"). Every trace carries
+`environment=<LANGFUSE_ENVIRONMENT>` and a session-scoped deterministic
 trace id, so re-runs of one experiment update their traces in place and
 different experiments never merge. Langfuse runs never consume Braintrust
 scored-run quotas: the logic scorers are computed locally and logged per trace
-as NUMERIC scores.
+as NUMERIC scores. `scripts/eval/run_annotation_queue.py` builds the HITL
+review queues on top of these traces (low-performing extractions +
+failed sorter classifications → one shared annotation queue).
 
 Each pipeline agent has a **designated task** traced as its own observation
 with its scores attached to that observation — per-agent performance metrics

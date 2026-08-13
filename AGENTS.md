@@ -419,7 +419,7 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
 - New streamer parsing → `test_cuad_streamer.py` /
   `test_legalbench_streamer.py` / `test_streamers.py`.
 - Run the full suite before committing: `python -m pytest tests/ -q`
-  (currently 193 tests, all passing).
+  (currently 303 tests, all passing).
 
 ## Gotchas
 

@@ -161,4 +161,5 @@ What this means:
   per-document trace (`--chunked --chunk-chars 90000 --chunk-overlap 8000`)
 - See [Architecture](Architecture) for the data flow, [Scoring](Scoring) for
   what the task scores mean, and [Eval-Runners](Eval-Runners) for the
-  Langfuse mirror commands
+  Langfuse mirror commands. Low-performing / failed traces are enqueued for
+  human review via [Annotation-Queues](Annotation-Queues).

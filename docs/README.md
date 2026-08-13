@@ -47,6 +47,11 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
   factuality audit with hallucination counts, CUAD category presence,
   ambiguous fields, and the raw predicted extraction), with prev/next
   navigation.
+- **Research memos** — a dedicated `#/memos` tab rendering `memos/*.md`
+  (the archived research memoranda: subtype-classification improvements,
+  entity-extraction v2→v15, contracts-specialist v17→v18) with a memo
+  selector and cross-memo companion links (`build_site.py` emits
+  `docs/data/memos.json`).
 - **OpenRouter benchmarks** — a dedicated `#/benchmarks` view with
   Artificial Analysis (intelligence/coding/agentic index rankings with
   pricing) and Design Arena (ELO/win-rate by category) data, fetched
