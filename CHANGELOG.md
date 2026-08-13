@@ -99,6 +99,17 @@ history of the repository's tags. Format follows
   scores endpoint (cursor-paginated, `subject` field group) instead of one
   request per trace; the queue's review URL is printed. Live on llm-dojo:
   queue `entity-extraction-low-performers` with 137 PENDING items.
+- **Sorter failure queue (`--task subtype`)**: the same tool now serves the
+  subtype-classification pipeline — `build --task subtype` enqueues every
+  trace where the PRIMARY CLASS (doc_type), the contract SUBTYPE (CUAD
+  folder), or both FAILED (read from the sorter's output composite,
+  `doc_type_ok`/`subtype_ok`; both-failures lead). The Langfuse Hobby plan
+  allows ONE annotation queue per project, so sorter items share the
+  existing queue and `status --task <task>` filters items by trace name
+  (extraction vs `subtype_classification`); sorter status shows
+  exact_match / subtype_accuracy / subtype_accuracy_equiv / confidence
+  with the failure flags. Live on llm-dojo: +35 PENDING sorter failures
+  (2 class-failed, 35 subtype-failed) across the sorter_v6 runs.
 - **`contracts_specialist_v21` — the merge arm, ADOPTED as the production
   arm**: v20's prompt text (v19 ko content + the four field rules) at
   **reasoning_effort=none**, same 50 docs, seed 42, chunked, Langfuse
