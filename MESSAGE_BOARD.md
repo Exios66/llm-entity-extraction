@@ -45,7 +45,27 @@ A task is yours only after you **claim it**, in this order:
 Never work silently; never race a claimed card. ONE owner per card — if a
 card is claimed, build off it (offer help / pick an unclaimed card).
 
-### 4. Work that relates to an existing task MUST update that task
+### 4. Work underway = `in_progress`, immediately — never `backlog`
+
+`backlog` means ZERO work has started: no draft, no diff, no run in
+flight, no partially landed commit. The moment ANY work exists for a
+card's scope — a first working-tree edit, an uncommitted prompt/test/
+script draft, a branch, a run that has started — the card MUST be moved
+to `in_progress` (Owner set, `Updated` dated), NOT left in `backlog`.
+
+- **Label it before the code, not after.** The status move happens when
+  work begins; never when it finishes.
+- **Sanity check every session (and before every commit):** if `git status`
+  (or a branch, or a running eval) shows changes that belong to a card,
+  that card must read `in_progress` in the table. If a card is found
+  underway-but-labeled-`backlog`, move it to `in_progress` at that moment,
+  set Owner to whoever holds the work, and post a dated note in the
+  discussion log. Uncommitted work on the board = an `in_progress` card.
+- **The table must never lie about reality:** a card whose summary says
+  "draft in the working tree" is, by definition, `in_progress` — update
+  the lane at the same time you write the summary.
+
+### 5. Work that relates to an existing task MUST update that task
 
 If your work **addresses the problem identified in a card** — even
 partially, or from a different angle — you update THAT card: comment on the
@@ -59,7 +79,7 @@ task.
 
 | Move | Who | When |
 |---|---|---|
-| `backlog` → `in_progress` | anyone (self-assign) | You are actively working it; Owner set + dated |
+| `backlog` → `in_progress` | anyone (self-assign) | You are actively working it, OR any work exists for it (draft, diff, branch, run started) — Owner set + dated, immediately, never deferred |
 | → `blocked` | owner | Stuck — post the blocker in Discussion + on the issue; name what unblocks it (data, keys, decision, card) |
 | `blocked` → `backlog`/`in_progress` | owner | Blocker cleared — post what cleared it |
 | → `in_review` | owner | Work done; awaiting validation (tests, A/B, release gate). Link the evidence (run, commit, PR) in the card |
@@ -70,7 +90,7 @@ A card is **not done until**: its CHANGELOG entry exists (same commit), the
 Archive row is filled (version + commit + result), and — for synced cards —
 the GitHub issue is closed.
 
-### 6. GitHub issue sync (critical / high-priority tasks)
+### 7. GitHub issue sync (critical / high-priority tasks)
 
 **Critical and cross-repo tasks are synced to GitHub issues** so agents can
 open/close them like normal issues while the board remains the source of
@@ -88,14 +108,14 @@ truth.
   never disagree about status.
 - Board-only cards (small, single-session tasks) do NOT need issues.
 
-### 7. Commit discipline
+### 8. Commit discipline
 
 Reference cards in commits — `MESSAGE BOARD: KANBAN-004 claimed` or
 `v24 diagnostic (KANBAN-004): ...`. A commit that lands a card's work
 carries its CHANGELOG entry in the same commit (AGENTS.md rule) and closes
 its issue.
 
-### 8. Release sweep
+### 9. Release sweep
 
 Semantic versioning is the spine: every open card names its target release.
 When a release ships (`scripts/release.py --bump`), sweep the board: cards
@@ -107,8 +127,8 @@ cards that did not land are re-targeted to the next release. The board and
 
 | Lane | Meaning | Who can move it |
 |---|---|---|
-| `backlog` | Todo — not yet started. The release it targets is set in the table. | anyone (add/claim) |
-| `in_progress` | Actively being worked by the Owner. ONE owner per card. | owner |
+| `backlog` | Todo — not yet started, NOTHING underway: no draft, no diff, no branch, no run in flight. The release it targets is set in the table. | anyone (add/claim) |
+| `in_progress` | Work EXISTS and is being actively worked by the Owner — OR any work for the card exists at all (uncommitted draft, started run, partial commit). ONE owner per card. Cards with uncommitted work in the tree must be here, never `backlog`. | owner (or any agent fixing a mislabeled card, with a dated discussion note) |
 | `blocked` | Stuck — waiting on data, keys, a decision, or another card. Post the blocker in Discussion. | owner |
 | `in_review` | Work done, awaiting validation (tests, A/B, release gate) before it can land. | owner → reviewer |
 | `done` | Finished and recorded in the Archive with CHANGELOG linkage. | reviewer/releaser |
