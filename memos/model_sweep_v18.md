@@ -31,6 +31,15 @@ The production recommendation is v18 with the stronger model; the flash
 line stays viable at 3× lower token cost when the field's ceiling does not
 matter.
 
+| Model × v18 | ko | overall | verified | cost |
+|---|---|---|---|---|
+| qwen3.7-flash | 0.8535 | 0.9230 | 0.991 | $0.037 |
+| deepseek-v4-flash | 0.8358 | 0.9012 | 0.996 | $0.069 |
+| **deepseek-v4-pro** | **0.8907** | **0.9289** | **1.000** | $0.053 |
+
+> **Verdict:** the catalog is model-agnostic (+6 to +11.5pp ko); deepseek-v4-pro is the vendor pick.
+
+
 ### The sweep (v18 × 3 models, same 50 docs, chunked, seed 42, Langfuse llm-dojo)
 
 Every arm runs the identical dataset fingerprint, chunking, seed, and scorer
@@ -56,28 +65,28 @@ Every arm runs the identical dataset fingerprint, chunking, seed, and scorer
 
 1. **Scope-fidelity dominates the gain.** All three models move on the
    same lever: ko +6.0 to +11.5pp from v15's terse family list to v18's
-   CUAD-mirror catalog. The prompt defect was real and model-independent;
-   the catalog is the single most valuable change in the v10→v18 arc.
+CUAD-mirror catalog. The prompt defect was real and model-independent;
+the catalog is the single most valuable change in the v10→v18 arc.
 2. **Segmentation capability is the separator.** deepseek-v4-pro matches
    **1059 spans** at alignment precision 0.685 (best in the whole series,
-   above v15's 0.650) with **1.000 verified_precision** — it extracts more
-   AND hallucinates nothing. deepseek-v4-flash matches the most items
-   (953) but at 0.549 alignment precision: it over-produces (1735 items,
-   +56% over the GT sample) and its ko (0.8358) sits ~5.5pp below the pro
-   model's — over-extraction is the flash line's ceiling, not the catalog's.
+above v15's 0.650) with **1.000 verified_precision** — it extracts more
+AND hallucinates nothing. deepseek-v4-flash matches the most items
+(953) but at 0.549 alignment precision: it over-produces (1735 items,
++56% over the GT sample) and its ko (0.8358) sits ~5.5pp below the pro
+model's — over-extraction is the flash line's ceiling, not the catalog's.
 3. **The residual after the sweep.** Even the champion leaves ~11% of ko on
    the table; the 131-span token-level decomposition (from the v18 flash
-   audit) still points at license grants (36) as the largest family —
-   evidence for v19's worked-example iteration, now with the pro model as
-   the measuring stick.
+audit) still points at license grants (36) as the largest family —
+evidence for v19's worked-example iteration, now with the pro model as
+the measuring stick.
 4. **The 0-ko docs persist across models.** SPRINGBANKPHARMACEUTICALS,
    QBIOMED joint filing, and PelicanDelivers extract nothing on the flash
-   line in any arm; a direct trace-level postmortem is the next diagnostic.
+line in any arm; a direct trace-level postmortem is the next diagnostic.
 5. **Cost is honest at every tier.** Pro costs ~$0.053 on this surface (raw
    usage; the OpenRouter ledger attributes $0.39 for 14/48 runs) — under
-   $1.50 for the full 510-doc corpus. The vendor decision is capability-
-   weighted: the pro model's +5.5pp on the task's hardest field justifies
-   the tier for production extraction.
+$1.50 for the full 510-doc corpus. The vendor decision is capability-
+weighted: the pro model's +5.5pp on the task's hardest field justifies
+the tier for production extraction.
 
 *Sources:* `reports/experiment_log.jsonl` (runs 044–048, task
 `contract_entity_extraction`) · `V16_PROPOSITION.md` §8–9 (decomposition,
@@ -93,15 +102,15 @@ runner = [LangGraph](https://langchain-ai.github.io/langgraph/) on
 
 1. **v19's worked examples, on the pro model.** The residual license-grant
    gap (36 spans) needs positive/negative span examples per family, tested
-   on deepseek-v4-pro — does the champion's ceiling move, or is the
-   remaining gap boundary-choice noise?
+on deepseek-v4-pro — does the champion's ceiling move, or is the
+remaining gap boundary-choice noise?
 2. **The over-production pathology.** deepseek-v4-flash's 1735-item output
    (+56%) with only 0.549 alignment precision suggests a per-chunk
-   exhaustion bias; a chunk-count × items-per-chunk audit would localize it.
+exhaustion bias; a chunk-count × items-per-chunk audit would localize it.
 3. **Doc-level scatter.** Token-level matching improves on ~17 docs and
    worsens on ~19 between arms while scored ko improves everywhere — the
-   embedding-rescue interaction with the catalog shapes is not yet
-   decomposed per doc.
+embedding-rescue interaction with the catalog shapes is not yet
+decomposed per doc.
 4. **Production vendor decision.** The full-corpus (510-doc) run on
    v18 × deepseek-v4-pro will confirm the ~+11.5pp headline at scale before
-   the llm-mailroom cut-over.
+the llm-mailroom cut-over.

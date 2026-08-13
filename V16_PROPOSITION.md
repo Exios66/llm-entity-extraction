@@ -784,3 +784,51 @@ QBIOMED/PelicanDelivers emit doc-grounded filing/payment items). One
 scope note: PelicanDelivers' 11 payment-milestone items are general
 payment duties the prompt excludes — harmless (no GT) but a scope-
 compliance observation.
+
+---
+
+## 16. Sorter v7 — data-backed rules + the 250-sample A/B (2026-08-13)
+
+### 16.1 Design (from the v6 509-doc failure decomposition, 35 fails)
+
+- **Rule 18 — CONSORTIUM O&M IS MAINTENANCE**: shared-infrastructure
+  "Operation and Maintenance" agreements (submarine-cable consortia TAT-14/
+  TELEGLOBE, rail/facility O&M) are maintenance even with joint-governance
+  machinery — fixes maintenance→joint_venture (2) and maintenance→service.
+- **Rule 19 — DEVELOPMENT OVER LICENSE**: development machinery + license
+  grants for the developed IP → development (the license is the delivery
+  mechanism, not the family) — fixes development→license (3).
+- **Rule 20 — PROMOTION GUARD**: "Promotion Agreement" / promotional-core
+  agreements are promotion despite marketing/distribution machinery —
+  fixes promotion→marketing (2) and promotion→distributor.
+
+### 16.2 A/B result (mailroom-cuad-contracts-full, stratified 250 seed 42 → 243 docs, qwen3.7-flash, reasoning medium, llm-dojo)
+
+| Metric | v6 | v7 | Δ |
+|---|---:|---:|---:|
+| strict subtype accuracy | 0.8683 | **0.8765** | **+0.82pp** |
+| equiv subtype accuracy | 0.8807 | **0.8889** | **+0.82pp** |
+| doc_type exact | 0.9918 | 0.9918 | 0 |
+| confidence | 0.955 | 0.953 | −0.2 |
+| fails | 32 | **30** | −2 |
+| promotion→marketing | 6 | **0** | fixed |
+
+**v7 wins the same-surface A/B.** The promotion cluster (6 errors) is
+eliminated; remaining errors: development→collaboration/license/franchise
+(5), outsourcing→manufacturing (2), affiliate→marketing (2), ip→license
+(2, new).
+
+### 16.3 Honest reading on the >95% target
+
+- **The 250-sample surface is a NEW, harder dataset revision**: the earlier
+  195-doc v6 runs (strict 0.9436) used dataset fingerprint 2e1fe4b7…; the
+  current full-corpus revision is fb9f939d… (re-synced corpus). Same-seed
+  stratified draws differ, and v6 scores 0.8683 here — the 0.94-era numbers
+  are not comparable to today's surface.
+- v7 reaches **0.8765 strict / 0.8889 equiv** on the current revision —
+  +0.82pp over v6. Reaching >0.95 strict needs further iterations (the
+  development-family cluster, the ip→license confusions) and/or the
+  corpus-revision effect quantified (a v6 rerun on the 195-doc size of the
+  new revision would isolate it).
+- The A/B discipline holds: v6 and v7 ran on the identical 243-doc sample
+  (same seed, same revision, same model) — the delta is the prompt.

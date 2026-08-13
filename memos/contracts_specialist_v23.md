@@ -40,19 +40,19 @@ The ko-justified production arm: **v23×max**; the overall champion stays
 Three infrastructure items closed alongside:
 1. **Same-scorer pipeline** (`scripts/reporting/rescore_manifests.py`):
    re-scores historical manifests with the current scorer (no-embedding
-   pass; `--auto-50` for the v13→v23 series; report →
-   `reports/same_scorer_scores.json`). String-level view shows the v19+
-   arms lean harder on the embedding rescue (official ko 0.83-0.85 vs
-   string 0.38-0.43) — the same-scorer view makes history drift-proof.
+pass; `--auto-50` for the v13→v23 series; report →
+`reports/same_scorer_scores.json`). String-level view shows the v19+
+arms lean harder on the embedding rescue (official ko 0.83-0.85 vs
+string 0.38-0.43) — the same-scorer view makes history drift-proof.
 2. **Langfuse prompt-store cleanup**: the version-scoped delete 404s on
    this instance, but delete-all + re-sync left every prompt at exactly
-   one version with clean production/latest labels (verified).
+one version with clean production/latest labels (verified).
 3. **0-ko docs corrected**: SPRINGBANK/QBIOMED/PelicanDelivers have ZERO
    obligation-family GT spans (QBIOMED = Schedule 13G joint filing) — ko
-   is None (excluded) in every arm, not 0.0; the earlier "0-ko" framing
-   was a token-level-audit artifact. Scope note: PelicanDelivers emits 11
-   payment-milestone items (general duties, outside the family scope) —
-   harmless without GT but a compliance observation.
+is None (excluded) in every arm, not 0.0; the earlier "0-ko" framing
+was a token-level-audit artifact. Scope note: PelicanDelivers emits 11
+payment-milestone items (general duties, outside the family scope) —
+harmless without GT but a compliance observation.
 
 *Open:* the 30-span residual at token level (span-choice divergence);
 v24 would need annotator-grain boundary examples rather than clause-class

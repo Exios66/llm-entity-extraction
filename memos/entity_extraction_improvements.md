@@ -24,6 +24,16 @@ with an 8k overlap and a union-at-merge completeness guarantee — which
 eliminates head+tail truncation loss entirely and delivers the best
 measured result (0.913, 95% CI 0.881–0.942) on the 50-doc surface.
 
+| Wave | Key metric | Value |
+|---|---|---|
+| schema specialization (v1–v3) | overall | ~0.55 → ~0.80 |
+| completeness + truncation (v4–v8) | overall | ~0.80 → ~0.88 |
+| scope + span grain (v9–v17) | key_obligations | → 0.78 |
+| chunking (v15) | overall | **0.913** |
+
+> **Verdict:** four waves of surgical prompt iterations raised overall extraction from ~0.55 to 0.91.
+
+
 ### Version progression (same-model qwen/qwen3.7-flash, seed 42)
 
 | Version | n | overall | 95% CI | field presence | verified precision | category presence |
@@ -47,57 +57,57 @@ fingerprint surface, seed 42.
 
 1. **v3 — schema specialization (the big jump).** The specialist moved
    from free-form extraction to the CUAD field schema with exact-normalize
-   types; 0.656 → 0.913, field presence 0.98. Everything after v3 is
-   fidelity on top of this base.
+types; 0.656 → 0.913, field presence 0.98. Everything after v3 is
+fidelity on top of this base.
 2. **v7/v8 — the regression and its lesson.** The 0.70 chained scores were
    traced to specific field behaviors (date handling, clause containment,
-   truncation at the 100k cap on Antares 106.8k / MOELIS 122.1k). v10/v11
-   recovered to 0.906 — and the diagnosis, not the version, is the
-   deliverable: **per-field failure patterns, not headline deltas, drive
-   the iteration**.
+truncation at the 100k cap on Antares 106.8k / MOELIS 122.1k). v10/v11
+recovered to 0.906 — and the diagnosis, not the version, is the
+deliverable: **per-field failure patterns, not headline deltas, drive
+the iteration**.
 3. **v12 — dates + containment + truncation honesty.** CUAD maps both
    "Agreement Date" and "Effective Date" onto `effective_date`; the model
-   picked the defined effective date while GT held the execution date
-   (NETGEAR/MOELIS scored 0.00). The defined-term-wins rule plus partial
-   credit tiers (year+month 0.67, 45-day cluster 0.67, year-only 0.33)
-   repaired dates; governing-law must be quoted verbatim in full
-   (containment 0.39 → 1.0); and the specialist learned to scan BOTH sides
-   of the truncation marker and to report `truncated` rather than
-   fabricating the omitted middle.
+picked the defined effective date while GT held the execution date
+(NETGEAR/MOELIS scored 0.00). The defined-term-wins rule plus partial
+credit tiers (year+month 0.67, 45-day cluster 0.67, year-only 0.33)
+repaired dates; governing-law must be quoted verbatim in full
+(containment 0.39 → 1.0); and the specialist learned to scan BOTH sides
+of the truncation marker and to report `truncated` rather than
+fabricating the omitted middle.
 4. **v13 — operative-requirement granularity.** `key_obligations` was
    under-producing (NANOPHASE 6 vs 11 GT spans, Antares 4 vs 7): one
-   verbatim item per distinct restriction/covenant/commitment, with a
-   list-size sanity check against the GT distribution (mean 7.4, max 22).
+verbatim item per distinct restriction/covenant/commitment, with a
+list-size sanity check against the GT distribution (mean 7.4, max 22).
 5. **v14 — source-truth duty.** The specialist extracts only what the text
    states (the harness never exposes GT); the truncation marker is
-   explicitly NOT the end of the document.
+explicitly NOT the end of the document.
 6. **v15 — the chunking enhancement.** Instead of one truncated pass,
    the runner feeds **overlapping windows — 90k characters with an 8k
-   overlap — so nothing is truncated at all**. The prompt's CHUNK DUTY
-   extracts every family occurrence each window can see, boundary clauses
-   are re-quoted by the overlap and **deduped at merge**, and the union is
-   the completeness guarantee. This is the mechanism behind the 0.913
-   result and the highest measured category presence on the standalone
-   surface.
+overlap — so nothing is truncated at all**. The prompt's CHUNK DUTY
+extracts every family occurrence each window can see, boundary clauses
+are re-quoted by the overlap and **deduped at merge**, and the union is
+the completeness guarantee. This is the mechanism behind the 0.913
+result and the highest measured category presence on the standalone
+surface.
 
 ### Interpretation
 
 1. **The per-field story explains the headline.** Date tiers +0.67 on two
    documents, containment +0.6 on one — the headline moves are sums of
-   surgically diagnosed field failures. The v0.13.0 changelog entry is the
-   companion evidence.
+surgically diagnosed field failures. The v0.13.0 changelog entry is the
+companion evidence.
 2. **Chunking beats truncation by construction.** Head+tail truncation
    makes omitted-middle clauses *unrecoverable*; overlapping windows make
-   them *recoverable twice* and dedupe at merge. v15 is the first version
-   where input size is not a failure mode.
+them *recoverable twice* and dedupe at merge. v15 is the first version
+where input size is not a failure mode.
 3. **Verified precision is the constant.** 0.97–1.00 across v12–v16 — the
    factuality guard holds; gains are recall/completeness, not hallucination
-   risk. v16's slight overall dip (0.886, CI overlaps v15) is the
-   fragment-grain itemization experiment — within noise, worth one more
-   same-surface run before promotion.
+risk. v16's slight overall dip (0.886, CI overlaps v15) is the
+fragment-grain itemization experiment — within noise, worth one more
+same-surface run before promotion.
 4. **Bootstrap CIs now make these comparisons honest** — v15's lead over
    v13/v14 is a CI-overlap, not a cliff; the site renders the intervals on
-   every run.
+every run.
 
 *Sources:* `reports/experiment_log.jsonl` (task `contract_entity_extraction`
 + chained rows) · `src/prompts.py` v12–v16 banners · `CHANGELOG.md` v0.13.0
@@ -112,11 +122,11 @@ postmortem · corpus = CUAD (Hendrycks et al., 2021 —
 
 1. **Does chunking help on truly long documents?** The 50-doc surface
    includes 100k+-char contracts; a targeted long-doc subset (Antares,
-   MOELIS, Phasebio-class) would confirm the completeness guarantee
-   directly.
+MOELIS, Phasebio-class) would confirm the completeness guarantee
+directly.
 2. **v16 vs v15:** fragment-grain `key_obligations` trades overall for
    output cleanliness — rerun on the identical surface and let the CI
-   decide promotion.
+decide promotion.
 3. **Cost:** overlapping windows multiply input tokens ~1.5–2× for long
    documents — the cost-vs-quality scatter on the site shows exactly what
-   the extra fidelity buys.
+the extra fidelity buys.

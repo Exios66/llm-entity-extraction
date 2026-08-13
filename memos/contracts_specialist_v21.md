@@ -43,34 +43,34 @@ two date-scorer bugs whose fixes moved effective_date 0.806 → 0.945.
 | verified_precision | 0.991 | 0.988 | 0.987 | **0.997** |
 | cost | $0.037 | $0.098 | $0.094 | **$0.039** |
 
-\* pre-fix scorer (see below).
+*pre-fix scorer (see below).
 
 ### Interpretation
 
 1. **The Ediets error was a reasoning-budget failure, fixed by the setting.**
    The v19 row burned 9.8k completion tokens on 2 chunks (max reasoning)
-   and returned unparseable JSON (ko 0.846 → 0.000). At reasoning=none the
-   same prompt+doc parses cleanly (ko 0.769, overall 0.967, 1.0k completion
-   tokens). v21 runs 50/50; MidwestEnergy (v20's error) also recovered.
+and returned unparseable JSON (ko 0.846 → 0.000). At reasoning=none the
+same prompt+doc parses cleanly (ko 0.769, overall 0.967, 1.0k completion
+tokens). v21 runs 50/50; MidwestEnergy (v20's error) also recovered.
 2. **The prompt-vs-reasoning confound is resolved.** At fixed reasoning=none,
    the v19/v20 prompt content scores ko 0.8385 — BELOW v18's catalog-only
-   0.8535. The +3.0pp v19 "gain" was the max-reasoning setting. v19's ko
-   crown (0.8840) is real but costs 2.6x and carries a 1/50 parse-error
-   risk; v21's overall is the better production trade (the field rules
-   +span discipline +scorer fixes recover far more than ko gives up).
+0.8535. The +3.0pp v19 "gain" was the max-reasoning setting. v19's ko
+crown (0.8840) is real but costs 2.6x and carries a 1/50 parse-error
+risk; v21's overall is the better production trade (the field rules
++span discipline +scorer fixes recover far more than ko gives up).
 3. **The date-scorer bugs (found during the v21 analysis) were the biggest
    single score lever.** The v20-era null-expectation rule (a) fired on
-   parseable compact dates — three perfect matches ("11/4/10" → ISO) scored
-   0.0 — and (b) was bypassed for null predictions (the `pred is None`
-   short-circuit returned 0.0 before the rule ran), leaving five
-   blank-template docs at 0.0 despite the model answering CORRECTLY. With
-   both fixed: effective_date 0.806 → 0.945 (+14pp), overall +1.1pp.
+parseable compact dates — three perfect matches ("11/4/10" → ISO) scored
+0.0 — and (b) was bypassed for null predictions (the `pred is None`
+short-circuit returned 0.0 before the rule ran), leaving five
+blank-template docs at 0.0 despite the model answering CORRECTLY. With
+both fixed: effective_date 0.806 → 0.945 (+14pp), overall +1.1pp.
 4. **All experiments now run in llm-dojo with prompts synced between
    projects.** Verified via the traces API that the project-scoped keys have
-   routed every run (incl. the mislabeled v21 passes) into llm-dojo; the
-   label default is now llm-dojo too. `sync_langfuse_prompts.py` mirrors
-   all 43 prompt versions into Langfuse (idempotent), ready to add the
-   primary project's key file for the second-project sync.
+routed every run (incl. the mislabeled v21 passes) into llm-dojo; the
+label default is now llm-dojo too. `sync_langfuse_prompts.py` mirrors
+all 43 prompt versions into Langfuse (idempotent), ready to add the
+primary project's key file for the second-project sync.
 
 *Sources:* `reports/experiment_log.jsonl` (runs 044–051, task
 `contract_entity_extraction`) · `V16_PROPOSITION.md` §10–12 ·
@@ -88,12 +88,12 @@ two date-scorer bugs whose fixes moved effective_date 0.806 → 0.945.
 
 1. **The ko trade is deliberate.** v21 accepts ko 0.8168 for overall 0.9396.
    If the ko ceiling matters (the hardest field), v19×max holds it at 2.6x
-   cost — a deployment choice per workload.
+cost — a deployment choice per workload.
 2. **Same-scorer historical records.** v18/v19 records still hold pre-fix
    date scores; a permanent re-scoring pipeline would make every historical
-   comparison immune to scorer drift (flagged in the v20 memo).
+comparison immune to scorer drift (flagged in the v20 memo).
 3. **The duplicate v2 Langfuse prompt versions.** The first sync (pre-
    idempotency fix) left identical-content v2 versions in llm-dojo; the
-   version-delete API path 404s on this instance — a UI cleanup item.
+version-delete API path 404s on this instance — a UI cleanup item.
 4. **The 0-ko docs.** SPRINGBANK, QBIOMED, PelicanDelivers remain
    extraction-poor across arms; a trace-level postmortem is still open.

@@ -9,15 +9,31 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
-- **`sorter_v7` — data-backed rules for the v6 confusion clusters
-  (KANBAN-001)**: registered prompt with three rules targeting the v6
-  509-doc full-corpus fails (strict 0.9312, 35 fails): consortium O&M →
+- **`sorter_v7` — the final classification A/B (250-sample) — v7 WINS
+  (+0.82pp strict)**: three data-backed rules targeting the v6 509-doc
+  full-corpus fails (strict 0.9312, 35 fails): consortium O&M →
   maintenance (shared-infrastructure governance wrappers do not make an
   agreement a joint_venture), development-over-license (development
   machinery wins over license grants for the developed IP), and the
   promotion guard (promotion title/core is its own family, not marketing or
-  distributor). Constant + `PROMPT_VERSIONS` entry + unit test landed;
-  evaluation is pending the 250-doc stratified A/B (board KANBAN-003).
+  distributor). Constant + `PROMPT_VERSIONS` entry + unit tests landed;
+  **same-surface A/B (mailroom-cuad-contracts-full, stratified 250 seed 42
+  → 243 docs, qwen3.7-flash, medium reasoning, llm-dojo): strict 0.8683 →
+  0.8765 (+0.82pp), equiv 0.8807 → 0.8889 (+0.82pp); the promotion→
+  marketing cluster (6 errors) is eliminated; 32 → 30 fails.** Caveat: the
+  current corpus revision (fingerprint fb9f939d…) is harder than the
+  revision behind the 195-doc 0.9436 runs (2e1fe4b7…) — v6 itself scores
+  0.8683 on it, so the >0.95 strict target needs further iterations on the
+  development-family and ip→license confusions. Full record:
+  `V16_PROPOSITION.md` §16.
+- **Research memos — site polish + visualization pass**: all 9 memos
+  re-checked through the site's actual `renderMd` — fixed two rendering
+  glitches (a `[***]` redaction marker inside a table cell that stole the
+  next bold pair; a `\*` footnote escape), de-indented paragraph
+  continuations (double-space artifacts), and added a standardized
+  **scorecard table + Verdict callout** to each memo that lacked a top-line
+  results display. All memos verified CLEAN through the render harness and
+  the headless render audit.
 
 ## [v0.15.0] - 2026-08-12
 

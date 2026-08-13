@@ -53,26 +53,26 @@ not diffuse. All other fields move by 1–2 documents (noise), not signal.
 
 1. **Span examples beat prose shapes.** The residual license-grant spans
    were unenumerable by keyword (grants-and-assigns with territories,
-   restriction-on-rights clauses, options, end-user access grants) — but
-   the seven verbatim positive examples taught the shape class: the target
-   docs (Fulucai = a distribution-license grant doc, NOVO, HPIL) recovered
-   +0.33 to +0.50 per doc at zero hallucination cost (verified_precision
-   0.988).
+restriction-on-rights clauses, options, end-user access grants) — but
+the seven verbatim positive examples taught the shape class: the target
+docs (Fulucai = a distribution-license grant doc, NOVO, HPIL) recovered
++0.33 to +0.50 per doc at zero hallucination cost (verified_precision
+0.988).
 2. **Span discipline is a precision lever, not a recall tax.** Items −29%
    with matched-span ratio up: the sentence+fragment pairs were pure waste;
-   the 225 near-duplicates dropped to 101 with no loss on the scored ko.
+the 225 near-duplicates dropped to 101 with no loss on the scored ko.
 3. **Max reasoning has a structured-output reliability floor.** One
    parse-error row in 50 (2.6x cost for +3.0pp ko) — the marginal ko value
-   of reasoning beyond "none" is positive, but its failure mode (token-
-   budget overrun on multi-chunk docs) is a production risk the repo's
-   reasoning_effort=none default exists to avoid.
+of reasoning beyond "none" is positive, but its failure mode (token-
+budget overrun on multi-chunk docs) is a production risk the repo's
+reasoning_effort=none default exists to avoid.
 4. **Confound by design.** The arm varies prompt AND reasoning together; a
    v19 × none run would isolate the prompt's true contribution (the next
-   $0.04 arm, not yet spent). The safe reading: the worked examples
-   recovered the license-family spans; reasoning bought the rest.
+$0.04 arm, not yet spent). The safe reading: the worked examples
+recovered the license-family spans; reasoning bought the rest.
 5. **Decision rule held.** ko ≥ +3pp met exactly; no field regressed >2pp.
    v19 is the flash-line ko champion; v18 stays the overall champion
-   (0.9230) until the confound is resolved.
+(0.9230) until the confound is resolved.
 
 *Sources:* `reports/experiment_log.jsonl` (runs 044–049, task
 `contract_entity_extraction`) · `V16_PROPOSITION.md` §9–10 (catalog,
@@ -89,10 +89,10 @@ artifacts, span-level diagnostics) · `src/prompts.py` v18/v19 banners ·
 
 1. **The prompt-vs-reasoning split.** A v19 × reasoning_effort=none arm
    (≈$0.04) isolates how much of the +3.0pp is the worked examples alone —
-   the input for the production config decision.
+the input for the production config decision.
 2. **The parse-error pathology.** Ediets EX-10.4 burned 9.8k completion
    tokens on 2 chunks; a reasoning-token cap or per-chunk retry would
-   harden max-reasoning mode.
+harden max-reasoning mode.
 3. **The 217 still-missing spans.** Token-level misses persist (241 → 217);
    the "other" bucket (~42) deserves its own decomposition before a v20.
 4. **Doc-level noise floor.** With 33/50 docs flat, the next improvements

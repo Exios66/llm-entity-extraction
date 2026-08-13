@@ -42,7 +42,7 @@ touch)**, so v20 as a whole is not a champion; v19 keeps the ko crown.
 | renewal_terms | 0.816 | 2 × 0.0 | evergreen clause ("shall continue in full force and effect thereafter until terminated by either Party by providing thirty (30) calendar days' prior written notice") never says "renew"; deal-terms table line |
 | governing_law | 0.932 | 2 near-0 | regulatory-jurisdiction sentence ("subject to all laws ... of the Canadian Radio-television and Telecommunications Commission") vs the model's proper governing-law sentence |
 | term_length | 0.968 | 1 × 0.44 | GT holds the DEFINED-TERM sentence ("The term "Term" shall mean ...") |
-| termination_clauses | 0.938 | 1 × 0.0 | GT is a redacted section ("Termination for Convenience. [***].") |
+| termination_clauses | 0.938 | 1 × 0.0 | GT is a redacted section (Termination for Convenience, redacted) |
 | document_name | 0.960 | 2 worst | short-title containment ("FRANCHISE AGREEMENT" inside the full title) |
 
 ### The v20 arm (qwen3.7-flash × max reasoning, same 50 docs, chunked, seed 42)
@@ -69,28 +69,28 @@ the prompt/model delta):
 
 1. **The scorer fixes are correctness fixes, adopted permanently.** A model
    that returns null for a contract whose date line is literally
-   "_____ day of ________, 19____" is right; a scorer that gives it 0.0
-   punishes honesty. Same for "Consultant"/"Member"/pronoun-alias party
-   labels (contained verbatim in the answer) and contained titles. These
-   rules raise the floor for every future run without touching historical
-   records (append-only stored scores).
+"_____ day of ________, 19____" is right; a scorer that gives it 0.0
+punishes honesty. Same for "Consultant"/"Member"/pronoun-alias party
+labels (contained verbatim in the answer) and contained titles. These
+rules raise the floor for every future run without touching historical
+records (append-only stored scores).
 2. **The prompt rules are validated on their targets.** renewal_terms
    +4.5pp and termination_clauses +5.4pp at same-scorer are real model-
-   behavior changes; term_length and governing_law are flat-to-slightly-
-   down (their single-doc targets did not move — Euromedia's regulatory
-   sentence still loses to the model's proper governing-law answer, a
-   GT-vs-model span choice no prompt can settle).
+behavior changes; term_length and governing_law are flat-to-slightly-
+down (their single-doc targets did not move — Euromedia's regulatory
+sentence still loses to the model's proper governing-law answer, a
+GT-vs-model span choice no prompt can settle).
 3. **The ko regression is variance, not a v20 effect.** 2 up vs 14 down,
    34 flat; the losers (HPIL 1.0→0.5, EcoScience 1.0→0.5, Healthcare
-   0.833→0.333) are docs the v20 rules never touch, and the v19 arm showed
-   the same diffuse spread (10 up vs 7 down). Max reasoning amplifies
-   run-to-run span choice. One parse-error row per arm (Ediets in v19,
-   MidwestEnergy in v20) is the documented reliability cost of
-   reasoning=max.
+0.833→0.333) are docs the v20 rules never touch, and the v19 arm showed
+the same diffuse spread (10 up vs 7 down). Max reasoning amplifies
+run-to-run span choice. One parse-error row per arm (Ediets in v19,
+MidwestEnergy in v20) is the documented reliability cost of
+reasoning=max.
 4. **Overall is a tie because the arms move different fields.** v19 wins
    ko, v20 wins the non-obligation fields; merging (v21 = v19's ko content
-   + v20's four field rules, ideally at reasoning=none) is the obvious next
-   arm and costs one ~$0.10 run.
++ v20's four field rules, ideally at reasoning=none) is the obvious next
+arm and costs one ~$0.10 run.
 
 *Sources:* `reports/experiment_log.jsonl` (runs 044–050, task
 `contract_entity_extraction`) · `V16_PROPOSITION.md` §10–11 ·
@@ -109,10 +109,10 @@ runner = [LangGraph](https://langchain-ai.github.io/langgraph/) on
    gains at reasoning=none (removing the parse-error risk)? One ~$0.10 arm.
 2. **The OCR-mangled date.** SPRINGBANK's "7t h day of April, 2020." is a
    real date the model misses; a date-normalizer that strips OCR spacing
-   ("7t h" → "7th") would make the GT parseable and the miss punishable —
-   scorer change, not prompt.
+("7t h" → "7th") would make the GT parseable and the miss punishable —
+scorer change, not prompt.
 3. **The 0-ko docs.** SPRINGBANK, QBIOMED, PelicanDelivers still extract
    little or nothing in several arms; a trace-level postmortem remains open.
 4. **Same-scorer reruns.** The official v19 record holds old-scorer scores;
    a permanent same-scorer re-scoring pipeline (embedding-inclusive) would
-   make every historical comparison immune to scorer drift.
+make every historical comparison immune to scorer drift.

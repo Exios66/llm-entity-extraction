@@ -22,6 +22,15 @@ full 509-document corpus (**0.859 → 0.931**, +7.3 pp), with family-level
 Crucially, **mean confidence is flat** (~0.94 across all versions) — the
 improvement is the prompt's classification rules, not a calibration shift.
 
+| Metric | v3 → v6 (same 195-doc surface) |
+|---|---|
+| strict subtype accuracy | 0.790 → **0.944** (+15.4pp) |
+| equiv subtype accuracy | 0.826 → **0.949** (+12.3pp) |
+| full-corpus (509) strict | 0.859 → **0.931** |
+
+> **Verdict:** v6 clears the bar on the controlled surface; strict 0.944 is the classification benchmark to beat.
+
+
 ### Same-surface A/B (195 docs, seed 42, fingerprint `2e1fe4b7`)
 
 Every row is the same sample, so deltas are directly comparable.
@@ -57,26 +66,26 @@ defaulted to "other".
 
 1. **Targeted rules beat generic preference.** v6's banner documents the
    evidence for each rule: hybrid operating-core precedence (a "Master
-   Development and Manufacturing Agreement" is filed under the operating
-   family by corpus convention), SEC §13(d)/13(g) joint-filing agreements
-   → `joint_venture` (previously `other`), license+maintenance titles →
-   `maintenance`, hosting ≠ license/development (provisioning work is not
-   development), remarketing → `marketing`, a marketing-core guard, and
-   annex/schedule inheritance from the parent agreement's family. Each rule
-   was added *because* a failure pattern existed in the v5 confusion matrix.
+Development and Manufacturing Agreement" is filed under the operating
+family by corpus convention), SEC §13(d)/13(g) joint-filing agreements
+→ `joint_venture` (previously `other`), license+maintenance titles →
+`maintenance`, hosting ≠ license/development (provisioning work is not
+development), remarketing → `marketing`, a marketing-core guard, and
+annex/schedule inheritance from the parent agreement's family. Each rule
+was added *because* a failure pattern existed in the v5 confusion matrix.
 2. **The family-confusion win is the headline.** 40 → 26 on the full
    corpus — the rules resolve exactly the near-synonymous family pairs the
-   strict metric punishes, and the equiv rate confirms the residue is
-   defensible family routing rather than noise (0.939).
+strict metric punishes, and the equiv rate confirms the residue is
+defensible family routing rather than noise (0.939).
 3. **Confidence is a constant.** Mean reported confidence is flat
    (~0.94); accuracy moved without any calibration change — the
-   experiment controls for the "model got more confident" alternative
-   explanation.
+experiment controls for the "model got more confident" alternative
+explanation.
 4. **Same-surface discipline mattered.** v4 looked like a wash on the 195
    surface but a strict regression (0.836 → 0.810); without the identical
-   fingerprint+seed frame these comparisons would have been noise (the
-   v0.13.0 "regression" postmortem documented exactly this trap with
-   disjoint 5-doc samples).
+fingerprint+seed frame these comparisons would have been noise (the
+v0.13.0 "regression" postmortem documented exactly this trap with
+disjoint 5-doc samples).
 
 *Sources:* `reports/experiment_log.jsonl` (task `subtype_classification`,
 fingerprints `2e1fe4b7` and `c2341957`) · `src/prompts.py` v6 banner ·
@@ -89,11 +98,29 @@ scores with bootstrap CIs on the site · corpus = CUAD (Hendrycks et al.,
 
 1. **Will the rules transfer to non-CUAD contracts?** The corpus-convention
    rules are learned from CUAD's filing conventions; a non-SEC contract
-   corpus (e.g. LegalBench MAUD agreements) may not share them. A
-   cross-corpus subtype pilot is the open validation.
+corpus (e.g. LegalBench MAUD agreements) may not share them. A
+cross-corpus subtype pilot is the open validation.
 2. **Failure residue:** the remaining 26 family confusions on 509 docs are
    concentrated in specific pairs — a per-family confusion-matrix audit
-   (site: subtype run views) will tell us which rule is next.
+(site: subtype run views) will tell us which rule is next.
 3. **Cost of precision:** the added rules lengthen the prompt; whether the
    +7.3 pp is worth the token cost for *your* corpus is a deployment
-   decision the cost-vs-quality scatter now makes visible.
+decision the cost-vs-quality scatter now makes visible.
+---
+
+## Addendum (2026-08-13): sorter v7 — the 250-sample A/B
+
+**Result: v7 beats v6 on the identical 243-doc stratified surface (seed 42,
+qwen3.7-flash, llm-dojo): strict 0.8683 → 0.8765 (+0.82pp), equiv 0.8807 →
+0.8889 (+0.82pp).** The three v7 rules (18. CONSORTIUM O&M IS MAINTENANCE,
+19. DEVELOPMENT OVER LICENSE, 20. PROMOTION GUARD) came from the v6 509-doc
+failure decomposition; the promotion→marketing cluster (6 errors) is
+eliminated outright.
+
+**Caveat on the >95% target:** the current full-corpus dataset revision
+(fingerprint fb9f939d…) is a harder surface than the revision behind the
+195-doc 0.9436 runs (fingerprint 2e1fe4b7…) — v6 itself scores 0.8683
+here. The 0.94-era numbers and today's numbers are not comparable; v7's
++0.82pp on the identical sample is the real, prompt-attributable gain, and
+the path to >0.95 runs through the remaining development-family and
+ip→license confusions on the current revision.

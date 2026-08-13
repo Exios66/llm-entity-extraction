@@ -47,28 +47,28 @@ favorable max-reasoning roll, not a reproducible config.
 
 1. **Ellipsis was a real, quantified regression mechanism.** The v19 length-
    anchor + discipline rules pushed the model to abbreviate clauses with
-   "...", and a 23.6% ellipsis rate directly explains a large share of the
-   token-level misses (an item like "T&B hereby grants to LEA... the sole
-   and exclusive worldwide right" cannot match the full GT span). v22's
-   VERBATIM COMPLETENESS rule cut this to 19.5-20.5% — and the max arm's
-   zero parse errors (vs 1/50 for v19/v20 max) suggest the output
-   discipline also kept the structured-output budget in check.
+"...", and a 23.6% ellipsis rate directly explains a large share of the
+token-level misses (an item like "T&B hereby grants to LEA... the sole
+and exclusive worldwide right" cannot match the full GT span). v22's
+VERBATIM COMPLETENESS rule cut this to 19.5-20.5% — and the max arm's
+zero parse errors (vs 1/50 for v19/v20 max) suggest the output
+discipline also kept the structured-output budget in check.
 2. **The dedupe fix held LegacyEducation-class clauses** (the 19-item list
    rebuilt) but the scored ko gain is modest (+1.3pp none, +2.7pp vs v21 at
-   max): 34 of the 38 lost spans remain token-level misses — the residual
-   is the annotator-vs-model span choice, which no output rule has fully
-   bridged since v15.
+max): 34 of the 38 lost spans remain token-level misses — the residual
+is the annotator-vs-model span choice, which no output rule has fully
+bridged since v15.
 3. **The ko ceiling is ~0.85 at none and ~0.88 at max (best roll).** Two
    identical-setting passes swing ±2.2pp; v19's 0.8840 was the favorable
-   roll. The honest production choice is v22×none (overall 0.9512, CI
-   .934-.967 — the first arm whose CI clears v18's point estimate) with ko
-   ~0.83, or v22×max for +1.5pp ko at 2.6x cost. v19×max is not
-   reproducible at its headline number.
+roll. The honest production choice is v22×none (overall 0.9512, CI
+.934-.967 — the first arm whose CI clears v18's point estimate) with ko
+~0.83, or v22×max for +1.5pp ko at 2.6x cost. v19×max is not
+reproducible at its headline number.
 4. **Project strategy locked in (per direction):** llm-dojo = prompt
    iteration (this repo); llm-mailroom = full-pipeline testing (the
-   llm-mailroom repo); insights flow llm-dojo → llm-mailroom. v22 synced
-   to llm-dojo's prompt store; the llm-mailroom project is one key file
-   away via `sync_langfuse_prompts.py --env-file`.
+llm-mailroom repo); insights flow llm-dojo → llm-mailroom. v22 synced
+to llm-dojo's prompt store; the llm-mailroom project is one key file
+away via `sync_langfuse_prompts.py --env-file`.
 
 *Sources:* `reports/experiment_log.jsonl` (runs 044–054, task
 `contract_entity_extraction`) · `V16_PROPOSITION.md` §12–13 ·
@@ -85,16 +85,16 @@ favorable max-reasoning roll, not a reproducible config.
 
 1. **The residual 34 spans.** Span-choice divergence (the model picks a
    different fragment of the same clause than the annotator) survives every
-   output rule; a worked-example set built from those 34 exact spans is the
-   next lever (v23).
+output rule; a worked-example set built from those 34 exact spans is the
+next lever (v23).
 2. **The annotation-queue loop.** The parallel annotation-queue tool
    (`run_annotation_queue.py`) is now available for the low-performing
-   traces — the 0-ko docs (SPRINGBANK, QBIOMED, PelicanDelivers) are its
-   first target.
+traces — the 0-ko docs (SPRINGBANK, QBIOMED, PelicanDelivers) are its
+first target.
 3. **Roll variance.** ±2.2pp between identical passes means single-run
    deltas below ~3pp should be treated as noise; the same-surface CI is the
-   decision instrument.
+decision instrument.
 4. **The full-pipeline handoff.** Porting the v22 prompt into the
    llm-mailroom agents is the deliverable of the llm-dojo → llm-mailroom
-   flow; the sync script makes the prompt versions available to that
-   project on demand.
+flow; the sync script makes the prompt versions available to that
+project on demand.
