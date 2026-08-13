@@ -340,6 +340,32 @@ SORTER_PROMPT_V7 = SORTER_PROMPT_V6.replace(
 
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v8 (development-vs-collaboration/
+# license/franchise; Intellectual Property Agreements are ip)
+# -----------------------------------------------------------------------------
+# v8 = v7 + the two remaining confusion clusters from the v7 243-doc
+# stratified A/B (qwen3.7-flash_sorter_v7_subtype_langfuse: strict 0.8765,
+# 30 fails): development->collaboration (2) are "Collaborative Development
+# and Commercialization" agreements whose joint-committee governance
+# overrode the development machinery; development->license (2) and
+# development->franchise (1) are "Development Agreement"-titled docs whose
+# operative grant/franchise structures read as the family; ip->license (2)
+# and ip->joint_venture (1) are "Intellectual Property Agreement"-titled
+# docs whose license/JV sections read as the family. Target: strict > 0.95
+# on the 250-doc stratified A/B.
+# =============================================================================
+
+SORTER_PROMPT_V8 = SORTER_PROMPT_V7.replace(
+    """20. PROMOTION GUARD: an agreement whose title names promotion ("Promotion Agreement") or whose operative core is promotional services, placement, and marketing of products IS promotion — its own family — even when it also carries marketing or distribution machinery ("Promotion Agreement" with sales/distribution terms -> promotion, not marketing and not distributor).""",
+    """20. PROMOTION GUARD: an agreement whose title names promotion ("Promotion Agreement") or whose operative core is promotional services, placement, and marketing of products IS promotion — its own family — even when it also carries marketing or distribution machinery ("Promotion Agreement" with sales/distribution terms -> promotion, not marketing and not distributor).
+
+21. DEVELOPMENT VERSUS COLLABORATION, LICENSE, AND FRANCHISE STRUCTURES: a "Collaborative Development and Commercialization Agreement" or "Collaborative Research, Development and Commercialization Agreement" with development machinery (a joint research program, joint steering committee, development plan, milestones, trial timelines) IS development — collaboration governance (JSC/JPT, joint committees) is how the partners run the development, not the family. A "Development Agreement" titled as such stays development even when its operative section is a "Grant of License" for the DEVELOPED materials or when it uses franchise structures ("Real Estate Education Training Program Development Agreement" with a Section 2 grant of rights -> development; "Franchise Development Agreement" -> development, not franchise — the individual-unit franchise agreements are the delivery mechanism; "License and Development Agreement" -> development per rule 19).
+
+22. INTELLECTUAL PROPERTY AGREEMENTS ARE ip: an agreement TITLED "Intellectual Property Agreement" (or "IP Agreement") is classified ip even when its operative core is structured as a license grant (a "Grant of License" section with license fees) or contains a joint-venture section — the corpus files these documents under Ip Ownership and the ground truth follows the folder; do not route them to license or to joint_venture ("INTELLECTUAL PROPERTY AGREEMENT" with a Section 1 grant of a non-exclusive right to use software/trademarks -> ip, not license; an "Intellectual Property Agreement" with a Section 3 joint venture -> ip, not joint_venture).""",
+)
+
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2420,6 +2446,7 @@ PROMPT_VERSIONS = {
     "sorter_v5": SORTER_PROMPT_V5,
     "sorter_v6": SORTER_PROMPT_V6,
     "sorter_v7": SORTER_PROMPT_V7,
+    "sorter_v8": SORTER_PROMPT_V8,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

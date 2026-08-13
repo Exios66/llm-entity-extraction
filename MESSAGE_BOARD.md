@@ -65,24 +65,46 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
 | Card | Status | Task (summary) | Owner | Updated | Target release | CHANGELOG / evidence |
 |---|---|---|---|---|---|---|
-| KANBAN-003 | `backlog` | **sorter_v7 A/B on the 250-doc stratified surface** — same seed as the v6 run; target strict > 0.95; verify each of the 3 rules (consortium O&M→maintenance, development-over-license, promotion guard) with failure-insight quotes before calling it. | unclaimed | 2026-08-12 | `[Unreleased]` → v0.16.0 | v6 full-corpus run: strict 0.9312, 35 fails (qwen3.7-flash_sorter_v6_subtype_langfuse, run 57); prompt registered as `sorter_v7` |
-| KANBAN-004 | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | 2026-08-12 | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
-| KANBAN-005 | `backlog` | **Mirror sync → llm-mailroom** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | 2026-08-12 | v0.16.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
-| KANBAN-006 | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue): adjudicate, feed corrections into the next prompt iteration. | unclaimed | 2026-08-12 | v0.16.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
-| KANBAN-008 | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | 2026-08-12 | v0.16.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
+| KANBAN-004 | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (v18-matched spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | 2026-08-12 | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
+| KANBAN-005 | `backlog` | **Mirror sync → llm-mailroom (partial done)** — v0.15.0 experiment-log mirror re-synced into llm-mailroom (`75d6fa0` DOCS SYNC). REMAINING: (a) sync the 58-run log incl. the v7 A/B, (b) sync the v22/v23 champion prompts into the llm-mailroom Langfuse project (`sync_langfuse_prompts.py --env-file langfuse-llm-mailroom.env`), (c) full-pipeline validation runs in llm-mailroom-experiments per the production-config decision (ties to KANBAN-008). | unclaimed | 2026-08-12 | v0.16.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; llm-mailroom `docs/reports/experiments/experiment_log.md` |
+| KANBAN-006 | `backlog` | **HITL annotation queue processing** — tooling DONE (score-config support landed `ca20d17`: get_or_create_annotation_config + default score-config in `run_annotation_queue.py`, FakeLangfuse tests). REMAINING: adjudicate the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue) and feed corrections into the next prompt iteration. | unclaimed | 2026-08-12 | v0.16.0 | `scripts/eval/run_annotation_queue.py status`; `tests/test_annotation_queue.py`; wiki `Annotation-Queues.md` |
+| KANBAN-008 | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | 2026-08-12 | v0.16.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
 | KANBAN-009 | `backlog` | **Score-drift hygiene** — extend the same-scorer rescore pipeline beyond the 50-doc series if a scorer rule changes again; keep `reports/same_scorer_scores.json` current per run. | unclaimed | 2026-08-12 | v0.16.0 | `scripts/reporting/rescore_manifests.py`; `tests/test_rescore_manifests.py` |
-| KANBAN-010 | `backlog` | **Restore OpenRouter cost accounting on the site** — the latest `build_site.py` regen dropped the `costs` meta + per-run `cost` blocks because no activity CSV was present. Re-ingest the OpenRouter activity-log export (Settings → Activity Logs) and rebuild; verify the cumulative-cost card renders. | unclaimed | 2026-08-12 | v0.16.0 | `scripts/site/build_site.py` (activity CSV ingest); site `#/` cost card; this commit's regen has no `costs` block in `docs/data/meta.json` |
 | KANBAN-011 | `backlog` | **Post-v23 model sweep (gated OPEN)** — run v22/v23 prompts × {deepseek-v4-flash, deepseek-v4-pro} on the same 50 docs to quantify the remaining model-bound segmentation gap (the v18 sweep proved scope-fidelity is model-agnostic; confirm the ko 0.85→0.89 plateau closes at the newest prompts). | unclaimed | 2026-08-12 | v0.16.0 | memo `model_sweep_v18.md`; `V16_PROPOSITION.md` §9.3/§15 |
+| KANBAN-012 | `backlog` | **sorter_v8 — next classification iteration** — remaining confusion clusters from the v7 243-doc A/B (32→30 fails): development→collaboration/license/franchise (5), outsourcing→manufacturing (2), affiliate→marketing (2), ip→license (2, new). Data-backed rules first (per-cluster error quotes), then the same-surface A/B; target strict > 0.90 on the current corpus revision (fb9f939d). | unclaimed | 2026-08-12 | `[Unreleased]` → v0.16.0 | `V16_PROPOSITION.md` §16.2–16.3; `reports/experiment_log.jsonl` run `qwen3.7-flash_sorter_v7_subtype_langfuse` |
+| KANBAN-013 | `backlog` | **Corpus-revision effect quantification** — v6 rerun on a 195-doc draw of the CURRENT corpus revision (fb9f939d) to isolate revision-shift vs prompt-gain (the 0.9436-era v6 numbers sit on fingerprint 2e1fe4b7 and are not comparable); needed before any >0.95 sorter claim. | unclaimed | 2026-08-12 | v0.16.0 | `V16_PROPOSITION.md` §16.3 |
+| KANBAN-014 | `backlog` | **v0.16.0 release** — `release.py --bump`, convert `[Unreleased]` (sorter_v7 A/B + memos polish) → v0.16.0, pyproject 0.15.0→0.16.0, site data regen + render audit, `release.py --check` (full test suite), tag + push + GitHub release with notes, wiki sync (`./wiki/sync-wiki.sh`). | unclaimed | 2026-08-12 | v0.16.0 | AGENTS.md "Release workflow"; CHANGELOG `[Unreleased]` |
+| KANBAN-015 | `backlog` | **Cross-corpus subtype pilot** — validate sorter_v7's corpus-convention rules on a non-SEC/non-CUAD corpus (LegalBench MAUD agreements): do the O&M/development/promotion rules transfer, or are they CUAD-filing-specific? | unclaimed | v0.17.0 | subtype memo "What questions…?" #1; `memos/subtype_classification_improvements.md` |
+| KANBAN-016 | `backlog` | **Long-doc chunking confirmation subset** — targeted subset of the 100k+-char contracts (Antares, MOELIS, Phasebio-class) to confirm the chunking completeness guarantee directly on at least one specialist arm. | unclaimed | v0.17.0 | memo `entity_extraction_improvements.md` #1 |
+| KANBAN-017 | `backlog` | **OCR-mangled date normalizer** — SPRINGBANK's "7t h day of April, 2020." is a real GT date the model misses; a normalization step ("7t h"→"7th") makes the GT parseable and the date miss punishable; add scorer/normalizer unit tests. | unclaimed | v0.17.0 | memo `contracts_specialist_v20.md` #2 |
+| KANBAN-018 | `backlog` | **sorter_v7 research memo** — the A/B landed without its memo (repo convention: memo in the same commit as the finding). Write `memos/sorter_v7_classification_improvements.md` (research-question format, scorecard table + Verdict callout, V16 §16 cross-ref). | unclaimed | v0.16.0 | AGENTS.md "Research memos"; CHANGELOG `[Unreleased]` sorter_v7 entry |
+| KANBAN-019 | `backlog` | **Sorter vision re-eval on the current corpus revision** — `sorter_vision_v0/v1` have no runs on revision fb9f939d (only 2 classification runs total, on the old corpus); re-A/B vision vs text on the new revision before trusting vision in the pipeline. | unclaimed | v0.17.0 | `src/prompts.py` vision block; `reports/experiment_log.jsonl` (vision coverage) |
 
 **Sweep rule:** when a release ships, re-target every non-done card to the
 new `[Unreleased]` version and move landed cards to the Archive. (Last sweep:
-v0.15.0 shipped 2026-08-12 — KANBAN-001/002/007 archived below.)
+2026-08-12 — v0.16.0 prep — KANBAN-003/010 archived below; KANBAN-001/002/007
+archived at the previous sweep.)
 
 ## Discussion board
 
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-12 — opencode — full-state sweep (KANBAN-003/010 done; +KANBAN-012…019)** Board
+  resynced to the current repo state (working tree clean, HEAD `cbb5b93`):
+  **KANBAN-003 archived** — the sorter_v7 243-doc A/B completed (strict
+  0.8765, +0.82pp; promotion cluster eliminated; run 58; changelog entry in
+  place) but the >0.95 target was NOT met → spawned KANBAN-012 (v8 cluster
+  iteration) + KANBAN-013 (corpus-revision effect). **KANBAN-010 archived** —
+  `costs` meta restored in `docs/data/meta.json` (openrouter activity CSV).
+  **KANBAN-005/006 updated** with partial-done tooling (llm-mailroom mirror
+  synced `75d6fa0`; annotation-queue score-config support `ca20d17`).
+  New backlog cards from the repo's own open questions: KANBAN-012 sorter_v8,
+  KANBAN-013 revision-effect, KANBAN-014 v0.16.0 release, KANBAN-015 cross-
+  corpus pilot, KANBAN-016 long-doc subset, KANBAN-017 OCR-date normalizer,
+  KANBAN-018 v7 research memo, KANBAN-019 vision re-eval. Claim before
+  starting; v0.16.0 release (KANBAN-014) needs KANBAN-012/013/018 decided
+  first (or explicitly deferred).
 - **2026-08-12 — opencode — governance** Timestamp discipline enforced
   repo-wide: AGENTS.md now carries the explicit "Agent message board" section
   — mandatory lifecycle (claim → lane-change → blocked → completion, each
@@ -121,9 +143,11 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
+| KANBAN-003 | `[Unreleased]` → v0.16.0 (2026-08-12) | `cbb5b93` EXPERIMENT: sorter v7 A/B | **v7 WINS the 243-doc same-surface A/B**: strict 0.8683→0.8765 (+0.82pp), equiv 0.8807→0.8889 (+0.82pp), promotion→marketing cluster 6→0, fails 32→30. Caveat landed honestly: current corpus revision (fb9f939d) is harder than the 0.9436-era (2e1fe4b7) — strict >0.95 NOT met; follow-ons KANBAN-012/013. Run 58, changelog `[Unreleased]` entry, `V16_PROPOSITION.md` §16 |
+| KANBAN-010 | `[Unreleased]` → v0.16.0 (2026-08-12) | `cbb5b93` (site data regen) | **OpenRouter cost accounting restored**: `docs/data/meta.json` `costs` block present again — source `openrouter_activity_2026-08-11.csv` (api_key "Laptop v3", export 2026-08-09→08-10, per_run coverage ×425 calls incl. embeddings); the cumulative-cost card renders from the current regen |
 | KANBAN-007 | v0.15.0 (2026-08-12) | tag `v0.15.0` → `4b6ad5f`; commits `93eb938`, `0a4051e`, `0afdf2e` | Release finalized: changelog dedup-repaired, tag pushed, GitHub release with dedicated notes published; `release.py --check` green (303 tests) |
-| KANBAN-002 | v0.16.0 prep (2026-08-12) | this commit (`KANBAN-002/007/001` board bootstrap) | Dirty tree landed: experiment log regen (57 runs), site data regen, `sorter_v7` registration + test, AGENTS.md board governance, changelog `[Unreleased]` entry for sorter_v7 |
-| KANBAN-001 | v0.16.0 prep (2026-08-12) | this commit | `SORTER_PROMPT_V7` constant + `PROMPT_VERSIONS["sorter_v7"]` + `test_sorter_v7_data_backed_rules` landed (18 prompt tests green). Evaluation tracked in KANBAN-003 |
+| KANBAN-002 | v0.16.0 prep (2026-08-12) | `ac156a5` MESSAGE BOARD: land the dirty tree + board sweep | Dirty tree landed: experiment log regen (57 runs), site data regen, `sorter_v7` registration + test, AGENTS.md board governance, changelog `[Unreleased]` entry for sorter_v7 |
+| KANBAN-001 | v0.16.0 prep (2026-08-12) | `ac156a5` | `SORTER_PROMPT_V7` constant + `PROMPT_VERSIONS["sorter_v7"]` + `test_sorter_v7_data_backed_rules` landed (18 prompt tests green). Evaluation tracked in KANBAN-003 |
 | *(v0.15.0 content)* | v0.15.0 (2026-08-12) | tag `v0.15.0` | All v0.15.0 changelog entries (v18 sweep → v19 → v20 → v21 → v22 → v23 → v23×max; scorer fixes; annotation queues ×2; memos tab + 6 memos; wiki Langfuse-Traces + Annotation-Queues; rescore pipeline; two-project Langfuse strategy; prompt-store cleanup) — cataloged in CHANGELOG.md v0.15.0, each with its own commit in `git log v0.14.0..v0.15.0` |
 
 When moving a card here: fill this table AND leave the lane row visible in

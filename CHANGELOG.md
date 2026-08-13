@@ -9,6 +9,21 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`sorter_v8` — the development/IP clusters A/B (v8 WINS, +2.06pp
+  strict)**: two data-backed rules from the exact 8 v7 failures —
+  21. DEVELOPMENT VERSUS COLLABORATION, LICENSE, AND FRANCHISE STRUCTURES
+  ("Collaborative Development" agreements are development; "Development
+  Agreement" titles stay development when grants/franchise structures
+  deliver the developed materials) and 22. INTELLECTUAL PROPERTY
+  AGREEMENTS ARE ip (IP-titled docs are ip despite license/JV sections).
+  Same-surface A/B (243-doc stratified, seed 42, qwen3.7-flash, medium,
+  llm-dojo): **strict 0.8765 → 0.8971 (+2.06pp), equiv 0.8889 → 0.9012,
+  30 → 25 fails; both target clusters eliminated** (development→
+  collaboration/license/franchise 5 → 0, ip→license/joint_venture 3 → 0).
+  Cumulative v6→v8: +2.9pp strict. Remaining: promotion-title→marketing
+  (2), outsourcing→manufacturing (2), customization-schedule annex (1)
+  plus a 1-off tail — v9 rules designed, 0.95 strict is a multi-iteration
+  target on this corpus revision. Full record: `V16_PROPOSITION.md` §17.
 - **`sorter_v7` — the final classification A/B (250-sample) — v7 WINS
   (+0.82pp strict)**: three data-backed rules targeting the v6 509-doc
   full-corpus fails (strict 0.9312, 35 fails): consortium O&M →

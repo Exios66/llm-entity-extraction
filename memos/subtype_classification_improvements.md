@@ -124,3 +124,20 @@ here. The 0.94-era numbers and today's numbers are not comparable; v7's
 +0.82pp on the identical sample is the real, prompt-attributable gain, and
 the path to >0.95 runs through the remaining development-family and
 ip→license confusions on the current revision.
+
+---
+
+## Addendum 2 (2026-08-13): sorter v8 — the development/IP clusters
+
+**Result: strict 0.8765 → 0.8971 (+2.06pp), equiv 0.8889 → 0.9012, 30 →
+25 fails on the identical 243-doc surface.** Both v8 target clusters are
+eliminated: development→collaboration/license/franchise (5) and
+ip→license/joint_venture (3) are all zero — the "Collaborative
+Development", "Franchise Development", "License and Development" and
+"Intellectual Property Agreement" patterns are now classified per the
+corpus convention. Remaining: promotion-title docs read as marketing (2),
+outsourcing-with-manufacturing read as manufacturing (2), a
+customization-schedule annex read as development (1), and a 1-off tail —
+the v9 rule set (promotion-title wins, outsourcing-title wins,
+customization schedules are maintenance) is designed and worth ~2-3pp;
+0.95 strict on this revision remains a multi-iteration target.

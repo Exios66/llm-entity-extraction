@@ -832,3 +832,51 @@ eliminated; remaining errors: development→collaboration/license/franchise
   new revision would isolate it).
 - The A/B discipline holds: v6 and v7 ran on the identical 243-doc sample
   (same seed, same revision, same model) — the delta is the prompt.
+
+---
+
+## 17. Sorter v8 — development/collaboration/license/franchise + IP-Agreement rules — A/B result (2026-08-13)
+
+### 17.1 Design (from the exact 8 v7 failures)
+
+- **Rule 21 — DEVELOPMENT VERSUS COLLABORATION, LICENSE, AND FRANCHISE
+  STRUCTURES**: "Collaborative Development and Commercialization"
+  agreements with development machinery are development (collaboration
+  governance is the operating structure, not the family); "Development
+  Agreement"-titled docs stay development when their operative grant/
+  franchise structures deliver the developed materials (Real Estate
+  Education Training Program Development Agreement; El Pollo Loco
+  Franchise Development Agreement; License and Development Agreement).
+- **Rule 22 — INTELLECTUAL PROPERTY AGREEMENTS ARE ip**: an agreement
+  titled "Intellectual Property Agreement" is ip even when its core is a
+  license-grant section or includes a joint-venture section (JINGWEI,
+  Cerence SpinCo, PREMIERBIOMEDICAL).
+
+### 17.2 A/B result (identical 243-doc stratified surface, seed 42, qwen3.7-flash, medium, llm-dojo)
+
+| Metric | v6 | v7 | v8 | Δ v8 vs v7 |
+|---|---:|---:|---:|---:|
+| strict subtype accuracy | 0.8683 | 0.8765 | **0.8971** | **+2.06pp** |
+| equiv subtype accuracy | 0.8807 | 0.8889 | **0.9012** | +1.23pp |
+| fails | 32 | 30 | **25** | −5 |
+| development→collaboration | — | 2 | **0** | fixed |
+| development→license | 2 | 2 | **0** | fixed |
+| development→franchise | 1 | 1 | **0** | fixed |
+| ip→license | — | 2 | **0** | fixed |
+| ip→joint_venture | — | 1 | **0** | fixed |
+
+Both target clusters eliminated; the promotion→marketing cluster from the
+v7-era returns at 2 (COLOGUARD PROMOTION AGREEMENT, CO-PROMOTION
+AGREEMENT — promotion-titled docs whose marketing machinery overrode the
+title rule), plus outsourcing→manufacturing (2) and a 1-off tail.
+
+### 17.3 Status vs the >0.95 target
+
+strict 0.8971 (+2.9pp cumulative v6→v8). The remaining 25 errors
+decompose into identifiable v9 rules (promotion-title wins over
+marketing; outsourcing-title wins over manufacturing; customization-
+schedule annexes are maintenance) worth ~2-3pp — the path to 0.95 also
+needs the 1-off tail (agency→other, license→other, sponsorship→service/
+agency) and doc_type edge cases (press-release exhibits). Honest read:
+0.95 strict on this revision is a multi-iteration target, not one more
+rule away.

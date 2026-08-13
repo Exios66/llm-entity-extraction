@@ -80,6 +80,27 @@ def test_sorter_v7_data_backed_rules():
     assert "PROMOTION GUARD" not in SORTER_PROMPT_V6
 
 
+def test_sorter_v8_remaining_clusters():
+    from src.prompts import SORTER_PROMPT_V7, SORTER_PROMPT_V8
+
+    # v8 is a strict derivation of v7: the base is untouched, the derived
+    # prompt adds the two rules for the v7 243-doc residual clusters.
+    assert SORTER_PROMPT_V8 != SORTER_PROMPT_V7
+    assert SORTER_PROMPT_V8.startswith(SORTER_PROMPT_V7[:300])
+    assert "sorter_v8" in PROMPT_VERSIONS
+
+    v8 = SORTER_PROMPT_V8
+    assert "21. DEVELOPMENT VERSUS COLLABORATION, LICENSE, AND FRANCHISE STRUCTURES" in v8
+    assert "Collaborative Development and Commercialization Agreement" in v8
+    assert "Franchise Development Agreement" in v8
+    assert "22. INTELLECTUAL PROPERTY AGREEMENTS ARE ip" in v8
+    assert "not route them to license or to joint_venture" in v8
+    assert "VALID CONTRACT SUBTYPE KEYS" in v8
+    # v7 predates the two rules.
+    assert "21. DEVELOPMENT VERSUS COLLABORATION" not in SORTER_PROMPT_V7
+    assert "INTELLECTUAL PROPERTY AGREEMENTS ARE ip" not in SORTER_PROMPT_V7
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt
