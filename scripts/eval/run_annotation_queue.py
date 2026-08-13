@@ -63,10 +63,57 @@ DEFAULT_QUEUE_DESCRIPTION = (
     "span + per-chunk generations against the CUAD ground truth and score "
     "the trace in the UI."
 )
+SORTER_QUEUE_DESCRIPTION = (
+    "Sorter traces (subtype_classification) with a FAILED classification — "
+    "primary class (doc_type), contract subtype, or both — enqueued "
+    "automatically from the llm-dojo mirror; review the sorter span and the "
+    "model's reasoning against the expected CUAD folder and score the trace "
+    "in the UI."
+)
 DEFAULT_THRESHOLD = 0.85
 DEFAULT_SCORE_NAME = "overall_extraction_score"
 DEFAULT_SESSION_CONTAINS = "extraction_langfuse"
 PAGE_SIZE = 100
+
+# ----------------------------------------------------------------------
+# Task registry — one entry per pipeline the queue builder serves.
+#
+# mode "threshold": enqueue traces whose ``score_name`` is below
+#                   ``--threshold`` (extraction pipeline).
+# mode "failure" : enqueue traces where classification FAILED — primary
+#                   class (doc_type) and/or contract subtype — read from
+#                   the trace output composite (sorter task).
+# ----------------------------------------------------------------------
+
+TASKS: dict[str, dict[str, Any]] = {
+    "extraction": {
+        "trace_name": "contract_entity_extraction",
+        "session_contains": "extraction_langfuse",
+        "prompt_prefix": "contracts_specialist",
+        "queue_name": "entity-extraction-low-performers",
+        "queue_description": DEFAULT_QUEUE_DESCRIPTION,
+        "mode": "threshold",
+    },
+    "subtype": {
+        "trace_name": "subtype_classification",
+        "session_contains": "subtype_langfuse",
+        "prompt_prefix": "sorter",
+        # Shared queue (the Langfuse Hobby plan allows ONE annotation queue
+        # per project): sorter failures live in the same queue as extraction
+        # low performers, distinguishable per task via the trace scores and
+        # trace name; ``status`` filters items by task.
+        "queue_name": "entity-extraction-low-performers",
+        "queue_description": SORTER_QUEUE_DESCRIPTION,
+        "mode": "failure",
+    },
+}
+
+# Display scores per task for the ``status`` subcommand.
+STATUS_SCORES: dict[str, list[str]] = {
+    "extraction": ["overall_extraction_score"],
+    "subtype": ["exact_match", "subtype_accuracy", "subtype_accuracy_equiv",
+                "confidence"],
+}
 
 
 class LangfuseApiError(RuntimeError):
@@ -240,6 +287,27 @@ class AnnotationQueueClient:
         inp = trace.get("input") or {}
         return str(inp.get(field) or "")
 
+    @staticmethod
+    def sorter_failure(trace: dict) -> dict | None:
+        """Sorter failure flags from the trace output composite.
+
+        Returns ``{"doc_type_failed": bool, "subtype_failed": bool}`` — the
+        doc-type (primary class) and subtype (CUAD folder) checks written by
+        ``run_langfuse_subtype_eval`` — or ``None`` when the trace is not a
+        measurable sorter trace. Subtype counts as failed when the strict
+        normalized-subtype match fails; a doc-type failure always fails the
+        subtype too (``subtype_ok`` requires ``doc_type_ok``).
+        """
+        sorter = (trace.get("output") or {}).get("sorter")
+        if not isinstance(sorter, dict):
+            return None
+        doc_type_ok = sorter.get("doc_type_ok")
+        subtype_ok = sorter.get("subtype_ok")
+        if doc_type_ok is None or subtype_ok is None:
+            return None
+        return {"doc_type_failed": not bool(doc_type_ok),
+                "subtype_failed": not bool(subtype_ok)}
+
     def score_map_by_name(self, name: str) -> dict[str, float]:
         """Bulk trace-score map for one score name (v3 scores endpoint).
 
@@ -383,6 +451,22 @@ def select_low_performers(ranked: list[dict], score_name: str, threshold: float,
     return bad
 
 
+def select_failures(ranked: list[dict], limit: int | None) -> list[dict]:
+    """Sorter traces with a FAILED classification (doc_type, subtype, or both).
+
+    ``ranked`` items are ``{"trace": ..., "flags": {"doc_type_failed",
+    "subtype_failed"} | None}``. Both-failures and class-failures lead
+    (worst first); unmeasurable traces (``flags is None``) are excluded.
+    """
+    failed = [r for r in ranked if r["flags"]
+              and (r["flags"]["doc_type_failed"] or r["flags"]["subtype_failed"])]
+    failed.sort(key=lambda r: (not r["flags"]["doc_type_failed"],
+                               not r["flags"]["subtype_failed"]))
+    if limit is not None:
+        failed = failed[:limit]
+    return failed
+
+
 def print_summary(queue: dict, items: list[dict], base_url: str,
                   project_id: str | None, dry_run: bool) -> None:
     action = "would enqueue" if dry_run else "enqueued"
@@ -395,9 +479,14 @@ def print_summary(queue: dict, items: list[dict], base_url: str,
         trace = item["trace"]
         url = (trace_review_url(base_url, project_id, trace["id"])
                if project_id else trace["id"])
-        score = item["score"]
-        score_text = "n/a" if score is None else f"{score:.4f}"
-        print(f"  score={score_text}  {trace_input_name(trace)}")
+        label = ""
+        if item.get("score") is not None:
+            label = f"score={item['score']:.4f}"
+        elif item.get("flags"):
+            flags = item["flags"]
+            label = (("class FAIL + subtype FAIL" if flags["doc_type_failed"]
+                      else "subtype FAIL"))
+        print(f"  {label:<26} {trace_input_name(trace)}")
         print(f"    {url}")
 
 
@@ -410,23 +499,44 @@ def build_queue(args: argparse.Namespace) -> int:
     client = AnnotationQueueClient(
         config.base_url, config.public_key, config.secret_key)
 
+    task = TASKS[args.task]
+    trace_name = task["trace_name"]
+    session_contains = args.session_contains or task["session_contains"]
+    prompt_prefix = task["prompt_prefix"]
+    queue_name = args.queue_name or task["queue_name"]
+    queue_description = args.queue_description or task["queue_description"]
+
     since = (datetime.now(timezone.utc) - timedelta(days=args.since_days)
              if args.since_days else None)
-    logger.info("scanning_traces", name=TRACE_NAME, since_days=args.since_days)
-    traces = client.list_extraction_traces(TRACE_NAME, since, args.session_contains)
+    logger.info("scanning_traces", name=trace_name, task=args.task,
+                since_days=args.since_days)
+    traces = client.list_extraction_traces(trace_name, since, session_contains)
     kept = [t for t in traces
-            if client.keep_for_pipeline(t, args.session_contains, "contracts_specialist")]
-    ranked = [{"trace": t,
-               "score": client.composite_score(t, args.score_name),
-               "filename": trace_input_name(t)} for t in kept]
-    low = select_low_performers(ranked, args.score_name, args.threshold,
-                                args.limit, args.include_unscored)
-    print(f"traces scanned : {len(traces)}  (pipeline: {len(kept)}, "
-          f"below {args.threshold}: {len([r for r in ranked if r['score'] is not None and r['score'] < args.threshold])}, "
-          f"unscored: {len([r for r in ranked if r['score'] is None])})")
+            if client.keep_for_pipeline(t, session_contains, prompt_prefix)]
+
+    if task["mode"] == "failure":
+        ranked = [{"trace": t, "flags": client.sorter_failure(t),
+                   "filename": trace_input_name(t)} for t in kept]
+        measured = [r for r in ranked if r["flags"]]
+        failed = [r for r in measured if r["flags"]["doc_type_failed"]
+                  or r["flags"]["subtype_failed"]]
+        low = select_failures(ranked, args.limit)
+        print(f"traces scanned : {len(traces)}  (pipeline: {len(kept)}, "
+              f"measured: {len(measured)}, failed: {len(failed)}, "
+              f"class-failed: {len([r for r in failed if r['flags']['doc_type_failed']])}, "
+              f"subtype-failed: {len([r for r in failed if r['flags']['subtype_failed']])})")
+    else:
+        ranked = [{"trace": t,
+                   "score": client.composite_score(t, args.score_name),
+                   "filename": trace_input_name(t)} for t in kept]
+        low = select_low_performers(ranked, args.score_name, args.threshold,
+                                    args.limit, args.include_unscored)
+        print(f"traces scanned : {len(traces)}  (pipeline: {len(kept)}, "
+              f"below {args.threshold}: {len([r for r in ranked if r['score'] is not None and r['score'] < args.threshold])}, "
+              f"unscored: {len([r for r in ranked if r['score'] is None])})")
 
     if args.dry_run or not low:
-        print_summary({"name": args.queue_name, "id": "(dry-run)"},
+        print_summary({"name": queue_name, "id": "(dry-run)"},
                       low, config.base_url, None, True)
         print("(dry-run — nothing written)" if args.dry_run else
               "(nothing to enqueue)")
@@ -438,8 +548,8 @@ def build_queue(args: argparse.Namespace) -> int:
         score_config_ids = [config_obj["id"]]
         logger.info("annotation_config", name=DEFAULT_ANNOTATION_CONFIG,
                     id=config_obj["id"])
-    queue = client.get_or_create_queue(args.queue_name,
-                                       args.queue_description,
+    queue = client.get_or_create_queue(queue_name,
+                                       queue_description,
                                        score_config_ids)
     existing = {item.get("objectId")
                 for item in client.list_queue_items(queue["id"])}
@@ -450,7 +560,7 @@ def build_queue(args: argparse.Namespace) -> int:
     for r in fresh:
         client.enqueue_item(queue["id"], r["trace"]["id"])
         logger.info("enqueued", trace_id=r["trace"]["id"],
-                    score=r["score"])
+                    score=r.get("score"))
     project_id = client.project_id(config.project)
     print_summary(queue, low, config.base_url, project_id, dry_run=False)
     print(f"newly enqueued : {len(fresh)}  (already present: {len(low) - len(fresh)})")
@@ -461,21 +571,30 @@ def queue_status(args: argparse.Namespace) -> int:
     config = load_langfuse_config(args.env_file)
     client = AnnotationQueueClient(
         config.base_url, config.public_key, config.secret_key)
+    task = TASKS[args.task]
+    queue_name = args.queue_name or task["queue_name"]
+    trace_name = task["trace_name"]
+    session_contains = args.session_contains or task["session_contains"]
     queue = None
     for candidate in client.list_queues():
-        if candidate.get("name") == args.queue_name:
+        if candidate.get("name") == queue_name:
             queue = candidate
             break
     if queue is None:
-        print(f"queue not found: {args.queue_name}")
+        print(f"queue not found: {queue_name}")
         return 1
     items = client.list_queue_items(queue["id"])
-    scores = client.score_map_by_name(args.score_name)
-    # id -> (filename, prompt_version) from the bulk traces list (no per-trace reads)
-    meta: dict[str, tuple[str, str]] = {}
-    for trace in client.list_extraction_traces(TRACE_NAME, None, args.session_contains):
+    score_maps = {name: client.score_map_by_name(name)
+                  for name in STATUS_SCORES[args.task]}
+    # id -> (filename, prompt_version, failure flags) from the bulk traces list
+    meta: dict[str, tuple[str, str, dict | None]] = {}
+    for trace in client.list_extraction_traces(trace_name, None, session_contains):
         meta[trace["id"]] = (trace_input_name(trace),
-                             str((trace.get("input") or {}).get("prompt_version") or ""))
+                             str((trace.get("input") or {}).get("prompt_version") or ""),
+                             client.sorter_failure(trace)
+                             if task["mode"] == "failure" else None)
+    # the shared queue may hold items from other tasks — keep only this task's
+    items = [i for i in items if i.get("objectId") in meta]
     pending = [i for i in items if i.get("status") == "PENDING"]
     processed = [i for i in items if i.get("status") == "PROCESSED"]
     project_id = client.project_id(config.project)
@@ -483,14 +602,36 @@ def queue_status(args: argparse.Namespace) -> int:
     print(f"items          : {len(items)}  (pending: {len(pending)}, processed: {len(processed)})")
     if project_id:
         print(f"review at      : {config.base_url}/project/{project_id}/annotation-queues/{queue['id']}")
-    for item in sorted(items, key=lambda i: (i.get("status") != "PENDING",
-                                             scores.get(i.get("objectId")) or 0)):
+
+    def sort_key(item: dict) -> tuple:
         tid = item.get("objectId")
-        score = scores.get(tid)
-        filename, version = meta.get(tid, ("", ""))
-        score_text = "n/a" if score is None else f"{score:.4f}"
-        print(f"  [{item.get('status'):<9}] {score_text:>7}  "
-              f"{version[:28]:<28} {filename[:60]}")
+        if task["mode"] == "failure":
+            flags = meta.get(tid, ("", "", None))[2] or {}
+            return (item.get("status") != "PENDING",
+                    not flags.get("doc_type_failed", False),
+                    not flags.get("subtype_failed", False))
+        first = STATUS_SCORES[args.task][0]
+        return (item.get("status") != "PENDING",
+                score_maps.get(first, {}).get(tid) or 0)
+
+    for item in sorted(items, key=sort_key):
+        tid = item.get("objectId")
+        filename, version, flags = meta.get(tid, ("", "", None))
+        if task["mode"] == "failure":
+            label = ""
+            if flags:
+                label = ("class+subtype FAIL" if flags["doc_type_failed"]
+                         else "subtype FAIL")
+            extra = " ".join(f"{name}={score_maps[name].get(tid):g}"
+                             for name in STATUS_SCORES[args.task][:2]
+                             if score_maps[name].get(tid) is not None)
+        else:
+            label = (f"{score_maps[STATUS_SCORES[args.task][0]].get(tid):.4f}"
+                     if score_maps[STATUS_SCORES[args.task][0]].get(tid) is not None
+                     else "n/a")
+            extra = ""
+        print(f"  [{item.get('status'):<9}] {label:<22} {extra:<20} "
+              f"{version[:24]:<24} {filename[:52]}")
         if project_id:
             print(f"      {trace_review_url(config.base_url, project_id, tid)}")
     return 0
@@ -498,20 +639,27 @@ def queue_status(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="HITL annotation queue for low-performing extraction traces (llm-dojo).")
+        description="HITL annotation queue for low-performing / failed traces (llm-dojo).")
     sub = parser.add_subparsers(dest="command", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--queue-name", default=DEFAULT_QUEUE_NAME)
+    common.add_argument("--task", choices=sorted(TASKS), default="extraction",
+                        help="pipeline task: extraction (score-threshold) or "
+                             "subtype (failed classification); both tasks share "
+                             "ONE annotation queue (Hobby-plan limit) and status "
+                             "filters items by task")
+    common.add_argument("--queue-name", default=None,
+                        help="queue name (default per task)")
     common.add_argument("--env-file", default="langfuse.env",
                         help="dotenv file with LANGFUSE_* keys (default: langfuse.env)")
     common.add_argument("--score-name", default=DEFAULT_SCORE_NAME,
                         help=f"trace score to rank on (default: {DEFAULT_SCORE_NAME})")
-    common.add_argument("--session-contains", default=DEFAULT_SESSION_CONTAINS,
-                        help="session-id substring that marks extraction runs")
+    common.add_argument("--session-contains", default=None,
+                        help="session-id substring that marks the pipeline's runs "
+                             "(default per task)")
 
     p_build = sub.add_parser("build", parents=[common],
-                             help="scan extraction traces and enqueue low performers")
+                             help="scan traces and enqueue low performers / failures")
     p_build.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
                          help=f"enqueue traces with score < threshold (default: {DEFAULT_THRESHOLD})")
     p_build.add_argument("--limit", type=int, default=None,
@@ -519,11 +667,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_build.add_argument("--since-days", type=int, default=30,
                          help="only traces newer than N days (default: 30)")
     p_build.add_argument("--include-unscored", action="store_true",
-                         help="also enqueue traces missing the score (old runs)")
+                         help="(extraction) also enqueue traces missing the score")
     p_build.add_argument("--score-config-ids", default=None,
                          help="comma-separated score config ids attached to the queue "
                               "for UI annotations")
-    p_build.add_argument("--queue-description", default=DEFAULT_QUEUE_DESCRIPTION)
+    p_build.add_argument("--queue-description", default=None,
+                         help="queue description (default per task)")
     p_build.add_argument("--dry-run", action="store_true",
                          help="scan + rank only; make no writes")
 

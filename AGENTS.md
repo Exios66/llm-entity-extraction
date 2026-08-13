@@ -104,10 +104,12 @@ python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
 python scripts/eval/run_langfuse_extraction_eval.py --prompt-version contracts_specialist_v11
 python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_v6
 
-# HITL annotation queue (llm-dojo mirror): filter IN low-performing extraction traces
-python scripts/eval/run_annotation_queue.py build --dry-run --threshold 0.85   # scan + rank, no writes
-python scripts/eval/run_annotation_queue.py build --threshold 0.85             # create queue + enqueue PENDING items
-python scripts/eval/run_annotation_queue.py status                            # queue items + scores + trace URLs
+# HITL annotation queue (llm-dojo mirror): filter IN low performers / failed classifications
+python scripts/eval/run_annotation_queue.py build --dry-run --threshold 0.85   # extraction: scan + rank, no writes
+python scripts/eval/run_annotation_queue.py build --threshold 0.85             # extraction: create queue + enqueue PENDING items
+python scripts/eval/run_annotation_queue.py build --task subtype --dry-run     # sorter: failed doc_type/subtype classifications
+python scripts/eval/run_annotation_queue.py build --task subtype               # sorter: enqueue classification failures
+python scripts/eval/run_annotation_queue.py status [--task subtype]            # queue items + scores + trace URLs
 
 # Wiki (version-controlled here, pushed to the public GitHub wiki)
 ./wiki/sync-wiki.sh                     # push wiki/ -> https://github.com/Exios66/llm-entity-extraction/wiki

@@ -9,6 +9,31 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`contracts_specialist_v23` × reasoning=max — the ko-justified arm**:
+  ko **0.8510** (best since v19's 0.8840), 50/50 rows (zero parse errors —
+  vs v19's 1/50), ellipsis 18.7% (lowest of the max arms), overall 0.9363
+  (CI .899-.964), verified_precision 0.974, $0.103. Within 3.3pp of the
+  v19 peak without its parse-error risk or −2.3pp overall penalty —
+  v23×max is the ko-justified production arm; v22×none (overall 0.9512)
+  remains the overall champion. Full matrix: `V16_PROPOSITION.md` §15.
+- **Same-scorer re-scoring pipeline** (`scripts/reporting/rescore_manifests.py`):
+  re-scores any extraction manifest with the CURRENT scorer (consistent
+  no-embedding pass) — the historical records stay append-only while every
+  comparison becomes immune to scorer drift. `--auto-50` covers the 50-doc
+  seed-42 series (v13→v23); report in `reports/same_scorer_scores.json`.
+  String-level insight: the v19+ arms lean harder on the embedding rescue
+  (official ko 0.83-0.85 vs string-level 0.38-0.43). Network-free smoke
+  tests in `tests/test_rescore_manifests.py`.
+- **Langfuse prompt-store cleanup**: the pre-idempotency-fix duplicate v2
+  prompt versions are gone — the version-scoped delete route 404s on this
+  instance, but delete-all + re-sync left all 45 prompts with exactly one
+  version (verified version=1) and clean production/latest labels.
+- **0-ko docs postmortem (corrected)**: SPRINGBANK/QBIOMED/PelicanDelivers
+  are NOT failures — their CUAD GT holds ZERO obligation-family spans
+  (QBIOMED is a Schedule 13G joint filing), so ko is None (excluded), not
+  0.0, in every arm. Earlier "0-ko" references were token-level-audit
+  artifacts. One scope note: PelicanDelivers' 11 payment-milestone items
+  are general payment duties the prompt excludes (harmless — no GT).
 - **`contracts_specialist_v23` — worked-example set v2 (the residual-34
   spans)**: built from the exact 34 GT spans v18 matched that v22 misses.
   Key finding: the v19 trademark NEGATIVE example was over-broad — it

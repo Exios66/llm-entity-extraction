@@ -711,3 +711,76 @@ parties, verified_precision) drags overall.
 3. **The trademark-negative fix is validated**: mark-ownership-use and mark
    non-tarnishment clauses are back in the extraction (Ritter, Armstrong
    spans recovered at token level).
+
+---
+
+## 15. v23×max, the same-scorer pipeline, the prompt-store cleanup, and the 0-ko postmortem (2026-08-13)
+
+### 15.1 v23 × reasoning=max — the ko-justified arm
+
+| Metric | v22 none | v22 max | v23 none | **v23 max** | v19 max |
+|---|---:|---:|---:|---:|---:|
+| key_obligations | 0.8294 | 0.8442 | 0.8374 | **0.8510** | 0.8840 |
+| overall | **0.9512** | 0.9446 | 0.9315 | 0.9363 | 0.9135 |
+| overall CI | .934-.967 | .922-.965 | .893-.960 | .899-.964 | .877-.946 |
+| rows ok / errors | 50/0 | 50/0 | 50/0 | **50/0** | 49/1 |
+| verified_precision | 0.991 | 0.996 | 0.973 | 0.974 | 0.988 |
+| ellipsis rate | 19.5% | 20.5% | 22.0% | **18.7%** | 27.1% |
+| cost | $0.039 | $0.100 | $0.039 | $0.103 | $0.098 |
+
+**ko 0.8510 — the best since v19's peak, at zero parse errors and the
+lowest ellipsis rate of the max arms.** v23×max is the ko-justified
+production arm (within 3.3pp of the v19 peak, minus the 1/50 parse-error
+risk and the −2.3pp overall penalty v19 paid); v22×none remains the
+overall champion (0.9512). The 30-span residual (v18-matched, still missed
+at token level) persists — span-choice divergence.
+
+### 15.2 Same-scorer re-scoring pipeline (scorer-drift immunity)
+
+`scripts/reporting/rescore_manifests.py` re-scores any extraction manifest
+with the scorer as it exists today (consistent no-embedding pass — the
+drift-sensitive numbers are field scores and overall; the factuality audit
+needs doc text the manifests don't carry). `--auto-50` covers the 50-doc
+seed-42 series; the report lands in `reports/same_scorer_scores.json`.
+Same-scorer view of the series (no-embedding):
+
+| version | overall | parties | eff_date | renewal | term_cl | ko |
+|---|---:|---:|---:|---:|---:|---:|
+| v13 | 0.8914 | 0.960 | 0.972 | 0.841 | 0.875 | 0.494 |
+| v14 | 0.8982 | 0.980 | 0.965 | 0.848 | 0.875 | 0.523 |
+| v15 | 0.8888 | 0.980 | 0.950 | 0.841 | 0.812 | 0.524 |
+| v16 | 0.8579 | 0.960 | 0.910 | 0.851 | 0.938 | 0.385 |
+| v17 | 0.8781 | 0.980 | 0.972 | 0.852 | 0.812 | 0.393 |
+| v18 | 0.8866 | 0.980 | 0.972 | 0.841 | 0.875 | 0.429 |
+| v19 | 0.8710 | 0.980 | 0.929 | 0.816 | 0.812 | 0.431 |
+| v21 | 0.8871 | 1.000 | 0.972 | 0.905 | 0.812 | 0.399 |
+| v22 | 0.8808 | 1.000 | 0.972 | 0.828 | 0.812 | 0.383 |
+| v22max | 0.8803 | 0.960 | 0.972 | 0.863 | 0.875 | 0.415 |
+| v23 | 0.8689 | 0.980 | 0.917 | 0.875 | 0.938 | 0.399 |
+
+Insight: at the string level the recent arms lean harder on the embedding
+rescue (official ko 0.83-0.85 vs string ko 0.38-0.43) — the v19+ content
+quotes more paraphrased/differently-boundary spans. The same-scorer view
+makes every historical comparison immune to scorer drift.
+
+### 15.3 Langfuse prompt-store cleanup (duplicate v2 versions)
+
+The pre-idempotency-fix sync left identical-content v2 versions; the
+version-scoped delete route 404s on this instance, but the CLI's
+delete-all (`prompts delete <name> --json`) works: all 45 prompts were
+deleted and re-synced — **each now holds exactly one version, clean
+production/latest labels** (verified: version=1 for spot-checks).
+
+### 15.4 The 0-ko docs — postmortem (corrected)
+
+SPRINGBANK, QBIOMED and PelicanDelivers are NOT extraction failures: their
+CUAD GT holds **zero obligation-family spans** (QBIOMED is a Schedule 13G
+joint filing — no covenants; SPRINGBANK EX-9's labeled categories are
+non-obligation; PelicanDelivers EX-10.3's GT has no family spans). ko is
+None (excluded from the mean) in every arm, not 0.0 — earlier "0-ko"
+references were an artifact of token-level audits treating 0-GT docs as
+0/0. The models behave appropriately (SPRINGBANK emits ~nothing;
+QBIOMED/PelicanDelivers emit doc-grounded filing/payment items). One
+scope note: PelicanDelivers' 11 payment-milestone items are general
+payment duties the prompt excludes — harmless (no GT) but a scope-
+compliance observation.

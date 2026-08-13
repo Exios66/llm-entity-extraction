@@ -15,8 +15,34 @@ import pytest
 import scripts.eval.run_annotation_queue as tool
 from scripts.eval.run_annotation_queue import (
     AnnotationQueueClient,
+    select_failures,
     select_low_performers,
 )
+
+
+def _sorter_trace(trace_id: str, doc_type_ok: bool, subtype_ok: bool,
+                  session: str = "qwen3.7-flash_sorter_v6_subtype_langfuse",
+                  version: str = "sorter_v6", filename: str | None = None,
+                  timestamp: str = "2026-08-12T19:50:39.000Z") -> dict:
+    return {
+        "id": trace_id,
+        "name": "subtype_classification",
+        "timestamp": timestamp,
+        "sessionId": session,
+        "input": {
+            "filename": filename or f"sort_{trace_id}.txt",
+            "prompt_version": version,
+            "model": "qwen/qwen3.7-flash",
+            "expected": "license",
+        },
+        "scores": ["score-id"],
+        "output": {"sorter": {
+            "doc_type": "contract", "contract_subtype": "license",
+            "expected_subtype": "license", "confidence": 0.94,
+            "doc_type_ok": doc_type_ok, "subtype_ok": subtype_ok,
+            "subtype_ok_equiv": subtype_ok, "failure_mode": None,
+        }},
+    }
 
 
 def _trace(trace_id: str, score: float | None, session: str = "qwen_contracts_specialist_v18_extraction_langfuse_50",
@@ -90,11 +116,20 @@ class FakeLangfuse:
             rows = []
             for trace in self.traces:
                 out = trace.get("output") or {}
-                if name and out:
-                    rows.append({"traceId": trace["id"], "name": name,
-                                 "value": out.get("overall_extraction_score"
-                                                  if name == "overall_extraction_score"
-                                                  else name, 0)})
+                if name == "overall_extraction_score" and out.get("overall_score") is not None:
+                    rows.append({"subject": {"traceId": trace["id"]},
+                                 "name": name, "value": out["overall_score"]})
+                elif name in ("exact_match", "subtype_accuracy",
+                              "subtype_accuracy_equiv", "confidence"):
+                    sorter = out.get("sorter") or {}
+                    if not sorter:
+                        continue
+                    value = {"exact_match": 1 if sorter.get("doc_type_ok") else 0,
+                             "subtype_accuracy": 1 if sorter.get("subtype_ok") else 0,
+                             "subtype_accuracy_equiv": 1 if sorter.get("subtype_ok_equiv") else 0,
+                             "confidence": sorter.get("confidence", 0.0)}[name]
+                    rows.append({"subject": {"traceId": trace["id"]},
+                                 "name": name, "value": value})
             return {"data": rows, "meta": {"totalItems": len(rows)}}
         if parts[0] == "score-configs" and method == "GET":
             return {"data": self.score_configs}
@@ -286,3 +321,119 @@ def test_status_queue_missing(fake_client, capsys):
     rc = tool.main_with_args(["status", "--queue-name", "does-not-exist"])
     assert rc == 1
     assert "queue not found" in capsys.readouterr().out
+
+
+# ----------------------------------------------------------------------
+# Sorter subtype task (failure mode)
+# ----------------------------------------------------------------------
+
+
+def test_sorter_failure_flags_from_composite():
+    both = AnnotationQueueClient.sorter_failure(
+        _sorter_trace("t1", doc_type_ok=False, subtype_ok=False))
+    assert both == {"doc_type_failed": True, "subtype_failed": True}
+    subtype_only = AnnotationQueueClient.sorter_failure(
+        _sorter_trace("t2", doc_type_ok=True, subtype_ok=False))
+    assert subtype_only == {"doc_type_failed": False, "subtype_failed": True}
+    ok = AnnotationQueueClient.sorter_failure(
+        _sorter_trace("t3", doc_type_ok=True, subtype_ok=True))
+    assert ok == {"doc_type_failed": False, "subtype_failed": False}
+    assert AnnotationQueueClient.sorter_failure({"id": "x"}) is None
+
+
+def test_select_failures_orders_worst_first():
+    ranked = [
+        {"trace": _sorter_trace("ok", True, True),
+         "flags": {"doc_type_failed": False, "subtype_failed": False}},
+        {"trace": _sorter_trace("both", False, False),
+         "flags": {"doc_type_failed": True, "subtype_failed": True}},
+        {"trace": _sorter_trace("sub", True, False),
+         "flags": {"doc_type_failed": False, "subtype_failed": True}},
+        {"trace": _sorter_trace("unk", True, True), "flags": None},
+    ]
+    failed = select_failures(ranked, None)
+    assert [r["trace"]["id"] for r in failed] == ["both", "sub"]
+    bounded = select_failures(ranked, 1)
+    assert [r["trace"]["id"] for r in bounded] == ["both"]
+
+
+def test_build_subtype_enqueues_failures_only(fake_client, capsys):
+    stub = fake_client
+    stub.traces = [
+        _sorter_trace("s1", doc_type_ok=True, subtype_ok=True),
+        _sorter_trace("s2", doc_type_ok=True, subtype_ok=False),
+        _sorter_trace("s3", doc_type_ok=False, subtype_ok=False),
+    ]
+    rc = tool.main_with_args(["build", "--task", "subtype", "--since-days", "60"])
+    assert rc == 0
+    assert [q["name"] for q in stub.queues] == ["entity-extraction-low-performers"]
+    assert {i["objectId"] for i in stub.items} == {"s2", "s3"}
+    out = capsys.readouterr().out
+    assert "failed: 2" in out
+    assert "class-failed: 1" in out
+    assert "subtype-failed: 2" in out
+    assert "entity-extraction-low-performers" in out
+
+
+def test_build_subtype_dry_run_writes_nothing(fake_client, capsys):
+    stub = fake_client
+    stub.traces = [_sorter_trace("s2", doc_type_ok=True, subtype_ok=False)]
+    rc = tool.main_with_args(["build", "--task", "subtype", "--dry-run",
+                              "--since-days", "60"])
+    assert rc == 0
+    assert not stub.queues and not stub.items
+    out = capsys.readouterr().out
+    assert "would enqueue" in out and "subtype FAIL" in out
+
+
+def test_build_subtype_idempotent(fake_client, capsys):
+    stub = fake_client
+    stub.traces = [_sorter_trace("s2", doc_type_ok=True, subtype_ok=False),
+                   _sorter_trace("s3", doc_type_ok=False, subtype_ok=False)]
+    tool.main_with_args(["build", "--task", "subtype", "--since-days", "60"])
+    assert len(stub.items) == 2
+    rc = tool.main_with_args(["build", "--task", "subtype", "--since-days", "60"])
+    assert rc == 0
+    assert len(stub.items) == 2
+    assert "already present: 2" in capsys.readouterr().out
+
+
+def test_status_subtype_shows_flags_and_scores(fake_client, capsys):
+    stub = fake_client
+    stub.traces = [
+        _sorter_trace("s2", doc_type_ok=True, subtype_ok=False),
+        _sorter_trace("s3", doc_type_ok=False, subtype_ok=False),
+    ]
+    tool.main_with_args(["build", "--task", "subtype", "--since-days", "60"])
+    rc = tool.main_with_args(["status", "--task", "subtype"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "entity-extraction-low-performers" in out
+    assert "subtype FAIL" in out
+    assert "exact_match" in out or "subtype_acc" in out
+    assert "pj-dojo" in out
+
+
+def test_shared_queue_status_filters_items_by_task(fake_client, capsys):
+    """The shared queue mixes tasks; status shows only the requested task's items."""
+    stub = fake_client
+    stub.traces = [
+        _trace("e1", 0.71),
+        _sorter_trace("s2", doc_type_ok=True, subtype_ok=False),
+    ]
+    tool.main_with_args(["build", "--threshold", "0.85", "--since-days", "60"])
+    tool.main_with_args(["build", "--task", "subtype", "--since-days", "60"])
+    assert {i["objectId"] for i in stub.items} == {"e1", "s2"}
+    assert len(stub.queues) == 1
+    capsys.readouterr()  # drain the builds' output
+
+    rc = tool.main_with_args(["status", "--task", "subtype"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "subtype FAIL" in out and "sort_s2.txt" in out
+    assert "doc_e1.txt" not in out
+
+    rc = tool.main_with_args(["status"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "doc_e1.txt" in out and "sort_s2.txt" not in out
