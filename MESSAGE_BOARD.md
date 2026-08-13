@@ -63,16 +63,16 @@ intact.
 
 Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
-| Card | Status | Task (summary) | Owner | Target release | CHANGELOG / evidence |
-|---|---|---|---|---|---|
-| KANBAN-003 | `backlog` | **sorter_v7 A/B on the 250-doc stratified surface** — same seed as the v6 run; target strict > 0.95; verify each of the 3 rules (consortium O&M→maintenance, development-over-license, promotion guard) with failure-insight quotes before calling it. | unclaimed | `[Unreleased]` → v0.16.0 | v6 full-corpus run: strict 0.9312, 35 fails (qwen3.7-flash_sorter_v6_subtype_langfuse, run 57); prompt registered as `sorter_v7` |
-| KANBAN-004 | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
-| KANBAN-005 | `backlog` | **Mirror sync → llm-mailroom** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.16.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
-| KANBAN-006 | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue): adjudicate, feed corrections into the next prompt iteration. | unclaimed | v0.16.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
-| KANBAN-008 | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
-| KANBAN-009 | `backlog` | **Score-drift hygiene** — extend the same-scorer rescore pipeline beyond the 50-doc series if a scorer rule changes again; keep `reports/same_scorer_scores.json` current per run. | unclaimed | v0.16.0 | `scripts/reporting/rescore_manifests.py`; `tests/test_rescore_manifests.py` |
-| KANBAN-010 | `backlog` | **Restore OpenRouter cost accounting on the site** — the latest `build_site.py` regen dropped the `costs` meta + per-run `cost` blocks because no activity CSV was present. Re-ingest the OpenRouter activity-log export (Settings → Activity Logs) and rebuild; verify the cumulative-cost card renders. | unclaimed | v0.16.0 | `scripts/site/build_site.py` (activity CSV ingest); site `#/` cost card; this commit's regen has no `costs` block in `docs/data/meta.json` |
-| KANBAN-011 | `backlog` | **Post-v23 model sweep (gated OPEN)** — run v22/v23 prompts × {deepseek-v4-flash, deepseek-v4-pro} on the same 50 docs to quantify the remaining model-bound segmentation gap (the v18 sweep proved scope-fidelity is model-agnostic; confirm the ko 0.85→0.89 plateau closes at the newest prompts). | unclaimed | v0.16.0 | memo `model_sweep_v18.md`; `V16_PROPOSITION.md` §9.3/§15 |
+| Card | Status | Task (summary) | Owner | Updated | Target release | CHANGELOG / evidence |
+|---|---|---|---|---|---|---|
+| KANBAN-003 | `backlog` | **sorter_v7 A/B on the 250-doc stratified surface** — same seed as the v6 run; target strict > 0.95; verify each of the 3 rules (consortium O&M→maintenance, development-over-license, promotion guard) with failure-insight quotes before calling it. | unclaimed | 2026-08-12 | `[Unreleased]` → v0.16.0 | v6 full-corpus run: strict 0.9312, 35 fails (qwen3.7-flash_sorter_v6_subtype_langfuse, run 57); prompt registered as `sorter_v7` |
+| KANBAN-004 | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | 2026-08-12 | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
+| KANBAN-005 | `backlog` | **Mirror sync → llm-mailroom** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | 2026-08-12 | v0.16.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
+| KANBAN-006 | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue): adjudicate, feed corrections into the next prompt iteration. | unclaimed | 2026-08-12 | v0.16.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
+| KANBAN-008 | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | 2026-08-12 | v0.16.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
+| KANBAN-009 | `backlog` | **Score-drift hygiene** — extend the same-scorer rescore pipeline beyond the 50-doc series if a scorer rule changes again; keep `reports/same_scorer_scores.json` current per run. | unclaimed | 2026-08-12 | v0.16.0 | `scripts/reporting/rescore_manifests.py`; `tests/test_rescore_manifests.py` |
+| KANBAN-010 | `backlog` | **Restore OpenRouter cost accounting on the site** — the latest `build_site.py` regen dropped the `costs` meta + per-run `cost` blocks because no activity CSV was present. Re-ingest the OpenRouter activity-log export (Settings → Activity Logs) and rebuild; verify the cumulative-cost card renders. | unclaimed | 2026-08-12 | v0.16.0 | `scripts/site/build_site.py` (activity CSV ingest); site `#/` cost card; this commit's regen has no `costs` block in `docs/data/meta.json` |
+| KANBAN-011 | `backlog` | **Post-v23 model sweep (gated OPEN)** — run v22/v23 prompts × {deepseek-v4-flash, deepseek-v4-pro} on the same 50 docs to quantify the remaining model-bound segmentation gap (the v18 sweep proved scope-fidelity is model-agnostic; confirm the ko 0.85→0.89 plateau closes at the newest prompts). | unclaimed | 2026-08-12 | v0.16.0 | memo `model_sweep_v18.md`; `V16_PROPOSITION.md` §9.3/§15 |
 
 **Sweep rule:** when a release ships, re-target every non-done card to the
 new `[Unreleased]` version and move landed cards to the Archive. (Last sweep:
@@ -83,6 +83,17 @@ v0.15.0 shipped 2026-08-12 — KANBAN-001/002/007 archived below.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-12 — opencode — governance** Timestamp discipline enforced
+  repo-wide: AGENTS.md now carries the explicit "Agent message board" section
+  — mandatory lifecycle (claim → lane-change → blocked → completion, each
+  with `YYYY-MM-DD` timestamps; **update your Kanban entry and move it to
+  the correct status BEFORE declaring any task, objective, or experimental
+  run finished**) plus explicit best practices (one owner per card, append-
+  only discussion, visible reopenings, archive-as-audit-trail, semver sweep,
+  commit references, conflict rule). The board table gained the `Updated`
+  column so every status carries its timestamp. All agents must read
+  AGENTS.md §"Agent message board" and MESSAGE_BOARD.md "How to use this
+  board" at the start of every session.
 - **2026-08-12 — opencode — KANBAN-002/007/001** Working tree landed in one
   commit (this board's own bootstrap commit): regenerated experiment log
   (57 records) + site data (`build_site.py` — NOTE: `costs` meta absent, no
