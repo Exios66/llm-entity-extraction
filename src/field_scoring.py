@@ -448,7 +448,9 @@ def score_date_field(pred, exp, embedding=None) -> float:
     # "Effective Date:") hold NO actual date. The model answering null is
     # CORRECT, and a fabricated date is not the labeled date — the row's
     # expectation is null: null prediction -> 1.0, anything else -> 0.0.
-    if _date_expected_is_null(exp):
+    # Only fires when the expected is genuinely template/label garbage: a
+    # PARSEABLE expected date (e.g. "11/4/10", "9/9/97") is never null.
+    if _parse_date(exp) is None and _date_expected_is_null(exp):
         return 1.0 if not str(pred).strip() else 0.0
     # Containment runs first: a multi-date prediction ("Executed March 1,
     # 1996 ... November 5, 1996") is unparseable as a whole, yet the label's
@@ -1196,7 +1198,15 @@ def score_extraction(
         field_type = field_types.get(key) or _heuristic_field_type(key, exp_value)
         pred_value = predicted.get(key)
         if pred_value is None:
-            score = 0.0
+            # A null answer satisfies a null-expectation date (blank-template
+            # or label-only GT holds no real date — the model is right not to
+            # fabricate one). Parseable expected dates are never null.
+            if (field_type == "date"
+                    and _parse_date(str(exp_value)) is None
+                    and _date_expected_is_null(str(exp_value))):
+                score = 1.0
+            else:
+                score = 0.0
         else:
             if key in containment_fields and field_type in ("name", "free_text", "containment"):
                 field_type = "containment"

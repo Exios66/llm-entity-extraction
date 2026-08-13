@@ -9,6 +9,41 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`contracts_specialist_v21` — the merge arm, ADOPTED as the production
+  arm**: v20's prompt text (v19 ko content + the four field rules) at
+  **reasoning_effort=none**, same 50 docs, seed 42, chunked, Langfuse
+  llm-dojo. Canonical record (run 051, `_50b`, fixed scorer): **overall
+  0.9283 → 0.9396 (+1.7pp vs v18 — best on the flash line), 50/50 rows
+  (zero parse errors — the EdietsComInc EX-10.4 failure from v19 is
+  resolved: max reasoning burned the 32k structured-output budget; at
+  reasoning=none the completion budget is the JSON alone), verified_precision
+  0.997, effective_date 0.945, renewal_terms 0.905 (+6.4pp), parties 0.980,
+  document_name 0.991, cost $0.039 (2.6x cheaper than max reasoning)**.
+  The prompt-vs-reasoning confound is resolved: the +3pp v19 ko gain was
+  the max-reasoning setting, not the worked examples (at fixed none,
+  v19/v20 content scores ko 0.8385 vs v18's 0.8535; v19 keeps the ko crown
+  0.8840 at 2.6x the cost and a 1/50 parse-error risk). Full record:
+  `V16_PROPOSITION.md` §12.
+- **Date-scorer bug fixes (field_scoring.py)**: the v20-era null-expectation
+  rule (a) fired on parseable compact dates ("11/4/10" — three PERFECT
+  matches scored 0.0) — now gated on `_parse_date(expected) is None`; and
+  (b) was never reached for `pred is None` (the short-circuit returned 0.0)
+  — the None path now consults the rule, so the five blank-template docs
+  score 1.0 for the model's CORRECT null answer. effective_date 0.806 →
+  0.945 on v21. SCORING.md §3 updated; regression tests added.
+- **All experiments run in llm-dojo; prompts synced between projects**:
+  `src/langfuse_config.py` defaults and `langfuse.env` label now read
+  llm-dojo (the project-scoped keys have routed every trace there all
+  along — verified via the traces API). New
+  `scripts/eval/sync_langfuse_prompts.py` mirrors every PROMPT_VERSIONS key
+  as a Langfuse text prompt — idempotent (skips unchanged latest-version
+  content), `--dry-run`, repeatable `--env-file` so a second project
+  (e.g. the primary llm-mailroom environment) is a drop-in with its own
+  key file. 43 prompts synced to llm-dojo; network-free smoke tests in
+  `tests/test_sync_langfuse_prompts.py`; workflow documented in AGENTS.md
+  ("After every run"). Note: the first sync predated the idempotency fix
+  and left duplicate v2 versions with identical content in llm-dojo
+  (cosmetic; the version-delete API path 404s on this instance).
 - **`contracts_specialist_v20` — non-obligation field fidelity (rules
   validated; arm ko-variance-dominated)**: four surgical prompt rules from
   the v19 per-field audit — renewal_terms EVERGREEN CLAUSES ("shall

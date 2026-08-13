@@ -1866,6 +1866,32 @@ CONTRACTS_SPECIALIST_PROMPT_V20 = CONTRACTS_SPECIALIST_PROMPT_V19.replace(
      Convenience. [***]."), never a fabricated body.""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v21 (the merge arm: v19 ko
+# content + v20 field rules, reasoning_effort=none)
+# -----------------------------------------------------------------------------
+# v21 is the v20 prompt TEXT (identical: v19's worked examples + span
+# discipline + the four v20 non-obligation field rules) run at
+# reasoning_effort=none. It is the surgical merge proposed in
+# V16_PROPOSITION.md §10.3/§11.3 and resolves two open questions in one
+# ~$0.04 arm:
+#   (1) the PROMPT-vs-REASONING confound: v19(max)=0.8840 vs
+#       v20(max)=0.8113 ko diff is diffuse max-reasoning variance; v21(none)
+#       vs v20(max) isolates the reasoning effect at fixed prompt, and
+#       v21(none) vs v18(none) isolates examples+rules at fixed reasoning;
+#   (2) the parse-error reliability cost of reasoning=max — EdietsComInc
+#       EX-10.4 (v19) and MidwestEnergyEmissions (v20) lost a row each when
+#       max reasoning overran the 32768-token structured-output budget
+#       (9.8k completion tokens -> unparseable JSON). At reasoning=none the
+#       completion budget is the JSON alone and the failure mode retires.
+# v21 prompt text == v20 prompt text (both derive from v19 with the same
+# four replaces); the version key + reasoning_effort param are the
+# experiment identity.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V21 = CONTRACTS_SPECIALIST_PROMPT_V20
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2268,6 +2294,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v18": CONTRACTS_SPECIALIST_PROMPT_V18,
     "contracts_specialist_v19": CONTRACTS_SPECIALIST_PROMPT_V19,
     "contracts_specialist_v20": CONTRACTS_SPECIALIST_PROMPT_V20,
+    "contracts_specialist_v21": CONTRACTS_SPECIALIST_PROMPT_V21,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

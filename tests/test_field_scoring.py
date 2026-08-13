@@ -58,6 +58,38 @@ def test_score_date_containment_and_partial_credit():
                             "March 24, 2014") == 1.0
     # A bare year inside the label is NOT a contained date phrase.
     assert score_date_field("2024", "March 3, 2024") != 1.0
+    # Compact 2-digit-year labels ("11/4/10") are parseable real dates —
+    # a matching ISO prediction scores 1.0 (never null-expectation).
+    assert score_date_field("2010-11-04", "11/4/10") == 1.0
+    assert score_date_field("2006-03-24", "03/24/06") == 1.0
+    assert score_date_field("1997-09-09", "9/9/97") == 1.0
+
+
+def test_score_date_null_expectation_templates():
+    # Blank-template / label-only GT holds no real date: a null prediction
+    # is CORRECT (1.0), a fabricated one is not the labeled date (0.0).
+    for template in ("_____ day of ________, 19____",
+                     "this  _____ day of _________, 20___",
+                     "Effective Date:",
+                     "the date of the Closing"):
+        assert score_date_field("", template) == 1.0, template
+        assert score_date_field("July 1, 2019", template) == 0.0, template
+    # The null-expectation path also fires through score_extraction when
+    # the prediction is None (the None short-circuit consults the rule).
+    from src.field_scoring import score_extraction
+    from src.taxonomy import load_taxonomy
+    ct = next(dc["field_types"] for dc in load_taxonomy()["doc_classes"]
+              if dc["key"] == "contract")
+    res = score_extraction("contract", ct,
+                           {"effective_date": None},
+                           {"effective_date": "_____ day of ________, 19____"},
+                           doc_text="")
+    assert res.field_scores["effective_date"] == 1.0
+    res2 = score_extraction("contract", ct,
+                            {"effective_date": None},
+                            {"effective_date": "11/4/10"},
+                            doc_text="")
+    assert res2.field_scores["effective_date"] == 0.0
 
 
 def test_score_date_proximity_cluster():

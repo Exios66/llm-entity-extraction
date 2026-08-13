@@ -17,8 +17,15 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_BASE_URL = "https://us.cloud.langfuse.com"
-DEFAULT_PROJECT = "llm-mailroom-experiments"
-DEFAULT_ENVIRONMENT = "llm-mailroom-experiments"
+# The prompt-iteration experiment environment: ALL eval runs trace to
+# llm-dojo (the keys in langfuse.env route there; the label below rides on
+# every trace). Other projects (e.g. the primary llm-mailroom environment)
+# stay reachable by passing --env-file with that project's keys to
+# scripts/eval/sync_langfuse_prompts.py — prompt iterations are synced
+# between projects by that script, never by re-pointing the experiment
+# traces.
+DEFAULT_PROJECT = "llm-dojo"
+DEFAULT_ENVIRONMENT = "llm-dojo"
 
 
 @dataclass(frozen=True)

@@ -77,7 +77,18 @@ python scripts/eval/run_subtype_eval.py --dataset mailroom-cuad-contracts-full \
 python scripts/eval/evaluate_prompt_version.py --dataset mailroom-cuad-contracts \
     --prompt-a sorter_vision_v0 --prompt-b sorter_vision_v1         # A/B
 
-# Langfuse mirrors (SEPARATE project llm-mailroom-experiments; keys in langfuse.env)
+# Langfuse mirrors (ALL experiments run in the llm-dojo project; keys in
+#   langfuse.env — the LANGFUSE_PROJECT label there and the code default in
+#   src/langfuse_config.py are both "llm-dojo", so runs tag llm-dojo even
+#   without flags; the keys themselves route every trace to that project).
+#   After every prompt iteration, sync the versioned prompts to Langfuse
+#   (idempotent; mirrors each PROMPT_VERSIONS key as a text prompt):
+#   python scripts/eval/sync_langfuse_prompts.py            # -> llm-dojo (langfuse.env)
+#   python scripts/eval/sync_langfuse_prompts.py --env-file langfuse.env \
+#       --env-file langfuse-primary.env                     # -> also the primary project
+#   (add --dry-run to preview; a missing env file / missing keys is skipped
+#   with a warning, so a second project is a drop-in — create an env file
+#   with that project's key pair and pass it on the command line.)
 python scripts/eval/run_langfuse_subtype_eval.py --dataset mailroom-cuad-contracts-full \
     --sorter-prompt-version sorter_v6
 python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \

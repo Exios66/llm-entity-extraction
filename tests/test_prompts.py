@@ -244,3 +244,23 @@ def test_contracts_v20_non_obligation_field_fidelity():
     assert "EVERGREEN CLAUSES" not in v19
     assert "DEFINED-TERM SENTENCES" not in v19
     assert "REDACTED SECTIONS" not in v19
+
+
+def test_contracts_v21_merge_arm():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V20,
+        CONTRACTS_SPECIALIST_PROMPT_V21,
+    )
+
+    # v21 is the v20 prompt TEXT at reasoning_effort=none (the merge arm:
+    # v19's ko content + v20's four field rules, with the max-reasoning
+    # parse-error risk retired). The prompt is identical to v20; the
+    # version key + reasoning param are the experiment identity.
+    assert CONTRACTS_SPECIALIST_PROMPT_V21 == CONTRACTS_SPECIALIST_PROMPT_V20
+    assert "contracts_specialist_v21" in PROMPT_VERSIONS
+    v21 = CONTRACTS_SPECIALIST_PROMPT_V21
+    assert "WORKED SPAN EXAMPLES" in v21
+    assert "SPAN DISCIPLINE" in v21
+    assert "EVERGREEN CLAUSES" in v21
+    assert "DEFINED-TERM SENTENCES" in v21
+    assert "REDACTED SECTIONS" in v21

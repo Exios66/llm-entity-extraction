@@ -511,3 +511,78 @@ cost documented in §10.3).
 - **Next step: v21 = v19's ko content + v20's four field rules** (one
   ~$0.10 arm) to test whether the field gains survive at v19's ko level;
   reasoning_effort=none variant recommended to retire the parse-error risk.
+
+---
+
+## 12. v21 (the merge arm: v19 ko content + v20 field rules @ reasoning=none) — ADOPTED as the production arm (2026-08-13)
+
+### 12.1 Design
+
+v21 = the v20 prompt text (v19's worked examples + span discipline + the
+four v20 field rules) run at **reasoning_effort=none**. It resolves both
+open questions from §10.3/§11.3 in one arm: (1) the prompt-vs-reasoning
+confound — v21(none) vs v20(max) isolates the reasoning effect at fixed
+prompt, and v21(none) vs v18(none) isolates the examples+rules at fixed
+reasoning; (2) the max-reasoning parse-error reliability cost — EdietsComInc
+EX-10.4 (v19: 9.8k completion tokens → unparseable JSON, ko 0.846 → 0.000)
+and MidwestEnergyEmissions (v20) each lost a row; at reasoning=none the
+completion budget is the JSON alone.
+
+### 12.2 A/B result (same 50 docs, chunked, seed 42, Langfuse llm-dojo, qwen3.7-flash)
+
+| Metric | v18(none) | v19(max) | v20(max) | v21(none) | Δ v21 vs v18 |
+|---|---:|---:|---:|---:|---:|
+| overall | 0.9230 | 0.9135 | 0.9142 | **0.9396** | **+1.7pp** |
+| key_obligations | 0.8535 | 0.8840 | 0.8113 | 0.8168 | −3.7pp |
+| parties | 0.940 | 0.918 | 1.000 | 0.980 | +4.0pp |
+| effective_date | 0.883* | 0.865* | 0.801 | **0.945** | +6.2pp |
+| term_length | 0.979 | 0.968 | 0.966 | **0.985** | +0.6pp |
+| governing_law | 0.934 | 0.932 | 0.919 | **0.938** | +0.4pp |
+| renewal_terms | 0.841 | 0.816 | 0.861 | **0.905** | +6.4pp |
+| termination_clauses | 0.938 | 0.938 | 0.867 | 0.938 | 0 |
+| document_name | 0.957 | 0.960 | 0.991 | **0.991** | +3.4pp |
+| rows ok / errors | 50/0 | 49/1 | 49/1 | **50/0** | — |
+| verified_precision | 0.991 | 0.988 | 0.987 | **0.997** | +0.6pp |
+| cost | $0.037 | $0.098 | $0.094 | **$0.039** | +$0.002 |
+
+\* v18/v19 eff_date scores were computed with the pre-fix scorer (see 12.3).
+
+**The confound is resolved:** at fixed reasoning=none, the v19/v20 prompt
+content scores ko 0.8385 (first v21 pass) — the +3pp v19 ko "gain" was the
+max-reasoning setting, not the worked examples; at fixed prompt, none-vs-max
+replaces the parse-error risk with zero errors and 2.6x lower cost.
+
+### 12.3 Date-scorer bugs found and fixed during the v21 analysis
+
+The v20-era null-expectation rule had two defects, both now fixed
+(SCORING.md §3, tests in test_field_scoring.py):
+
+1. **Over-broad null expectation**: `_date_expected_is_null` fired on any
+   expected without a month-name or 4-digit year — INCLUDING parseable
+   compact dates ("11/4/10", "03/24/06", "9/9/97"). Three PERFECT matches
+   (Cardlytics, DataCall, GALACTICCOMM) scored 0.0. Fixed: the rule only
+   fires when `_parse_date(expected) is None`.
+2. **None-prediction short-circuit**: `score_extraction` returned 0.0 for
+   `pred is None` before the null-expectation rule could fire — five
+   template-GT docs (BUFFALOWILDWINGS, GOOSEHEAD, PfHospitality,
+   SPARKLINGSPRING, GpaqAcquisition) stayed at 0.0 despite the model
+   answering CORRECTLY (null for a blank date line). Fixed: the None path
+   now consults the null-expectation rule (1.0 for null-expectation dates).
+
+The canonical v21 record (`qwen3.7-flash_contracts_specialist_v21_
+extraction_langfuse_50b`, run 051) carries the fixed scorer: effective_date
+0.9446, overall 0.9396. The first v21 pass (`_50`, run 050) predates the
+fix and understates it (eff_date 0.8056, overall 0.9283).
+
+### 12.4 Langfuse environment hardening (per direction: all experiments in llm-dojo, prompts synced between projects)
+
+- **llm-dojo is now the default**: `src/langfuse_config.py` defaults +
+  `langfuse.env` label both read llm-dojo (the project-scoped keys have
+  routed every trace there all along — verified via the traces API).
+- **Prompt sync**: `scripts/eval/sync_langfuse_prompts.py` mirrors every
+  PROMPT_VERSIONS key as a Langfuse text prompt (idempotent — skips
+  unchanged latest-version content; `--dry-run`; repeatable `--env-file`
+  for additional projects). Run after every prompt iteration (AGENTS.md).
+  43 prompts synced to llm-dojo (note: the first sync predated the
+  idempotency fix and left duplicate v2 versions with identical content —
+  cosmetic, documented in the changelog).
