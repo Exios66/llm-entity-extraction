@@ -264,3 +264,34 @@ def test_contracts_v21_merge_arm():
     assert "EVERGREEN CLAUSES" in v21
     assert "DEFINED-TERM SENTENCES" in v21
     assert "REDACTED SECTIONS" in v21
+
+
+def test_contracts_v22_ko_recovery_rules():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V21,
+        CONTRACTS_SPECIALIST_PROMPT_V22,
+    )
+
+    # v22 is a strict derivation of v21: the base is untouched, the derived
+    # prompt fixes the ko regression (ellipsis abbreviation + over-dedupe).
+    assert CONTRACTS_SPECIALIST_PROMPT_V22 != CONTRACTS_SPECIALIST_PROMPT_V21
+    assert CONTRACTS_SPECIALIST_PROMPT_V22.startswith(CONTRACTS_SPECIALIST_PROMPT_V21[:300])
+    assert "contracts_specialist_v22" in PROMPT_VERSIONS
+
+    v22 = CONTRACTS_SPECIALIST_PROMPT_V22
+    # Verbatim completeness: no ellipsis abbreviation, no truncated quotes.
+    assert "VERBATIM COMPLETENESS" in v22
+    assert "NEVER abbreviate with ellipses" in v22
+    assert "never truncate a quote" in v22
+    # Dedupe narrowed: overlapping wording is NOT duplication.
+    assert "overlapping wording is NOT duplication" in v22
+    assert "drop only exact repeats and sentence/fragment" in v22
+    assert "never a distinct requirement whose wording" in v22
+    # All prior content intact.
+    assert "WORKED SPAN EXAMPLES" in v22
+    assert "EVERGREEN CLAUSES" in v22
+    assert "DEFINED-TERM SENTENCES" in v22
+    # v21 predates the ko-recovery rules.
+    v21 = CONTRACTS_SPECIALIST_PROMPT_V21
+    assert "VERBATIM COMPLETENESS" not in v21
+    assert "overlapping wording is NOT duplication" not in v21

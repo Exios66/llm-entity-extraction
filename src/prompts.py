@@ -1892,6 +1892,55 @@ CONTRACTS_SPECIALIST_PROMPT_V20 = CONTRACTS_SPECIALIST_PROMPT_V19.replace(
 
 CONTRACTS_SPECIALIST_PROMPT_V21 = CONTRACTS_SPECIALIST_PROMPT_V20
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v22 (ko-recovery: verbatim
+# completeness + disciplined dedupe)
+# -----------------------------------------------------------------------------
+# v22 = v21 + the key_obligations regression fix, measured on the v21
+# 50-doc audit (runs 050-051): ko fell 0.8535 -> ~0.82 at fixed
+# reasoning=none, and the span-level decomposition found 38 spans v18
+# matched that v21 misses, with two mechanisms:
+#   (1) ELLIPSIS ABBREVIATION: 23.6% of v21 items contain "..." (v18:
+#       15.8%) — "T&B hereby grants to LEA... the sole and exclusive
+#       worldwide right" — truncated quotes fail token overlap AND
+#       embedding similarity against the full GT span;
+#   (2) OVER-DEDUPLICATION: the v19 SPAN DISCIPLINE dedupe dropped DISTINCT
+#       requirements whose wording overlaps another item's — LegacyEducation
+#       lost its records-keeping duty, insurance items, sell-off period, and
+#       assignment-exception clause (19 -> 12 items, ko 0.889 -> 0.39).
+# v22 narrows the dedupe to exact repeats and sentence/fragment pairs of the
+# SAME requirement (overlapping wording between different requirements is
+# not duplication), and adds VERBATIM COMPLETENESS: full verbatim quotes,
+# never ellipses. All other v21 content is untouched. Evaluated at
+# reasoning_effort=none (the production setting).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V22 = CONTRACTS_SPECIALIST_PROMPT_V21.replace(
+    """   - SPAN DISCIPLINE (one item per operative requirement): never emit a clause
+     twice — neither an exact repeat nor a sentence PLUS its own fragment. A
+     requirement stated at sentence length and again at fragment length is ONE
+     requirement; after building the list, scan for repeats and sentence/fragment
+     pairs and drop the redundant copies. The list is complete when every present
+           family occurrence appears exactly once at the 10-25-word span grain.""",
+    """   - SPAN DISCIPLINE (one item per operative requirement): never emit a clause
+     twice — an EXACT repeat, or a sentence PLUS its own fragment, is the SAME
+     requirement and appears once. BUT overlapping wording is NOT duplication:
+     two different requirements that share language are BOTH items — a
+     records-keeping duty and a royalty-statement duty are not the same clause,
+     a license grant and its sublicense restriction are not the same clause.
+     After building the list, drop only exact repeats and sentence/fragment
+     pairs of the SAME requirement — never a distinct requirement whose wording
+     overlaps another item's. The list is complete when every present
+           family occurrence appears exactly once at the 10-25-word span grain.
+   - VERBATIM COMPLETENESS: every item is a complete, verbatim quote of its
+     operative span — NEVER abbreviate with ellipses ("..."), never skip the
+     middle of a clause, never truncate a quote. A truncated item does not
+     match the ground-truth span and scores as a miss. If a clause is long,
+     quote its operative core in full at the 10-25-word grain — completeness
+     over brevity.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2295,6 +2344,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v19": CONTRACTS_SPECIALIST_PROMPT_V19,
     "contracts_specialist_v20": CONTRACTS_SPECIALIST_PROMPT_V20,
     "contracts_specialist_v21": CONTRACTS_SPECIALIST_PROMPT_V21,
+    "contracts_specialist_v22": CONTRACTS_SPECIALIST_PROMPT_V22,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

@@ -586,3 +586,68 @@ fix and understates it (eff_date 0.8056, overall 0.9283).
   43 prompts synced to llm-dojo (note: the first sync predated the
   idempotency fix and left duplicate v2 versions with identical content —
   cosmetic, documented in the changelog).
+
+---
+
+## 13. v22 (ko-recovery: verbatim completeness + disciplined dedupe) — results (2026-08-13)
+
+### 13.1 The regression, diagnosed at span level
+
+The user flagged the ko drop (v19 0.8840 → v21 ~0.82). The span-level
+decomposition of v21 vs v18 found 38 spans v18 matched that v21 misses,
+two mechanisms:
+1. **Ellipsis abbreviation**: 23.6% of v21 items contain "..." (v18 15.8%)
+   — "T&B hereby grants to LEA... the sole and exclusive worldwide right" —
+   truncated quotes fail both token overlap and embedding similarity.
+2. **Over-deduplication**: the v19 SPAN DISCIPLINE dedupe dropped DISTINCT
+   requirements sharing wording — LegacyEducation fell 19 → 12 items (ko
+   0.889 → 0.39): its records-keeping duty, insurance items, sell-off
+   period and assignment-exception clause were lost.
+
+### 13.2 v22 fixes + the reasoning-matrix result
+
+v22 narrows the dedupe (only exact repeats and sentence/fragment pairs of
+the SAME requirement; overlapping wording between different requirements
+is not duplication) and adds VERBATIM COMPLETENESS (full verbatim quotes,
+never ellipses). Run at BOTH reasoning settings (same 50 docs, seed 42,
+chunked, Langfuse llm-dojo):
+
+| Metric | v18 none | v19 max | v21 none | v22 none | v22 max |
+|---|---:|---:|---:|---:|---:|
+| key_obligations | 0.8535 | 0.8840 | 0.8168 | 0.8294 | 0.8442 |
+| overall | 0.9230 | 0.9135 | 0.9396 | **0.9512** | 0.9446 |
+| overall 95% CI | .891-.949 | .877-.946 | .904-.965 | **.934-.967** | .922-.965 |
+| renewal_terms | 0.841 | 0.816 | 0.905 | 0.828 | 0.863 |
+| parties | 0.940 | 0.918 | 0.980 | **1.000** | 0.960 |
+| effective_date | 0.883* | 0.865* | 0.945 | **0.972** | **0.972** |
+| items / ellipsis-rate | 1118 / 15.8% | 792 / 27.1% | 890 / 23.6% | 841 / **19.5%** | 902 / 20.5% |
+| rows ok / errors | 50/0 | 49/1 | 50/0 | 50/0 | **50/0** |
+| verified_precision | 0.991 | 0.988 | 0.980 | 0.991 | **0.996** |
+| cost | $0.037 | $0.098 | $0.039 | **$0.039** | $0.100 |
+
+\* pre-fix scorer.
+
+### 13.3 Reading
+
+1. **The ko regression is partly variance, partly content, partly the
+   reasoning setting.** Two passes of IDENTICAL settings swing ±2.2pp (v21
+   first pass 0.8385 vs canonical 0.8168); at fixed reasoning=none the
+   v19/v20/v21/v22 content family plateaus at ~0.82-0.85 (v18 0.8535,
+   v22 0.8294); max reasoning adds +1.5pp on v22 (0.8442) — v19's 0.8840
+   was the favorable max-reasoning roll (v20×max swung to 0.8113).
+2. **v22's mechanisms worked partially**: ellipsis 23.6% → 19.5% (none) and
+   the dedupe fix held LegacyEducation-class clauses; the scored ko gain is
+   +1.3pp at none, +2.7pp vs v21 at max. 34 of the 38 v18-matched spans are
+   still token-level misses — the remaining gap is span-choice/boundary
+   divergence plus residual abbreviation, not the dedupe.
+3. **v22 × none is the production arm** (overall 0.9512, series best CI,
+   50/50 rows, cheapest); **v22 × max is the ko arm** (0.8442, 50/50 —
+   the v22 prompt's tighter output kept the max-reasoning parse-error rate
+   at 0, vs 1/50 for v19/v20). v19's 0.8840 ko remains the peak but is a
+   single roll at 2.6x cost with a 1/50 risk and the worst overall of the
+   recent arms — not a defensible production config.
+4. **Project strategy (per direction)**: llm-dojo = prompt iteration (this
+   repo); llm-mailroom (llm-mailroom-experiments) = full-pipeline testing
+   (llm-mailroom repo); enhancements flow llm-dojo → llm-mailroom. Documented
+   in AGENTS.md; prompt sync script supports both projects (v22 synced to
+   llm-dojo; the llm-mailroom project is a drop-in key file away).

@@ -77,17 +77,25 @@ python scripts/eval/run_subtype_eval.py --dataset mailroom-cuad-contracts-full \
 python scripts/eval/evaluate_prompt_version.py --dataset mailroom-cuad-contracts \
     --prompt-a sorter_vision_v0 --prompt-b sorter_vision_v1         # A/B
 
-# Langfuse mirrors (ALL experiments run in the llm-dojo project; keys in
-#   langfuse.env — the LANGFUSE_PROJECT label there and the code default in
-#   src/langfuse_config.py are both "llm-dojo", so runs tag llm-dojo even
-#   without flags; the keys themselves route every trace to that project).
-#   After every prompt iteration, sync the versioned prompts to Langfuse
-#   (idempotent; mirrors each PROMPT_VERSIONS key as a text prompt):
+# Langfuse projects (two environments, two purposes):
+#   - llm-dojo: where THIS repo's prompt iterations run — individual prompt
+#     improvements and enhancements, evaluated one prompt version at a time.
+#     ALL eval runs trace here (keys in langfuse.env are project-scoped and
+#     route every trace to llm-dojo; the LANGFUSE_PROJECT label and the code
+#     default in src/langfuse_config.py are both "llm-dojo").
+#   - llm-mailroom (llm-mailroom-experiments): EXCLUSIVELY for testing and
+#     improving the FULL mailroom pipeline (the llm-mailroom repo). Insights
+#     and results from llm-dojo iterations are applied there — prompt
+#     enhancements flow llm-dojo -> llm-mailroom, never the reverse.
+#   Prompt iteration sync: after every prompt iteration, mirror the versioned
+#   prompts into Langfuse (idempotent; each PROMPT_VERSIONS key becomes a
+#   text prompt; repeatable --env-file adds projects, e.g. a key file for the
+#   llm-mailroom project when pipeline tests need the same prompt versions):
 #   python scripts/eval/sync_langfuse_prompts.py            # -> llm-dojo (langfuse.env)
 #   python scripts/eval/sync_langfuse_prompts.py --env-file langfuse.env \
-#       --env-file langfuse-primary.env                     # -> also the primary project
+#       --env-file langfuse-llm-mailroom.env               # -> both projects
 #   (add --dry-run to preview; a missing env file / missing keys is skipped
-#   with a warning, so a second project is a drop-in — create an env file
+#   with a warning, so another project is a drop-in — create an env file
 #   with that project's key pair and pass it on the command line.)
 python scripts/eval/run_langfuse_subtype_eval.py --dataset mailroom-cuad-contracts-full \
     --sorter-prompt-version sorter_v6
@@ -95,6 +103,11 @@ python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
     --sorter-prompt-version sorter_v6 --extractor-prompt-version contracts_specialist_v11
 python scripts/eval/run_langfuse_extraction_eval.py --prompt-version contracts_specialist_v11
 python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_v6
+
+# HITL annotation queue (llm-dojo mirror): filter IN low-performing extraction traces
+python scripts/eval/run_annotation_queue.py build --dry-run --threshold 0.85   # scan + rank, no writes
+python scripts/eval/run_annotation_queue.py build --threshold 0.85             # create queue + enqueue PENDING items
+python scripts/eval/run_annotation_queue.py status                            # queue items + scores + trace URLs
 
 # Wiki (version-controlled here, pushed to the public GitHub wiki)
 ./wiki/sync-wiki.sh                     # push wiki/ -> https://github.com/Exios66/llm-entity-extraction/wiki
@@ -398,6 +411,9 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   scoring for all three judge dimensions).
 - New scoring behavior → unit tests in `test_field_scoring.py` /
   `test_extraction_normalization.py`.
+- New Langfuse mirror tooling → unit tests in `test_annotation_queue.py`
+  (network-free: a fake Langfuse API stand-in covers selection, idempotency,
+  and CLI wiring of `run_annotation_queue.py`).
 - New streamer parsing → `test_cuad_streamer.py` /
   `test_legalbench_streamer.py` / `test_streamers.py`.
 - Run the full suite before committing: `python -m pytest tests/ -q`

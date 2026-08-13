@@ -9,6 +9,45 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`contracts_specialist_v22` — ko-recovery rules (verbatim completeness +
+  disciplined dedupe)**: the v21 span-level audit found 38 v18-matched GT
+  spans lost to (1) ellipsis abbreviation (23.6% of v21 items contain
+  "...", vs v18 15.8%) and (2) over-deduplication (LegacyEducation fell
+  19→12 items — records, insurance, sell-off and assignment-exception
+  clauses dropped). v22 narrows the dedupe to exact repeats and
+  sentence/fragment pairs of the SAME requirement and adds VERBATIM
+  COMPLETENESS (never ellipses). Results on the same 50 docs (seed 42,
+  chunked, llm-dojo): **v22×none — overall 0.9512 (series best, CI
+  .934-.967), ko 0.8294, ellipsis 19.5%, 50/50 rows, $0.039; v22×max —
+  ko 0.8442, overall 0.9446, verified_precision 0.996, 50/50 rows (zero
+  parse errors — the v22 output discipline retired the max-reasoning
+  error rate), $0.100**. The ko regression is diagnosed as partially
+  variance (identical-setting passes swing ±2.2pp), partially content
+  (the v19+ content family plateaus ~0.83-0.85 at reasoning=none), and
+  partially the reasoning setting (max adds +1.5pp on v22; v19's 0.8840
+  was the favorable max roll). Production arm: v22×none. Full matrix:
+  `V16_PROPOSITION.md` §13.
+- **Langfuse two-project strategy (per direction)**: llm-dojo is where
+  THIS repo's prompt iterations run (individual prompt improvements);
+  llm-mailroom (llm-mailroom-experiments) is EXCLUSIVELY for testing and
+  improving the full mailroom pipeline in the llm-mailroom repo — insights
+  flow llm-dojo → llm-mailroom, never the reverse. Documented in AGENTS.md
+  and `src/langfuse_config.py`; `sync_langfuse_prompts.py` supports both
+  projects via repeatable `--env-file` (v22 synced to llm-dojo — 1 created,
+  43 unchanged, idempotent).
+- **Human-in-the-loop annotation queue for low-performing extraction
+  traces** (`scripts/eval/run_annotation_queue.py`): scans the llm-dojo
+  mirror's `contract_entity_extraction` traces (session-scoped to the
+  extraction pipeline, prompt-version scoped to the contracts specialist),
+  ranks them by the attached deterministic `overall_extraction_score`
+  (worst first), and enqueues the ones below `--threshold` (default 0.85)
+  into a Langfuse **annotation queue** as `PENDING` review items —
+  idempotent (queue created once by name; already-enqueued traces never
+  re-enqueued). `status` subcommand lists queue items with per-trace
+  scores and review URLs. The queue is the HITL loop around the
+  experiment cycle: `build` → human review/annotation in the Langfuse UI →
+  annotations feed the next prompt iteration. `--dry-run` scans without
+  writing; 10 network-free tests (`tests/test_annotation_queue.py`).
 - **`contracts_specialist_v21` — the merge arm, ADOPTED as the production
   arm**: v20's prompt text (v19 ko content + the four field rules) at
   **reasoning_effort=none**, same 50 docs, seed 42, chunked, Langfuse
