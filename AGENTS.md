@@ -72,6 +72,15 @@ so.**
     (a) the run's KANBAN status + result timestamped, (b) the
     `reports/experiment_log.{jsonl,md}` regeneration, and (c) the
     CHANGELOG tie-in — in that order.
+11. **GitHub issue sync (critical / cross-repo cards).** Critical and
+    cross-repo cards are synced to GitHub issues so agents can open/close
+    them like normal issues: open with `gh issue create --label kanban
+    --title "KANBAN-00N: <task>" --body "<card summary + evidence>"` in the
+    repo where the work lands, and put the issue number in the card's
+    `Issue` column. Close the issue (`gh issue close NNN`) in the SAME
+    commit that archives the card; reopen it when a card is reopened. The
+    issue body and the card must never disagree about status. Board-only
+    cards (small, single-session) do NOT need issues.
 
 ### Best practices (explicit)
 
@@ -79,6 +88,13 @@ so.**
   agent. Offer help on the discussion board; take over only by handoff.
 - **Build off cards, never around them.** If a card your work depends on is
   `in_progress` elsewhere, wait or coordinate — do not fork the work.
+- **Task-relation rule — update, don't duplicate.** If your work addresses
+  the problem identified in an existing card (even partially, or from a
+  different angle), update THAT card: comment on its issue / post to the
+  discussion board, move its status to match reality, extend its summary
+  with what you found. Never create a parallel card or a duplicate issue
+  for covered work; only add a new card (and issue, if critical) when no
+  card covers the task.
 - **Discussion log is append-only.** Newest at top, always timestamped,
   always card-referenced (`KANBAN-00N`). Never edit a past entry — post a
   correction.
