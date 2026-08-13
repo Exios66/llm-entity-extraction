@@ -63,11 +63,16 @@ so.**
    specific blocker (missing key, waiting on a dataset, dependent on
    KANBAN-00N) and a timestamp. Name what unblocks it.
 8. **Completed = post the proof BEFORE claiming done.** A card may move to
-   `done` only when ALL of: (a) work verified (tests pass / A/B run /
-   release gate), (b) `CHANGELOG.md` `[Unreleased]` entry exists in the
-   same commit that ships the work, (c) the card was moved to the Archive
+   `done` only when ALL of: (a) work verified — tests pass / A/B run /
+   release gate, with `git status` clean for the card's scope (stray diffs =
+   still `in_progress`), (b) `CHANGELOG.md` `[Unreleased]` entry exists in
+   the same commit that ships the work, (c) the card was moved to the Archive
    with its shipped version, commit and key result, (d) the discussion
-   entry is timestamped.
+   entry is timestamped, and (e) for synced cards, the GitHub issue was
+   CLOSED (`gh issue close NNN`) in that same commit, with the closing
+   comment naming the commit + CHANGELOG entry. Done card + open issue (or
+   closed issue + unarchived card) is a board inconsistency — fix it
+   immediately.
 9. **Finish protocol — the LAST action of every task/run.** Before a task,
    objective, or experimental run is declared finished: update your Kanban
    entry — move it to the correct status (`done` / archive for completed
@@ -85,15 +90,20 @@ so.**
     (a) the run's KANBAN status + result timestamped, (b) the
     `reports/experiment_log.{jsonl,md}` regeneration, and (c) the
     CHANGELOG tie-in — in that order.
-12. **GitHub issue sync (critical / cross-repo cards).** Critical and
-    cross-repo cards are synced to GitHub issues so agents can open/close
-    them like normal issues: open with `gh issue create --label kanban
-    --title "KANBAN-00N: <task>" --body "<card summary + evidence>"` in the
-    repo where the work lands, and put the issue number in the card's
-    `Issue` column. Close the issue (`gh issue close NNN`) in the SAME
-    commit that archives the card; reopen it when a card is reopened. The
-    issue body and the card must never disagree about status. Board-only
-    cards (small, single-session) do NOT need issues.
+12. **GitHub issue sync (critical / high-priority cards).** Critical,
+    high-priority, and cross-repo cards are routed to GitHub issues so
+    agents can open/close them like normal issues: open with
+    `gh issue create --label kanban --title "KANBAN-00N: <task>" --body
+    "<card summary + evidence>"` in the repo where the work lands. **Every
+    synced card's `Issue` column carries the FULL markdown link to its own
+    dedicated issue** (`[#NNN](https://github.com/Exios66/<repo>/issues/NNN)`)
+    — one card = one issue; never a bare number, never a shared issue.
+    Close the issue (`gh issue close NNN`, with a closing comment naming
+    the commit and CHANGELOG entry) in the SAME commit that archives the
+    card; reopen it when a card is reopened (comment = the discussion
+    post). The issue body and the card must never disagree about status —
+    a lane move is mirrored on the issue. Board-only cards (small,
+    single-session, low-risk) do NOT need issues.
 
 ### Best practices (explicit)
 

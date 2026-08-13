@@ -75,7 +75,7 @@ for a covered problem** and never open a duplicate issue. Only add a NEW
 card (next free number, new issue if critical) when NO card covers the
 task.
 
-### 5. Status moves — when and who
+### 6. Status moves — when and who
 
 | Move | Who | When |
 |---|---|---|
@@ -86,36 +86,81 @@ task.
 | `in_review` → `done` (Archive) | reviewer/releaser | Validation passed; CHANGELOG entry exists (same-commit rule); issue CLOSED in the same commit |
 | `done` → `backlog` (reopen) | anyone | Regression / new data / superseded assumption — Discussion post explains why; issue reopened with the post |
 
-A card is **not done until**: its CHANGELOG entry exists (same commit), the
-Archive row is filled (version + commit + result), and — for synced cards —
-the GitHub issue is closed.
+A card is **not done until** every criterion in §7 holds; a synced card's
+`done` and its issue's `closed` are the SAME event.
 
-### 7. GitHub issue sync (critical / high-priority tasks)
+### 7. Completion — the done & issue-close criteria
 
-**Critical and cross-repo tasks are synced to GitHub issues** so agents can
+A task is COMPLETE — and its dedicated GitHub issue CLOSABLE — only when EVERY
+requirement holds. All six must be true before you report done:
+
+1. **Work verified** — tests pass (network-free suite), the A/B run landed,
+   and/or the release gate (`release.py --check`) is green. **No uncommitted
+   work may remain in the card's scope** — `git status` is clean for the
+   card's files (stray diffs mean the card is still `in_progress`, not done).
+2. **CHANGELOG entry exists** — the `[Unreleased]` (or released) entry
+   describing the work lands in the SAME commit that ships it (AGENTS.md
+   same-commit rule). No changelog entry = no done.
+3. **Card archived** — the card moved to the Archive with: shipped version,
+   commit/tag, key result, and the Owner/`Updated` timestamp filled.
+4. **Discussion closed out** — a dated closing entry on the discussion board
+   (result + verdict), newest-at-top, history never edited.
+5. **Issue closed in the same commit** — for synced cards, `gh issue close
+   NNN` runs with a closing comment naming the commit and CHANGELOG entry,
+   IN the same commit that archives the card. The card must never sit
+   `done` with its issue open, nor the issue closed with the card unarchived.
+6. **No orphaned scope** — anything discovered but NOT delivered (a new
+   confusion cluster, a follow-on arm) spawns its own card + issue BEFORE
+   this card closes; unfinished discovery is not a silent done.
+
+Completion close-out is the LAST action of every task: verify → changelog →
+archive → discussion post → close issue → report.
+
+Reopen protocol (regression / new data / superseded assumption): move the
+card back to `backlog` AND reopen its issue with the Discussion post as the
+comment — in the same pass.
+
+### 8. GitHub issue sync (critical / high-priority tasks)
+
+**Critical, high-priority, and cross-repo tasks are routed to GitHub issues**
+(label `kanban`), opened in the repo where the work lands, so agents can
 open/close them like normal issues while the board remains the source of
 truth.
 
-- **When a new critical card is added**, open its issue in the repo where
-  the work lands: `gh issue create --title "KANBAN-00N: <task>" --label kanban --body "<card summary + evidence + procedure>"`. Put the issue number in the card's `Issue` column.
+- **Which tasks route to issues:** critical / high-priority cards, cross-repo
+  work, anything whose completion must be externally verifiable, and any
+  card the human asks to track as an issue. Board-only cards (small,
+  single-session, low-risk) do NOT need issues.
+- **The card ALWAYS carries the dedicated issue link.** Every synced card's
+  `Issue` column holds the FULL markdown link to its own dedicated issue —
+  `[#NNN](https://github.com/Exios66/<repo>/issues/NNN)` — never a bare
+  number, never a link to another card's issue. One card = one issue.
+- **Order of operations when adding a critical card:** open the issue FIRST
+  (in the repo where the work lands), then write its link into the card:
+  `gh issue create --title "KANBAN-00N: <task>" --label kanban --body "<card summary + evidence + procedure>"`.
+- **Cross-reference both ways.** The issue body names its `KANBAN-00N`; the
+  card names its issue link. They must never disagree about status — a lane
+  move on the card is mirrored on the issue (claim → comment, blocked →
+  blocker comment, done → closed).
 - **When a card ships**, close its issue in the same commit that archives
   the card (`gh issue close NNN`), with a closing comment naming the commit
-  and CHANGELOG entry.
+  and CHANGELOG entry (see §7.5).
 - **When a card is reopened**, reopen its issue with the Discussion post as
   the comment.
-- Issues carry the `kanban` label; the issue body always links back to the
-  card number, and the card always carries the issue number — the two must
-  never disagree about status.
-- Board-only cards (small, single-session tasks) do NOT need issues.
+- **Sync sweep:** after any board edit, audit the table — every open card
+  has a link in its `Issue` column, and every link points at an issue that
+  is OPEN (`gh issue list --label kanban`), except cards in the Archive,
+  whose issues are CLOSED. A missing link = an unsynced card = not ready
+  for assignment.
 
-### 8. Commit discipline
+### 9. Commit discipline
 
 Reference cards in commits — `MESSAGE BOARD: KANBAN-004 claimed` or
 `v24 diagnostic (KANBAN-004): ...`. A commit that lands a card's work
 carries its CHANGELOG entry in the same commit (AGENTS.md rule) and closes
 its issue.
 
-### 9. Release sweep
+### 10. Release sweep
 
 Semantic versioning is the spine: every open card names its target release.
 When a release ships (`scripts/release.py --bump`), sweep the board: cards
@@ -157,6 +202,19 @@ v0.15.0 shipped 2026-08-12 — KANBAN-001/002/007 archived below.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-13 — opencode — board logic (issue routing + close criteria)** Board
+  governance extended: (1) **GitHub issue routing formalized** (§8) —
+  critical/high-priority/cross-repo cards route to issues with label
+  `kanban`, opened FIRST in the repo where the work lands, and every synced
+  card's `Issue` column MUST carry the full link to its own dedicated issue
+  (`[#NNN](url)`) — one card = one issue, card↔issue status never disagrees;
+  (2) **completion & issue-close criteria** (§7) — the six requirements to
+  consider a task done AND its issue closable: verified work with clean
+  `git status`, CHANGELOG entry in the same commit, card archived with
+  version/commit/result, timestamped closing discussion entry, issue closed
+  in the same commit as the archive, no orphaned scope. AGENTS.md rules 8
+  and 12 updated to match. Sync sweep verified: issues #3–#10 open
+  (↔ 8 open cards), #2 closed (↔ archived KANBAN-003).
 - **2026-08-13 — opencode — board logic (all cards)** In-progress semantics
   enforced: **work underway = `in_progress`, never `backlog`** codified as
   procedure §4 (backlog = ZERO work started: no draft, no diff, no run in
