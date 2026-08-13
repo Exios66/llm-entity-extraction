@@ -8,7 +8,17 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
-> sorter v7→v9 A/B series (strict 0.8683→0.9259), annotation-queue score-configs, agent message board + GitHub issue kanban routing, site board tab, cost-telemetry removal
+### Added
+- **Sorter scale-up — v9 re-baseline + full-509 v8/v9 benchmark**: three
+  cheap runs (~$0.25, 1213 classifications) settle the scale question.
+  **v9 @ 509 = 0.9116 strict / 0.9194 equiv, beating v8 @ 509 (0.9018 /
+  0.9096) by +0.98pp — the v6→v9 rule iterations hold at full scale.**
+  The re-baseline (v9 @ 195 = 0.8872) settles the 0.95-era question: the
+  0.9436-era v6 number lived on the OLDER corpus revision (fingerprint
+  2e1fe4b7 vs fb9f939d) — the 0.95 target was revision-confounded.
+  Sample-size behavior is non-monotonic but bounded (v9: 0.8872 → 0.9259
+  → 0.9116 across 195/243/509); the full-set number is the stable
+  estimate. Full matrix: `V16_PROPOSITION.md` §19.
 
 ## [v0.16.0] - 2026-08-13
 

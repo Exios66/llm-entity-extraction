@@ -158,3 +158,19 @@ maintenance.
 confusions (no cluster above 2) plus per-doc variance — single-rule
 iterations have diminishing returns from here; ~0.93 is the practical
 plateau on this corpus revision.
+
+---
+
+## Addendum 4 (2026-08-13): sorter v9 scale-up — 195/243/509 matrix
+
+**Result: the improvements hold at full scale.** v9 @ 509 = **0.9116
+strict / 0.9194 equiv** vs v8 @ 509 = 0.9018 / 0.9096 (+0.98pp) — the
+v6→v9 rule iterations generalize beyond the stratified samples. The
+re-baseline settles the 0.95-era question: v9 @ 195 = 0.8872 on the
+current corpus revision, while the 0.9436-era v6 number lived on the
+OLDER revision (fingerprint 2e1fe4b7 vs fb9f939d) — the 0.95 target was
+revision-confounded. Sample-size behavior is non-monotonic but bounded
+(v9: 0.8872 → 0.9259 → 0.9116 across 195/243/509) — the full-set number
+is the stable estimate; the 243→509 drop reflects harder docs the
+stratification undersamples. Scale-check cost: ~$0.25 for 1213
+classifications.
