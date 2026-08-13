@@ -20,6 +20,7 @@ GitHub Pages:
 | [Getting-Started](Getting-Started) | setup, first eval, the experiment loop |
 | [Architecture](Architecture) | repo layout, data flow, agents |
 | [Eval-Runners](Eval-Runners) | every eval runner, flags, matrices |
+| [Langfuse-Traces](Langfuse-Traces) | how to read the Langfuse trace graphs — node-by-node, chunked examples |
 | [Experiment-Log](Experiment-Log) | the JSONL log, the markdown renderer, the site |
 | [Scoring](Scoring) | every metric, where it is computed, how to read it |
 | [Site](Site) | the visualization site: views, charts, interactions |

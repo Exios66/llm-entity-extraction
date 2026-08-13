@@ -4,6 +4,7 @@
 - [Getting-Started](Getting-Started)
 - [Architecture](Architecture)
 - [Eval-Runners](Eval-Runners)
+- [Langfuse-Traces](Langfuse-Traces)
 - [Experiment-Log](Experiment-Log)
 - [Scoring](Scoring)
 - [Site](Site)
