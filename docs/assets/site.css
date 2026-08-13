@@ -706,3 +706,10 @@ a:focus-visible, button:focus-visible, .nav-group-trigger:focus-visible {
 .memo-tbl th, .memo-tbl td { padding: 6px 10px; }
 .memo code { font-family: var(--mono); font-size: 12px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; }
 .memo strong { font-weight: 700; }
+
+/* ---- agent kanban board view ---- */
+.board-wrap { overflow-x: auto; }
+.board-wrap .memo { max-width: 100%; }
+.board-wrap .memo table { min-width: 720px; }
+.board-wrap .memo h3 { border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.board-wrap .memo a { text-decoration: underline; }

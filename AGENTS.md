@@ -39,40 +39,53 @@ so.**
    Owner (agent name) + claimed date, moving it to `in_progress`, and
    posting a dated discussion entry (e.g. `**2026-08-12 — sorter-agent —
    KANBAN-003** claimed; running the 250-doc A/B now`). ONE owner per card.
-4. **Every lane change carries a timestamp.** When a card moves
+4. **Work underway = `in_progress`, immediately — never `backlog`.** The
+   moment ANY work exists for a card's scope — a first working-tree edit,
+   an uncommitted draft (prompt constant, test, script), a branch, a run
+   that has started, or a partially landed commit — the card MUST be
+   `in_progress` (owner set, timestamped), NOT `backlog`. `backlog` means
+   ZERO work has started: no draft, no diff, no run in flight. Sanity
+   check before every commit: if `git status` shows changes that belong to
+   a card, that card is `in_progress` — label it before the code, not
+   after. Cards discovered to be underway-but-labeled-`backlog` are moved
+   to `in_progress` at the NEXT session read (rule 1), with the owner set
+   to whoever holds the work and a dated note in the discussion log.
+5. **Every lane change carries a timestamp.** When a card moves
    (`backlog` → `in_progress` → `blocked` / `in_review` / `done`), update
    the card's Status AND its timestamp column/entry, and say what happened
    on the discussion board. Timestamps are `YYYY-MM-DD` and must match the
    day the change happened, not the day you remember it.
-5. **Update DURING work, not only at the end.** Post to the discussion board
+6. **Update DURING work, not only at the end.** Post to the discussion board
    at every material event: decision made, result obtained, blocker hit,
    scope changed, handoff to another agent. A silent agent is an untrusted
    agent.
-6. **Blocked = post the blocker.** Move the card to `blocked` with the
+7. **Blocked = post the blocker.** Move the card to `blocked` with the
    specific blocker (missing key, waiting on a dataset, dependent on
    KANBAN-00N) and a timestamp. Name what unblocks it.
-7. **Completed = post the proof BEFORE claiming done.** A card may move to
+8. **Completed = post the proof BEFORE claiming done.** A card may move to
    `done` only when ALL of: (a) work verified (tests pass / A/B run /
    release gate), (b) `CHANGELOG.md` `[Unreleased]` entry exists in the
    same commit that ships the work, (c) the card was moved to the Archive
    with its shipped version, commit and key result, (d) the discussion
    entry is timestamped.
-8. **Finish protocol — the LAST action of every task/run.** Before a task,
+9. **Finish protocol — the LAST action of every task/run.** Before a task,
    objective, or experimental run is declared finished: update your Kanban
    entry — move it to the correct status (`done` / archive for completed
    work, `blocked` if it ended stuck), record the timestamp, update the
    Owner/result fields, and post the closing discussion entry. Only then
    report completion to the user.
-9. **Fresh session? Fresh read.** At the start of every new session (or
-   after returning to the repo), re-read the board and the discussion log
-   — other agents may have moved your cards, blocked your dependencies, or
-   reused your experiment names.
-10. **Experiments specifically:** the claim, the run, and the closing entry
+10. **Fresh session? Fresh read.** At the start of every new session (or
+    after returning to the repo), re-read the board and the discussion log
+    — other agents may have moved your cards, blocked your dependencies, or
+    reused your experiment names. Also run the rule-4 sanity check: any
+    card with uncommitted or partially landed work in its scope must read
+    `in_progress` (fix it if it doesn't).
+11. **Experiments specifically:** the claim, the run, and the closing entry
     must ALL be on the board. Never close out an experimental run without
     (a) the run's KANBAN status + result timestamped, (b) the
     `reports/experiment_log.{jsonl,md}` regeneration, and (c) the
     CHANGELOG tie-in — in that order.
-11. **GitHub issue sync (critical / cross-repo cards).** Critical and
+12. **GitHub issue sync (critical / cross-repo cards).** Critical and
     cross-repo cards are synced to GitHub issues so agents can open/close
     them like normal issues: open with `gh issue create --label kanban
     --title "KANBAN-00N: <task>" --body "<card summary + evidence>"` in the

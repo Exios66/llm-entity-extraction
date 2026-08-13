@@ -838,6 +838,8 @@ def main_with_args(argv: list[str]) -> int:
         json.dumps(build_benchmarks(args.benchmarks_key), indent=1), encoding="utf-8")
     (args.out / "memos.json").write_text(
         json.dumps(build_memos(), indent=1), encoding="utf-8")
+    (args.out / "board.json").write_text(
+        json.dumps(build_board(), indent=1), encoding="utf-8")
     print(f"Site data rebuilt: {len(records)} records -> {args.out} "
           f"({len(prompts)} prompts, {len(meta.get('surfaces', []))} surfaces)")
     return 0
@@ -880,6 +882,23 @@ def build_trends(records: list[dict], summaries: list[dict]) -> dict:
             entry["ablation"] = scores.get("ablation")
         by_task.setdefault(task, []).append(entry)
     return {"tasks": by_task}
+
+
+def _now_iso() -> str:
+    """UTC timestamp for derived-data provenance."""
+    import datetime as _dt
+    return _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+
+def build_board() -> dict:
+    """The agent Kanban board (MESSAGE_BOARD.md at the repo root) shipped to
+    the site's board tab — the live work-progress board for the cross-repo
+    project, rendered read-only for visual inspection."""
+    path = REPO_ROOT / "MESSAGE_BOARD.md"
+    if not path.is_file():
+        return {"markdown": "", "built_at": None}
+    return {"markdown": path.read_text(encoding="utf-8"),
+            "built_at": _now_iso()}
 
 
 def build_memos() -> dict:

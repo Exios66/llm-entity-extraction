@@ -366,6 +366,36 @@ SORTER_PROMPT_V8 = SORTER_PROMPT_V7.replace(
 
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v9 (promotion-title wins,
+# outsourcing-title wins, customization schedules are maintenance)
+# -----------------------------------------------------------------------------
+# v9 = v8 + the three remaining title-vs-machinery clusters from the v8
+# 243-doc stratified A/B (qwen3.7-flash_sorter_v8_subtype_langfuse:
+# strict 0.8971, 25 fails): promotion->marketing (2) and
+# promotion->distributor (1) are promotion-TITLED docs whose marketing/
+# distribution machinery overrode the title (COLOGUARD PROMOTION
+# AGREEMENT, CO-PROMOTION AGREEMENT, PROMOTION AND DISTRIBUTION
+# AGREEMENT); outsourcing->manufacturing (2) are outsourcing-TITLED docs
+# whose outsourced services ARE manufacturing (Paratek Outsourcing
+# Agreement, NICELTD MANUFACTURING OUTSOURCING AGREEMENT);
+# maintenance->development (1) is a Customization Schedule exhibit to a
+# Software License, Customization and Maintenance Agreement (annex
+# inheritance, rule 17). Target: strict > 0.95 on the 250-doc A/B.
+# =============================================================================
+
+SORTER_PROMPT_V9 = SORTER_PROMPT_V8.replace(
+    """22. INTELLECTUAL PROPERTY AGREEMENTS ARE ip: an agreement TITLED "Intellectual Property Agreement" (or "IP Agreement") is classified ip even when its operative core is structured as a license grant (a "Grant of License" section with license fees) or contains a joint-venture section — the corpus files these documents under Ip Ownership and the ground truth follows the folder; do not route them to license or to joint_venture ("INTELLECTUAL PROPERTY AGREEMENT" with a Section 1 grant of a non-exclusive right to use software/trademarks -> ip, not license; an "Intellectual Property Agreement" with a Section 3 joint venture -> ip, not joint_venture).""",
+    """22. INTELLECTUAL PROPERTY AGREEMENTS ARE ip: an agreement TITLED "Intellectual Property Agreement" (or "IP Agreement") is classified ip even when its operative core is structured as a license grant (a "Grant of License" section with license fees) or contains a joint-venture section — the corpus files these documents under Ip Ownership and the ground truth follows the folder; do not route them to license or to joint_venture ("INTELLECTUAL PROPERTY AGREEMENT" with a Section 1 grant of a non-exclusive right to use software/trademarks -> ip, not license; an "Intellectual Property Agreement" with a Section 3 joint venture -> ip, not joint_venture).
+
+23. PROMOTION TITLE WINS: when the TITLE names promotion — "COLOGUARD PROMOTION AGREEMENT", "CO-PROMOTION AGREEMENT", "PROMOTION AND DISTRIBUTION AGREEMENT" — the agreement is promotion even when its operative machinery is marketing plans, detailing, field force, or distribution rights. Promotion in the title wins over marketing and over distributor (a "COLOGUARD PROMOTION AGREEMENT" appointing Pfizer to promote and detail -> promotion; a "PROMOTION AND DISTRIBUTION AGREEMENT" with bundling and distribution clauses -> promotion, not distributor).
+
+24. OUTSOURCING TITLE WINS: an agreement TITLED "Outsourcing Agreement" (including "Manufacturing Outsourcing Agreement" and "Outsourcing and Manufacturing Agreement") is outsourcing even when the outsourced services ARE manufacturing — outsourcing is the family and the outsourced function is the delivery mechanism, not the family ("MANUFACTURING OUTSOURCING AGREEMENT" with manufacturing-services obligations -> outsourcing, not manufacturing; an "Outsourcing Agreement" whose supplier must manufacture the product -> outsourcing).
+
+25. CUSTOMIZATION SCHEDULES ARE MAINTENANCE: a "Customization Schedule" (or customization addendum/exhibit) attached to a license, customization and maintenance parent agreement is maintenance per annex inheritance (rule 17) — customization of the licensed software is maintenance work, not development ("Customization Schedule" to a "Software License, Customization and Maintenance Agreement" -> maintenance, not development).""",
+)
+
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2447,6 +2477,7 @@ PROMPT_VERSIONS = {
     "sorter_v6": SORTER_PROMPT_V6,
     "sorter_v7": SORTER_PROMPT_V7,
     "sorter_v8": SORTER_PROMPT_V8,
+    "sorter_v9": SORTER_PROMPT_V9,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

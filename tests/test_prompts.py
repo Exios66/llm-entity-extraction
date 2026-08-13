@@ -101,6 +101,29 @@ def test_sorter_v8_remaining_clusters():
     assert "INTELLECTUAL PROPERTY AGREEMENTS ARE ip" not in SORTER_PROMPT_V7
 
 
+def test_sorter_v9_title_wins_rules():
+    from src.prompts import SORTER_PROMPT_V8, SORTER_PROMPT_V9
+
+    # v9 is a strict derivation of v8: the base is untouched, the derived
+    # prompt adds the three title-vs-machinery rules for the v8 residuals.
+    assert SORTER_PROMPT_V9 != SORTER_PROMPT_V8
+    assert SORTER_PROMPT_V9.startswith(SORTER_PROMPT_V8[:300])
+    assert "sorter_v9" in PROMPT_VERSIONS
+
+    v9 = SORTER_PROMPT_V9
+    assert "23. PROMOTION TITLE WINS" in v9
+    assert "COLOGUARD PROMOTION AGREEMENT" in v9
+    assert "24. OUTSOURCING TITLE WINS" in v9
+    assert "MANUFACTURING OUTSOURCING AGREEMENT" in v9
+    assert "25. CUSTOMIZATION SCHEDULES ARE MAINTENANCE" in v9
+    assert "Customization Schedule" in v9
+    assert "VALID CONTRACT SUBTYPE KEYS" in v9
+    # v8 predates the three rules.
+    assert "23. PROMOTION TITLE WINS" not in SORTER_PROMPT_V8
+    assert "OUTSOURCING TITLE WINS" not in SORTER_PROMPT_V8
+    assert "CUSTOMIZATION SCHEDULES ARE MAINTENANCE" not in SORTER_PROMPT_V8
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt

@@ -47,6 +47,10 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
   factuality audit with hallucination counts, CUAD category presence,
   ambiguous fields, and the raw predicted extraction), with prev/next
   navigation.
+- **Agent kanban board** — a `#/board` tab rendering `MESSAGE_BOARD.md`
+  (the cross-repo agent work-progress board: kanban lanes, GitHub-issue
+  links, discussion log, archive) read-only for visual inspection
+  (`build_site.py` emits `docs/data/board.json`).
 - **Research memos** — a dedicated `#/memos` tab rendering `memos/*.md`
   (the archived research memoranda: subtype-classification improvements,
   entity-extraction v2→v15, contracts-specialist v17→v18) with a memo

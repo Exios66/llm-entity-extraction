@@ -57,10 +57,7 @@
    "dirty": false
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 10,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 10
  },
  {
   "id": 2,
@@ -120,10 +117,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 10,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 10
  },
  {
   "id": 3,
@@ -183,10 +177,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 10,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 10
  },
  {
   "id": 4,
@@ -247,23 +238,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 10,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 415,
-    "total": 425
-   },
-   "tokens": {
-    "prompt": 140026,
-    "completion": 28581,
-    "cached": 0
-   },
-   "cost_total_usd": 0.00740400000000004,
-   "cost_avg_per_doc_usd": 0.000740400000000004,
-   "tokens_avg_per_doc": 16860.7
-  }
+  "data_source_n_samples": 10
  },
  {
   "id": 5,
@@ -324,23 +299,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 10,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 1214,
-    "total": 1224
-   },
-   "tokens": {
-    "prompt": 202590,
-    "completion": 28213,
-    "cached": 0
-   },
-   "cost_total_usd": 0.008216999999999969,
-   "cost_avg_per_doc_usd": 0.0008216999999999969,
-   "tokens_avg_per_doc": 23080.3
-  }
+  "data_source_n_samples": 10
  },
  {
   "id": 6,
@@ -400,23 +359,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 1814,
-    "total": 1824
-   },
-   "tokens": {
-    "prompt": 315435,
-    "completion": 42724,
-    "cached": 0
-   },
-   "cost_total_usd": 0.012519999999999953,
-   "cost_avg_per_doc_usd": 0.0025039999999999906,
-   "tokens_avg_per_doc": 71631.8
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 7,
@@ -476,23 +419,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 342,
-    "total": 352
-   },
-   "tokens": {
-    "prompt": 209388,
-    "completion": 40043,
-    "cached": 0
-   },
-   "cost_total_usd": 0.010797999999999952,
-   "cost_avg_per_doc_usd": 0.0021595999999999903,
-   "tokens_avg_per_doc": 49886.2
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 8,
@@ -552,23 +479,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 636,
-    "total": 646
-   },
-   "tokens": {
-    "prompt": 219829,
-    "completion": 40276,
-    "cached": 0
-   },
-   "cost_total_usd": 0.010903000000000005,
-   "cost_avg_per_doc_usd": 0.002180600000000001,
-   "tokens_avg_per_doc": 52021.0
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 9,
@@ -628,23 +539,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 0,
-    "total": 10
-   },
-   "tokens": {
-    "prompt": 159705,
-    "completion": 49296,
-    "cached": 0
-   },
-   "cost_total_usd": 0.011196,
-   "cost_avg_per_doc_usd": 0.0022392,
-   "tokens_avg_per_doc": 41800.2
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 10,
@@ -704,23 +599,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 0,
-    "total": 10
-   },
-   "tokens": {
-    "prompt": 159085,
-    "completion": 40744,
-    "cached": 0
-   },
-   "cost_total_usd": 0.010065000000000001,
-   "cost_avg_per_doc_usd": 0.002013,
-   "tokens_avg_per_doc": 39965.8
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 11,
@@ -780,23 +659,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 0,
-    "total": 10
-   },
-   "tokens": {
-    "prompt": 159085,
-    "completion": 40132,
-    "cached": 0
-   },
-   "cost_total_usd": 0.009984999999999999,
-   "cost_avg_per_doc_usd": 0.0019969999999999996,
-   "tokens_avg_per_doc": 39843.4
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 12,
@@ -854,23 +717,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 50,
-    "embeddings": 0,
-    "total": 50
-   },
-   "tokens": {
-    "prompt": 490382,
-    "completion": 6731,
-    "cached": 0
-   },
-   "cost_total_usd": 0.015562999999999994,
-   "cost_avg_per_doc_usd": 0.0003112599999999999,
-   "tokens_avg_per_doc": 9942.26
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 13,
@@ -929,23 +776,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 50,
-    "embeddings": 0,
-    "total": 50
-   },
-   "tokens": {
-    "prompt": 490382,
-    "completion": 6825,
-    "cached": 0
-   },
-   "cost_total_usd": 0.015570999999999996,
-   "cost_avg_per_doc_usd": 0.0003114199999999999,
-   "tokens_avg_per_doc": 9944.14
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 14,
@@ -1005,23 +836,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 195,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 195,
-    "embeddings": 0,
-    "total": 195
-   },
-   "tokens": {
-    "prompt": 2118616,
-    "completion": 226865,
-    "cached": 0
-   },
-   "cost_total_usd": 0.09575899999999996,
-   "cost_avg_per_doc_usd": 0.0004910717948717946,
-   "tokens_avg_per_doc": 12028.107692307693
-  }
+  "data_source_n_samples": 195
  },
  {
   "id": 15,
@@ -1081,23 +896,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 195,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 396,
-    "embeddings": 0,
-    "total": 396
-   },
-   "tokens": {
-    "prompt": 4320464,
-    "completion": 248685,
-    "cached": 0
-   },
-   "cost_total_usd": 0.16692600000000024,
-   "cost_avg_per_doc_usd": 0.0008560307692307705,
-   "tokens_avg_per_doc": 23431.533333333333
-  }
+  "data_source_n_samples": 195
  },
  {
   "id": 16,
@@ -1157,10 +956,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 195,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 195
  },
  {
   "id": 17,
@@ -1220,23 +1016,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 7,
-    "total": 17
-   },
-   "tokens": {
-    "prompt": 165811,
-    "completion": 11625,
-    "cached": 0
-   },
-   "cost_total_usd": 0.0064719999999999995,
-   "cost_avg_per_doc_usd": 0.0012943999999999998,
-   "tokens_avg_per_doc": 35487.2
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 18,
@@ -1296,23 +1076,7 @@
    "dirty": true
   },
   "data_source_project": "mailroom-eval/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": true,
-   "calls": {
-    "chat": 10,
-    "embeddings": 0,
-    "total": 10
-   },
-   "tokens": {
-    "prompt": 166008,
-    "completion": 12153,
-    "cached": 0
-   },
-   "cost_total_usd": 0.006555,
-   "cost_avg_per_doc_usd": 0.001311,
-   "tokens_avg_per_doc": 35632.2
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 19,
@@ -1372,10 +1136,7 @@
    "dirty": false
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 509,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 509
  },
  {
   "id": 20,
@@ -1430,10 +1191,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 21,
@@ -1493,10 +1251,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 195,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 195
  },
  {
   "id": 22,
@@ -1555,10 +1310,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 195,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 195
  },
  {
   "id": 23,
@@ -1617,10 +1369,7 @@
    "dirty": false
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 195,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 195
  },
  {
   "id": 24,
@@ -1680,10 +1429,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 25,
@@ -1743,10 +1489,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 26,
@@ -1806,10 +1549,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 27,
@@ -1853,10 +1593,7 @@
    "dirty": true
   },
   "data_source_project": null,
-  "data_source_n_samples": 3,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 3
  },
  {
   "id": 28,
@@ -1917,10 +1654,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 3,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 3
  },
  {
   "id": 29,
@@ -1980,10 +1714,7 @@
    "dirty": false
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 30,
@@ -2044,10 +1775,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 3,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 3
  },
  {
   "id": 31,
@@ -2091,10 +1819,7 @@
    "dirty": true
   },
   "data_source_project": null,
-  "data_source_n_samples": 3,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 3
  },
  {
   "id": 32,
@@ -2154,10 +1879,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 509,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 509
  },
  {
   "id": 33,
@@ -2217,10 +1939,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 34,
@@ -2280,10 +1999,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 35,
@@ -2344,10 +2060,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 36,
@@ -2407,10 +2120,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 37,
@@ -2470,10 +2180,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 38,
@@ -2534,10 +2241,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 5,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 5
  },
  {
   "id": 39,
@@ -2597,10 +2301,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 30,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 30
  },
  {
   "id": 40,
@@ -2660,10 +2361,7 @@
    "dirty": false
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 30,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 30
  },
  {
   "id": 41,
@@ -2723,10 +2421,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 42,
@@ -2786,10 +2481,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 43,
@@ -2849,10 +2541,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 44,
@@ -2912,10 +2601,7 @@
    "dirty": false
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 45,
@@ -2975,10 +2661,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 46,
@@ -3038,10 +2721,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 47,
@@ -3101,10 +2781,7 @@
    "dirty": false
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 48,
@@ -3164,10 +2841,7 @@
    "dirty": false
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 49,
@@ -3227,10 +2901,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 50,
@@ -3290,10 +2961,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 51,
@@ -3353,10 +3021,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 52,
@@ -3416,10 +3081,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 53,
@@ -3479,10 +3141,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 54,
@@ -3542,10 +3201,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 55,
@@ -3605,10 +3261,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 56,
@@ -3668,10 +3321,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
-  "data_source_n_samples": 50,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 50
  },
  {
   "id": 57,
@@ -3730,10 +3380,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 243,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 243
  },
  {
   "id": 58,
@@ -3792,10 +3439,7 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 243,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 243
  },
  {
   "id": 59,
@@ -3854,9 +3498,6 @@
    "dirty": true
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
-  "data_source_n_samples": 243,
-  "cost": {
-   "covered": false
-  }
+  "data_source_n_samples": 243
  }
 ]

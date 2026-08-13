@@ -163,6 +163,7 @@ function parseHash() {
   if (window.location.hash.match(/^#\/prompts/)) return { view: "prompts" };
   if (window.location.hash.match(/^#\/benchmarks/)) return { view: "benchmarks" };
   if (window.location.hash.match(/^#\/memos/)) return { view: "memos" };
+  if (window.location.hash.match(/^#\/board/)) return { view: "board" };
   return { view: "index" };
 }
 
@@ -174,6 +175,7 @@ async function route() {
   else if (r.view === "prompts") await renderPrompts();
   else if (r.view === "benchmarks") await renderBenchmarks();
   else if (r.view === "memos") await renderMemos();
+  else if (r.view === "board") await renderBoard();
   else await renderIndex();
 }
 
@@ -1844,6 +1846,35 @@ async function renderMemos() {
   };
   document.getElementById("mm-a").addEventListener("change", render);
   render();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- agent kanban board view ---------- */
+
+/* The cross-repo agent Kanban board (MESSAGE_BOARD.md) rendered read-only
+ * for visual inspection: the Kanban table, status lanes, discussion log,
+ * and archive. Reuses the memos markdown renderer. */
+async function renderBoard() {
+  let board = null;
+  try { board = await fetchJson("data/board.json"); }
+  catch (e) { board = { markdown: "" }; }
+  const md = (board && board.markdown) || "";
+  if (!md) {
+    $("#view").innerHTML = `<a class="back" href="#/">← All runs</a>
+      <div class="detail-head"><h2>Agent kanban board</h2>
+        <div class="meta-line">work-progress board for the cross-repo project — rebuild the site to ship it</div></div>
+      <div class="card"><div class="body"><div class="empty">Board not shipped yet — run
+        <span class="mono">python scripts/site/build_site.py</span> after editing MESSAGE_BOARD.md.</div></div></div>`;
+    return;
+  }
+  $("#view").innerHTML = `
+    <a class="back" href="#/">← All runs</a>
+    <div class="detail-head"><h2>Agent kanban board</h2>
+      <div class="meta-line">live work-progress / communication board for the cross-repo
+        project (llm-entity-extraction + llm-mailroom) — cards, issues, discussion, archive.
+        <a href="https://github.com/Exios66/llm-entity-extraction/blob/main/MESSAGE_BOARD.md"
+           target="_blank" rel="noopener">edit in repo</a>${board.built_at ? ` · built ${new Date(board.built_at).toLocaleString()}` : ""}</div></div>
+    <div class="card"><div class="body board-wrap">${renderMd(md)}</div></div>`;
   window.scrollTo(0, 0);
 }
 

@@ -119,8 +119,8 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
 | Card | Issue | Status | Task (summary) | Owner | Target release | CHANGELOG / evidence |
 |---|---|---|---|---|---|---|
-| KANBAN-003 | [#2](https://github.com/Exios66/llm-entity-extraction/issues/2) | `backlog` | **sorter_v7 A/B on the 250-doc stratified surface** — same seed as the v6 run; target strict > 0.95; verify each of the 3 rules (consortium O&M→maintenance, development-over-license, promotion guard) with failure-insight quotes before calling it. | unclaimed | `[Unreleased]` → v0.16.0 | v6 full-corpus run: strict 0.9312, 35 fails (qwen3.7-flash_sorter_v6_subtype_langfuse, run 57); prompt registered as `sorter_v7` |
-| KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
+| KANBAN-012 | [#10](https://github.com/Exios66/llm-entity-extraction/issues/10) | `backlog` | **sorter_v9 A/B (title-wins rules)** — `SORTER_PROMPT_V9` draft in the working tree (promotion-title wins, outsourcing-title wins, customization-schedules-are-maintenance) targeting the v8 243-doc A/B's 25 fails (strict 0.8971); register + test + run the same stratified surface; target strict > 0.92, verify each rule with failure-insight quotes. | unclaimed | `[Unreleased]` → v0.16.0 | v8 run: qwen3.7-flash_sorter_v8_subtype_langfuse (strict 0.8971, 25 fails); prompt draft `SORTER_PROMPT_V9` + test in working tree |
+| KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` |(https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
 | KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.16.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
 | KANBAN-006 | [#5](https://github.com/Exios66/llm-entity-extraction/issues/5) | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue): adjudicate, feed corrections into the next prompt iteration. | unclaimed | v0.16.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
 | KANBAN-008 | [#6](https://github.com/Exios66/llm-entity-extraction/issues/6) | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
@@ -137,6 +137,14 @@ v0.15.0 shipped 2026-08-12 — KANBAN-001/002/007 archived below.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-13 — opencode — KANBAN-003/012 + site** Board sweep: sorter_v7
+  A/B landed (KANBAN-003 archived — v7 wins +0.82pp strict 0.8765, commit
+  `cbb5b93`; issue #2 closed) and the user-run v8 A/B recorded (v8 wins
+  +2.06pp strict 0.8971, commit `43ef2ab`, development & IP clusters
+  eliminated — proposition §17). New card KANBAN-012 (sorter_v9 title-wins
+  draft, issue #10). The board is now ALSO rendered read-only on the
+  experiment-log site under a `#/board` tab (`build_site.py` emits
+  `docs/data/board.json`) — links to each card's GitHub issue.
 - **2026-08-12 — opencode — board procedures (all cards)** Procedures
   formalized in "How to use this board": self-assignment order (comment →
   move to `in_progress` + Owner + date → reference in commits), the
@@ -173,6 +181,8 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
+| KANBAN-003 | v0.16.0 prep (2026-08-12) | commit `cbb5b93` | sorter_v7 250-doc A/B landed: **v7 wins (+0.82pp strict, 0.8765)** — promotion cluster fixed; issue #2 closed on sweep |
+| *(user-run, no card)* — sorter_v8 A/B | v0.16.0 prep (2026-08-12) | commit `43ef2ab` | **v8 wins (+2.06pp strict, 0.8971)** on the 243-doc stratified surface — development & IP clusters eliminated; memo addendum + proposition §17 |
 | KANBAN-007 | v0.15.0 (2026-08-12) | tag `v0.15.0` → `4b6ad5f`; commits `93eb938`, `0a4051e`, `0afdf2e` | Release finalized: changelog dedup-repaired, tag pushed, GitHub release with dedicated notes published; `release.py --check` green (303 tests) |
 | KANBAN-002 | v0.16.0 prep (2026-08-12) | commit `ac156a5` | Dirty tree landed: experiment log regen (57 runs), site data regen, `sorter_v7` registration + test, AGENTS.md board governance, changelog `[Unreleased]` entry for sorter_v7 |
 | KANBAN-001 | v0.16.0 prep (2026-08-12) | commit `ac156a5` | `SORTER_PROMPT_V7` constant + `PROMPT_VERSIONS["sorter_v7"]` + `test_sorter_v7_data_backed_rules` landed (18 prompt tests green). Evaluation tracked in KANBAN-003 |
