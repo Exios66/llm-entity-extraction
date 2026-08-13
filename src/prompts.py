@@ -1729,6 +1729,72 @@ CONTRACTS_SPECIALIST_PROMPT_V18 = CONTRACTS_SPECIALIST_PROMPT_V17.replace(
      extracted.""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v19 (worked span examples +
+# span discipline)
+# -----------------------------------------------------------------------------
+# v19 = v18 + the two residual levers measured on the v18 qwen-flash 50-doc
+# A/B (run 046): (1) the remaining misses still decompose hardest into the
+# license-grant family — 93 of the 241 token-level-unmatched GT spans are
+# license-shaped, and only 25 of 107 license-ish GT spans carry the naive
+# "grants ... a license" phrasing (grants-and-assigns with territories,
+# restriction-on-rights clauses, options, end-user access grants) — so v19
+# adds WORKED SPAN EXAMPLES drawn verbatim from those residual misses, with
+# verified negative examples (trademark-hygiene and product-marketing
+# duties that the v18 WHERE-IT-SITS guard let through; sentence+fragment
+# duplicates). (2) alignment precision: 71% of v18's predicted items are
+# token-unmatched, of which 225 are near-duplicates of another emitted item
+# (sentence+fragment pairs, exact repeats — one audit clause emitted twice
+# in a single chunk) — so v19 adds SPAN DISCIPLINE: one item per operative
+# requirement with a post-build dedupe scan. Evaluated with
+# reasoning_effort=max on qwen3.7-flash.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V19 = CONTRACTS_SPECIALIST_PROMPT_V18.replace(
+    """         inure to any third party").
+     Every occurrence of a present family must appear as its own verbatim item —""",
+    """         inure to any third party").
+   - WORKED SPAN EXAMPLES (the operative-span grain for the shapes the models skip
+     most, drawn from the residual misses):
+     + "The Company hereby grants to Allscripts and its Affiliates a non-exclusive,
+       royalty-free, irrevocable, fully paid-up, perpetual license to use, reproduce,
+       and modify the Installed Software" — the GRANT fragment is the item even when
+       the sentence continues with territory, sublicense, or restriction riders.
+     + "CONTENT PROVIDER hereby grants and assigns by means of present assignment to
+       COMPANY ... the right and license for the territory of the People Republic of
+       China to use, reproduce, distribute, transmit and publicly display the Current
+       Content" — a grant-and-assign with a territory is ONE item.
+     + "This Agreement grants ENVISION a non-exclusive and non-royalty bearing license
+       to use the mark 'SierraSil'" — short trademark grants are items.
+     + "eDiets hereby grants to Women.com ... a non-exclusive, nontransferable,
+       worldwide, royalty-free license" — long modifier chains do not hide the grant.
+     + "SFJ shall not sell, assign, sublicense or otherwise transfer any rights in or
+       to the Product" — restrictions ON the licensed rights are License Grant items,
+       not Anti-Assignment-of-the-agreement items.
+     + "Licensee's exercise of the Option is at its sole discretion; Licensee may
+       exercise the Option by written notice to Licensor at any time during the
+       Option Period" — options to license or acquire rights ARE items.
+     + "Impresse shall permit Users who access the Co-Branded Site to access and use
+       Co-Branded Content" — end-user access rights granted by a license ARE items.
+     NEGATIVE examples — never emit these:
+     - "Sekisui shall not deface, cover, obscure, erase, alter or remove any Qualigen
+       trade names, brand names, trademarks or logos" — trademark-hygiene and
+       product-marketing duties are operational, NOT family clauses.
+     - the same clause twice (an exact repeat, or a sentence PLUS its own fragment):
+       one operative requirement, one item.
+     Every occurrence of a present family must appear as its own verbatim item —""",
+).replace(
+    """     verbatim and keep it complete — never truncate mid-obligation.""",
+    """     verbatim and keep it complete — never truncate mid-obligation.
+   - SPAN DISCIPLINE (one item per operative requirement): never emit a clause
+     twice — neither an exact repeat nor a sentence PLUS its own fragment. A
+     requirement stated at sentence length and again at fragment length is ONE
+     requirement; after building the list, scan for repeats and sentence/fragment
+     pairs and drop the redundant copies. The list is complete when every present
+     family occurrence appears exactly once at the 10-25-word span grain.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2129,6 +2195,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v16": CONTRACTS_SPECIALIST_PROMPT_V16,
     "contracts_specialist_v17": CONTRACTS_SPECIALIST_PROMPT_V17,
     "contracts_specialist_v18": CONTRACTS_SPECIALIST_PROMPT_V18,
+    "contracts_specialist_v19": CONTRACTS_SPECIALIST_PROMPT_V19,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

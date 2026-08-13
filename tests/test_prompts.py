@@ -169,3 +169,38 @@ def test_contracts_v18_family_fidelity_catalog():
     # v17 predates the catalog.
     v17 = CONTRACTS_SPECIALIST_PROMPT_V17
     assert "mirroring the CUAD clause categories 1:1" not in v17
+
+
+def test_contracts_v19_worked_examples_and_span_discipline():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V18,
+        CONTRACTS_SPECIALIST_PROMPT_V19,
+    )
+
+    # v19 is a strict derivation of v18: the base is untouched, the derived
+    # prompt adds the worked span examples (license-grant shapes drawn from
+    # the residual misses) and the one-item-per-requirement span discipline.
+    assert CONTRACTS_SPECIALIST_PROMPT_V19 != CONTRACTS_SPECIALIST_PROMPT_V18
+    assert CONTRACTS_SPECIALIST_PROMPT_V19.startswith(CONTRACTS_SPECIALIST_PROMPT_V18[:300])
+    assert "contracts_specialist_v19" in PROMPT_VERSIONS
+
+    v19 = CONTRACTS_SPECIALIST_PROMPT_V19
+    # Worked span examples: positive license shapes + verified negatives.
+    assert "WORKED SPAN EXAMPLES" in v19
+    assert "grants and assigns by means of present assignment" in v19
+    assert "restrictions ON the licensed rights are License Grant items" in v19
+    assert "options to license or acquire rights ARE items" in v19
+    assert "NEGATIVE examples" in v19
+    assert "trademark-hygiene" in v19
+    assert "one operative requirement, one item" in v19
+    # Span discipline: dedupe duty against repeats and sentence/fragment pairs.
+    assert "SPAN DISCIPLINE" in v19
+    assert "never emit a clause" in v19
+    assert "drop the redundant copies" in v19
+    # The v18 catalog and exclusion guard are intact.
+    assert "mirroring the CUAD clause categories 1:1" in v19
+    assert "never excluded because of WHERE it sits" in v19
+    # v18 predates the worked examples.
+    v18 = CONTRACTS_SPECIALIST_PROMPT_V18
+    assert "WORKED SPAN EXAMPLES" not in v18
+    assert "SPAN DISCIPLINE" not in v18

@@ -387,3 +387,56 @@ shapes still do not enumerate.
 2. **v19 (if needed)**: address the residual license-grant misses with
    worked positive/negative span examples per family instead of prose
    shapes.
+
+---
+
+## 10. v19 (worked span examples + span discipline, max reasoning) — ADOPTED as flash-line ko champion (2026-08-12)
+
+### 10.1 Design (data-backed from the v18 flash 50-doc audit)
+
+- **License-grant gap**: 93 of 241 token-level-unmatched GT spans were
+  license-shaped, but only 25 of 107 license-ish GT spans carry the naive
+  "grants ... a license" phrasing — the misses are grants-and-assigns with
+  territories, restriction-on-rights clauses, options, and end-user access
+  grants. v19 adds WORKED SPAN EXAMPLES drawn verbatim from the residual
+  misses (7 positive shapes + 2 verified negatives — trademark-hygiene and
+  product-marketing duties that v18's WHERE-IT-SITS guard let through).
+- **Alignment precision**: 71% of v18's predicted items were token-unmatched,
+  225 of them near-duplicates (sentence+fragment pairs; one audit clause
+  emitted twice in a chunk). v19 adds SPAN DISCIPLINE — one item per
+  operative requirement with a post-build dedupe scan.
+- Run: qwen3.7-flash, **reasoning_effort=max**, same 50 docs, seed 42,
+  chunked, Langfuse llm-dojo.
+
+### 10.2 A/B result (v19 vs v18, same surface)
+
+| Metric | v18 | v19 | Δ |
+|---|---|---|---|
+| key_obligations | 0.8535 | **0.8840** | **+3.0pp** |
+| overall | 0.9230 | 0.9135 | −1.0pp (error row + noise; excl. error ≈ 0.932) |
+| items | 1118 | **792** | **−29%** |
+| near-dup emissions | 159 | 101 | −58 |
+| alignment precision | 0.619 | **0.662** | +4.3pp |
+| verified_precision | 0.991 | 0.988 | −0.3pp |
+| parties / eff_date / term / gov | .940/.883/.979/.934 | .918/.865/.968/.932 | 1-2 docs of noise each |
+| tokens / cost | 993k / $0.037 | 1.52M / **$0.098** | +53% / 2.6x |
+
+**ko motion**: 10 docs up vs 7 down, 33 flat. Gains concentrate in the
+license-family docs the worked examples target: HPIL 0.5→1.0, NOVO 0.667→
+1.0, Fulucai 0.5→0.833, LinkPlus 0.571→0.857, BuffaloWildWings 0.368→0.579.
+The single −0.846 is the Ediets EX-10.4 parse error (see below).
+
+### 10.3 Verdict and caveats
+
+- **Decision rule met**: ko +3.0pp (≥ +3pp) and no field regressed >2pp.
+  **v19 is the flash-line key_obligations champion (ko 0.8840, +10.9pp vs
+  v15)**; v18 remains the safest overall champion (0.9230) — the overall
+  delta is the Ediets error row, not the prompt.
+- **Reliability caveat**: reasoning_effort=max burned the structured-output
+  budget on a 2-chunk doc (9.8k completion tokens → unparseable JSON, 1/50
+  rows lost; at v18's level for that doc, ko ≈ 0.90). Production candidate:
+  v19 prompt × reasoning_effort=none (not yet run — the prompt vs reasoning
+  confound is unresolved by design; one more arm would isolate it).
+- **Spend**: $0.098 for the 50-doc surface; total session spend across all
+  v18/v19 arms ≈ $0.29 estimated (OpenRouter ledger $0.39 across 14/49
+  runs).

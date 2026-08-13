@@ -9,6 +9,27 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`contracts_specialist_v19` — worked span examples + span discipline
+  (flash-line ko champion)**: v18's residual (93/241 token-unmatched GT
+  spans license-shaped, only 25/107 with naive "grants ... a license"
+  phrasing) motivated WORKED SPAN EXAMPLES drawn verbatim from the misses
+  (grants-and-assigns with territories, restriction-on-rights, options,
+  end-user access grants; verified negatives: trademark-hygiene/product-
+  marketing duties, sentence+fragment repeats). v18's 225 near-duplicate
+  items motivated SPAN DISCIPLINE (one item per operative requirement +
+  post-build dedupe). Run: qwen3.7-flash × **reasoning_effort=max**, same
+  50 docs, seed 42, chunked, Langfuse llm-dojo — **ko 0.8535 → 0.8840
+  (+3.0pp; +10.9pp vs v15), alignment precision 0.619 → 0.662, items −29%
+  (1118→792), verified_precision 0.988**; gains concentrate in the target
+  license docs (HPIL 0.5→1.0, NOVO 0.667→1.0, Fulucai 0.5→0.833).
+  Caveats: 1/50 parse-error row (Ediets EX-10.4 — max reasoning overran
+  the structured budget; ko ≈ 0.90 without it), prompt-vs-reasoning
+  confound unresolved, cost 2.6x ($0.098). Full record: `V16_PROPOSITION.md`
+  §10, `memos/contracts_specialist_v19.md`.
+- **Research memo `memos/contracts_specialist_v19.md`**: dedicated memo for
+  the worked-examples iteration (span examples beat prose shapes for the
+  license family; reasoning-effort reliability trade), linked from the memos
+  README and shipped on the site's memos tab.
 - **v18 model sweep — scope-fidelity is model-agnostic, segmentation is
   model-bound**: v18 × {deepseek-v4-flash, deepseek-v4-pro} on the same
   50-doc surface (seed 42, chunked, Langfuse llm-dojo). Every model gains
