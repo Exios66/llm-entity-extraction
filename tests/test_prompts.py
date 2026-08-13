@@ -295,3 +295,39 @@ def test_contracts_v22_ko_recovery_rules():
     v21 = CONTRACTS_SPECIALIST_PROMPT_V21
     assert "VERBATIM COMPLETENESS" not in v21
     assert "overlapping wording is NOT duplication" not in v21
+
+
+def test_contracts_v23_residual_34_examples():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V22,
+        CONTRACTS_SPECIALIST_PROMPT_V23,
+    )
+
+    # v23 is a strict derivation of v22: the base is untouched, the derived
+    # prompt adds the second worked-example set built from the 34 residual
+    # spans (v18-matched, v22-missed) and sharpens the trademark negative.
+    assert CONTRACTS_SPECIALIST_PROMPT_V23 != CONTRACTS_SPECIALIST_PROMPT_V22
+    assert CONTRACTS_SPECIALIST_PROMPT_V23.startswith(CONTRACTS_SPECIALIST_PROMPT_V22[:300])
+    assert "contracts_specialist_v23" in PROMPT_VERSIONS
+
+    v23 = CONTRACTS_SPECIALIST_PROMPT_V23
+    # Recurring missed shapes from the residual 34.
+    assert "audited-financial-statement delivery IS an Audit Rights item" in v23
+    assert "Fox will remit all VGSL Revenue to Licensee" in v23
+    assert "all-requirements supply" in v23
+    assert "joint trademark registration" in v23
+    assert "sell-off revenues subject to royalties" in v23
+    assert "at cost without markup" in v23
+    # The trademark negative is sharpened, not removed.
+    assert "mark-HYGIENE duties" in v23
+    assert "mark-OWNERSHIP-USE restrictions" in v23
+    assert "mark non-tarnishment" in v23
+    assert "NEGATIVE examples" in v23
+    # All prior content intact.
+    assert "VERBATIM COMPLETENESS" in v23
+    assert "WORKED SPAN EXAMPLES" in v23
+    assert "EVERGREEN CLAUSES" in v23
+    # v22 predates the v2 examples.
+    v22 = CONTRACTS_SPECIALIST_PROMPT_V22
+    assert "audited-financial-statement delivery" not in v22
+    assert "mark-HYGIENE duties" not in v22

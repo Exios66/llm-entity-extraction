@@ -9,6 +9,25 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`contracts_specialist_v23` — worked-example set v2 (the residual-34
+  spans)**: built from the exact 34 GT spans v18 matched that v22 misses.
+  Key finding: the v19 trademark NEGATIVE example was over-broad — it
+  suppressed GT-labeled mark-ownership-use restrictions (Ritter "register,
+  use or claim ownership") and mark non-tarnishment (ARMSTRONGFLOORING)
+  along with the intended hygiene duties; v23 disambiguates mark-HYGIENE
+  (operational) from mark-ownership-use / non-tarnishment (items) and adds
+  verbatim positives for the recurring missed shapes (audited-statement
+  delivery, revenue remittance/commissions, all-requirements supply,
+  firm-service commitments, liability-cap fragments, post-termination
+  exhaustion, sell-off revenues subject to royalties, joint trademark
+  registration, sublicense-to-affiliates, option windows, "at cost without
+  markup"). Results (same 50 docs, seed 42, chunked, llm-dojo,
+  reasoning=none): **ko 0.8374 (best none-reasoning arm; trend 0.8168 →
+  0.8294 → 0.8374), 42 spans recovered at token level (Ritter supply,
+  PHREESIA assignment, Phasebio additional-insured) vs 31 lost**, overall
+  0.9315 (v22's 0.9512 stays the champion — v23's field variance
+  effective_date 0.917 / verified_precision 0.973 is same-surface noise,
+  not a prompt effect). Full record: `V16_PROPOSITION.md` §14.
 - **`contracts_specialist_v22` — ko-recovery rules (verbatim completeness +
   disciplined dedupe)**: the v21 span-level audit found 38 v18-matched GT
   spans lost to (1) ellipsis abbreviation (23.6% of v21 items contain

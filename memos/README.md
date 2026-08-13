@@ -18,3 +18,4 @@ remaining uncertainties.
 
 Rendered on the experiment-log site under the **memos** tab
 (https://exios66.github.io/llm-entity-extraction/).
+| [`contracts_specialist_v23.md`](contracts_specialist_v23.md) | v23 (worked-example set v2): the v19 trademark negative was over-broad (suppressed GT mark-ownership/non-tarnishment clauses); fixed + 11 verbatim positives for the residual-34 shapes — ko 0.8374 (best @none), 42 spans recovered at token level; v22 keeps the overall crown 0.9512 |

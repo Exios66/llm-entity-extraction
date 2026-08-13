@@ -651,3 +651,63 @@ chunked, Langfuse llm-dojo):
    (llm-mailroom repo); enhancements flow llm-dojo → llm-mailroom. Documented
    in AGENTS.md; prompt sync script supports both projects (v22 synced to
    llm-dojo; the llm-mailroom project is a drop-in key file away).
+
+---
+
+## 14. v23 (worked-example set v2 — the residual-34 spans) — results (2026-08-13)
+
+### 14.1 Design (from the exact 34 spans v18 matched that v22 misses)
+
+Two findings drove v23: (1) the v19 NEGATIVE example ("Sekisui shall not
+deface ... trade names") cast too wide a net — it suppressed the whole
+trademark-use class, but GT HOLDS mark-ownership-use restrictions
+(Ritter: "neither Party shall register, use or claim ownership or other
+rights in any logo, trade name") and mark non-tarnishment
+(ARMSTRONGFLOORING: "shall not tarnish or bring into disrepute the
+reputation or goodwill associated with the Seller Licensed Trademarks").
+v23 disambiguates mark-HYGIENE (operational) from mark-ownership-use and
+mark non-tarnishment (items). (2) Recurring missed shapes among the 34:
+audited-statement delivery, revenue remittance/commissions,
+all-requirements supply commitments, firm-service commitments,
+liability-cap fragments, post-termination inventory exhaustion, sell-off
+revenues subject to royalties, joint trademark registration,
+sublicense-to-affiliates, option-window restrictions, "at cost without
+markup" pricing — each added as a verbatim positive example.
+
+### 14.2 A/B result (same 50 docs, seed 42, chunked, llm-dojo, qwen3.7-flash, reasoning=none)
+
+| Metric | v21 | v22 | v23 |
+|---|---:|---:|---:|
+| key_obligations | 0.8168 | 0.8294 | **0.8374** |
+| overall | 0.9396 | **0.9512** | 0.9315 |
+| overall CI | .904-.965 | **.934-.967** | .893-.960 |
+| effective_date | 0.945 | 0.972 | 0.917 |
+| renewal_terms | 0.905 | 0.828 | 0.875 |
+| parties | 0.980 | 1.000 | 0.980 |
+| verified_precision | 0.980 | 0.991 | 0.973 |
+| rows ok / errors | 50/0 | 50/0 | 50/0 |
+| cost | $0.039 | $0.039 | $0.040 |
+
+**Token-level span motion**: 42 v22-missed spans recovered (incl. the exact
+target spans — Ritter all-requirements supply, PHREESIA assignment,
+Phasebio additional-insured) vs 31 v22-matched lost — net +11. The worked
+examples demonstrably moved the right clauses; the scored ko gains are
+smaller (+0.8pp) because embedding rescue already matched many
+semantically and the run's other-field variance (effective_date −5.6pp,
+parties, verified_precision) drags overall.
+
+### 14.3 Reading
+
+1. **ko trend at reasoning=none: 0.8168 → 0.8294 → 0.8374 (+2.1pp over two
+   iterations).** The v19-v23 content family is climbing back toward v18's
+   0.8535; the 0.8840 peak remains a max-reasoning outcome (v22×max:
+   0.8442). At none, the realistic ceiling is ~0.85 — the residual is
+   annotator-vs-model span-choice, which examples reduce but do not
+   eliminate.
+2. **v22 remains the overall champion (0.9512)**; v23's field variance
+   (effdate 0.917, verified 0.973) is within the same-surface CI band, not
+   a prompt effect. A v23×max arm (≈$0.10) is the remaining question if ko
+   is the priority.
+3. **The trademark-negative fix is validated**: mark-ownership-use and mark
+   non-tarnishment clauses are back in the extraction (Ritter, Armstrong
+   spans recovered at token level).

@@ -1941,6 +1941,85 @@ CONTRACTS_SPECIALIST_PROMPT_V22 = CONTRACTS_SPECIALIST_PROMPT_V21.replace(
      over brevity.""",
 )
 
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v23 (worked-example set v2 —
+# the residual-34 spans)
+# -----------------------------------------------------------------------------
+# v23 = v22 + the second worked-example set, built from the exact 34 GT
+# spans that v18 matched but v22 misses at token level (the §13 residual):
+#   (1) the v19 NEGATIVE example ("Sekisui shall not deface ... trade
+#       names") cast too wide a net — it suppressed the whole
+#       trademark-use class, but GT HOLDS mark-ownership/use restrictions
+#       ("neither Party shall register, use or claim ownership or other
+#       rights in any logo, trade name" — Ritter) and mark non-tarnishment
+#       ("shall not tarnish or bring into disrepute the reputation or
+#       goodwill associated with the Seller Licensed Trademarks" —
+#       ARMSTRONGFLOORING). v23 disambiguates: mark HYGIENE on goods is
+#       operational; mark-OWNERSHIP-USE and mark non-tarnishment ARE items;
+#   (2) recurring missed shapes among the 34: audited-financial-statement
+#       delivery (IPAYMENT, GOOSEHEAD), revenue remittance / commissions
+#       (GluMobile "Fox will remit all VGSL Revenue", GOOSEHEAD "receive all
+#       Commissions"), all-requirements supply commitments (Ritter
+#       "supply Sekisui with all of Sekisui's commercial requirements"),
+#       firm-service commitments (Penntex), liability-cap fragments
+#       (Healthcare, Midwest "$31,200.00"), post-termination inventory
+#       exhaustion (LEGACYTECHNOLOGY, in GT twice), sell-off revenues
+#       subject to royalties (GluMobile), joint trademark registration
+#       (Integrity), sublicense-to-affiliates (ARMSTRONGFLOORING), option-
+#       window restrictions (NEONSYSTEMS), and "at cost without markup"
+#       pricing (GpaqAcquisition) — each added as a positive example.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V23 = CONTRACTS_SPECIALIST_PROMPT_V22.replace(
+    """     NEGATIVE examples — never emit these:
+     - "Sekisui shall not deface, cover, obscure, erase, alter or remove any Qualigen
+       trade names, brand names, trademarks or logos" — trademark-hygiene and
+       product-marketing duties are operational, NOT family clauses.
+     - the same clause twice (an exact repeat, or a sentence PLUS its own fragment):
+       one operative requirement, one item.""",
+    """     + "ISO shall make available to SERVICERS annual audited financial statements
+       prepared by an independent auditing firm within 90 days of the end of each
+       fiscal year" — audited-financial-statement delivery IS an Audit Rights item.
+     + "Fox will remit all VGSL Revenue to Licensee" — a one-sentence revenue
+       remittance IS a Revenue/Profit Sharing item.
+     + "Qualigen shall supply Sekisui with all of Sekisui's commercial requirements
+       for the Product in the Applicable Markets" — an all-requirements supply
+       commitment IS an item (Exclusivity/Minimum Commitment).
+     + "Neither Party shall register, use or claim ownership or other rights in any
+       logo, trade name, brand name" — mark-OWNERSHIP-USE restrictions ARE IP
+       Ownership items.
+     + "The Company shall not tarnish or bring into disrepute the reputation of or
+       goodwill associated with the Seller Licensed Trademarks" — mark non-
+       tarnishment IS a Non-Disparagement item.
+     + "TL will trademark the series name in joint names of TL and Integrity" —
+       joint trademark registration IS a Joint IP Ownership item.
+     + "The aggregate liability of Supplier under this Agreement shall be equal to
+       the amounts paid" / "... is limited to, and shall not exceed $31,200.00" —
+       a liability cap, even as a fragment, IS a Cap On Liability item.
+     + "Upon termination, ENVISION shall have eighteen (18) months to exhaust any
+       inventories, packaging and advertising materials" — post-termination
+       exhaustion IS a Post-Termination Services item.
+     + "Arizona may sublicense the licenses granted herein to its Affiliates and
+       Third Parties in the ordinary course of business" — sublicense rights ARE
+       License Grant items.
+     + "Any revenues received by Licensee for the Wireless Products during the Sell
+       Off Period will be subject to Licensee's obligation to pay Fox Royalties" —
+       sell-off revenues subject to royalties ARE Revenue/Profit Sharing items.
+     + "the EP's services on such projects for the benefit of PFHOF shall be charged
+       to PFHOF at cost without markup" — "at cost without markup" IS a Price
+       Restriction item.
+     NEGATIVE examples — never emit these:
+     - "Sekisui shall not deface, cover, obscure, erase, alter or remove any Qualigen
+       trade names, brand names, trademarks or logos" — trademark-HYGIENE duties
+       (how a party handles marks on its goods) and product-marketing duties are
+       operational, NOT family clauses — BUT mark-ownership-use restrictions
+       ("shall not register, use or claim ownership") and mark non-tarnishment
+       clauses ARE items (see the positives above).
+     - the same clause twice (an exact repeat, or a sentence PLUS its own fragment):
+       one operative requirement, one item.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2345,6 +2424,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v20": CONTRACTS_SPECIALIST_PROMPT_V20,
     "contracts_specialist_v21": CONTRACTS_SPECIALIST_PROMPT_V21,
     "contracts_specialist_v22": CONTRACTS_SPECIALIST_PROMPT_V22,
+    "contracts_specialist_v23": CONTRACTS_SPECIALIST_PROMPT_V23,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

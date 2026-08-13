@@ -47,6 +47,7 @@ class FakeLangfuse:
         self.traces: list[dict] = []
         self.queues: list[dict] = []
         self.items: list[dict] = []
+        self.score_configs: list[dict] = []
         self.project = {"name": "llm-dojo", "id": "pj-dojo"}
         self.calls: list[str] = []
 
@@ -84,6 +85,14 @@ class FakeLangfuse:
             rows = [i for i in self.items if i.get("queueId") == queue_id
                     and (status is None or i.get("status") == status)]
             return {"data": rows, "meta": {"totalItems": len(rows)}}
+        if parts[0] == "score-configs" and method == "GET":
+            return {"data": self.score_configs}
+        if parts[0] == "score-configs" and method == "POST":
+            cfg = {"id": f"sc-{len(self.score_configs)}",
+                   "name": json_body["name"], "dataType": json_body["dataType"],
+                   "categories": json_body.get("categories", [])}
+            self.score_configs.append(cfg)
+            return cfg
         if parts[0] == "annotation-queues" and method == "POST" and parts[2:] == ["items"]:
             item = {"id": f"i-{len(self.items)}", "queueId": parts[1],
                     "objectId": json_body["objectId"], "objectType": json_body["objectType"],

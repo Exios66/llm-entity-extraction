@@ -247,6 +247,51 @@ class AnnotationQueueClient:
     def list_queues(self) -> list[dict]:
         return self._get_all("annotation-queues")
 
+    def list_score_configs(self) -> list[dict]:
+        body = self._request("GET", "score-configs")
+        return body.get("data", body if isinstance(body, list) else [])
+
+    def create_score_config(self, name: str, data_type: str,
+                            categories: list[dict] | None = None,
+                            min_value: float | None = None,
+                            max_value: float | None = None,
+                            description: str = "") -> dict:
+        body: dict[str, Any] = {"name": name, "dataType": data_type}
+        if categories:
+            body["categories"] = categories
+        if min_value is not None:
+            body["minValue"] = min_value
+        if max_value is not None:
+            body["maxValue"] = max_value
+        if description:
+            body["description"] = description
+        return self._request("POST", "score-configs", json_body=body)
+
+    def get_or_create_annotation_config(
+            self, name: str = DEFAULT_ANNOTATION_CONFIG) -> dict:
+        """The queue's review score config (idempotent by name).
+
+        Human reviewers score each trace against this config in the
+        Langfuse UI; the default is a categorical verdict
+        (correct / partial / incorrect). The public list endpoint returns
+        config ids (strings), so dict rows are matched directly and id
+        rows are expanded one-by-one (config counts are small).
+        """
+        rows = self.list_score_configs() or []
+        if rows and isinstance(rows[0], str):
+            for config_id in rows:
+                config = self._request("GET", f"score-configs/{config_id}")
+                if config.get("name") == name:
+                    return config
+        else:
+            for config in rows:
+                if config.get("name") == name:
+                    return config
+        return self.create_score_config(
+            name, "CATEGORICAL", categories=DEFAULT_ANNOTATION_CATEGORIES,
+            description="Human annotation verdict on a reviewed extraction "
+                        "trace (enqueued low performer)")
+
     def create_queue(self, name: str, description: str,
                      score_config_ids: list[str] | None = None) -> dict:
         body: dict[str, Any] = {
@@ -356,9 +401,15 @@ def build_queue(args: argparse.Namespace) -> int:
               "(nothing to enqueue)")
         return 0
 
+    score_config_ids = args.score_config_ids
+    if not score_config_ids:
+        config_obj = client.get_or_create_annotation_config()
+        score_config_ids = [config_obj["id"]]
+        logger.info("annotation_config", name=DEFAULT_ANNOTATION_CONFIG,
+                    id=config_obj["id"])
     queue = client.get_or_create_queue(args.queue_name,
                                        args.queue_description,
-                                       args.score_config_ids)
+                                       score_config_ids)
     existing = {item.get("objectId")
                 for item in client.list_queue_items(queue["id"])}
     fresh = [r for r in low if r["trace"]["id"] not in existing]
