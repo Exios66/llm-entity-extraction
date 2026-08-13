@@ -9,6 +9,20 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`sorter_v9` — the title-wins A/B (v9 WINS, +2.88pp strict)**: three
+  data-backed rules from the exact v8 residual — 23. PROMOTION TITLE WINS
+  (COLOGUARD/CO-PROMOTION/PROMOTION AND DISTRIBUTION agreements are
+  promotion despite marketing/distribution machinery), 24. OUTSOURCING
+  TITLE WINS (outsourcing-titled docs are outsourcing even when the
+  outsourced services ARE manufacturing), 25. CUSTOMIZATION SCHEDULES ARE
+  MAINTENANCE (annex inheritance for customization schedules). Same-surface
+  A/B (243-doc stratified, seed 42, qwen3.7-flash, medium, llm-dojo):
+  **strict 0.8971 → 0.9259 (+2.88pp), equiv 0.9012 → 0.9259, 25 → 18
+  fails; all three target clusters eliminated**. Cumulative v6→v9:
+  **+5.8pp strict (0.8683 → 0.9259)**. The remaining 18 fails are a 1-off
+  long tail (no cluster >2) — ~0.93 is the practical plateau on this
+  corpus revision; 0.95 needs tail-sampling iterations or a re-baseline.
+  Full record: `V16_PROPOSITION.md` §18.
 - **`sorter_v8` — the development/IP clusters A/B (v8 WINS, +2.06pp
   strict)**: two data-backed rules from the exact 8 v7 failures —
   21. DEVELOPMENT VERSUS COLLABORATION, LICENSE, AND FRANCHISE STRUCTURES

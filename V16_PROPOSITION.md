@@ -880,3 +880,47 @@ needs the 1-off tail (agency→other, license→other, sponsorship→service/
 agency) and doc_type edge cases (press-release exhibits). Honest read:
 0.95 strict on this revision is a multi-iteration target, not one more
 rule away.
+
+---
+
+## 18. Sorter v9 — promotion-title/outsourcing-title/customization-schedule rules — A/B result (2026-08-13)
+
+### 18.1 Design (from the exact v8 residual)
+
+- **Rule 23 — PROMOTION TITLE WINS**: promotion-titled docs (COLOGUARD
+  PROMOTION AGREEMENT, CO-PROMOTION AGREEMENT, PROMOTION AND
+  DISTRIBUTION AGREEMENT) are promotion despite marketing/detailing/
+  distribution machinery.
+- **Rule 24 — OUTSOURCING TITLE WINS**: outsourcing-titled docs (incl.
+  MANUFACTURING OUTSOURCING AGREEMENT) are outsourcing even when the
+  outsourced services ARE manufacturing.
+- **Rule 25 — CUSTOMIZATION SCHEDULES ARE MAINTENANCE**: a Customization
+  Schedule exhibit to a Software License, Customization and Maintenance
+  Agreement is maintenance (annex inheritance, rule 17).
+
+### 18.2 A/B result (identical 243-doc stratified surface, seed 42, qwen3.7-flash, medium, llm-dojo)
+
+| Metric | v6 | v7 | v8 | v9 | Δ v9 vs v8 |
+|---|---:|---:|---:|---:|---:|
+| strict | 0.8683 | 0.8765 | 0.8971 | **0.9259** | **+2.88pp** |
+| equiv | 0.8807 | 0.8889 | 0.9012 | **0.9259** | +2.47pp |
+| fails | 32 | 30 | 25 | **18** | −7 |
+| promotion→marketing/distributor | 6 | 0 | 3 | **0** | fixed |
+| outsourcing→manufacturing | — | — | 2 | **0** | fixed |
+| maintenance→development (schedule) | — | — | 1 | **0** | fixed |
+
+**Cumulative v6→v9: +5.8pp strict (0.8683 → 0.9259).** The remaining 18
+fails are a long tail of 1-off confusions (development→collaboration 2,
+agency→other, license→other, strategic_alliance→service,
+sponsorship→agency, development→franchise, co_branding→endorsement,
+hosting→license, outsourcing→other, supply→distributor, …) — no remaining
+cluster exceeds 2, so single-rule iterations have diminishing returns.
+
+### 18.3 Status vs the >0.95 target
+
+strict 0.9259 — within 2.4pp, but the residual is a 1-off tail plus
+per-doc judgment variance (the development→collaboration pair oscillates
+between runs at 1-2). The path to 0.95 now runs through either (a) more
+stratified-sample iterations on the tail (each worth fractions of a pp),
+or (b) accepting ~0.93 as the current-revision plateau and re-baselining
+against the 195-doc surface for the 0.95-era comparison.

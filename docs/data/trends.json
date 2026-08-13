@@ -892,6 +892,25 @@
      "function_over_form": 3,
      "other_fallback": 1
     }
+   },
+   {
+    "id": 60,
+    "experiment_name": "qwen3.7-flash_sorter_v9_subtype_langfuse",
+    "timestamp": "2026-08-13T05:00:09.718926+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v9",
+    "headline_value": 0.9259,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.125017,
+    "n_rows": 243,
+    "seed": 42,
+    "sample_key": "fb9f939d925bc6c55b500422309d7e5eeeda145ee45d91ba72c11be789899240:42:243",
+    "mode_counts": {
+     "family_confusion": 15,
+     "function_over_form": 2,
+     "other_fallback": 1
+    }
    }
   ],
   "sorter_classification": [

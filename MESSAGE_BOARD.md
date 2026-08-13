@@ -139,8 +139,8 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
 | Card | Issue | Status | Task (summary) | Owner | Target release | CHANGELOG / evidence |
 |---|---|---|---|---|---|---|
-| KANBAN-012 | [#10](https://github.com/Exios66/llm-entity-extraction/issues/10) | `backlog` | **sorter_v9 A/B (title-wins rules)** — `SORTER_PROMPT_V9` draft in the working tree (promotion-title wins, outsourcing-title wins, customization-schedules-are-maintenance) targeting the v8 243-doc A/B's 25 fails (strict 0.8971); register + test + run the same stratified surface; target strict > 0.92, verify each rule with failure-insight quotes. | unclaimed | `[Unreleased]` → v0.16.0 | v8 run: qwen3.7-flash_sorter_v8_subtype_langfuse (strict 0.8971, 25 fails); prompt draft `SORTER_PROMPT_V9` + test in working tree |
-| KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` |(https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
+| KANBAN-012 | [#10](https://github.com/Exios66/llm-entity-extraction/issues/10) | `in_progress` | **sorter_v9 A/B (title-wins rules)** — `SORTER_PROMPT_V9` draft in the working tree (promotion-title wins, outsourcing-title wins, customization-schedules-are-maintenance + rule-22 rewrite) targeting the v8 243-doc A/B's 25 fails (strict 0.8971); uncommitted: prompt constant + test + site-derived artifacts. Next: commit the registration + test, then run the same stratified surface; target strict > 0.92, verify each rule with failure-insight quotes. | opencode — 2026-08-13 | `[Unreleased]` → v0.16.0 | v8 run: qwen3.7-flash_sorter_v8_subtype_langfuse (strict 0.8971, 25 fails); `SORTER_PROMPT_V9` + test draft in `git status` (`src/prompts.py`, `tests/test_prompts.py`) |
+| KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
 | KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.16.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
 | KANBAN-006 | [#5](https://github.com/Exios66/llm-entity-extraction/issues/5) | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue): adjudicate, feed corrections into the next prompt iteration. | unclaimed | v0.16.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
 | KANBAN-008 | [#6](https://github.com/Exios66/llm-entity-extraction/issues/6) | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
@@ -157,6 +157,17 @@ v0.15.0 shipped 2026-08-12 — KANBAN-001/002/007 archived below.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-13 — opencode — board logic (all cards)** In-progress semantics
+  enforced: **work underway = `in_progress`, never `backlog`** codified as
+  procedure §4 (backlog = ZERO work started: no draft, no diff, no run in
+  flight) + the status-transition table + status-lane definitions; AGENTS.md
+  lifecycle gained the matching rule (rule 4) with the `git status` sanity
+  check. Applied immediately: **KANBAN-012 moved `backlog`→`in_progress`**
+  (owner opencode) — its `SORTER_PROMPT_V9` draft + test are in the working
+  tree right now (`src/prompts.py`, `tests/test_prompts.py`), which made the
+  `backlog` label false by definition. KANBAN-004's corrupted row (duplicate
+  cells from a bad merge) repaired. Rule for all agents: label a card
+  `in_progress` when the work starts, before the code — never after.
 - **2026-08-13 — opencode — KANBAN-003/012 + site** Board sweep: sorter_v7
   A/B landed (KANBAN-003 archived — v7 wins +0.82pp strict 0.8765, commit
   `cbb5b93`; issue #2 closed) and the user-run v8 A/B recorded (v8 wins

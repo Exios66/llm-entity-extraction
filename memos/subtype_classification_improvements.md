@@ -141,3 +141,20 @@ customization-schedule annex read as development (1), and a 1-off tail —
 the v9 rule set (promotion-title wins, outsourcing-title wins,
 customization schedules are maintenance) is designed and worth ~2-3pp;
 0.95 strict on this revision remains a multi-iteration target.
+
+---
+
+## Addendum 3 (2026-08-13): sorter v9 — the title-wins rules
+
+**Result: strict 0.8971 → 0.9259 (+2.88pp), equiv 0.9012 → 0.9259, 25 → 18
+fails on the identical 243-doc surface. Cumulative v6→v9: +5.8pp strict
+(0.8683 → 0.9259).** All three v9 targets eliminated: promotion-titled
+docs (COLOGUARD, CO-PROMOTION, PROMOTION AND DISTRIBUTION) are now
+promotion; outsourcing-titled docs (incl. MANUFACTURING OUTSOURCING
+AGREEMENT) are now outsourcing; the Customization Schedule annex is now
+maintenance.
+
+**Status vs 0.95:** 2.4pp short, with the residual now a long tail of 1-off
+confusions (no cluster above 2) plus per-doc variance — single-rule
+iterations have diminishing returns from here; ~0.93 is the practical
+plateau on this corpus revision.
