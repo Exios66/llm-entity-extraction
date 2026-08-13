@@ -42,9 +42,9 @@ to a name heuristic). `FIELD_SCORERS` dispatch table:
 | Type | Scorer | Definition |
 |---|---|---|
 | `id` | `score_id_field` | Normalize (uppercase, strip punctuation/whitespace, drop corporate suffixes) → exact match. Docket/filing/reference numbers. |
-| `date` | `score_date_field` | Parse both sides to a canonical `datetime.date` (ISO, `mm/dd/yyyy`, "March 3, 2024", ordinal prose "10th day of January 2000", OCR artifacts) → exact match. Fallbacks, in order: **containment** — the label's date phrase (month/day-level: 3+ tokens or an explicit month) appears inside the prediction, or vice versa (CUAD maps BOTH "Agreement Date" and "Effective Date" onto `effective_date`, so documents legitimately carry several dates and the labeler may hold any of them) → 1.0; **partial credit** on shared components when both sides parse — year+month → 0.67, within a 45-day cluster (execution vs defined effective date — the same agreement's date pair) → 0.67, year-only → 0.33; unparseable values fall back to `name` fuzzy matching. A bare year ("2024") never earns full credit. |
+| `date` | `score_date_field` | Parse both sides to a canonical `datetime.date` (ISO, `mm/dd/yyyy`, "March 3, 2024", ordinal prose "10th day of January 2000", OCR artifacts) → exact match. **Null-expectation rule (v20-era scorer):** a blank-template or label-only expected date ("_____ day of ________, 19____", "Effective Date:") holds no real date — the row's expectation is null: a null/empty prediction scores 1.0 (the model is CORRECT to find no date), any non-empty prediction scores 0.0. Fallbacks, in order: **containment** — the label's date phrase (month/day-level: 3+ tokens or an explicit month) appears inside the prediction, or vice versa (CUAD maps BOTH "Agreement Date" and "Effective Date" onto `effective_date`, so documents legitimately carry several dates and the labeler may hold any of them) → 1.0; **partial credit** on shared components when both sides parse — year+month → 0.67, within a 45-day cluster (execution vs defined effective date — the same agreement's date pair) → 0.67, year-only → 0.33; unparseable values fall back to `name` fuzzy matching. A bare year ("2024") never earns full credit. |
 | `money` | `score_money_field` | Strip `$`, commas, expand `K`/`M`/`B` suffixes and "USD/DOLLARS/EUROS" → float compare within **one cent** (legal amounts are exact: $250,001 ≠ $250,000). Unparseable prose falls back to `name` matching. |
-| `name` | `score_name_field` | Normalized fuzzy matching: max(Jaro-Winkler, token-set ratio), but JW is only trusted when the token sets share ≥ 1 token (JW is dangerously lenient on disjoint short-vs-long names). |
+| `name` | `score_name_field` | Normalized fuzzy matching: max(Jaro-Winkler, token-set ratio), but JW is only trusted when the token sets share ≥ 1 token (JW is dangerously lenient on disjoint short-vs-long names). **Containment first (v20-era scorer):** when EVERY expected token appears in the prediction ("FRANCHISE AGREEMENT" inside "Goosehead Insurance Agency, LLC Franchise Agreement") → 1.0 — short titles contained in longer extracted titles are matches. |
 | `free_text` | `score_free_text_field` | SQuAD-style token F1 over lowercase token multisets. |
 | `containment` | `score_containment_field` | Share of the EXPECTED text's (stopword-filtered) tokens covered by the prediction. For verbatim-clause fields whose label is one sentence of a longer passage — returning the expected sentence plus riders/citations scores 1.0. Applied automatically to `containment_fields` (`governing_law`, `term_length`, `renewal_terms`). |
 | `entity_list[:<element>]` | `score_entity_list` | Pairwise similarity matrix over predicted vs expected items, **optimal bipartite matching** (Hungarian algorithm, `scipy`; greedy fallback), threshold `bipartite_match_threshold` (0.6) → `precision = matched/n_predicted`, `recall = matched/n_expected`, `f1 = 2PR/(P+R)`. |
@@ -67,6 +67,13 @@ label set. For these fields:
   don't cut the score;
 - role-word labels ("Shipper.", "Seller", "Sponsor", ...) count as matched
   whenever the prediction names at least one party (the role is instantiated);
+- **contained labels (v20-era scorer)**: a GT label of 3-6 tokens whose
+  tokens appear VERBATIM, contiguously, inside a predicted item is also
+  instantiated — CUAD party labels are sometimes fragments of the extracted
+  name ("Consultant" inside 'Timothy Cabrera ("Consultant")', the pronoun
+  alias '"we," "us," or "our"' inside 'Goosehead Insurance Agency, LLC
+  ("we," "us," or "our")'). Matched unconditionally (no party-presence
+  gate needed — the containing item is the evidence);
 - raw precision/recall/F1 are always kept in `entity_list_scores` for audit.
 
 **Ambiguous band** `[0.5, 0.85]` — per-field scores inside the band set

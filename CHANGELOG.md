@@ -9,6 +9,32 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`contracts_specialist_v20` — non-obligation field fidelity (rules
+  validated; arm ko-variance-dominated)**: four surgical prompt rules from
+  the v19 per-field audit — renewal_terms EVERGREEN CLAUSES ("shall
+  continue in full force and effect thereafter until terminated by N days'
+  notice" — no "renew" word needed) + DEAL-TERMS TABLES; term_length
+  DEFINED-TERM SENTENCES (carve-out of the no-definitions rule); governing
+  law regulatory-jurisdiction sentences; termination_clauses REDACTED
+  SECTIONS (heading + "[***]" marker). Same-scorer re-score (embedding
+  off, both arms): **renewal_terms +4.5pp, termination_clauses +5.4pp** on
+  target; official overall 0.9142 vs 0.9135 (tie) because ko −7.3pp was
+  diffuse run variance (2 up vs 14 down, 34 flat — docs the rules never
+  touch) + one parse-error row per arm. **Not adopted as champion** (v19
+  holds ko 0.8840); next step v21 = v19 content + v20 field rules.
+- **Scorer fixes (field_scoring.py, ADOPTED — all future runs)**: (1)
+  blank-template/label-only expected dates ("_____ day of ________,
+  19____", "Effective Date:") are null expectations — a null prediction
+  scores 1.0 (3 of 5 v19 zero-date docs); (2) partial-GT party labels whose
+  tokens appear verbatim in a predicted item are instantiated (role and
+  pronoun labels: "Consultant", "Member", '"we," "us," or "our"' — 3 of 4
+  v19 zero-parties docs; parties 0.918→1.000 on v20); (3) name fields score
+  full token-containment → 1.0 (document_name 0.960→0.991 on v20).
+  Historical records keep their stored scores; SCORING.md §3 documents the
+  rules. Full record: `V16_PROPOSITION.md` §11.
+- **Research memo `memos/contracts_specialist_v20.md`**: the field-fidelity
+  iteration (scorer correctness fixes + field-rule validation), linked from
+  the memos README and shipped on the site's memos tab.
 - **`contracts_specialist_v19` — worked span examples + span discipline
   (flash-line ko champion)**: v18's residual (93/241 token-unmatched GT
   spans license-shaped, only 25/107 with naive "grants ... a license"

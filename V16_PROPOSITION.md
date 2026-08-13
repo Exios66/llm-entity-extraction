@@ -440,3 +440,74 @@ The single −0.846 is the Ediets EX-10.4 parse error (see below).
 - **Spend**: $0.098 for the 50-doc surface; total session spend across all
   v18/v19 arms ≈ $0.29 estimated (OpenRouter ledger $0.39 across 14/49
   runs).
+
+---
+
+## 11. v20 (non-obligation field fidelity) — field gains validated, ko variance-dominated (2026-08-12)
+
+### 11.1 Design (from the v19 per-field failure audit)
+
+The v19 overall is dragged by non-obligation fields: effective_date 5 docs
+at 0.0 (blank-template GT — "_____ day of ________, 19____", "Effective
+Date:" — where the model's null answer is CORRECT), parties 4 docs at 0.0
+(role/pronoun labels: "Consultant", "Member", '"we," "us," or "our"'),
+renewal_terms 2 docs at 0.0 (evergreen clauses that never say "renew";
+deal-terms tables), governing_law 2 docs near-0 (regulatory-jurisdiction
+sentence), term_length (defined-Term sentence), termination_clauses
+(redacted section "[***]"). Three surgical SCORER fixes + four surgical
+prompt rules:
+
+- **Scorer (field_scoring.py, affects all future runs; historical records
+  keep their stored scores):**
+  1. `score_date_field`: blank-template / label-only expected dates are null
+     expectations — null prediction = 1.0 (3 of the 5 zero docs fixed;
+     SPRINGBANK's OCR-mangled real date "7t h day of April, 2020." stays a
+     genuine miss).
+  2. `score_entity_list` (partial_gt): a GT label whose 3-6 tokens appear
+     verbatim inside a predicted item is instantiated — fixes the
+     "Consultant"/"Member"/pronoun-alias party labels (3 of 4 zero docs).
+  3. `score_name_field`: full token-containment of the expected in the
+     predicted → 1.0 (GOOSEHEAD "FRANCHISE AGREEMENT" inside the long
+     title; LOYALTYPOINT's genuinely different title stays low).
+- **Prompt (v20 = v19 + four rules):** renewal_terms EVERGREEN CLAUSES +
+  DEAL-TERMS TABLES; term_length DEFINED-TERM SENTENCES (carved out of the
+  existing no-definitions rule); governing_law regulatory-jurisdiction
+  sentences; termination_clauses REDACTED SECTIONS (heading + marker).
+
+### 11.2 A/B result (same 50 docs, chunked, seed 42, Langfuse llm-dojo, qwen3.7-flash × max reasoning)
+
+Official records (v19 old-scorer vs v20 new-scorer — scorer deltas below
+isolated by a no-embedding re-score of both arms with the SAME new scorer):
+
+| Metric | v19 | v20 | Δ official | Δ same-scorer |
+|---|---|---|---|---|
+| overall | 0.9135 | 0.9142 | +0.07pp | +0.49pp |
+| key_obligations | 0.8840 | 0.8113 | **−7.3pp** | −5.6pp |
+| parties | 0.918 | **1.000** | +8.2pp | +2.0pp (scorer) |
+| document_name | 0.960 | **0.991** | +3.1pp | +3.1pp (scorer) |
+| effective_date | 0.865 | 0.802 | −6.3pp | +2.1pp (scorer) |
+| renewal_terms | 0.816 | 0.861 | +4.5pp | +4.5pp (prompt) |
+| termination_clauses | 0.938 | 0.867 | −7.1pp | **+5.4pp (prompt)** |
+| term_length | 0.968 | 0.966 | −0.2pp | −0.2pp |
+| governing_law | 0.932 | 0.919 | −1.3pp | −1.3pp |
+| verified_precision | 0.988 | 0.987 | −0.1pp | — |
+| tokens / cost | 1.52M / $0.098 | 1.46M / $0.094 | — | — |
+
+**ko motion v19→v20: 2 up vs 14 down, 34 flat** — the −7.3pp ko is diffuse
+across docs the v20 rules never touch (HPIL, a v19 worked-example winner,
+1.0→0.5; EcoScience 1.0→0.5), i.e. max-reasoning run variance on a prompt
+whose ko-relevant text is unchanged, plus one parse-error row per arm
+(v19: Ediets; v20: MidwestEnergyEmissions — the max-reasoning reliability
+cost documented in §10.3).
+
+### 11.3 Verdict
+
+- **Scorer fixes ADOPTED** (correctness: blank-template dates, role/pronoun
+  party labels, contained titles) — they raise the floor for every future
+  run; SCORING.md §3 updated.
+- **v20 field rules VALIDATED on their targets** (renewal +4.5pp,
+  termination_clauses +5.4pp same-scorer) but the arm is ko-variance-
+  dominated: v20 as a whole is NOT a champion (ko 0.8113 < v19 0.8840).
+- **Next step: v21 = v19's ko content + v20's four field rules** (one
+  ~$0.10 arm) to test whether the field gains survive at v19's ko level;
+  reasoning_effort=none variant recommended to retire the parse-error risk.

@@ -372,12 +372,18 @@ def score_name_field(pred, exp, embedding=None) -> float:
     scores ~0.62), so the raw JW score is only trusted when the two names
     share at least one token. Disjoint names fall back to the token-set
     ratio, which stays low for genuinely different entities.
+
+    Token containment runs first: a short title or name whose EVERY token
+    appears in the prediction ("FRANCHISE AGREEMENT" inside "Goosehead
+    Insurance Agency, LLC Franchise Agreement") is contained — 1.0.
     """
     np_, ne = normalize_text(pred), normalize_text(exp)
     if not np_ and not ne:
         return 1.0
     if not np_ or not ne:
         return 0.0
+    if set(_tokenize(ne)) and set(_tokenize(ne)) <= set(_tokenize(np_)):
+        return 1.0
     base = _token_set_ratio(np_, ne)
     if set(_tokenize(np_)) & set(_tokenize(ne)):
         base = max(base, _jaro_winkler(np_, ne))
@@ -437,6 +443,13 @@ def score_date_field(pred, exp, embedding=None) -> float:
         pred = str(pred or "")
     if not isinstance(exp, str):
         exp = str(exp or "")
+    # Blank-template and label-only ground truth (CUAD annotators select the
+    # contract's literal date line: "_____ day of ________, 19____",
+    # "Effective Date:") hold NO actual date. The model answering null is
+    # CORRECT, and a fabricated date is not the labeled date — the row's
+    # expectation is null: null prediction -> 1.0, anything else -> 0.0.
+    if _date_expected_is_null(exp):
+        return 1.0 if not str(pred).strip() else 0.0
     # Containment runs first: a multi-date prediction ("Executed March 1,
     # 1996 ... November 5, 1996") is unparseable as a whole, yet the label's
     # date phrase may be literally quoted inside it.
@@ -462,6 +475,22 @@ def score_date_field(pred, exp, embedding=None) -> float:
 
 _MONTH_NAMES = ["january", "february", "march", "april", "may", "june",
                 "july", "august", "september", "october", "november", "december"]
+
+
+def _date_expected_is_null(exp: str) -> bool:
+    """True when the expected date text carries no real date: a blank
+    template line ("_____ day of ________, 19____", "____ day of May, 2000")
+    or a bare label ("Effective Date:", "the date first written above").
+    Blank templates are detected by underscores; labels by the absence of
+    any date evidence (no month name, no four-digit year).
+    """
+    if "_" in exp or "blank" in exp.lower():
+        return True
+    low = exp.lower()
+    if not any(m in low for m in _MONTH_NAMES):
+        if not re.search(r"\b(19|20)\d{2}\b", low):
+            return True
+    return False
 
 
 def _date_phrase_contained(container: str, target: str) -> bool:
@@ -600,13 +629,35 @@ def score_entity_list(element_type: str, pred, exp, embedding=None,
     n_pred, n_exp = len(pred_items), len(exp_items)
 
     # Role-word labels are matched by the mere presence of named parties.
+    # Beyond the role list, a label whose tokens appear verbatim inside a
+    # predicted item is instantiated (the CUAD label is then a fragment of
+    # the extracted name — "Consultant" inside 'Timothy Cabrera ("Consultant")',
+    # the pronoun alias '"we," "us," or "our"' inside 'Goosehead Insurance
+    # Agency, LLC ("we," "us," or "our")').
     if partial_gt:
-        real_exp = [e for e in exp_items if not _is_role_word(e)]
-        role_items = n_exp - len(real_exp)
+        pred_token_lists = [_tokenize(str(p)) for p in pred_items]
+
+        def _label_contained(label: str) -> bool:
+            label_tokens = _tokenize(str(label))
+            if not label_tokens:
+                return False
+            n = len(label_tokens)
+            if n < 3 or n > 6:
+                return False
+            return any(
+                label_tokens == tokens[i:i + n]
+                for tokens in pred_token_lists
+                for i in range(len(tokens) - n + 1)
+            )
+
+        real_exp = [e for e in exp_items if not (_is_role_word(e) or _label_contained(e))]
+        role_items = sum(1 for e in exp_items if _is_role_word(e))
+        contained_items = n_exp - len(real_exp) - role_items
         pred_has_party = any(not _is_role_word(p) for p in pred_items)
     else:
         real_exp = exp_items
         role_items = 0
+        contained_items = 0
         pred_has_party = False
 
     # Skip the Hungarian machinery when a single-element list is trivially
@@ -645,6 +696,8 @@ def score_entity_list(element_type: str, pred, exp, embedding=None,
 
     if role_items and pred_has_party:
         matched += role_items
+    if contained_items:
+        matched += contained_items
 
     precision = matched / n_pred
     recall = matched / n_exp

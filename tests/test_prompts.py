@@ -204,3 +204,43 @@ def test_contracts_v19_worked_examples_and_span_discipline():
     v18 = CONTRACTS_SPECIALIST_PROMPT_V18
     assert "WORKED SPAN EXAMPLES" not in v18
     assert "SPAN DISCIPLINE" not in v18
+
+
+def test_contracts_v20_non_obligation_field_fidelity():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V19,
+        CONTRACTS_SPECIALIST_PROMPT_V20,
+    )
+
+    # v20 is a strict derivation of v19: the base is untouched, the derived
+    # prompt adds the four non-obligation field rules from the v19 per-field
+    # failure audit (renewal_terms, term_length, governing_law,
+    # termination_clauses).
+    assert CONTRACTS_SPECIALIST_PROMPT_V20 != CONTRACTS_SPECIALIST_PROMPT_V19
+    assert CONTRACTS_SPECIALIST_PROMPT_V20.startswith(CONTRACTS_SPECIALIST_PROMPT_V19[:300])
+    assert "contracts_specialist_v20" in PROMPT_VERSIONS
+
+    v20 = CONTRACTS_SPECIALIST_PROMPT_V20
+    # renewal_terms: evergreen clauses + deal-terms tables.
+    assert "EVERGREEN CLAUSES" in v20
+    assert "shall continue in full force and effect thereafter" in v20
+    assert "DEAL-TERMS TABLES" in v20
+    # term_length: defined-Term sentences carve out of the existing
+    # no-definitions rule.
+    assert "DEFINED-TERM SENTENCES" in v20
+    assert "DEFINES THE TERM ITSELF" in v20
+    assert "do NOT answer with the definition of a defined term" in v20
+    # governing_law: regulatory-jurisdiction sentences included.
+    assert "regulatory-jurisdiction" in v20
+    assert "Canadian Radio-television and Telecommunications" in v20
+    # termination_clauses: redacted sections still count via heading+marker.
+    assert "REDACTED SECTIONS" in v20
+    assert "Termination for\n     Convenience. [***]." in v20 or "Termination for Convenience. [***]." in v20
+    # v19's worked examples and span discipline are intact.
+    assert "WORKED SPAN EXAMPLES" in v20
+    assert "SPAN DISCIPLINE" in v20
+    # v19 predates the field rules.
+    v19 = CONTRACTS_SPECIALIST_PROMPT_V19
+    assert "EVERGREEN CLAUSES" not in v19
+    assert "DEFINED-TERM SENTENCES" not in v19
+    assert "REDACTED SECTIONS" not in v19

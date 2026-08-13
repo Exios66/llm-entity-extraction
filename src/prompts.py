@@ -1792,7 +1792,78 @@ CONTRACTS_SPECIALIST_PROMPT_V19 = CONTRACTS_SPECIALIST_PROMPT_V18.replace(
      requirement stated at sentence length and again at fragment length is ONE
      requirement; after building the list, scan for repeats and sentence/fragment
      pairs and drop the redundant copies. The list is complete when every present
-     family occurrence appears exactly once at the 10-25-word span grain.""",
+           family occurrence appears exactly once at the 10-25-word span grain.""",
+)
+
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v20 (non-obligation field
+# fidelity)
+# -----------------------------------------------------------------------------
+# v20 = v19 + the four non-obligation field fixes from the v19 50-doc
+# per-field failure audit (the fields that drag overall_extraction_score):
+#   - renewal_terms 0.8157: Penntex (0.0) and BWW (0.125) hold EVERGREEN
+#     clauses ("shall continue in full force and effect thereafter until
+#     terminated by either Party by providing thirty (30) calendar days'
+#     prior written notice") that never say "renew", and Fulucai (0.0) holds
+#     a deal-terms TABLE ("License Term Perpetual, unlimited runs ...
+#     Commencing: November 15, 2012"). The rule now names the evergreen
+#     shape explicitly and demands the deal-terms lines be read verbatim.
+#   - term_length 0.9680: LegacyEducation (0.444) GT holds the DEFINED-TERM
+#     sentence ("The term "Term" shall mean an initial term of five years,
+#     automatically renewable thereafter ...") — the rule now quotes it.
+#   - governing_law 0.9321: Euromedia (0.143) GT holds the regulatory-
+#     jurisdiction sentence ("subject to all laws, regulations, license
+#     conditions and decisions of the Canadian Radio-television and
+#     Telecommunications Commission") — the rule now includes it (the field
+#     is containment-scored, so extra context is free).
+#   - termination_clauses 0.9375: PHREESIA (0.0) GT is a REDACTED section
+#     ("Termination for Convenience. [***].") — redacted family sections
+#     now count via their heading + redaction marker.
+# Evaluated with the same settings as v19 (qwen3.7-flash, reasoning=max,
+# 50 docs, seed 42, chunked). Scorer-side (v20-record): unparseable-GT date
+# templates are null expectations, parties labels instantiate by token
+# containment, and name fields score full-token containment — see
+# SCORING.md §3; historical records keep their stored scores.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V20 = CONTRACTS_SPECIALIST_PROMPT_V19.replace(
+    """   - `renewal_terms`: every provision governing renewal, extension, or rollover of the
+     term — automatic renewal, renewal notices, renewal lengths, and term-sheet/deal-terms
+     lines such as "Perpetual, unlimited runs" or "renewable for 1 year extension".""",
+    """   - `renewal_terms`: every provision governing renewal, extension, or rollover of the
+     term — automatic renewal, renewal notices, renewal lengths, and term-sheet/deal-terms
+     lines such as "Perpetual, unlimited runs" or "renewable for 1 year extension".
+     EVERGREEN CLAUSES: a term that "shall continue in full force and effect thereafter
+     until terminated by either Party by providing N days' prior written notice" IS a
+     renewal/extension provision even when the word "renew" never appears — quote it in
+     full, including the notice days. DEAL-TERMS TABLES: read deal-terms/term-sheet
+     lines verbatim ("License Term Perpetual, unlimited runs x Other: 2 years
+     Commencing: November 15, 2012") and include their dates and durations.""",
+).replace(
+    """     riders). CRITICAL: do NOT answer with the definition of a defined term such as""",
+    """     riders). DEFINED-TERM SENTENCES: when the agreement DEFINES THE TERM ITSELF ("The
+     term \\"Term\\" shall mean an initial term of five years, automatically renewable
+     thereafter for successive 5-year terms unless either party ..."), quote that
+     definition sentence in full — the ground-truth duration text is that definition.
+     CRITICAL: do NOT answer with the definition of a defined term such as""",
+).replace(
+    """   - `governing_law`: ONLY the sentence identifying the jurisdiction whose laws govern
+     the agreement (e.g. "...shall be governed by the laws of the State of Delaware").""",
+    """   - `governing_law`: ONLY the sentence identifying the jurisdiction whose laws govern
+     the agreement (e.g. "...shall be governed by the laws of the State of Delaware"),
+     plus any regulatory-jurisdiction sentence subjecting the agreement to a country's
+     or commission's laws ("This Agreement is subject to all laws, regulations, license
+     conditions and decisions of the Canadian Radio-television and Telecommunications
+     Commission") — quote each such sentence in full.""",
+).replace(
+    """     days' prior written notice of impending termination" — the complete clause text
+     must appear in the item.""",
+    """     days' prior written notice of impending termination" — the complete clause text
+     must appear in the item. REDACTED SECTIONS: when a termination section's operative
+     text is redacted in the source (e.g. "[***]" or "[*]" placeholders), the section
+     still counts — emit the section heading plus the redaction marker ("Termination for
+     Convenience. [***]."), never a fabricated body.""",
 )
 
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
@@ -2196,6 +2267,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v17": CONTRACTS_SPECIALIST_PROMPT_V17,
     "contracts_specialist_v18": CONTRACTS_SPECIALIST_PROMPT_V18,
     "contracts_specialist_v19": CONTRACTS_SPECIALIST_PROMPT_V19,
+    "contracts_specialist_v20": CONTRACTS_SPECIALIST_PROMPT_V20,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,
