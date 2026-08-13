@@ -17,6 +17,90 @@ never exact-match-on-extraction. The agents are pip-installable
 (`pip install -e .`) so llm-mailroom's LangGraph architecture imports and
 calls them directly; prompt versions are the experiment identity.
 
+## Agent message board — READ THIS FIRST, EVERY SESSION
+
+`MESSAGE_BOARD.md` (repo root) is the living Kanban canvas shared by ALL
+agents working in this repository: backlog / in_progress / blocked /
+in_review / done lanes, a discussion log, and an audit archive. It is the
+only place where cross-agent task state lives. **Every task, objective, or
+experimental run in this repository MUST have a card, and every card MUST
+be kept current with timestamps. An agent is NOT done until its card says
+so.**
+
+### Mandatory lifecycle (every card, every time)
+
+1. **Read the board FIRST** — before starting ANY task, before writing any
+   code, and before committing anything. Check the Kanban table AND the
+   discussion log: never duplicate or race a claimed card.
+2. **No card = no work.** If your task has no card, create one (next free
+   `KANBAN-00N`), add it to the Kanban table, and claim it — in the SAME
+   session you start the work, not after.
+3. **Claim with a timestamp.** A card in `backlog` is claimed by setting
+   Owner (agent name) + claimed date, moving it to `in_progress`, and
+   posting a dated discussion entry (e.g. `**2026-08-12 — sorter-agent —
+   KANBAN-003** claimed; running the 250-doc A/B now`). ONE owner per card.
+4. **Every lane change carries a timestamp.** When a card moves
+   (`backlog` → `in_progress` → `blocked` / `in_review` / `done`), update
+   the card's Status AND its timestamp column/entry, and say what happened
+   on the discussion board. Timestamps are `YYYY-MM-DD` and must match the
+   day the change happened, not the day you remember it.
+5. **Update DURING work, not only at the end.** Post to the discussion board
+   at every material event: decision made, result obtained, blocker hit,
+   scope changed, handoff to another agent. A silent agent is an untrusted
+   agent.
+6. **Blocked = post the blocker.** Move the card to `blocked` with the
+   specific blocker (missing key, waiting on a dataset, dependent on
+   KANBAN-00N) and a timestamp. Name what unblocks it.
+7. **Completed = post the proof BEFORE claiming done.** A card may move to
+   `done` only when ALL of: (a) work verified (tests pass / A/B run /
+   release gate), (b) `CHANGELOG.md` `[Unreleased]` entry exists in the
+   same commit that ships the work, (c) the card was moved to the Archive
+   with its shipped version, commit and key result, (d) the discussion
+   entry is timestamped.
+8. **Finish protocol — the LAST action of every task/run.** Before a task,
+   objective, or experimental run is declared finished: update your Kanban
+   entry — move it to the correct status (`done` / archive for completed
+   work, `blocked` if it ended stuck), record the timestamp, update the
+   Owner/result fields, and post the closing discussion entry. Only then
+   report completion to the user.
+9. **Fresh session? Fresh read.** At the start of every new session (or
+   after returning to the repo), re-read the board and the discussion log
+   — other agents may have moved your cards, blocked your dependencies, or
+   reused your experiment names.
+10. **Experiments specifically:** the claim, the run, and the closing entry
+    must ALL be on the board. Never close out an experimental run without
+    (a) the run's KANBAN status + result timestamped, (b) the
+    `reports/experiment_log.{jsonl,md}` regeneration, and (c) the
+    CHANGELOG tie-in — in that order.
+
+### Best practices (explicit)
+
+- **One owner at a time.** Never start work on a card owned by another
+  agent. Offer help on the discussion board; take over only by handoff.
+- **Build off cards, never around them.** If a card your work depends on is
+  `in_progress` elsewhere, wait or coordinate — do not fork the work.
+- **Discussion log is append-only.** Newest at top, always timestamped,
+  always card-referenced (`KANBAN-00N`). Never edit a past entry — post a
+  correction.
+- **Reopenings are visible.** A `done`/archived card can be reopened by
+  moving it back to `backlog` with a timestamped post explaining why
+  (regression, new data, superseded assumption). History is never deleted —
+  reopen, don't rewrite.
+- **Archive is the audit trail.** Closed cards LIVE in the Archive — they
+  leave the open Kanban table so the table shows ONLY open work. Never
+  delete a card; moving to Archive IS the record.
+- **Semver sync always.** Cards name their target release; when a release
+  ships (`scripts/release.py --bump`), sweep the board in the same session:
+  landed cards → Archive under that version (timestamped), open cards →
+  re-targeted to the next release. The board and `CHANGELOG.md` must never
+  disagree.
+- **Commits reference cards.** Message format: `MESSAGE BOARD: KANBAN-00N
+  claimed/moved/done` or `KANBAN-00N (sorter_v7): <summary>` so git history
+  maps to the board.
+- **Conflict rule.** If two agents updated the same card, the later
+  timestamp wins the lane; the overwritten party posts a reconciliation
+  entry rather than reverting blindly.
+
 ## Environment & setup
 
 - Python 3.10+ (tested on 3.13). Deps in `requirements.txt`; the repo is also
@@ -242,7 +326,9 @@ accounting). The rules below are the invariants:
    comparisons — never compare across different samples.
 8. **Log & document** — verify the record in `reports/experiment_log.jsonl`
    (see "After every run" below), then update `CHANGELOG.md` (see "Release
-   workflow").
+   workflow"). Then close out the run on the message board: move its KANBAN
+   card to the correct status with a timestamp and a dated discussion entry
+   (result, scores, verdict) BEFORE reporting the run as finished.
 
 ## After every run (experiment log upkeep)
 
@@ -262,6 +348,9 @@ git add reports/experiment_log.jsonl reports/experiment_log.md docs/data
 git commit -m "EXPERIMENT: <experiment_name>"
 git push origin main
 ```
+
+Before declaring the run finished: timestamped card update + discussion
+entry on `MESSAGE_BOARD.md` (see the message board section above).
 
 **Mirror sync into llm-mailroom** (the synced copy at
 `docs/reports/experiments/experiment_log.md` + its own GH Pages sync):
@@ -326,6 +415,8 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
    section), `docs/README.md` (the site's own doc), `SCORING.md` (formula/
    metric changes), and this `AGENTS.md` itself (workflow/architecture
    changes). Never skip docs that describe the thing that changed.
+   Sweep `MESSAGE_BOARD.md`: move shipped cards to the Archive under this
+   version, re-target open cards to the next release.
 4. **Regenerate derived artifacts** — `render_experiment_log.py` (new runs)
    + `scripts/site/build_site.py` (site data) + the headless render audit
    (`node tests/assets/site_render_audit.js`).
@@ -506,6 +597,8 @@ changing any agent/graph code.
   `config/README.md`, `scripts/README.md`, `tests/README.md`,
   `reports/README.md`, `docs/README.md` (site), plus the root `README.md` —
   keep them current when the layout or a module's contract changes.
+  `MESSAGE_BOARD.md` is the shared agent task canvas — keep it current on
+  EVERY task, not just releases (see the message board section above).
 - The project **wiki** is version-controlled in `wiki/` (Home,
   Getting-Started, Architecture, Eval-Runners, Experiment-Log, Scoring, Site,
   Release-Process, Taxonomy, FAQ) and pushed to the public GitHub wiki with

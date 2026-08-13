@@ -314,6 +314,32 @@ VALID CONTRACT SUBTYPE KEYS (the ONLY values contract_subtype may take when doc_
 
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v7 (O&M consortia, development-over-
+# license, promotion guard)
+# -----------------------------------------------------------------------------
+# v7 = v6 + the three remaining confusion clusters from the v6 509-doc
+# full-corpus run (qwen3.7-flash_sorter_v6_subtype_langfuse: strict 0.9312,
+# 35 fails): maintenance->joint_venture (2) and maintenance->service (1)
+# are shared-infrastructure O&M consortia (submarine cable, facility, rail
+# "Operation and Maintenance" agreements) whose joint governance machinery
+# overrode the maintenance core; development->license (3) are development
+# agreements whose license grants for the developed IP read as license;
+# promotion->marketing (2) and promotion->distributor (1) are promotion
+# agreements whose marketing/distribution machinery overrode the promotion
+# title. Target: strict > 0.95 on the 250-doc stratified A/B.
+# =============================================================================
+
+SORTER_PROMPT_V7 = SORTER_PROMPT_V6.replace(
+    """17. ANNEX INHERITANCE: a schedule, exhibit, addendum, or rider attached to a parent agreement belongs to the FAMILY OF THE PARENT agreement named in its header or incorporated terms (a "Product License Schedule" or "Customization Schedule" to a "Software License, Customization and Maintenance Agreement" -> maintenance). Do not re-classify the family from a schedule\'s own title.""",
+    """18. CONSORTIUM O&M IS MAINTENANCE: a shared-infrastructure "Operation and Maintenance" agreement (a submarine-cable consortium, a facility O&M, a rail or pipeline O&M) is MAINTENANCE even when it carries joint-governance machinery — a management committee, proportional voting interests, shared capital and O&M cost allocation, common undivided ownership. The governance wrapper is how the consortium runs the O&M; it does not make the agreement a joint_venture ("TAT-14 submarine cable O&M agreement" -> maintenance, not joint_venture; a rail "Operation and Maintenance Agreement" -> maintenance, not service).
+
+19. DEVELOPMENT OVER LICENSE: when an agreement combines development machinery — a development plan, milestones or trial timelines, a joint steering/R&D committee, development funding, development-stage IP provisions — with license grants for the DEVELOPED IP, development wins: a license grant is the delivery mechanism for developed products, not the family ("Development Agreement" with a license for the developed technology -> development, not license; a license-and-customization agreement with a development plan -> development).
+
+20. PROMOTION GUARD: an agreement whose title names promotion ("Promotion Agreement") or whose operative core is promotional services, placement, and marketing of products IS promotion — its own family — even when it also carries marketing or distribution machinery ("Promotion Agreement" with sales/distribution terms -> promotion, not marketing and not distributor).""",
+)
+
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2393,6 +2419,7 @@ PROMPT_VERSIONS = {
     "sorter_v4": SORTER_PROMPT_V4,
     "sorter_v5": SORTER_PROMPT_V5,
     "sorter_v6": SORTER_PROMPT_V6,
+    "sorter_v7": SORTER_PROMPT_V7,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

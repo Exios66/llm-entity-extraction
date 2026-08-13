@@ -57,6 +57,29 @@ def test_extractor_v5_truncation_and_full_clause_rules():
     assert "third-party beneficiary" in prompt
 
 
+def test_sorter_v7_data_backed_rules():
+    from src.prompts import SORTER_PROMPT_V6, SORTER_PROMPT_V7
+
+    # v7 is a strict derivation of v6: the base is untouched, the derived
+    # prompt adds the three rules for the v6 509-doc confusion clusters.
+    assert SORTER_PROMPT_V7 != SORTER_PROMPT_V6
+    assert SORTER_PROMPT_V7.startswith(SORTER_PROMPT_V6[:300])
+    assert "sorter_v7" in PROMPT_VERSIONS
+
+    v7 = SORTER_PROMPT_V7
+    assert "18. CONSORTIUM O&M IS MAINTENANCE" in v7
+    assert "submarine-cable consortium" in v7
+    assert "19. DEVELOPMENT OVER LICENSE" in v7
+    assert "delivery mechanism for developed products" in v7
+    assert "20. PROMOTION GUARD" in v7
+    assert "not marketing and not distributor" in v7
+    # The option list is intact and the rule set ends before it.
+    assert "VALID CONTRACT SUBTYPE KEYS" in v7
+    # v6 predates the three rules.
+    assert "CONSORTIUM O&M IS MAINTENANCE" not in SORTER_PROMPT_V6
+    assert "PROMOTION GUARD" not in SORTER_PROMPT_V6
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt

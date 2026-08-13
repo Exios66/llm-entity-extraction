@@ -8,7 +8,16 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
-> contracts specialist v19–v23 arms, sorter failure queue, memos tab + wiki trace reader, scorer fixes, rescore pipeline
+### Added
+- **`sorter_v7` — data-backed rules for the v6 confusion clusters
+  (KANBAN-001)**: registered prompt with three rules targeting the v6
+  509-doc full-corpus fails (strict 0.9312, 35 fails): consortium O&M →
+  maintenance (shared-infrastructure governance wrappers do not make an
+  agreement a joint_venture), development-over-license (development
+  machinery wins over license grants for the developed IP), and the
+  promotion guard (promotion title/core is its own family, not marketing or
+  distributor). Constant + `PROMPT_VERSIONS` entry + unit test landed;
+  evaluation is pending the 250-doc stratified A/B (board KANBAN-003).
 
 ## [v0.15.0] - 2026-08-12
 

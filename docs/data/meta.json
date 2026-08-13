@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-13T04:09:00.778721+00:00",
+ "built_at": "2026-08-13T04:30:29.654739+00:00",
  "surfaces": [
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -10,19 +10,20 @@
   "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30",
   "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
-  "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5"
+  "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
+  "fb9f939d925bc6c55b500422309d7e5eeeda145ee45d91ba72c11be789899240:42:243"
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 56,
+ "run_count": 57,
  "tasks": {
   "contract_entity_extraction": 27,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 11,
+  "subtype_classification": 12,
   "sorter_classification": 2
  },
  "models": {
-  "qwen/qwen3.7-flash": 54,
+  "qwen/qwen3.7-flash": 55,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -39,7 +40,7 @@
   "sorter_v5 + contracts_specialist_v10": 1,
   "sorter_v5 + contracts_specialist_v11": 1,
   "sorter_v5": 3,
-  "sorter_v6": 5,
+  "sorter_v6": 6,
   "sorter_v6 + contracts_specialist_v11": 6,
   "contracts_specialist_v11": 3,
   "sorter_v6 + contracts_specialist_v12": 2,
@@ -56,10 +57,10 @@
   "contracts_specialist_v22": 2,
   "contracts_specialist_v23": 2
  },
- "n_rows": 3305,
- "n_ok": 3303,
+ "n_rows": 3548,
+ "n_ok": 3546,
  "n_error": 2,
- "total_tokens": 47625351,
+ "total_tokens": 50775205,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 53,
@@ -112,18 +113,18 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 11,
+   "runs": 12,
    "best": {
     "run_id": 20,
     "value": 1.0
    },
-   "median": 0.841,
+   "median": 0.84975,
    "worst": {
     "run_id": 15,
     "value": 0.7897
    },
-   "documents": 2293,
-   "tokens": 26006595
+   "documents": 2536,
+   "tokens": 29156449
   },
   "sorter_classification": {
    "runs": 2,
@@ -367,269 +368,5 @@
    "scoring_md": "https://github.com/Exios66/llm-entity-extraction/blob/main/SCORING.md",
    "agents_md": "https://github.com/Exios66/llm-entity-extraction/blob/main/AGENTS.md"
   }
- },
- "costs": {
-  "source": "openrouter_activity_2026-08-11.csv",
-  "api_key": "Laptop v3",
-  "export": {
-   "start": "2026-08-09 21:51:30",
-   "end": "2026-08-10 05:29:39"
-  },
-  "per_run": {
-   "4": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 415,
-     "total": 425
-    },
-    "tokens": {
-     "prompt": 140026,
-     "completion": 28581,
-     "cached": 0
-    },
-    "cost_total_usd": 0.00740400000000004,
-    "cost_avg_per_doc_usd": 0.000740400000000004,
-    "tokens_avg_per_doc": 16860.7
-   },
-   "5": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 1214,
-     "total": 1224
-    },
-    "tokens": {
-     "prompt": 202590,
-     "completion": 28213,
-     "cached": 0
-    },
-    "cost_total_usd": 0.008216999999999969,
-    "cost_avg_per_doc_usd": 0.0008216999999999969,
-    "tokens_avg_per_doc": 23080.3
-   },
-   "6": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 1814,
-     "total": 1824
-    },
-    "tokens": {
-     "prompt": 315435,
-     "completion": 42724,
-     "cached": 0
-    },
-    "cost_total_usd": 0.012519999999999953,
-    "cost_avg_per_doc_usd": 0.0025039999999999906,
-    "tokens_avg_per_doc": 71631.8
-   },
-   "7": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 342,
-     "total": 352
-    },
-    "tokens": {
-     "prompt": 209388,
-     "completion": 40043,
-     "cached": 0
-    },
-    "cost_total_usd": 0.010797999999999952,
-    "cost_avg_per_doc_usd": 0.0021595999999999903,
-    "tokens_avg_per_doc": 49886.2
-   },
-   "8": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 636,
-     "total": 646
-    },
-    "tokens": {
-     "prompt": 219829,
-     "completion": 40276,
-     "cached": 0
-    },
-    "cost_total_usd": 0.010903000000000005,
-    "cost_avg_per_doc_usd": 0.002180600000000001,
-    "tokens_avg_per_doc": 52021.0
-   },
-   "9": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 0,
-     "total": 10
-    },
-    "tokens": {
-     "prompt": 159705,
-     "completion": 49296,
-     "cached": 0
-    },
-    "cost_total_usd": 0.011196,
-    "cost_avg_per_doc_usd": 0.0022392,
-    "tokens_avg_per_doc": 41800.2
-   },
-   "10": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 0,
-     "total": 10
-    },
-    "tokens": {
-     "prompt": 159085,
-     "completion": 40744,
-     "cached": 0
-    },
-    "cost_total_usd": 0.010065000000000001,
-    "cost_avg_per_doc_usd": 0.002013,
-    "tokens_avg_per_doc": 39965.8
-   },
-   "11": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 0,
-     "total": 10
-    },
-    "tokens": {
-     "prompt": 159085,
-     "completion": 40132,
-     "cached": 0
-    },
-    "cost_total_usd": 0.009984999999999999,
-    "cost_avg_per_doc_usd": 0.0019969999999999996,
-    "tokens_avg_per_doc": 39843.4
-   },
-   "12": {
-    "covered": true,
-    "calls": {
-     "chat": 50,
-     "embeddings": 0,
-     "total": 50
-    },
-    "tokens": {
-     "prompt": 490382,
-     "completion": 6731,
-     "cached": 0
-    },
-    "cost_total_usd": 0.015562999999999994,
-    "cost_avg_per_doc_usd": 0.0003112599999999999,
-    "tokens_avg_per_doc": 9942.26
-   },
-   "13": {
-    "covered": true,
-    "calls": {
-     "chat": 50,
-     "embeddings": 0,
-     "total": 50
-    },
-    "tokens": {
-     "prompt": 490382,
-     "completion": 6825,
-     "cached": 0
-    },
-    "cost_total_usd": 0.015570999999999996,
-    "cost_avg_per_doc_usd": 0.0003114199999999999,
-    "tokens_avg_per_doc": 9944.14
-   },
-   "14": {
-    "covered": true,
-    "calls": {
-     "chat": 195,
-     "embeddings": 0,
-     "total": 195
-    },
-    "tokens": {
-     "prompt": 2118616,
-     "completion": 226865,
-     "cached": 0
-    },
-    "cost_total_usd": 0.09575899999999996,
-    "cost_avg_per_doc_usd": 0.0004910717948717946,
-    "tokens_avg_per_doc": 12028.107692307693
-   },
-   "15": {
-    "covered": true,
-    "calls": {
-     "chat": 396,
-     "embeddings": 0,
-     "total": 396
-    },
-    "tokens": {
-     "prompt": 4320464,
-     "completion": 248685,
-     "cached": 0
-    },
-    "cost_total_usd": 0.16692600000000024,
-    "cost_avg_per_doc_usd": 0.0008560307692307705,
-    "tokens_avg_per_doc": 23431.533333333333
-   },
-   "17": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 7,
-     "total": 17
-    },
-    "tokens": {
-     "prompt": 165811,
-     "completion": 11625,
-     "cached": 0
-    },
-    "cost_total_usd": 0.0064719999999999995,
-    "cost_avg_per_doc_usd": 0.0012943999999999998,
-    "tokens_avg_per_doc": 35487.2
-   },
-   "18": {
-    "covered": true,
-    "calls": {
-     "chat": 10,
-     "embeddings": 0,
-     "total": 10
-    },
-    "tokens": {
-     "prompt": 166008,
-     "completion": 12153,
-     "cached": 0
-    },
-    "cost_total_usd": 0.006555,
-    "cost_avg_per_doc_usd": 0.001311,
-    "tokens_avg_per_doc": 35632.2
-   }
-  },
-  "unattributed": {
-   "rows": 0,
-   "cost_total_usd": 0.0
-  },
-  "totals": {
-   "calls": {
-    "chat": 791,
-    "embeddings": 4428
-   },
-   "tokens": 10139699,
-   "cost_total_usd": 0.3879340000000001
-  },
-  "per_task": {
-   "contract_entity_extraction": 0.01562100000000001,
-   "chained_sorter_extractor": 0.07849399999999991,
-   "subtype_classification": 0.29381900000000016
-  },
-  "per_prompt": {
-   "contracts_specialist_v3": 0.01562100000000001,
-   "sorter_v1 + contracts_specialist_v4": 0.012519999999999953,
-   "sorter_v2 + contracts_specialist_v5": 0.010797999999999952,
-   "sorter_v3 + contracts_specialist_v6": 0.010903000000000005,
-   "sorter_v3 + contracts_specialist_v7": 0.011196,
-   "sorter_v3 + contracts_specialist_v8": 0.02005,
-   "sorter_v3": 0.29381900000000016,
-   "sorter_v5 + contracts_specialist_v10": 0.0064719999999999995,
-   "sorter_v5 + contracts_specialist_v11": 0.006555
-  },
-  "covered_runs": 14,
-  "total_runs": 56
  }
 }
