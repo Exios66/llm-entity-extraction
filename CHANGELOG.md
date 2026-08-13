@@ -63,6 +63,44 @@ history of the repository's tags. Format follows
   **scorecard table + Verdict callout** to each memo that lacked a top-line
   results display. All memos verified CLEAN through the render harness and
   the headless render audit.
+- **Annotation-queue score-config support**: `run_annotation_queue.py` now
+  lists and creates Langfuse score-configs
+  (`get_or_create_annotation_config`) and auto-provisions the default
+  annotation score-config id when `--score-config-ids` is not given;
+  `FakeLangfuse` mocks the new GET/POST routes to exercise the flow in
+  `tests/test_annotation_queue.py`.
+- **Agent message board — the cross-repo Kanban + GitHub issue routing**:
+  `MESSAGE_BOARD.md` is the living Kanban canvas shared by ALL agents
+  across **llm-entity-extraction and llm-mailroom** — `backlog` /
+  `in_progress` / `blocked` / `in_review` / `done` lanes with timestamps,
+  an append-only discussion log, and an audit archive (finished cards are
+  kept for auditability, never deleted). Governance codified in `AGENTS.md`
+  (§"Agent message board — READ THIS FIRST, EVERY SESSION"):
+  read-the-board-first every session; claim → Owner + timestamp; **work
+  underway = `in_progress` immediately, never `backlog`** (the `git status`
+  sanity check before every commit); the six-point completion & issue-close
+  criteria (verified work + clean tree, CHANGELOG entry in the same commit,
+  card archived with version/commit/result, timestamped closing discussion
+  entry, issue closed in the same commit, no orphaned scope); releases
+  sweep cards to the Archive in semver lockstep with `CHANGELOG.md`.
+- **Kanban → GitHub issue routing**: critical / high-priority / cross-repo
+  cards route to dedicated GitHub issues (label `kanban`) opened in the
+  repo where the work lands — each synced card's `Issue` column carries the
+  FULL markdown link to its own dedicated issue (`[#NNN](url)`),
+  one card = one issue, issue body ↔ card never disagree about status,
+  issues close in the same commit that archives their card. Board-only
+  cards (small, single-session) skip issues.
+- **Site — agent board tab**: the Kanban board renders read-only on the
+  experiment-log site as the `#/board` view (`build_site.py` emits
+  `docs/data/board.json`; docs/README documents it); card links jump to
+  the corresponding GitHub issue.
+
+### Removed
+- **Per-run cost/usage telemetry from the site data**: `docs/data/` now
+  omits embedded OpenRouter cost/usage objects (the `costs` meta block and
+  per-run `cost`) — the site no longer displays detailed cost telemetry;
+  the append-only `reports/experiment_log.jsonl` remains the record of
+  tokens/cost per run.
 
 ## [v0.15.0] - 2026-08-12
 

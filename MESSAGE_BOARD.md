@@ -184,24 +184,37 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
 | Card | Issue | Status | Task (summary) | Owner | Target release | CHANGELOG / evidence |
 |---|---|---|---|---|---|---|
-| KANBAN-012 | [#10](https://github.com/Exios66/llm-entity-extraction/issues/10) | `in_progress` | **sorter_v9 A/B (title-wins rules)** — `SORTER_PROMPT_V9` draft in the working tree (promotion-title wins, outsourcing-title wins, customization-schedules-are-maintenance + rule-22 rewrite) targeting the v8 243-doc A/B's 25 fails (strict 0.8971); uncommitted: prompt constant + test + site-derived artifacts. Next: commit the registration + test, then run the same stratified surface; target strict > 0.92, verify each rule with failure-insight quotes. | opencode — 2026-08-13 | `[Unreleased]` → v0.16.0 | v8 run: qwen3.7-flash_sorter_v8_subtype_langfuse (strict 0.8971, 25 fails); `SORTER_PROMPT_V9` + test draft in `git status` (`src/prompts.py`, `tests/test_prompts.py`) |
-| KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
-| KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.16.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
-| KANBAN-006 | [#5](https://github.com/Exios66/llm-entity-extraction/issues/5) | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue): adjudicate, feed corrections into the next prompt iteration. | unclaimed | v0.16.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
-| KANBAN-008 | [#6](https://github.com/Exios66/llm-entity-extraction/issues/6) | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | v0.16.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
-| KANBAN-009 | [#7](https://github.com/Exios66/llm-entity-extraction/issues/7) | `backlog` | **Score-drift hygiene** — extend the same-scorer rescore pipeline beyond the 50-doc series if a scorer rule changes again; keep `reports/same_scorer_scores.json` current per run. | unclaimed | v0.16.0 | `scripts/reporting/rescore_manifests.py`; `tests/test_rescore_manifests.py` |
-| KANBAN-010 | [#8](https://github.com/Exios66/llm-entity-extraction/issues/8) | `backlog` | **Restore OpenRouter cost accounting on the site** — the latest `build_site.py` regen dropped the `costs` meta + per-run `cost` blocks because no activity CSV was present. Re-ingest the OpenRouter activity-log export (Settings → Activity Logs) and rebuild; verify the cumulative-cost card renders. | unclaimed | v0.16.0 | `scripts/site/build_site.py` (activity CSV ingest); site `#/` cost card; this commit's regen has no `costs` block in `docs/data/meta.json` |
-| KANBAN-011 | [#9](https://github.com/Exios66/llm-entity-extraction/issues/9) | `backlog` | **Post-v23 model sweep (gated OPEN)** — run v22/v23 prompts × {deepseek-v4-flash, deepseek-v4-pro} on the same 50 docs to quantify the remaining model-bound segmentation gap (the v18 sweep proved scope-fidelity is model-agnostic; confirm the ko 0.85→0.89 plateau closes at the newest prompts). | unclaimed | v0.16.0 | memo `model_sweep_v18.md`; `V16_PROPOSITION.md` §9.3/§15 |
+| KANBAN-013 | [#11](https://github.com/Exios66/llm-entity-extraction/issues/11) | `backlog` | **Sorter >0.93 tail-sampling iteration** — the v9 A/B left 18 fails, a 1-off long tail (no cluster >2); ~0.93 is the practical plateau on this corpus revision. 0.95 strict needs either tail-sampling iterations (per-error-class rules on the long tail) or a corpus re-baseline; proposal + data first (`V16_PROPOSITION.md` §18 risk register). | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §18; v9 run: qwen3.7-flash_sorter_v9_subtype_langfuse (strict 0.9259, 18 fails) |
+| KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
+| KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.17.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
+| KANBAN-006 | [#5](https://github.com/Exios66/llm-entity-extraction/issues/5) | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue — 172 pending at last count): adjudicate, feed corrections into the next prompt iteration. | unclaimed | v0.17.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
+| KANBAN-008 | [#6](https://github.com/Exios66/llm-entity-extraction/issues/6) | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
+| KANBAN-009 | [#7](https://github.com/Exios66/llm-entity-extraction/issues/7) | `backlog` | **Score-drift hygiene** — extend the same-scorer rescore pipeline beyond the 50-doc series if a scorer rule changes again; keep `reports/same_scorer_scores.json` current per run. | unclaimed | v0.17.0 | `scripts/reporting/rescore_manifests.py`; `tests/test_rescore_manifests.py` |
+| KANBAN-011 | [#9](https://github.com/Exios66/llm-entity-extraction/issues/9) | `backlog` | **Post-v23 model sweep (gated OPEN)** — run v22/v23 prompts × {deepseek-v4-flash, deepseek-v4-pro} on the same 50 docs to quantify the remaining model-bound segmentation gap (the v18 sweep proved scope-fidelity is model-agnostic; confirm the ko 0.85→0.89 plateau closes at the newest prompts). | unclaimed | v0.17.0 | memo `model_sweep_v18.md`; `V16_PROPOSITION.md` §9.3/§15 |
 
 **Sweep rule:** when a release ships, re-target every non-done card to the
 new `[Unreleased]` version and move landed cards to the Archive. (Last sweep:
-v0.15.0 shipped 2026-08-12 — KANBAN-001/002/007 archived below.)
+v0.16.0 2026-08-13 — KANBAN-003/010/012 archived below; open cards
+re-targeted to v0.17.0.)
 
 ## Discussion board
 
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-13 — opencode — v0.16.0 release sweep (KANBAN-012/010 done; +KANBAN-013)** Board
+  swept for the v0.16.0 release: **KANBAN-012 archived** — the sorter_v9 A/B
+  landed (commit `6697ea9`): strict 0.8971→0.9259 (+2.88pp), v6→v9 +5.8pp,
+  25→18 fails, all three title-wins clusters eliminated; issue #10 closed.
+  Honest reading: ~0.93 is the practical plateau (18 fails = 1-off long
+  tail) → follow-on **KANBAN-013** (tail-sampling iteration, issue #11).
+  **KANBAN-010 archived as resolved-by-decision** — cost telemetry removal
+  (`25aa942`) replaced "restore cost accounting": the site now intentionally
+  omits detailed cost/usage data; issue #8 closed. Open cards (004/005/006/
+  008/009/011) re-targeted v0.16.0 → v0.17.0. Issues #3–#7/#9 stay open;
+  #2/#8/#10 closed. Changelog `[Unreleased]` completed (queue score-config,
+  board + issue routing, board tab, cost-telemetry removal) ahead of the
+  v0.16.0 tag.
 - **2026-08-13 — opencode — board logic (issue routing + close criteria)** Board
   governance extended: (1) **GitHub issue routing formalized** (§8) —
   critical/high-priority/cross-repo cards route to issues with label
@@ -270,6 +283,8 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
+| KANBAN-012 | v0.16.0 (2026-08-13) | commit `6697ea9` | sorter_v9 A/B landed: **v9 wins (+2.88pp strict, 0.9259)** — promotion/outsourcing/customization-schedule clusters eliminated, 25→18 fails, v6→v9 +5.8pp; ~0.93 practical plateau → follow-on KANBAN-013; issue #10 closed |
+| KANBAN-010 | v0.16.0 (2026-08-13) | commit `25aa942` | **Resolved by decision** — site cost telemetry intentionally REMOVED (costs meta + per-run cost gone from `docs/data/`); "restore cost accounting" superseded; issue #8 closed |
 | KANBAN-003 | v0.16.0 prep (2026-08-12) | commit `cbb5b93` | sorter_v7 250-doc A/B landed: **v7 wins (+0.82pp strict, 0.8765)** — promotion cluster fixed; issue #2 closed on sweep |
 | *(user-run, no card)* — sorter_v8 A/B | v0.16.0 prep (2026-08-12) | commit `43ef2ab` | **v8 wins (+2.06pp strict, 0.8971)** on the 243-doc stratified surface — development & IP clusters eliminated; memo addendum + proposition §17 |
 | KANBAN-007 | v0.15.0 (2026-08-12) | tag `v0.15.0` → `4b6ad5f`; commits `93eb938`, `0a4051e`, `0afdf2e` | Release finalized: changelog dedup-repaired, tag pushed, GitHub release with dedicated notes published; `release.py --check` green (303 tests) |
