@@ -8,6 +8,104 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+> sorter v7→v9 A/B series (strict 0.8683→0.9259), annotation-queue score-configs, agent message board + GitHub issue kanban routing, site board tab, cost-telemetry removal
+
+## [v0.16.0] - 2026-08-13
+
+### Added
+- **`sorter_v9` — the title-wins A/B (v9 WINS, +2.88pp strict)**: three
+  data-backed rules from the exact v8 residual — 23. PROMOTION TITLE WINS
+  (COLOGUARD/CO-PROMOTION/PROMOTION AND DISTRIBUTION agreements are
+  promotion despite marketing/distribution machinery), 24. OUTSOURCING
+  TITLE WINS (outsourcing-titled docs are outsourcing even when the
+  outsourced services ARE manufacturing), 25. CUSTOMIZATION SCHEDULES ARE
+  MAINTENANCE (annex inheritance for customization schedules). Same-surface
+  A/B (243-doc stratified, seed 42, qwen3.7-flash, medium, llm-dojo):
+  **strict 0.8971 → 0.9259 (+2.88pp), equiv 0.9012 → 0.9259, 25 → 18
+  fails; all three target clusters eliminated**. Cumulative v6→v9:
+  **+5.8pp strict (0.8683 → 0.9259)**. The remaining 18 fails are a 1-off
+  long tail (no cluster >2) — ~0.93 is the practical plateau on this
+  corpus revision; 0.95 needs tail-sampling iterations or a re-baseline.
+  Full record: `V16_PROPOSITION.md` §18.
+- **`sorter_v8` — the development/IP clusters A/B (v8 WINS, +2.06pp
+  strict)**: two data-backed rules from the exact 8 v7 failures —
+  21. DEVELOPMENT VERSUS COLLABORATION, LICENSE, AND FRANCHISE STRUCTURES
+  ("Collaborative Development" agreements are development; "Development
+  Agreement" titles stay development when grants/franchise structures
+  deliver the developed materials) and 22. INTELLECTUAL PROPERTY
+  AGREEMENTS ARE ip (IP-titled docs are ip despite license/JV sections).
+  Same-surface A/B (243-doc stratified, seed 42, qwen3.7-flash, medium,
+  llm-dojo): **strict 0.8765 → 0.8971 (+2.06pp), equiv 0.8889 → 0.9012,
+  30 → 25 fails; both target clusters eliminated** (development→
+  collaboration/license/franchise 5 → 0, ip→license/joint_venture 3 → 0).
+  Cumulative v6→v8: +2.9pp strict. Remaining: promotion-title→marketing
+  (2), outsourcing→manufacturing (2), customization-schedule annex (1)
+  plus a 1-off tail — v9 rules designed, 0.95 strict is a multi-iteration
+  target on this corpus revision. Full record: `V16_PROPOSITION.md` §17.
+- **`sorter_v7` — the final classification A/B (250-sample) — v7 WINS
+  (+0.82pp strict)**: three data-backed rules targeting the v6 509-doc
+  full-corpus fails (strict 0.9312, 35 fails): consortium O&M →
+  maintenance (shared-infrastructure governance wrappers do not make an
+  agreement a joint_venture), development-over-license (development
+  machinery wins over license grants for the developed IP), and the
+  promotion guard (promotion title/core is its own family, not marketing or
+  distributor). Constant + `PROMPT_VERSIONS` entry + unit tests landed;
+  **same-surface A/B (mailroom-cuad-contracts-full, stratified 250 seed 42
+  → 243 docs, qwen3.7-flash, medium reasoning, llm-dojo): strict 0.8683 →
+  0.8765 (+0.82pp), equiv 0.8807 → 0.8889 (+0.82pp); the promotion→
+  marketing cluster (6 errors) is eliminated; 32 → 30 fails.** Caveat: the
+  current corpus revision (fingerprint fb9f939d…) is harder than the
+  revision behind the 195-doc 0.9436 runs (2e1fe4b7…) — v6 itself scores
+  0.8683 on it, so the >0.95 strict target needs further iterations on the
+  development-family and ip→license confusions. Full record:
+  `V16_PROPOSITION.md` §16.
+- **Research memos — site polish + visualization pass**: all 9 memos
+  re-checked through the site's actual `renderMd` — fixed two rendering
+  glitches (a `[***]` redaction marker inside a table cell that stole the
+  next bold pair; a `\*` footnote escape), de-indented paragraph
+  continuations (double-space artifacts), and added a standardized
+  **scorecard table + Verdict callout** to each memo that lacked a top-line
+  results display. All memos verified CLEAN through the render harness and
+  the headless render audit.
+- **Annotation-queue score-config support**: `run_annotation_queue.py` now
+  lists and creates Langfuse score-configs
+  (`get_or_create_annotation_config`) and auto-provisions the default
+  annotation score-config id when `--score-config-ids` is not given;
+  `FakeLangfuse` mocks the new GET/POST routes to exercise the flow in
+  `tests/test_annotation_queue.py`.
+- **Agent message board — the cross-repo Kanban + GitHub issue routing**:
+  `MESSAGE_BOARD.md` is the living Kanban canvas shared by ALL agents
+  across **llm-entity-extraction and llm-mailroom** — `backlog` /
+  `in_progress` / `blocked` / `in_review` / `done` lanes with timestamps,
+  an append-only discussion log, and an audit archive (finished cards are
+  kept for auditability, never deleted). Governance codified in `AGENTS.md`
+  (§"Agent message board — READ THIS FIRST, EVERY SESSION"):
+  read-the-board-first every session; claim → Owner + timestamp; **work
+  underway = `in_progress` immediately, never `backlog`** (the `git status`
+  sanity check before every commit); the six-point completion & issue-close
+  criteria (verified work + clean tree, CHANGELOG entry in the same commit,
+  card archived with version/commit/result, timestamped closing discussion
+  entry, issue closed in the same commit, no orphaned scope); releases
+  sweep cards to the Archive in semver lockstep with `CHANGELOG.md`.
+- **Kanban → GitHub issue routing**: critical / high-priority / cross-repo
+  cards route to dedicated GitHub issues (label `kanban`) opened in the
+  repo where the work lands — each synced card's `Issue` column carries the
+  FULL markdown link to its own dedicated issue (`[#NNN](url)`),
+  one card = one issue, issue body ↔ card never disagree about status,
+  issues close in the same commit that archives their card. Board-only
+  cards (small, single-session) skip issues.
+- **Site — agent board tab**: the Kanban board renders read-only on the
+  experiment-log site as the `#/board` view (`build_site.py` emits
+  `docs/data/board.json`; docs/README documents it); card links jump to
+  the corresponding GitHub issue.
+### Removed
+- **Per-run cost/usage telemetry from the site data**: `docs/data/` now
+  omits embedded OpenRouter cost/usage objects (the `costs` meta block and
+  per-run `cost`) — the site no longer displays detailed cost telemetry;
+  the append-only `reports/experiment_log.jsonl` remains the record of
+  tokens/cost per run.
+
+
 ### Added
 - **`sorter_v9` — the title-wins A/B (v9 WINS, +2.88pp strict)**: three
   data-backed rules from the exact v8 residual — 23. PROMOTION TITLE WINS
@@ -950,6 +1048,8 @@ history of the repository's tags. Format follows
 
 [v0.15.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.15.0
 [Unreleased]: https://github.com/Exios66/llm-entity-extraction
+[v0.16.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.16.0
+https://github.com/Exios66/llm-entity-extraction
 [v0.14.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.14.0
 [v0.13.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.13.0
 [v0.12.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.12.0

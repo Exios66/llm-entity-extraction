@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-entity-extraction"
-version = "0.15.0"
+version = "0.16.0"
 description = "LangChain agents (sorter, specialists, judge) + prompt experiment loop for legal document classification and entity extraction"
 readme = "README.md"
 requires-python = ">=3.10"
