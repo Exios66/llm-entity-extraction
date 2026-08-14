@@ -213,6 +213,12 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
   spans/doc (49 docs null); 131 docs carry `[***]` redaction markers;
   Anti-Assignment co-occurs with Change Of Control in 98% of the
   less-common docs. Committing with CHANGELOG `[Unreleased]` entry.
+- **2026-08-14 — opencode — KANBAN-014 done** Full-corpus CUAD EDA landed in
+  commit `2fe4103` (v0.17.0 prep, CHANGELOG `[Unreleased]` Added entry in the
+  same commit, 306 tests green): `data/eda/report.md` + `findings.md` +
+  `figures/01`–`10`, driven by `scripts/eda/explore_cuad.py` (reproducible:
+  `python scripts/eda/explore_cuad.py` from the repo root; Braintrust texts
+  with local/CUAD fallback). Card archived.
 - **2026-08-13 — opencode — v0.16.0 release sweep (KANBAN-012/010 done; +KANBAN-013)** Board
   swept for the v0.16.0 release: **KANBAN-012 archived** — the sorter_v9 A/B
   landed (commit `6697ea9`): strict 0.8971→0.9259 (+2.88pp), v6→v9 +5.8pp,
@@ -294,6 +300,7 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
+| KANBAN-014 | v0.17.0 prep (2026-08-14) | commit `2fe4103` | Full-corpus CUAD EDA shipped: `scripts/eda/explore_cuad.py` + `data/eda/{report.md,findings.md,figures/01–10}` all git-tracked. Headlines: median 33,425 chars (max 338,211), 17.1% over the 90k chunk window, `key_obligations` scope mean 16.0 spans/doc (49 null docs), 131 docs with `[***]` redaction markers, Anti-Assignment+Change Of Control 98% co-occurrence |
 | KANBAN-012 | v0.16.0 (2026-08-13) | commit `6697ea9` | sorter_v9 A/B landed: **v9 wins (+2.88pp strict, 0.9259)** — promotion/outsourcing/customization-schedule clusters eliminated, 25→18 fails, v6→v9 +5.8pp; ~0.93 practical plateau → follow-on KANBAN-013; issue #10 closed |
 | KANBAN-010 | v0.16.0 (2026-08-13) | commit `25aa942` | **Resolved by decision** — site cost telemetry intentionally REMOVED (costs meta + per-run cost gone from `docs/data/`); "restore cost accounting" superseded; issue #8 closed |
 | KANBAN-003 | v0.16.0 prep (2026-08-12) | commit `cbb5b93` | sorter_v7 250-doc A/B landed: **v7 wins (+0.82pp strict, 0.8765)** — promotion cluster fixed; issue #2 closed on sweep |
