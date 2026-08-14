@@ -588,7 +588,9 @@ def queue_status(args: argparse.Namespace) -> int:
                   for name in STATUS_SCORES[args.task]}
     # id -> (filename, prompt_version, failure flags) from the bulk traces list
     meta: dict[str, tuple[str, str, dict | None]] = {}
-    for trace in client.list_extraction_traces(trace_name, None, session_contains):
+    since = (datetime.now(timezone.utc) - timedelta(days=args.since_days)
+             if args.since_days else None)
+    for trace in client.list_extraction_traces(trace_name, since, session_contains):
         meta[trace["id"]] = (trace_input_name(trace),
                              str((trace.get("input") or {}).get("prompt_version") or ""),
                              client.sorter_failure(trace)
@@ -657,6 +659,9 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--session-contains", default=None,
                         help="session-id substring that marks the pipeline's runs "
                              "(default per task)")
+    common.add_argument("--since-days", type=int, default=30,
+                        help="only traces newer than N days (default: 30); bounds "
+                             "the scan for both build and status")
 
     p_build = sub.add_parser("build", parents=[common],
                              help="scan traces and enqueue low performers / failures")
@@ -664,8 +669,6 @@ def build_parser() -> argparse.ArgumentParser:
                          help=f"enqueue traces with score < threshold (default: {DEFAULT_THRESHOLD})")
     p_build.add_argument("--limit", type=int, default=None,
                          help="max traces to enqueue (worst first)")
-    p_build.add_argument("--since-days", type=int, default=30,
-                         help="only traces newer than N days (default: 30)")
     p_build.add_argument("--include-unscored", action="store_true",
                          help="(extraction) also enqueue traces missing the score")
     p_build.add_argument("--score-config-ids", default=None,

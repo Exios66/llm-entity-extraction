@@ -414,6 +414,26 @@ def test_status_subtype_shows_flags_and_scores(fake_client, capsys):
     assert "pj-dojo" in out
 
 
+def test_status_since_days_bounds_scan(fake_client, capsys):
+    """status --since-days bounds the trace-meta scan (no all-history pagination)."""
+    stub = fake_client
+    stub.traces = [
+        _sorter_trace("s_old", doc_type_ok=True, subtype_ok=False,
+                      timestamp="2026-01-01T00:00:00.000Z"),
+    ]
+    tool.main_with_args(["build", "--task", "subtype", "--since-days", "365"])
+    assert len(stub.items) == 1
+    capsys.readouterr()
+
+    rc = tool.main_with_args(["status", "--task", "subtype"])
+    assert rc == 0
+    assert "sort_s_old.txt" not in capsys.readouterr().out
+
+    rc = tool.main_with_args(["status", "--task", "subtype", "--since-days", "365"])
+    assert rc == 0
+    assert "sort_s_old.txt" in capsys.readouterr().out
+
+
 def test_shared_queue_status_filters_items_by_task(fake_client, capsys):
     """The shared queue mixes tasks; status shows only the requested task's items."""
     stub = fake_client

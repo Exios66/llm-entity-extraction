@@ -23,6 +23,14 @@ history of the repository's tags. Format follows
   Change Of Control co-occur in 98% of the less-common docs; 131 contracts
   carry `[***]`-style redaction markers. KANBAN-014.
 
+### Fixed
+- **`run_annotation_queue.py status` unbounded trace scan** — `status` now
+  honors `--since-days` (default 30, shared with `build`) when building the
+  item metadata map; previously it scanned the full trace history
+  (`list_extraction_traces(..., since=None)`), which stalled for minutes on
+  the subtype task under Langfuse rate limits. `--session-contains` remains
+  the way to scope either subcommand to one run family.
+
 ### Added
 - **Sorter scale-up — v9 re-baseline + full-509 v8/v9 benchmark**: three
   cheap runs (~$0.25, 1213 classifications) settle the scale question.

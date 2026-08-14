@@ -187,7 +187,7 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 | KANBAN-013 | [#11](https://github.com/Exios66/llm-entity-extraction/issues/11) | `backlog` | **Sorter >0.93 tail-sampling iteration** — the v9 A/B left 18 fails, a 1-off long tail (no cluster >2); ~0.93 is the practical plateau on this corpus revision. 0.95 strict needs either tail-sampling iterations (per-error-class rules on the long tail) or a corpus re-baseline; proposal + data first (`V16_PROPOSITION.md` §18 risk register). | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §18; v9 run: qwen3.7-flash_sorter_v9_subtype_langfuse (strict 0.9259, 18 fails) |
 | KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
 | KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.17.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
-| KANBAN-006 | [#5](https://github.com/Exios66/llm-entity-extraction/issues/5) | `backlog` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue — 172 pending at last count): adjudicate, feed corrections into the next prompt iteration. | unclaimed | v0.17.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
+| KANBAN-006 | [#5](https://github.com/Exios66/llm-entity-extraction/issues/5) | `in_progress` | **HITL annotation queue processing** — work the pending llm-dojo queue items (extraction < 0.85 + sorter failure queue — 217 PENDING at last count): adjudicate, feed corrections into the next prompt iteration. Tooling fix (bounded `status` scan) landed 2026-08-14. | opencode (2026-08-14) | v0.17.0 | `scripts/eval/run_annotation_queue.py status`; wiki `Annotation-Queues.md` |
 | KANBAN-008 | [#6](https://github.com/Exios66/llm-entity-extraction/issues/6) | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
 | KANBAN-009 | [#7](https://github.com/Exios66/llm-entity-extraction/issues/7) | `backlog` | **Score-drift hygiene** — extend the same-scorer rescore pipeline beyond the 50-doc series if a scorer rule changes again; keep `reports/same_scorer_scores.json` current per run. | unclaimed | v0.17.0 | `scripts/reporting/rescore_manifests.py`; `tests/test_rescore_manifests.py` |
 | KANBAN-011 | [#9](https://github.com/Exios66/llm-entity-extraction/issues/9) | `backlog` | **Post-v23 model sweep (gated OPEN)** — run v22/v23 prompts × {deepseek-v4-flash, deepseek-v4-pro} on the same 50 docs to quantify the remaining model-bound segmentation gap (the v18 sweep proved scope-fidelity is model-agnostic; confirm the ko 0.85→0.89 plateau closes at the newest prompts). | unclaimed | v0.17.0 | memo `model_sweep_v18.md`; `V16_PROPOSITION.md` §9.3/§15 |
@@ -213,6 +213,23 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
   spans/doc (49 docs null); 131 docs carry `[***]` redaction markers;
   Anti-Assignment co-occurs with Change Of Control in 98% of the
   less-common docs. Committing with CHANGELOG `[Unreleased]` entry.
+- **2026-08-13 — opencode — KANBAN-006 queue tooling fix** `status` was
+  hanging: it scanned the FULL trace history for the item meta map
+  (`list_extraction_traces(..., since=None)`), which stalls for minutes on
+  the subtype task under Langfuse rate limits. Fixed: `--since-days` moved
+  to the shared args (default 30, same as `build`) and `status` now bounds
+  the scan — `run_annotation_queue.py` + regression test
+  (`test_status_since_days_bounds_scan`); 306 tests green, CHANGELOG
+  `[Unreleased]` Fixed entry added.
+- **2026-08-13 — opencode — KANBAN-006 queue refresh** Rebuilt the llm-dojo
+  annotation queue with the most recent run's failures: v9-scoped
+  `build --task subtype` (session `qwen3.7-flash_sorter_v9_subtype_langfuse`,
+  dedupes against the queue) enqueued **45 new sorter failures** (0 already
+  present) — doc_type/subtype classification misses from the v9 full-corpus
+  + A/B runs (05:00/05:12 UTC). Queue now **217 PENDING, 0 PROCESSED**
+  (172 prior + 45). Note: `status --task subtype` hangs on the trace-meta
+  scan (no `since` bound on `list_extraction_traces`) — items verified via
+  direct queue-items read instead.
 - **2026-08-14 — opencode — KANBAN-014 done** Full-corpus CUAD EDA landed in
   commit `2fe4103` (v0.17.0 prep, CHANGELOG `[Unreleased]` Added entry in the
   same commit, 306 tests green): `data/eda/report.md` + `findings.md` +
