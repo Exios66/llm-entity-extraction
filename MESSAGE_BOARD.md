@@ -191,6 +191,7 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 | KANBAN-008 | [#6](https://github.com/Exios66/llm-entity-extraction/issues/6) | `backlog` | **v23×max ko arm — production decision** — ko 0.8510 @ 2.6× cost, 0 parse errors vs v22×none 0.9512 overall. Decide/documented the recommended production config (or split: overall arm vs ko arm) and record it in README/AGENTS docs. | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §15.1; memo `contracts_specialist_v23.md` |
 | KANBAN-009 | [#7](https://github.com/Exios66/llm-entity-extraction/issues/7) | `backlog` | **Score-drift hygiene** — extend the same-scorer rescore pipeline beyond the 50-doc series if a scorer rule changes again; keep `reports/same_scorer_scores.json` current per run. | unclaimed | v0.17.0 | `scripts/reporting/rescore_manifests.py`; `tests/test_rescore_manifests.py` |
 | KANBAN-011 | [#9](https://github.com/Exios66/llm-entity-extraction/issues/9) | `backlog` | **Post-v23 model sweep (gated OPEN)** — run v22/v23 prompts × {deepseek-v4-flash, deepseek-v4-pro} on the same 50 docs to quantify the remaining model-bound segmentation gap (the v18 sweep proved scope-fidelity is model-agnostic; confirm the ko 0.85→0.89 plateau closes at the newest prompts). | unclaimed | v0.17.0 | memo `model_sweep_v18.md`; `V16_PROPOSITION.md` §9.3/§15 |
+| KANBAN-014 | — | `in_progress` | **Full-corpus EDA → `data/eda/`** — full exploratory data analysis of the 510-contract CUAD corpus (annotations + text): subtype/filing composition, category YES rates, restriction-family (`key_obligations`) span load, text-length budgets vs pipeline input windows, per-subtype lengths, restriction co-occurrence, redaction markers. Deliverables: `scripts/eda/explore_cuad.py` + `data/eda/{report.md,findings.md,figures/*.png}` all git-tracked. | opencode (2026-08-14) | v0.17.0 | `data/eda/report.md`; `scripts/eda/explore_cuad.py` |
 
 **Sweep rule:** when a release ships, re-target every non-done card to the
 new `[Unreleased]` version and move landed cards to the Archive. (Last sweep:
@@ -202,6 +203,16 @@ re-targeted to v0.17.0.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-14 — opencode — KANBAN-014 claimed** Full-corpus EDA
+  (510-contract CUAD) in progress: `scripts/eda/explore_cuad.py` rewritten
+  (Braintrust full-corpus texts aligned 510/510 by title with local/CUAD
+  fallback; restriction-family vs all-category span load; length-budget
+  shares; co-occurrence; redaction scan) → outputs `data/eda/report.md`,
+  `data/eda/findings.md`, `figures/01`–`10`. Key numbers: median 33,425
+  chars, 17% over the 90k chunk window; `key_obligations` scope mean 16.0
+  spans/doc (49 docs null); 131 docs carry `[***]` redaction markers;
+  Anti-Assignment co-occurs with Change Of Control in 98% of the
+  less-common docs. Committing with CHANGELOG `[Unreleased]` entry.
 - **2026-08-13 — opencode — v0.16.0 release sweep (KANBAN-012/010 done; +KANBAN-013)** Board
   swept for the v0.16.0 release: **KANBAN-012 archived** — the sorter_v9 A/B
   landed (commit `6697ea9`): strict 0.8971→0.9259 (+2.88pp), v6→v9 +5.8pp,

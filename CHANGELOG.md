@@ -9,6 +9,21 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **Full-corpus EDA of the CUAD contracts dataset** — new
+  `scripts/eda/explore_cuad.py` (Braintrust full-corpus text aligned 510/510
+  to the CUAD titles, with local-txt / CUAD-context fallback) rendering
+  `data/eda/report.md`, `data/eda/findings.md`, and `data/eda/figures/01`–`10`
+  (subtype distribution, text-length hist + pipeline budget lines, category
+  YES rates, category span load, spans/doc, filing families, per-subtype
+  lengths, restriction co-occurrence heatmap, annotation density) — all
+  git-tracked. Headline numbers: median 33,425 chars (mean 52,563, max
+  338,211); 17.1% of contracts exceed the 90k-char chunk window and 9.4% a
+  32k-token context; the extractor's `key_obligations` scope (31 of 41
+  categories) averages 16.0 spans/doc (49 contracts null); Anti-Assignment +
+  Change Of Control co-occur in 98% of the less-common docs; 131 contracts
+  carry `[***]`-style redaction markers. KANBAN-014.
+
+### Added
 - **Sorter scale-up — v9 re-baseline + full-509 v8/v9 benchmark**: three
   cheap runs (~$0.25, 1213 classifications) settle the scale question.
   **v9 @ 509 = 0.9116 strict / 0.9194 equiv, beating v8 @ 509 (0.9018 /
