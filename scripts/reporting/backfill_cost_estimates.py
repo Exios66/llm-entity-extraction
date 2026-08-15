@@ -9,8 +9,8 @@ deterministic token x price estimate (``src/cost_models.py``) to each tokens
 bucket; no other field is touched and record order is preserved.
 
 Usage:
-    python scripts/backfill_cost_estimates.py            # reports/experiment_log.jsonl
-    python scripts/backfill_cost_estimates.py --dry-run  # preview the deltas
+    python scripts/reporting/backfill_cost_estimates.py            # reports/experiment_log.jsonl
+    python scripts/reporting/backfill_cost_estimates.py --dry-run  # preview the deltas
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.cost_models import estimate_cost  # noqa: E402
 

@@ -25,9 +25,24 @@ history of the repository's tags. Format follows
   (AGENTS.md cheatsheet + run-sink paragraph, README, wiki/Eval-Runners);
   `.env`/`.env.example` carry the flag. Verified live: 1-doc subtype pilot
   through the disabled path logged `tracing_backend=none` +
-  `langsmith=True` with the trace tree captured in the LangSmith `llm-mailroom`
+  `langsmith=True` with the trace tree captured in the LangSmith   `llm-mailroom`
   project and no Braintrust 400s. 365 tests green (+5 gate unit tests, +1
   disabled-path smoke test).
+- **Repository streamlining + navigation pass (KANBAN-027)** — `README.md`
+  gains a **Table of Contents** and a repaired, complete **Layout tree**
+  (the `src/` modules `openrouter_utils`/`prompts`/`scorers`/`taxonomy` were
+  mis-nested under `wiki/`; stale/missing entries corrected; every area
+  linked to its own README), with stale test counts fixed (223 → 375) and
+  the `sorter_v0…v12` / `contracts_specialist_v0…v31` prompt tables +
+  `BRAINTRUST_LOGGING` conditional wiring documented. `src/README.md` gains
+  `braintrust_logging`, `eval_shims`, `master_labels`, `metrics`;
+  `memos/README.md` table formatting fixed + missing memo rows added
+  (v28/v30/v31/sorter_v10_v11); `scripts/README.md` now enumerates every
+  eval/reporting runner + `scripts/eda/`. `scripts/backfill_cost_estimates.py`
+  **nested under `scripts/reporting/`** (one-time reporting backfill; run as
+  `python scripts/reporting/backfill_cost_estimates.py`; live refs in
+  `scripts/README.md` + `wiki/Scoring.md` updated). Docs-only + safe nesting —
+  no functional change, 375 tests green, site render audit clean.
 
 ### Added
 - **LegalBench test-set eval path (KANBAN-026)** — the official

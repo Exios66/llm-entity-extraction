@@ -14,6 +14,22 @@ repo's Braintrust evaluation pattern (vision classification of document page
 images) and the [llm-mailroom](https://github.com/Exios66/llm-mailroom)
 taxonomy/prompts.
 
+## Contents
+
+- [The sorter's two jobs](#the-sorters-two-jobs)
+- [The pipeline under test](#the-pipeline-under-test)
+- [Scoring (deterministic, field-type-aware)](#scoring-deterministic-field-type-aware)
+- [Layout (repo map)](#layout)
+- [Experiment log](#experiment-log)
+- [Website](#website)
+- [Setup](#setup)
+- [Sync the HF corpora into Braintrust](#sync-the-hf-corpora-into-braintrust)
+- [The loop (one prompt at a time)](#the-loop-one-prompt-at-a-time)
+- [Adding a prompt version](#adding-a-prompt-version)
+- [Tests](#tests)
+- [Credits](#credits)
+- [Docs & navigation](#docs--navigation)
+
 ## The sorter's two jobs
 
 1. **Vision classification of the ACTUAL PDFs (RVL-CDIP pipeline)** — every
@@ -135,64 +151,103 @@ worked examples in `docs/slides/`.
 
 ## Layout
 
+The repo is a Python package (`pyproject.toml` — `pip install -e .` makes
+`agents`, `src`, `config` importable from ANY codebase, e.g. llm-mailroom's
+LangGraph). Every area has its own README — use them as the detailed map.
+
 ```
-agents/                  LangChain agents (sorter, specialists, judge)
+agents/                  LangChain agents under test (see agents/README.md)
   base_agent.py          ChatOpenAI (OpenRouter) + structured output + vision calls
   sorter_agent.py        doc-type + contract-subtype classification (text + image)
   specialist_agents.py   per-class field extraction + shared JSON schemas
   judge_agent.py         LLM-as-a-judge (classification/completeness/correctness)
-config/taxonomy.yaml     doc classes, field types, agent->model mapping, thresholds
+config/                  the control panel (see config/README.md)
+  taxonomy.yaml          doc classes, field types, agent->model mapping, thresholds
 src/                     core modules (see src/README.md)
   bootstrap.py           percentile-bootstrap CIs + two-sample delta significance
-  cost_models.py         verified per-model prices + deterministic cost estimation
   braintrust_config.py   loads braintrust.env / .env (org, project, model, api base)
+  braintrust_logging.py  BRAINTRUST_LOGGING gate: on/off Braintrust experiment sink
   braintrust_utils.py    Braintrust HTTP, dataset load/upload, experiment fetch
   classifier.py          label/confidence/reasoning parsers (RVL-CDIP style)
+  cost_models.py         verified per-model prices + deterministic cost estimation
   cuad_ground_truth.py   CUAD 41-category catalog -> expected fields + presence
   env_utils.py           dotenv loading + required-var validation
+  eval_shims.py          run_local_eval(): the shared local scoring loop when
+                         BRAINTRUST_LOGGING=disabled (thread pool + manifest resume)
   evaluation.py          dataset validation, fingerprints, resumable manifests
   experiment_log.py      append-only repo experiment log (JSONL + markdown renderer)
   field_scoring.py       deterministic field-type-aware content scoring + factuality audit
   image_utils.py         PDF/TIFF -> 1024x1024 grayscale PNG helpers
+  langfuse_config.py     Langfuse project config (llm-dojo by default)
+  langfuse_tracing.py    Langfuse mirror tracer (one trace per document, scores)
   llm_chain.py           LangChain chain factory for eval loops
-scripts/                 ops + evals + reporting + site + releases (see scripts/README.md)
-tests/                   network-free suite + headless site render audit (see tests/README.md)
-reports/                 the experiment log: experiment_log.{jsonl,md} (see reports/README.md)
-wiki/                    this wiki's pages + wiki/sync-wiki.sh (pushes the GitHub wiki)
+  master_labels.py       curated master ground-truth CSV loader (MAE diagnostics)
+  metrics.py             run-level extraction diagnostics (MAE/R2, span drift, decomposition)
   openrouter_utils.py    OpenRouter constants + vision message builders
-  prompts.py             ALL agent prompts, versioned
+  prompts.py             ALL agent prompts, versioned (the version key IS the identity)
   scorers.py             deterministic Braintrust scorers (exact_match, failure, cost)
   taxonomy.py            YAML loader for config/taxonomy.yaml
-scripts/
+scripts/                 ops + evals + reporting + site + releases (see scripts/README.md)
   datasets/              sync the HF corpora into Braintrust datasets
-    stream_cuad_to_bt.py            CUAD v1: 510 contract PDFs, every page rendered
-    stream_legalbench_to_bt.py      MAUD v1: 139 agreements + 13k-row classification suite
-    stream_legalbench_tasks_to_bt.py 60+ LegalBench classification tasks
-    download_cuad_pdfs.py           full CUAD v1 corpus (PDFs + CUAD_v1.json) to data/cuad_pdfs/
-  eval/                  the experiment loops
-    run_classification_eval.py      one prompt, text/vision/task modes, local PDFs
-    run_extraction_eval.py          contracts specialist vs CUAD ground truth
-    run_chained_eval.py             sorter -> extractor end-to-end pipeline eval
-    run_annotation_queue.py         HITL annotation queues (llm-dojo mirror): enqueue
-                                    low-performing extraction traces / failed sorter
-                                    classifications for human review, then audit the queue
-    run_binary_class_eval.py        binary question precision/recall/F1
-    run_multiclass_eval.py          all-class eval with per-class accuracy
-    run_subtype_eval.py             sorter-only contract-subtype eval (one call per PDF)
-    evaluate_prompt_version.py      A/B two prompt versions on the same dataset
-  reporting/
-    report_generator.py             markdown experiment report from Braintrust
-    confusion_matrix.py             PNG + CSV confusion matrix from Braintrust
-    score_extraction_manifest.py    post-hoc extraction scoring from a manifest
-    render_experiment_log.py        rebuild the markdown log from the JSONL source
-    rescore_manifests.py            re-score extraction manifests with the CURRENT scorer
-                                    (immune to scorer drift; --auto-50 covers the 50-doc series)
-    judge_experiment.py             post-hoc JudgeAgent review of failed classifications
-    backfill_subtype_reasoning.py   one-time enrichment: full failure reasoning from spans
-  site/
-    build_site.py                   rebuild docs/ (GitHub Pages) data from the JSONL
-tests/                   unit tests (303, no network)
+  eda/                   full-corpus EDA (explore_cuad.py -> data/eda/)
+  eval/                  the experiment loops + Langfuse mirrors + annotation queues
+  reporting/             experiment-log renderer + reports + post-hoc scoring + backfills
+  site/                  build_site.py: rebuild docs/ (GH Pages) data from the JSONL
+  release.py             semver release automation (--bump / --check / --dry-run)
+tests/                   network-free suite + headless site render audit (see tests/README.md)
+reports/                 the experiment log: experiment_log.{jsonl,md} (see reports/README.md)
+docs/                    the GH Pages site: index.html + assets/ + slides/ + data/ (see docs/README.md)
+memos/                   archived research memoranda (see memos/README.md)
+wiki/                    this wiki's pages + wiki/sync-wiki.sh (pushes the GitHub wiki)
+data/                    (gitignored run artifacts: manifests/, legalbench_local/, samples/)
+                         + tracked data/eda/ (EDA report, findings, figures)
+.opencode/               agent prompts + skills (prompt-engineer, experiment-log-sync, eval-judge)
 ```
+
+Under `scripts/` the key files are:
+
+```
+scripts/datasets/
+  stream_cuad_to_bt.py            CUAD v1: 510 contract PDFs, every page rendered
+  stream_legalbench_to_bt.py      MAUD v1: 139 agreements + 13k-row classification suite
+  stream_legalbench_tasks_to_bt.py  60+ LegalBench classification tasks
+  download_cuad_pdfs.py           full CUAD v1 corpus (PDFs + CUAD_v1.json) to data/cuad_pdfs/
+scripts/eda/
+  explore_cuad.py                 full-corpus EDA -> data/eda/{report.md,findings.md,figures/}
+scripts/eval/
+  run_classification_eval.py      one prompt, text/vision/task modes, local PDFs
+  run_extraction_eval.py          contracts specialist vs CUAD ground truth
+  run_chained_eval.py             sorter -> extractor end-to-end pipeline eval
+  run_subtype_eval.py             sorter-only contract-subtype eval (one call per PDF)
+  run_binary_class_eval.py        binary question precision/recall/F1
+  run_multiclass_eval.py          all-class eval with per-class accuracy
+  run_model_matrix.py             model x prompt grid on one surface
+  evaluate_prompt_version.py      A/B two prompt versions on the same dataset
+  run_annotation_queue.py         HITL annotation queues (llm-dojo mirror)
+  run_langfuse_subtype_eval.py        PRIMARY-sink mirror of run_subtype_eval
+  run_langfuse_chained_eval.py        PRIMARY-sink mirror of run_chained_eval
+  run_langfuse_extraction_eval.py     PRIMARY-sink mirror of run_extraction_eval (--chunked)
+  run_langfuse_classification_eval.py Langfuse mirror of run_classification_eval (--prompt-mode task)
+  sync_langfuse_prompts.py        mirror versioned prompts into Langfuse (idempotent)
+  sync_langfuse_datasets.py       mirror Braintrust datasets into Langfuse datasets
+scripts/reporting/
+  render_experiment_log.py        rebuild the markdown log from the JSONL source
+  report_generator.py             markdown experiment report from Braintrust
+  confusion_matrix.py             PNG + CSV confusion matrix from Braintrust
+  score_extraction_manifest.py    post-hoc extraction scoring from a manifest
+  rescore_manifests.py            re-score extraction manifests with the CURRENT scorer
+                                  (immune to scorer drift; --auto-50 covers the 50-doc series)
+  judge_experiment.py             post-hoc JudgeAgent review of failed classifications
+  backfill_subtype_reasoning.py   one-time enrichment: full failure reasoning from spans
+  backfill_cost_estimates.py      one-time backfill: stamp cost_estimated_usd on historical records
+scripts/site/
+  build_site.py                   rebuild docs/ (GitHub Pages) data from the JSONL
+```
+
+`data/manifests/`, `data/legalbench_local/`, and `data/samples/` are
+**gitignored** run checkpoints/local dumps (resumable manifests, the LegalBench
+`--local-dump` eval surface) — they appear on disk after runs but are never
+committed.
 
 ## Experiment log
 
@@ -482,21 +537,30 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 
 | Family | Versions |
 |---|---|
-| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1`, `sorter_v2`, `sorter_v3`, `sorter_v4`, `sorter_v5`, `sorter_v6` |
+| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1` … `sorter_v12` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
-| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v23` |
+| Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v31` |
 | Other specialists | `corporate_records_specialist`, `due_diligence_specialist`, `correspondence_specialist`, `compliance_specialist`, `court_opinions_specialist` |
 | Agents / judges | `boss`, `reporter`, `judge`, `judge-classification`, `judge-correctness` |
 | PDF | `pdf_transcriber` |
 
+Run `python -c "from src.prompts import list_prompts; print('\\n'.join(list_prompts()))"`
+for the authoritative, current list.
+
 ### LangChain + Braintrust wiring
 
 The eval runners call `braintrust.integrations.langchain.setup_langchain()`
-before any model call. That installs the Braintrust LangChain callback handler,
-so every `ChatPromptTemplate -> ChatOpenAI -> parser` chain invocation inside
-the eval task is traced as a nested span under the Braintrust experiment row —
-prompt, response, tokens, latency are all visible in the UI.
+before any model call **when Braintrust logging is enabled**
+(`BRAINTRUST_LOGGING=enabled`; it is **disabled by default**). That installs the
+Braintrust LangChain callback handler, so every
+`ChatPromptTemplate -> ChatOpenAI -> parser` chain invocation inside the eval
+task is traced as a nested span under the Braintrust experiment row — prompt,
+response, tokens, latency are all visible in the UI. With the default
+`BRAINTRUST_LOGGING=disabled`, the runners skip `setup_langchain` + `braintrust.Eval`
+entirely and run the same local scoring loop through `src/eval_shims.py` —
+the PRIMARY sink is Langfuse (`run_langfuse_*_eval.py`) + LangSmith spans (see
+AGENTS.md "Run sink").
 
 ### Langfuse mirror (two projects, two purposes)
 
@@ -554,10 +618,11 @@ python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
 python -m pytest tests/ -v
 ```
 
-223 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
+375 tests, none hitting the network: prompts, scorers, taxonomy, evaluation
 helpers, config loading, field scoring, CUAD ground truth, the subtype
 handoff cue, page voting, the chained/extraction/classification/subtype/langfuse
-eval smoke loops, and the streamer parsers are all mocked.
+eval smoke loops, the Langfuse annotation-queue + prompt-sync tooling, the
+release workflow, the site builder, and the streamer parsers are all mocked.
 
 ## Credits
 
@@ -589,12 +654,31 @@ licensed corpora, benchmarks, and frameworks:
   framework under test; **[Braintrust](https://braintrust.dev)** and
   **[Langfuse](https://langfuse.com)** — the tracing/eval backends.
 
-## Docs
+## Docs & navigation
 
+**Repo root (this file)** — the front door. Then, by depth:
+
+- `AGENTS.md` — the agent workflow guide: setup, commands, architecture,
+  conventions, gotchas, and the inter-agent message-board protocol.
+- `MESSAGE_BOARD.md` — the living Kanban canvas shared by all agents
+  (backlog / in_progress / blocked / in_review / done, discussion log,
+  archive).
+- `CHANGELOG.md` — semantic-version history of all significant releases
+  (each tagged `vX.Y.Z`).
 - `SCORING.md` — every scorer and metric: classification, binary, multiclass,
   field-type-aware content scoring, factuality audit, chained stage trackers,
   A/B deltas, token/cost accounting.
-- `CHANGELOG.md` — semantic-version history of all significant releases
-  (each tagged `vX.Y.Z`).
-- `AGENTS.md` — the agent workflow guide: setup, commands, architecture,
-  conventions, and gotchas.
+- `V16_PROPOSITION.md` — the historical research proposition behind the
+  v16+ prompt iterations (champion lineage, model sweeps).
+
+**Per-area maps** — one README per top-level area, kept current with the
+layout: [`agents/README.md`](agents/README.md) ·
+[`config/README.md`](config/README.md) · [`src/README.md`](src/README.md) ·
+[`scripts/README.md`](scripts/README.md) · [`tests/README.md`](tests/README.md) ·
+[`reports/README.md`](reports/README.md) · [`docs/README.md`](docs/README.md) ·
+[`docs/slides/README.md`](docs/slides/README.md) · [`memos/README.md`](memos/README.md).
+
+**Working surfaces** — [`reports/experiment_log.md`](reports/experiment_log.md)
+(rendered experiment log) · the [GH Pages site](https://exios66.github.io/llm-entity-extraction/)
+(scoring decks, run viewer, board, memos) · the public [wiki](https://github.com/Exios66/llm-entity-extraction/wiki)
+(`wiki/`, pushed with `./wiki/sync-wiki.sh`).

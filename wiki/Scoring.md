@@ -237,6 +237,7 @@ per-model prices (`src/cost_models.py`): qwen $0.03/$0.13 per 1M (in/out),
 deepseek-v4-flash $0.05/$0.25, deepseek-v4-pro $0.435/$0.87 (unknown models
 resolve by prefix or honestly report None). `tokens_summary(model=)` stamps
 `cost_estimated_usd` on every record; historical records were backfilled
-(`scripts/backfill_cost_estimates.py`, documented one-time append-only
-exception). The site shows billed OpenRouter totals when the activity CSV is
-ingested, and the estimate otherwise — never a fabricated number.
+(`scripts/reporting/backfill_cost_estimates.py`, documented one-time
+append-only exception). The site shows billed OpenRouter totals when the
+activity CSV is ingested, and the estimate otherwise — never a fabricated
+number.
