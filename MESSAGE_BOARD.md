@@ -184,7 +184,6 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
 | Card | Issue | Status | Task (summary) | Owner | Target release | CHANGELOG / evidence |
 |---|---|---|---|---|---|---|
-| KANBAN-016 | [#12](https://github.com/Exios66/llm-entity-extraction/issues/12) | `in_progress` | **Contracts specialist v24 — reasoning trace + metrics-aligned formats** — `CONTRACTS_SCHEMA` gains a required `reasoning` object (summary + per-field entries), chunked merge unions reasoning across chunks, new `contracts_specialist_v24` prompt (reason field-by-field BEFORE finalizing; metrics-aligned format discipline: ISO dates, duration-phrase-leading `term_length`, plain currency `contract_value` — format alignment only, NO master-CSV leakage), tests, same-surface 5-doc A/B vs v23 (pair counts, MAE/R², reasoning presence). | opencode (2026-08-15) | v0.17.0 | `agents/specialist_agents.py`, `src/prompts.py` v24, `tests/test_specialist_chunked.py`, `tests/test_extraction_normalization.py` |
 | KANBAN-013 | [#11](https://github.com/Exios66/llm-entity-extraction/issues/11) | `backlog` | **Sorter >0.93 tail-sampling iteration** — the v9 A/B left 18 fails, a 1-off long tail (no cluster >2); ~0.93 is the practical plateau on this corpus revision. 0.95 strict needs either tail-sampling iterations (per-error-class rules on the long tail) or a corpus re-baseline; proposal + data first (`V16_PROPOSITION.md` §18 risk register). | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §18; v9 run: qwen3.7-flash_sorter_v9_subtype_langfuse (strict 0.9259, 18 fails) |
 | KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
 | KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.17.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
@@ -222,6 +221,18 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
   modules + gotcha, docs/README.md, wiki/Scoring.md + wiki synced).
   337 tests green, site render audit green. Chained-eval diagnostics remain
   out of scope (own runner, future card). Archive row updated.
+- **2026-08-15 — opencode — KANBAN-016 done** Contracts specialist v24 landed in
+  commit `6f77615` (v0.17.0 prep, CHANGELOG `[Unreleased]` Changed entry in the
+  same commit, 341 tests green, Langfuse llm-dojo prompt store synced — v24
+  mirrored). **Pilot A/B (seed 42, n=5, same surface):** v24 0.9336 vs v23
+  0.9366 overall (noise), **key_obligations +10.2pp (0.5984→0.7006)**,
+  reasoning trace on 5/5 rows both runs (schema-required — v24 entries are
+  per-field structured: field/evidence/section_ref), date_n 5/5 + dur_n 2/2
+  parseable pairs both runs, money_n 0 (no money GT in sample), tokens +2.5%
+  (1,312 extra per run). Tradeoff documented: `term_length` containment
+  dipped on 1 doc (Ediets 1.0→0.3333 — the leading-duration-phrase rule
+  trades containment credit for parseability; monitored in the next arm).
+  Issue #12 closed; card archived.
 - **2026-08-15 — opencode — KANBAN-016 claimed** Contracts specialist v24 claimed `in_progress` (issue #12 opened first, cross-repo — llm-mailroom imports the agent): the extractor gains a REQUIRED per-field reasoning trace (`reasoning`: summary + entries[{field, evidence, section_ref}]) produced before finalizing the extraction, plus metrics-aligned format discipline so the new regression diagnostics (date/duration/money MAE + R² vs master labels) parse more pairs. Format alignment ONLY — the master CSV is eval ground truth and never reaches the model. Related but distinct from KANBAN-004 (span-residual arm). Planned runs: `{model}_contracts_specialist_v23_sample5` vs `{model}_contracts_specialist_v24_sample5` (seed 42, 5 docs) — names reserved here.
 - **2026-08-14 — opencode — KANBAN-015 done (reconciliation: parallel-edit merge)** Extraction
   regression diagnostics landed in commit `91392ea` (v0.17.0 prep; CHANGELOG
@@ -354,6 +365,7 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
+| KANBAN-016 | v0.17.0 prep (2026-08-15) | commit `6f77615` | Contracts specialist v24: **required per-field reasoning trace** (schema `reasoning` object first, chunked merge unions entries, never scored, rides into log + Langfuse) + **metrics-aligned format discipline** (canonical duration phrase leads `term_length`, plain currency `contract_value`, ISO dates — format only, no master-CSV leakage). A/B seed 42 n=5: overall 0.9336 vs 0.9366 (noise), **key_obligations +10.2pp**, reasoning 5/5 rows, tokens +2.5%; term containment dip on 1 doc documented; issue #12 closed |
 | KANBAN-015 | v0.17.0 prep (2026-08-14/15) | commits `91392ea` + follow-up | Extraction regression diagnostics shipped end-to-end: **R² + MAE tracked for dates/durations** (`date_r2`/`duration_r2` = 1 − SS_res/SS_tot, negative kept), **money MAE (USD)**, **span-count drift (MAE + signed mean)**, field error decomposition, pair counts — all in `scores.diagnostics` (JSONL + dedicated md-log section + GH Pages run-detail diagnostics card); `src/metrics.py` + `src/master_labels.py` (curated CSV preferred, raw clause-text fallback), `--master-labels`/`MASTER_LABELS_CSV` on both extraction runners; **scoring-method slide decks `docs/slides/`** (7 decks + index, worked examples incl. real pilot block `pilot_diag_v22_sample2`); SCORING.md §4 + README + AGENTS.md + wiki updated; 31+4 new tests, 337 total green |
 | KANBAN-014 | v0.17.0 prep (2026-08-14) | commit `2fe4103` | Full-corpus CUAD EDA shipped: `scripts/eda/explore_cuad.py` + `data/eda/{report.md,findings.md,figures/01–10}` all git-tracked. Headlines: median 33,425 chars (max 338,211), 17.1% over the 90k chunk window, `key_obligations` scope mean 16.0 spans/doc (49 null docs), 131 docs with `[***]` redaction markers, Anti-Assignment+Change Of Control 98% co-occurrence |
 | KANBAN-012 | v0.16.0 (2026-08-13) | commit `6697ea9` | sorter_v9 A/B landed: **v9 wins (+2.88pp strict, 0.9259)** — promotion/outsourcing/customization-schedule clusters eliminated, 25→18 fails, v6→v9 +5.8pp; ~0.93 practical plateau → follow-on KANBAN-013; issue #10 closed |
