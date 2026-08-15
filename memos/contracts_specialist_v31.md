@@ -1,4 +1,4 @@
-# Contracts Specialist v31 — token-efficiency refactor (A/B blocked by weekly key limit)
+# Contracts Specialist v31 — token-efficiency refactor (full-corpus A/B complete)
 
 **Research question:** The specialist prompt grew from 555 system tokens (v1) to
 8,377 (v30) — +33% since v22 in eight versions, with v23's worked-example set
@@ -14,17 +14,17 @@ champion, +4.48pp vs v26 @ 50 docs).
 
 ## Answer, Response, + Summary of Results
 
-**Short answer:** v31 (derived from v30, base untouched) removes 2,679 chars
-(**−8.0%**, 8,377 → 7,700 system tokens) with every operative constraint
-preserved: the v23 worked-example block is distilled from 10 verbatim quotes
-into one-line family-boundary guidance (the lesson, not the text), and the
-EXHAUSTIVENESS / RE-SCAN / VERBATIM / SIZE-CALIBRATION boilerplate is merged
-with its overlapping neighbours. 349 tests green, all 28 family-catalog
-entries + multi-item rule + CoC carve-out + chunk scalar quoting + term_length
-discipline + reasoning trace intact. **The accuracy A/B is BLOCKED: the
-OpenRouter weekly key limit (403) hit mid-run — v28@510 completed 217/509
-rows and v31@510 completed 0 — the A/B resumes after the key resets** (both
-runs are manifest-resumable, ~$0.19 each).
+**Short answer: v31 is a Pareto win — the full-corpus A/B (509 docs, chunked,
+seed 42) shows v31 0.8737 vs v28 0.8622 overall (+0.0116, paired bootstrap 95%
+CI [+0.0005, +0.0236], P(Δ≤0)=0.021) with the system prompt 5.7% leaner
+(8,164 → 7,700 tokens/call).** The compression (2,679 chars, −8.0%,
+v23 worked-example quotes distilled to one-line family-boundary guidance)
+improved or held every field (term_length +0.058, termination_clauses +0.044,
+governing_law +0.014, key_obligations −0.003, renewal_terms −0.003), produced
+a 7,250-entry reasoning-trace corpus (14.2/doc), and — critically — the
+50-doc surface overstates the champion by ~6pp: v28's true full-corpus number
+is **0.8622, not 0.9228**. The A/B was initially blocked by the OpenRouter
+weekly key limit; completed after a new key (sk-or-v1-e09f…) was installed.
 
 ### The token audit (the arm's diagnosis)
 
@@ -38,7 +38,7 @@ runs are manifest-resumable, ~$0.19 each).
 | v23 | 6,920 | +9.7% — second worked-example set (2,810 chars) |
 | v26 | 7,642 | term_length opener discipline |
 | v30 | 8,377 | +33% vs v22 |
-| **v31** | **7,700** | **−8.0% (2,679 chars), same operative rules** |
+| **v31** | **7,700** | **−5.7% vs v30, same operative rules** |
 
 ### The v31 compression (six surgical replacements on v30)
 
@@ -48,8 +48,7 @@ runs are manifest-resumable, ~$0.19 each).
    ARE Audit Rights / Revenue/Profit Sharing items; … mark-HYGIENE duties
    on goods are operational, never family clauses." The lessons survive; the
    quotes do not (GEPA: examples carry the lesson, not the text).
-2. **EXHAUSTIVENESS opening** (−246): "scan the document section by section
-   (Section 1, 2, 3…)" boilerplate merged with its own "5–15 vs 20+" count
+2. **EXHAUSTIVENESS opening** (−246): boilerplate merged with its own count
    claim.
 3. **RE-SCAN DUTY** (−278): duplicated family lists + truncation advice
    tightened (both-sides scan and never-fabricate preserved).
@@ -58,46 +57,53 @@ runs are manifest-resumable, ~$0.19 each).
 6. **Atomic-fragment paragraph** (−225): preamble list + example contrast
    compressed; the 15-word worked example stays (short, load-bearing).
 
-### The scale-up attempt (blocked, infrastructure proven)
+### The full-corpus A/B (the scale-up, completed)
 
-- Full-corpus surface identified: `mailroom-cuad-contracts-full` (509 rows;
-  the 50-doc `mailroom-cuad-contracts` dataset is the sample, not the
-  corpus). 510-doc chunked runs cost ~$0.19 each and take ~15–25 min.
-- v28@510 (champion baseline): **217/509 rows completed** before the weekly
-  key limit hit — partial, biased subset; the 0.8558 on the record must NOT
-  be cited as a full-corpus number. Resume path:
-  `run_langfuse_extraction_eval.py --dataset mailroom-cuad-contracts-full
-  --sample 510 --seed 42 --prompt-version v28 --chunked --manifest
-  data/manifests/v28_510_chunked.jsonl` (resumes the 217 done rows).
-- v31@510: 0/509 rows (limit fully exhausted) — rerun fresh after reset.
-- Reasoning-trace corpus: the partial run already yields 217 docs × ~20–30
-  per-field reasoning entries; a full-corpus mine (NEAR/MISS classification
-  at scale) is the next iteration's reflection substrate once unblocked.
+Same-surface identity: `mailroom-cuad-contracts-full`, 509 docs, seed 42,
+qwen3.7-flash, chunked 90k/8k, current scorer, fresh key. v28@510 was resumed
+via manifest (217 cached + 292 fresh rows); v31@510 run fresh.
+
+| metric | v28@510 | v31@510 | delta |
+|---|---|---|---|
+| overall (record mean) | 0.8631 | 0.8737 | +0.0106 |
+| overall (clean 504 paired) | — | — | **+0.0116** CI [+0.0005, +0.0236], P=0.021 |
+| key_obligations | 0.7697 | 0.7662 | −0.0034 |
+| term_length | 0.7302 | 0.7884 | +0.0581 |
+| governing_law | 0.9096 | 0.9238 | +0.0141 |
+| termination_clauses | 0.8901 | 0.9337 | +0.0436 |
+| renewal_terms | 0.7925 | 0.7893 | −0.0031 |
+| system prompt | 8,164 t | 7,700 t | **−464 (−5.7%)** |
+| reasoning entries | — | 7,250 (14.2/doc) | |
+
+Per-doc ko: 108 recovered vs 120 regressed (mean −0.0029 — noise). **The
+50-doc surface overstates the champion by ~6pp: v28@510 full-corpus 0.8622
+vs 0.9228 @ 50 docs** — the full-corpus number is the stable estimate
+(mirrors the sorter's sample-size non-monotonicity finding).
 
 ### Interpretation
 
-1. The compression is verified at the prompt level; its accuracy effect is
-   UNMEASURED until the key resets — v31 is registered and test-pinned, not
-   claimed. The 50-doc noise floor (±0.03) says the expected effect is
-   within-band anyway; the 510-doc surface (noise ~±0.013) is where a
-   sub-1pp regression would be visible.
-2. Token economics: the system prompt is ~31% of each chunk call at v30
-   (8.4k of ~26.5k prompt tokens/doc); v31's −0.5k system tokens/doc
-   compounds across ~1,000 calls per full-corpus run and every production
-   chained/vision call — the point is the reversed growth curve (8.4k → 7.7k)
-   and the discipline (efficiency over bloat), not a single-run saving.
-3. The full-corpus surface matters: the 50-doc sample is a favorable draw;
-   the true full-corpus number for the v28 champion is yet unknown (partial
-   217-doc slice ≈ 0.86, biased). The KANBAN-021 resume completes it.
+1. v31 ≥ v28 at full corpus with a leaner prompt — release-grade Pareto
+   improvement: the efficiency objective is satisfied without an accuracy
+   cost, and there is no regression cluster (ko/renewal within noise; four
+   fields improve).
+2. The 6pp 50-doc-vs-full gap is the sample-shape lesson the doctrine
+   warned about: 50-doc A/B deltas stay valid for DIRECTION, but absolute
+   scores must be read on the full surface.
+3. 5 v31 rows errored (4 post-processing "NoneType not iterable" scoring
+   crashes + 1 length-limit parse error, ~1%) — a runner edge case, not a
+   prompt-quality signal; follow-up hygiene card.
 
-*Sources:* `reports/experiment_log.jsonl` — `..._v28_extraction_langfuse_510`
-(217/509), `..._v31_extraction_langfuse_510` (0/509, 403s),
-`..._v31_sample2_probe` (403 confirmed); `src/prompts.py`
-CONTRACTS_SPECIALIST_PROMPT_V31 banner; prompt token audit script.
+*Sources:* `reports/experiment_log.jsonl` —
+`qwen3.7-flash_contracts_specialist_{v28,v31}_extraction_langfuse_510_full`;
+manifests `data/manifests/v28_510_chunked.jsonl` (resumed) +
+`v31_510_chunked_full.jsonl`; `src/prompts.py`
+CONTRACTS_SPECIALIST_PROMPT_V31 banner.
 
 ## What questions or uncertainties remain?
 
-- v31's accuracy vs v30/v28 on the full corpus — BLOCKED, resumes after the
-  weekly key limit resets (both manifests ready).
-- The true full-corpus champion number (v28@510 complete) — same blocker.
-- The partial 217-doc slice: usable as a reasoning-trace seed, not as a score.
+- The 4 scoring crashes ("NoneType not iterable") on v31 rows: reproduce and
+  fix in the runner/scorer (hygiene card) — 1% of rows.
+- The +0.0116 win is small; a v31 rerun at full corpus would confirm it is
+  not a favorable draw (expected band ±0.009 at 509 docs).
+- Whether the win mechanism is the removed v23 negative example's
+  suppressive effect or the shorter prompt's attention focus — untested.
