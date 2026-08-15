@@ -2,9 +2,12 @@
 
 A prompt experiment loop environment for legal document entity extraction: the
 building block for the llm-mailroom agents. Each evaluation tests **one prompt
-version at a time**, runs the agents on **LangChain**, and logs everything to
-**Braintrust** for comparison in the UI — plus a fully expanded, append-only
-experiment log in the repo (`reports/experiment_log.{jsonl,md}`).
+version at a time**, runs the agents on **LangChain**, and sinks runs to
+**Langfuse** (per-document traces + scores) + **LangSmith** (LLM spans) + a
+fully expanded, append-only experiment log in the repo
+(`reports/experiment_log.{jsonl,md}`). Braintrust hosts the eval datasets
+(read-only) — its experiment/span logging is disabled by default
+(`BRAINTRUST_LOGGING=disabled`) so runs never consume its plan quota.
 
 Modeled on the [RVL-CDIP-Classifier](https://github.com/Exios66/RVL-CDIP-Classifier)
 repo's Braintrust evaluation pattern (vision classification of document page
@@ -404,8 +407,15 @@ python scripts/eval/run_chained_eval.py \
 # maintenance/license, development/license, affiliate/joint_venture count as
 # correct routing). Per-subtype accuracy + expected x predicted confusion
 # matrix in the repo log.
-python scripts/eval/run_subtype_eval.py --dry-run                  # preview
-python scripts/eval/run_subtype_eval.py                            # all 50 contracts
+#
+# PRIMARY SINK: run the Langfuse mirror (per-document traces + scores in
+# Langfuse, LLM spans in LangSmith). The Braintrust runner below is the
+# local-scoring / manifest-resume path — with BRAINTRUST_LOGGING disabled
+# (the default) it skips braintrust.Eval entirely.
+python scripts/eval/run_langfuse_subtype_eval.py \
+    --dataset mailroom-cuad-contracts-full --stratified 250 --seed 42 \
+    --sorter-prompt-version sorter_v11 --dry-run          # preview
+python scripts/eval/run_subtype_eval.py --dry-run                  # preview (local path)
 python scripts/eval/run_subtype_eval.py --sorter-prompt-version sorter_v3 \
     --manifest data/manifests/subtype_50_v3.jsonl
 python scripts/eval/run_subtype_eval.py --sample 10 --seed 42      # pilot slice
@@ -433,9 +443,9 @@ never collide.
 | `run_multiclass_eval.py` | one prompt version across all taxonomy classes, per-class + macro accuracy |
 | `run_subtype_eval.py` | sorter-only contract-family eval: one classification per PDF; `sorter_exact_match` (doc_type), `sorter_subtype_accuracy` (EXACT CUAD-folder key) and `sorter_subtype_accuracy_equiv` (family-level — defensible equivalents like reseller/distributor, maintenance/license, development/license, affiliate/joint_venture recognized as correct routing), per-subtype accuracy + confusion matrix in the repo log |
 | `evaluate_prompt_version.py` | A/B: two prompt versions on the same dataset, delta summary |
-| `run_langfuse_subtype_eval.py` | **Langfuse mirror** of `run_subtype_eval` (same data/task/scorers) — traces into the SEPARATE `llm-mailroom-experiments` project, zero Braintrust scored-run quota |
-| `run_langfuse_chained_eval.py` | **Langfuse mirror** of the chained eval: per-agent spans (`sorter`, `contracts_specialist`) with each agent's designated task scores attached to its own observation; `--handoff-scope subtype` (default) cues the specialist with the predicted subtype's CUAD field groups |
-| `run_langfuse_extraction_eval.py` | **Langfuse mirror** of the specialist-only extraction eval |
+| `run_langfuse_subtype_eval.py` | **Primary-sink mirror** of `run_subtype_eval` (same data/task/scorers) — one per-document Langfuse trace with numeric scores in `llm-dojo`, zero Braintrust scored-run quota; every LLM call also auto-traces to LangSmith |
+| `run_langfuse_chained_eval.py` | **Primary-sink mirror** of the chained eval: per-agent spans (`sorter`, `contracts_specialist`) with each agent's designated task scores attached to its own observation; `--handoff-scope subtype` (default) cues the specialist with the predicted subtype's CUAD field groups |
+| `run_langfuse_extraction_eval.py` | **Primary-sink mirror** of the specialist-only extraction eval (`--chunked` supported — the truncation-doctrine A/B surface) |
 | `run_langfuse_classification_eval.py` | **Langfuse mirror** of the doc-type classification eval (text mode); `--prompt-mode task` + `--valid-classes` mirror the LegalBench task eval too (e.g. `mailroom-lb-hearsay`), one `legalbench_task` observation per row |
 
 Every runner supports `--samples-per-class`/`--sample`, `--sample-seed`/`--seed`,

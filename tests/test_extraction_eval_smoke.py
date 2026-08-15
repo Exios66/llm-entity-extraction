@@ -66,6 +66,8 @@ CUAD_LABELS = [
 @pytest.fixture
 def fake_extraction_eval(monkeypatch):
     run = FakeEvalRun()
+    monkeypatch.setenv("BRAINTRUST_LOGGING", "enabled")
+
 
     def fake_eval_call(project, *args, **kwargs):
         run.kwargs = kwargs

@@ -8,6 +8,27 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Changed
+- **Run sink swapped to Langfuse + LangSmith — Braintrust logging OFF by
+  default (KANBAN-025)** — the four `run_*_eval.py` runners (subtype,
+  extraction, chained, classification) now consult `BRAINTRUST_LOGGING`
+  (`src/braintrust_logging.py`, default `disabled`): when disabled they skip
+  `setup_langchain` + `braintrust.Eval` entirely and run the SAME local
+  scoring loop via `src/eval_shims.py::run_local_eval` (ThreadPoolExecutor +
+  manifest resume + the repo experiment log, `tracing_backend="none"` with a
+  `braintrust_logging/langsmith` tracing meta), so every surface — including
+  vision classification and chunked extraction — runs with ZERO Braintrust
+  plan quota; `braintrust.Eval`/`setup_langchain` stay opt-in per run with
+  `BRAINTRUST_LOGGING=enabled`. The `run_langfuse_*_eval.py` mirrors are now
+  the documented PRIMARY path (per-document Langfuse traces + numeric scores,
+  LangSmith LLM spans, chunked extraction supported). Docs flipped
+  (AGENTS.md cheatsheet + run-sink paragraph, README, wiki/Eval-Runners);
+  `.env`/`.env.example` carry the flag. Verified live: 1-doc subtype pilot
+  through the disabled path logged `tracing_backend=none` +
+  `langsmith=True` with the trace tree captured in the LangSmith `llm-mailroom`
+  project and no Braintrust 400s. 365 tests green (+5 gate unit tests, +1
+  disabled-path smoke test).
+
 ### Added
 - **`sorter_v10` + `sorter_v11` — marketing title-wins arm (KANBAN-013)** —
   the v9 close-out's "1-off long tail" plateau reading is superseded by
@@ -39,22 +60,25 @@ history of the repository's tags. Format follows
   in the log.)
 - **`contracts_specialist_v31` — token-efficiency refactor (KANBAN-021)** —
   same operative rules as v30, compressed: **−8.0% (2,679 chars; 8,377 →
-  7,700 system tokens)** with every constraint preserved (28 family-catalog
-  entries, multi-item family-section rule, CoC-definition carve-out,
-  additive re-scan, chunk-mode scalar quoting, term_length opener
-  discipline, reasoning trace, formats). The v23 worked-example block
-  (2,810 chars of verbatim quotes) is distilled into one-line
+  7,700 system tokens, −5.7%)** with every constraint preserved (28
+  family-catalog entries, multi-item family-section rule, CoC-definition
+  carve-out, additive re-scan, chunk-mode scalar quoting, term_length
+  opener discipline, reasoning trace, formats). The v23 worked-example
+  block (2,810 chars of verbatim quotes) is distilled into one-line
   family-boundary guidance — the lesson, not the text — and the
   EXHAUSTIVENESS/RE-SCAN/VERBATIM/SIZE-CALIBRATION boilerplate is merged
-  with its overlapping neighbours. Prompt-level compression verified (349
-  tests green incl. `test_contracts_v31_token_efficiency_refactor`);
-  **accuracy A/B BLOCKED by the OpenRouter weekly key limit (403)** — v28@510
-  completed 217/509 rows, v31@510 0/509; resumes after the key reset via
-  the resumable manifests (~$0.19/run, `mailroom-cuad-contracts-full`
-  surface). Memo `memos/contracts_specialist_v31.md` (v22→v31 token
-  audit: 6,309 → 8,377 → 7,700). The full-corpus v28 baseline remains
-  incomplete — the partial 0.8558 (217 docs) is a biased subset, not a
-  full-corpus number.
+  with its overlapping neighbours. **Full-corpus A/B (509 docs, seed 42,
+  chunked, current scorer): v31 0.8737 vs v28 0.8622 (+0.0116, paired
+  bootstrap CI [+0.0005, +0.0236], P(Δ≤0)=0.021) with the leaner prompt —
+  a Pareto win; no regression cluster** (term_length +0.058,
+  termination_clauses +0.044, governing_law +0.014, key_obligations
+  −0.003). Re-baseline: the 50-doc surface overstates the champion by ~6pp
+  (v28 0.9228 @50 vs 0.8622 @510). 349→356 tests green (incl.
+  `test_contracts_v31_token_efficiency_refactor`); 7,250-entry
+  reasoning-trace corpus (14.2/doc) for the next reflection. The A/B was
+  initially blocked by the OpenRouter weekly key limit and completed after
+  a new key was installed (v28@510 resumed via manifest, v31@510 fresh).
+  Memo `memos/contracts_specialist_v31.md` (v22→v31 token audit).
 - **LegalBench HEARSAY task fully wired (KANBAN-022)** — the half-done sync
   completed end-to-end: `mailroom-lb-hearsay` synced from the actual
   LegalBench task data (binary Yes/No, 5 train rows / 95 test, 5 slices —

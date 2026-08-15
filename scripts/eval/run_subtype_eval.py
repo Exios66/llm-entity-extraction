@@ -52,9 +52,14 @@ from agents.sorter_agent import (  # noqa: E402
     normalize_subtype,
 )
 from src.braintrust_config import load_braintrust_config  # noqa: E402
+from src.braintrust_logging import (  # noqa: E402
+    braintrust_logging_enabled,
+    langsmith_enabled,
+)
 from src.braintrust_utils import load_braintrust_dataset  # noqa: E402
 from src.env_utils import require_env  # noqa: E402
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset  # noqa: E402
+from src.eval_shims import run_local_eval  # noqa: E402
 from src.experiment_log import (  # noqa: E402
     append_experiment,
     append_markdown,
@@ -180,6 +185,7 @@ def main_with_args(argv: list[str]) -> int:
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
+    bt_enabled = braintrust_logging_enabled()
 
     available = list_prompts()
     if args.sorter_prompt_version not in available:
@@ -243,7 +249,13 @@ def main_with_args(argv: list[str]) -> int:
         print(f"  sorter={args.sorter_prompt_version} model={args.model}")
         return 0
 
-    setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    if bt_enabled:
+        setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    else:
+        print("Braintrust experiment logging DISABLED (BRAINTRUST_LOGGING=disabled) — "
+              "results sink to the repo experiment log"
+              + (" and LangSmith (LANGSMITH_TRACING=true)" if langsmith_enabled() else "")
+              + "; use the run_langfuse_*_eval.py runner for Langfuse traces.")
 
     usage_by_index: dict[int, dict] = {}
 
@@ -362,43 +374,61 @@ def main_with_args(argv: list[str]) -> int:
     def _report_run(results, verbose, jsonl):
         return all(results)
 
-    result = braintrust.Eval(
-        args.project,
-        data=lambda: [
+    if bt_enabled:
+        result = braintrust.Eval(
+            args.project,
+            data=lambda: [
+                {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
+                           "doc_text": d["doc_text"], "expected_subtype": d["expected_subtype"]},
+                 "expected": {"doc_type": d["expected"],
+                              "expected_subtype": d["expected_subtype"]},
+                 "filename": d["filename"]}
+                for i, d in enumerate(dataset)
+            ],
+            task=classify,
+            scores=bt_scorers,
+            max_concurrency=args.max_concurrency,
+            reporter=braintrust.Reporter("subtype-classification",
+                                         report_eval=_report_eval, report_run=_report_run),
+            project_id=args.project_id,
+            experiment_name=experiment_name,
+            metadata={
+                "sorter_prompt": args.sorter_prompt_version,
+                "model": args.model,
+                "reasoning_effort": args.reasoning_effort,
+                "max_input_chars": args.max_input_chars,
+                "task": "subtype_classification",
+                "ground_truth": "cuad_folder",
+                "ground_truth_mode": "cuad_type_aware",
+                "dataset": f"{args.dataset_project}/{args.dataset}",
+                "dataset_size": len(dataset),
+                "dataset_fingerprint": dataset_fingerprint(dataset),
+                "bt_scores": args.bt_scores,
+            },
+            description=(f"{args.model} | sorter {args.sorter_prompt_version} | "
+                         f"contract subtype only | {len(dataset)} PDFs"),
+        )
+    else:
+        rows = [
             {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
                        "doc_text": d["doc_text"], "expected_subtype": d["expected_subtype"]},
              "expected": {"doc_type": d["expected"],
                           "expected_subtype": d["expected_subtype"]},
              "filename": d["filename"]}
             for i, d in enumerate(dataset)
-        ],
-        task=classify,
-        scores=bt_scorers,
-        max_concurrency=args.max_concurrency,
-        reporter=braintrust.Reporter("subtype-classification",
-                                     report_eval=_report_eval, report_run=_report_run),
-        project_id=args.project_id,
-        experiment_name=experiment_name,
-        metadata={
-            "sorter_prompt": args.sorter_prompt_version,
-            "model": args.model,
-            "reasoning_effort": args.reasoning_effort,
-            "max_input_chars": args.max_input_chars,
-            "task": "subtype_classification",
-            "ground_truth": "cuad_folder",
-            "ground_truth_mode": "cuad_type_aware",
-            "dataset": f"{args.dataset_project}/{args.dataset}",
-            "dataset_size": len(dataset),
-            "dataset_fingerprint": dataset_fingerprint(dataset),
-            "bt_scores": args.bt_scores,
-        },
-        description=(f"{args.model} | sorter {args.sorter_prompt_version} | "
-                     f"contract subtype only | {len(dataset)} PDFs"),
-    )
+        ]
+        result = run_local_eval(classify, rows, args.max_concurrency)
 
     log_experiment_to_repo(result, dataset, args, experiment_name,
-                           usage_by_index, log_path, md_log_path)
-    braintrust.flush()
+                           usage_by_index, log_path, md_log_path,
+                           tracing_backend="braintrust" if bt_enabled else "none",
+                           tracing_meta=None if bt_enabled else {
+                               "braintrust_logging": False,
+                               "langsmith": langsmith_enabled(),
+                               "hint": "run_langfuse_*_eval.py for Langfuse traces",
+                           })
+    if bt_enabled:
+        braintrust.flush()
     return 0
 
 

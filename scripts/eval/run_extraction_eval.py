@@ -51,10 +51,12 @@ import braintrust
 
 from agents.specialist_agents import ContractsSpecialist
 from src.braintrust_config import load_braintrust_config
+from src.braintrust_logging import braintrust_logging_enabled, langsmith_enabled
 from src.braintrust_utils import load_braintrust_dataset
 from src.cuad_ground_truth import build_expected_fields, build_presence_expectations
 from src.env_utils import require_env
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.eval_shims import run_local_eval
 from src.experiment_log import (
     append_experiment,
     append_markdown,
@@ -173,6 +175,7 @@ def main_with_args(argv: list[str]) -> int:
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
+    bt_enabled = braintrust_logging_enabled()
 
     available = list_prompts()
     if args.prompt_version not in available:
@@ -241,7 +244,13 @@ def main_with_args(argv: list[str]) -> int:
                   "--chunked for production-representative extraction A/Bs.")
         return 0
 
-    setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    if bt_enabled:
+        setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    else:
+        print("Braintrust experiment logging DISABLED (BRAINTRUST_LOGGING=disabled) — "
+              "results sink to the repo experiment log"
+              + (" and LangSmith (LANGSMITH_TRACING=true)" if langsmith_enabled() else "")
+              + "; use the run_langfuse_*_eval.py runner for Langfuse traces.")
 
     from src.prompts import get_prompt
 
@@ -552,9 +561,47 @@ def main_with_args(argv: list[str]) -> int:
     def _report_run(results, verbose, jsonl):
         return all(results)
 
-    result = braintrust.Eval(
-        args.project,
-        data=lambda: [
+    if bt_enabled:
+        result = braintrust.Eval(
+            args.project,
+            data=lambda: [
+                {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
+                           "doc_text": d["doc_text"], "expected_fields": d["expected_fields"],
+                           "expected_presence": d.get("expected_presence") or {},
+                           "doc_category": d.get("doc_category")},
+                 "expected": {
+                     "doc_type": d["expected"],
+                     "expected_fields": d["expected_fields"],
+                 },
+                 "filename": d["filename"]}
+                for i, d in enumerate(with_truth)
+            ],
+            task=extract_contract,
+            scores=bt_scorers,
+            max_concurrency=args.max_concurrency,
+            reporter=braintrust.Reporter("extraction-only",
+                                         report_eval=_report_eval, report_run=_report_run),
+            project_id=args.project_id,
+            experiment_name=experiment_name,
+            metadata={
+                "prompt": prompt_text,
+                "prompt_version": args.prompt_version,
+                "model": args.model,
+                "task": "contract_entity_extraction",
+                "ground_truth": "cuad_v1_clause_labels",
+                "scoring": "field_type_aware_content_scoring",
+                "bt_scores": args.bt_scores,
+                "judge": args.judge,
+                "fields": scored_fields,
+                "dataset": f"{args.dataset_project}/{args.dataset}",
+                "dataset_size": len(with_truth),
+                "dataset_fingerprint": dataset_fingerprint(with_truth),
+                "manifest": str(args.manifest) if args.manifest else None,
+            },
+            description=f"{args.model} | {args.prompt_version} | CUAD extraction eval | fields={len(scored_fields)} | bt_scores={args.bt_scores}",
+        )
+    else:
+        rows = [
             {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
                        "doc_text": d["doc_text"], "expected_fields": d["expected_fields"],
                        "expected_presence": d.get("expected_presence") or {},
@@ -565,38 +612,22 @@ def main_with_args(argv: list[str]) -> int:
              },
              "filename": d["filename"]}
             for i, d in enumerate(with_truth)
-        ],
-        task=extract_contract,
-        scores=bt_scorers,
-        max_concurrency=args.max_concurrency,
-        reporter=braintrust.Reporter("extraction-only",
-                                     report_eval=_report_eval, report_run=_report_run),
-        project_id=args.project_id,
-        experiment_name=experiment_name,
-        metadata={
-            "prompt": prompt_text,
-            "prompt_version": args.prompt_version,
-            "model": args.model,
-            "task": "contract_entity_extraction",
-            "ground_truth": "cuad_v1_clause_labels",
-            "scoring": "field_type_aware_content_scoring",
-            "bt_scores": args.bt_scores,
-            "judge": args.judge,
-            "fields": scored_fields,
-            "dataset": f"{args.dataset_project}/{args.dataset}",
-            "dataset_size": len(with_truth),
-            "dataset_fingerprint": dataset_fingerprint(with_truth),
-            "manifest": str(args.manifest) if args.manifest else None,
-        },
-        description=f"{args.model} | {args.prompt_version} | CUAD extraction eval | fields={len(scored_fields)} | bt_scores={args.bt_scores}",
-    )
+        ]
+        result = run_local_eval(extract_contract, rows, args.max_concurrency)
 
     print_extraction_summary(result, scored_fields)
     log_experiment_to_repo(result, scored_fields, with_truth, args, experiment_name,
                            usage_by_index, log_path, md_log_path, field_types=field_types,
                            master_labels=master_labels if master_labels_used else None,
-                           master_labels_path=str(master_labels_path) if master_labels_used else None)
-    braintrust.flush()
+                           master_labels_path=str(master_labels_path) if master_labels_used else None,
+                           tracing_backend="braintrust" if bt_enabled else "none",
+                           tracing_meta=None if bt_enabled else {
+                               "braintrust_logging": False,
+                               "langsmith": langsmith_enabled(),
+                               "hint": "run_langfuse_*_eval.py for Langfuse traces",
+                           })
+    if bt_enabled:
+        braintrust.flush()
     return 0
 
 

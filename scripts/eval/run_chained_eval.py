@@ -44,9 +44,11 @@ import braintrust
 from agents.sorter_agent import SUBTYPE_UNKNOWN, SorterAgent, normalize_subtype
 from agents.specialist_agents import ContractsSpecialist
 from src.braintrust_config import load_braintrust_config
+from src.braintrust_logging import braintrust_logging_enabled, langsmith_enabled
 from src.braintrust_utils import load_braintrust_dataset
 from src.env_utils import require_env
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.eval_shims import run_local_eval
 from src.experiment_log import (
     append_experiment,
     append_markdown,
@@ -129,6 +131,7 @@ def main_with_args(argv: list[str]) -> int:
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
+    bt_enabled = braintrust_logging_enabled()
 
     available = list_prompts()
     for version in (args.sorter_prompt_version, args.extractor_prompt_version):
@@ -181,7 +184,13 @@ def main_with_args(argv: list[str]) -> int:
               f"model={args.model}")
         return 0
 
-    setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    if bt_enabled:
+        setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    else:
+        print("Braintrust experiment logging DISABLED (BRAINTRUST_LOGGING=disabled) — "
+              "results sink to the repo experiment log"
+              + (" and LangSmith (LANGSMITH_TRACING=true)" if langsmith_enabled() else "")
+              + "; use the run_langfuse_*_eval.py runner for Langfuse traces.")
 
     sorter_usage_by_index: dict[int, dict] = {}
     extractor_usage_by_index: dict[int, dict] = {}
@@ -441,9 +450,46 @@ def main_with_args(argv: list[str]) -> int:
     def _report_run(results, verbose, jsonl):
         return all(results)
 
-    result = braintrust.Eval(
-        args.project,
-        data=lambda: [
+    if bt_enabled:
+        result = braintrust.Eval(
+            args.project,
+            data=lambda: [
+                {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
+                           "doc_text": d["doc_text"], "expected_fields": d["expected_fields"],
+                           "expected_presence": d.get("expected_presence") or {},
+                           "expected_subtype": (d.get("metadata") or {}).get("category"),
+                           "doc_category": d.get("doc_category")},
+                 "expected": {"doc_type": d["expected"], "expected_fields": d["expected_fields"]},
+                 "filename": d["filename"]}
+                for i, d in enumerate(with_truth)
+            ],
+            task=chain,
+            scores=bt_scorers,
+            max_concurrency=args.max_concurrency,
+            reporter=braintrust.Reporter("chained-sorter-extractor",
+                                         report_eval=_report_eval, report_run=_report_run),
+            project_id=args.project_id,
+            experiment_name=experiment_name,
+            metadata={
+                "sorter_prompt": args.sorter_prompt_version,
+                "extractor_prompt": args.extractor_prompt_version,
+                "model": args.model,
+                "reasoning_effort": args.reasoning_effort,
+                "sorter_reasoning_effort": args.sorter_reasoning_effort,
+                "handoff_scope": args.handoff_scope,
+                "task": "chained_sorter_extractor",
+                "ground_truth": "cuad_v1_clause_labels",
+                "ground_truth_mode": "cuad_type_aware",
+                "dataset": f"{args.dataset_project}/{args.dataset}",
+                "dataset_size": len(with_truth),
+                "dataset_fingerprint": dataset_fingerprint(with_truth),
+                "bt_scores": args.bt_scores,
+            },
+            description=(f"{args.model} | sorter {args.sorter_prompt_version} -> "
+                         f"extractor {args.extractor_prompt_version} | chained"),
+        )
+    else:
+        rows = [
             {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
                        "doc_text": d["doc_text"], "expected_fields": d["expected_fields"],
                        "expected_presence": d.get("expected_presence") or {},
@@ -452,37 +498,20 @@ def main_with_args(argv: list[str]) -> int:
              "expected": {"doc_type": d["expected"], "expected_fields": d["expected_fields"]},
              "filename": d["filename"]}
             for i, d in enumerate(with_truth)
-        ],
-        task=chain,
-        scores=bt_scorers,
-        max_concurrency=args.max_concurrency,
-        reporter=braintrust.Reporter("chained-sorter-extractor",
-                                     report_eval=_report_eval, report_run=_report_run),
-        project_id=args.project_id,
-        experiment_name=experiment_name,
-        metadata={
-            "sorter_prompt": args.sorter_prompt_version,
-            "extractor_prompt": args.extractor_prompt_version,
-            "model": args.model,
-            "reasoning_effort": args.reasoning_effort,
-            "sorter_reasoning_effort": args.sorter_reasoning_effort,
-            "handoff_scope": args.handoff_scope,
-            "task": "chained_sorter_extractor",
-            "ground_truth": "cuad_v1_clause_labels",
-            "ground_truth_mode": "cuad_type_aware",
-            "dataset": f"{args.dataset_project}/{args.dataset}",
-            "dataset_size": len(with_truth),
-            "dataset_fingerprint": dataset_fingerprint(with_truth),
-            "bt_scores": args.bt_scores,
-        },
-        description=(f"{args.model} | sorter {args.sorter_prompt_version} -> "
-                     f"extractor {args.extractor_prompt_version} | chained"),
-    )
+        ]
+        result = run_local_eval(chain, rows, args.max_concurrency)
 
     log_experiment_to_repo(result, scored_fields, with_truth, args, experiment_name,
                            sorter_usage_by_index, extractor_usage_by_index,
-                           log_path, md_log_path)
-    braintrust.flush()
+                           log_path, md_log_path,
+                           tracing_backend="braintrust" if bt_enabled else "none",
+                           tracing_meta=None if bt_enabled else {
+                               "braintrust_logging": False,
+                               "langsmith": langsmith_enabled(),
+                               "hint": "run_langfuse_*_eval.py for Langfuse traces",
+                           })
+    if bt_enabled:
+        braintrust.flush()
     return 0
 
 

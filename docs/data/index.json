@@ -5060,7 +5060,7 @@
   "seed": 42,
   "sample_key": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509",
   "global_best_pp": -13.52,
-  "delta_best_pp": -0.7299999999999973,
+  "delta_best_pp": -1.7900000000000027,
   "timestamp": "2026-08-15T19:36:16.952017+00:00",
   "git": {
    "commit": "1d8dfa3",
@@ -5612,7 +5612,7 @@
   "seed": 42,
   "sample_key": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509",
   "global_best_pp": -12.790000000000001,
-  "delta_best_pp": 0.0,
+  "delta_best_pp": -1.0600000000000054,
   "timestamp": "2026-08-15T20:00:55.089638+00:00",
   "git": {
    "commit": "3cec084",
@@ -5690,5 +5690,122 @@
   },
   "data_source_project": null,
   "data_source_n_samples": 5
+ },
+ {
+  "id": 95,
+  "experiment_name": "qwen3.7-flash_contracts_specialist_v31_extraction_langfuse_510_full",
+  "task": "contract_entity_extraction",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracts_specialist_v31",
+  "headline": {
+   "label": "extraction",
+   "value": 0.8737
+  },
+  "ci95": {
+   "lo": 0.8625,
+   "hi": 0.8852,
+   "half": 0.0113,
+   "n": 504,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "overall_extraction_score": 0.8737,
+   "field_presence": 0.9655,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 0.9889,
+    "effective_date": 0.8577,
+    "governing_law": 0.9238,
+    "key_obligations": 0.7662,
+    "parties": 0.8966,
+    "renewal_terms": 0.7893,
+    "term_length": 0.7884,
+    "termination_clauses": 0.9337
+   },
+   "field_exact_rate": 0.7536,
+   "list_f1": 0.4972,
+   "date_mae_days": 43.8634,
+   "date_r2": 0.981,
+   "duration_mae_days": 421.2372,
+   "duration_r2": 0.7203
+  },
+  "n_rows": 509,
+  "n_ok": 504,
+  "n_error": 5,
+  "total_tokens": 11725630,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.493516,
+  "cost_estimated_per_doc_usd": 0.00097,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266",
+  "seed": 42,
+  "sample_key": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509",
+  "global_best_pp": -11.729999999999997,
+  "delta_best_pp": 0.0,
+  "timestamp": "2026-08-15T20:26:54.628294+00:00",
+  "git": {
+   "commit": "e49473d",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509
+ },
+ {
+  "id": 96,
+  "experiment_name": "pilot_nobt_sorter_v11",
+  "task": "subtype_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v11",
+  "headline": {
+   "label": "subtype strict",
+   "value": 1.0,
+   "detail": "doc_type 1.0000 \u00b7 strict 1.0000 \u00b7 equiv 1.0000"
+  },
+  "ci95": {
+   "lo": 0.20654329147389294,
+   "hi": 1.0,
+   "half_pp": 39.672835426305355,
+   "source": "wilson"
+  },
+  "breakdown": {
+   "doc_type_accuracy": 1.0,
+   "subtype_accuracy": 1.0,
+   "subtype_accuracy_equiv": 1.0,
+   "confidence": 0.95,
+   "n_failed": 0,
+   "mode_counts": {}
+  },
+  "n_rows": 1,
+  "n_ok": 1,
+  "n_error": 0,
+  "total_tokens": 17694,
+  "cost_usd": null,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.000664,
+  "cost_estimated_per_doc_usd": 0.000664,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "afb2e0e77981c268fd1b9e9c38811053030860fa936a90a7f8e846164f7bf2cd",
+  "seed": 42,
+  "sample_key": "afb2e0e77981c268fd1b9e9c38811053030860fa936a90a7f8e846164f7bf2cd:42:1",
+  "global_best_pp": 0.0,
+  "delta_best_pp": 0.0,
+  "timestamp": "2026-08-15T20:29:12.841346+00:00",
+  "git": {
+   "commit": "e49473d",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 1
  }
 ]

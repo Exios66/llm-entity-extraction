@@ -60,6 +60,8 @@ class FakeEvalRun:
 @pytest.fixture
 def fake_eval(monkeypatch, tmp_path):
     run = FakeEvalRun()
+    monkeypatch.setenv("BRAINTRUST_LOGGING", "enabled")
+
 
     def fake_eval_call(project, *args, **kwargs):
         run.kwargs = kwargs

@@ -24,7 +24,18 @@ python scripts/eval/run_classification_eval.py --dataset mailroom-lb-hearsay \
     --prompt-mode task --valid-classes Yes,No --prompt-version legalbench_task_v0
 ```
 
-## Subtype (`scripts/eval/run_subtype_eval.py`)
+## Run sink (read first)
+
+**Primary sink: Langfuse + LangSmith + the repo experiment log.**
+`run_langfuse_*_eval.py` are the primary eval runners — one per-document
+Langfuse trace with numeric scores plus LangSmith LLM spans
+(`LANGSMITH_TRACING=true`). Braintrust hosts the datasets (read-only) and its
+experiment/span logging is OFF by default (`BRAINTRUST_LOGGING=disabled` in
+`.env`), so the `run_*_eval.py` runners below skip `braintrust.Eval` and run
+the same local scoring loop (manifest resume, experiment log). Opt back into
+Braintrust logging per run with `BRAINTRUST_LOGGING=enabled`.
+
+## Subtype (`scripts/eval/run_langfuse_subtype_eval.py` — primary; `run_subtype_eval.py` — local/resume)
 
 Sorter-only subtype routing: one call per document decides the primary class
 AND the contract-subtype family (25 CUAD families + `other`).
@@ -34,8 +45,10 @@ AND the contract-subtype family (25 CUAD families + `other`).
 `per_subtype`, `confusion_matrix`, bootstrap CIs.
 
 ```bash
+python scripts/eval/run_langfuse_subtype_eval.py --dataset mailroom-cuad-contracts-full \
+    --stratified 250 --seed 42 --sorter-prompt-version sorter_v11     # primary (Langfuse + LangSmith)
 python scripts/eval/run_subtype_eval.py --dataset mailroom-cuad-contracts-full \
-    --stratified 200 --seed 42 --sorter-prompt-version sorter_v5
+    --stratified 200 --seed 42 --sorter-prompt-version sorter_v5      # local scoring, no Braintrust log
 ```
 
 ## Extraction (`scripts/eval/run_extraction_eval.py`)

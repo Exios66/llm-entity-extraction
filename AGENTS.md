@@ -10,12 +10,18 @@ This repo measures how well prompt versions classify legal documents and
 extract entities, one prompt at a time. Datasets (CUAD contracts, LegalBench
 tasks) are synced into Braintrust; eval runners send real documents through
 the LangChain agents (sorter, specialists, judge) via OpenRouter; every run
-produces a Braintrust experiment PLUS one append-only record in
+produces ONE append-only record in
 `reports/experiment_log.jsonl` and a fully expanded markdown section in
-`reports/experiment_log.md`. Scoring is deterministic and field-type-aware —
-never exact-match-on-extraction. The agents are pip-installable
-(`pip install -e .`) so llm-mailroom's LangGraph architecture imports and
-calls them directly; prompt versions are the experiment identity.
+`reports/experiment_log.md`. **Run sink: Langfuse + LangSmith + the local
+experiment log.** Braintrust experiment/span logging is DISABLED by default
+(`BRAINTRUST_LOGGING=disabled` — Braintrust stays read-only for dataset
+hosting, so runs never consume its plan's scored-run/log-byte quota). Traces
+per run land in Langfuse (`run_langfuse_*_eval.py` mirror runners, one trace
+per document with scores) and every LangChain LLM call auto-traces to
+LangSmith (`LANGSMITH_TRACING=true`). Scoring is deterministic and
+field-type-aware — never exact-match-on-extraction. The agents are
+pip-installable (`pip install -e .`) so llm-mailroom's LangGraph architecture
+imports and calls them directly; prompt versions are the experiment identity.
 
 ## Agent message board & inter-agent workflow — READ THIS FIRST, EVERY SESSION
 
@@ -274,26 +280,13 @@ python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay  # e.g.
                                     # UPSERT via deterministic row ids — never duplicate)
 
 # Evals (each tests ONE prompt version; naming is {model-slug}_{prompt-version}[_suffix])
-python scripts/eval/run_classification_eval.py --dataset mailroom-cuad-contracts \
-    --input-mode vision --prompt-version sorter_vision_v0          # vision, all pages
-python scripts/eval/run_classification_eval.py --dataset mailroom-cuad-contracts \
-    --input-mode text --prompt-version sorter_v0                    # full text
-python scripts/eval/run_extraction_eval.py --dataset mailroom-cuad-contracts \
-    --prompt-version contracts_specialist_v2 --manifest data/manifests/extract_v2.jsonl
-python scripts/eval/run_chained_eval.py --dataset mailroom-cuad-contracts \
-    --sorter-prompt-version sorter_v5 --extractor-prompt-version contracts_specialist_v11 \
-    --manifest data/manifests/chained_5.jsonl                      # sorter -> extractor
-python scripts/eval/run_chained_eval.py ... --handoff-scope none   # legacy handoff (no subtype cue)
-python scripts/eval/run_chained_eval.py ... --handoff-scope ground_truth  # error-propagation ablation:
-                            # specialist ALSO runs with the GT-subtype handoff; scores.ablation
-                            # splits sorter routing loss from specialist error
-python scripts/eval/run_model_matrix.py --task subtype --models qwen/qwen3.7-flash,deepseek/deepseek-v4-flash \
-                            --prompts sorter_v5,sorter_v6 --sample 10 --seed 42  # cross-model matrix
-python scripts/eval/run_subtype_eval.py --dataset mailroom-cuad-contracts-full \
-    --stratified 200 --seed 42 --sorter-prompt-version sorter_v5   # sorter-only, even across classes
-python scripts/eval/evaluate_prompt_version.py --dataset mailroom-cuad-contracts \
-    --prompt-a sorter_vision_v0 --prompt-b sorter_vision_v1         # A/B
-
+# Run sink is Langfuse + LangSmith + the repo experiment log — Braintrust
+# experiment/span logging is OFF by default (BRAINTRUST_LOGGING=disabled), so
+# the run_langfuse_*_eval.py runners are the PRIMARY eval path (per-document
+# Langfuse traces with scores; every LLM call also auto-traces to LangSmith).
+# The run_*_eval.py runners are the local-scoring / manifest-resume path —
+# with Braintrust logging disabled they skip braintrust.Eval entirely; opt
+# back in per run with BRAINTRUST_LOGGING=enabled.
 # Langfuse projects (two environments, two purposes):
 #   - llm-dojo: where THIS repo's prompt iterations run — individual prompt
 #     improvements and enhancements, evaluated one prompt version at a time.
@@ -314,14 +307,37 @@ python scripts/eval/evaluate_prompt_version.py --dataset mailroom-cuad-contracts
 #   (add --dry-run to preview; a missing env file / missing keys is skipped
 #   with a warning, so another project is a drop-in — create an env file
 #   with that project's key pair and pass it on the command line.)
+
+# PRIMARY — Langfuse sink (one trace per document with scores) + LangSmith spans
 python scripts/eval/run_langfuse_subtype_eval.py --dataset mailroom-cuad-contracts-full \
-    --sorter-prompt-version sorter_v6
+    --stratified 250 --seed 42 --sorter-prompt-version sorter_v11  # sorter-only, even across classes
 python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
     --sorter-prompt-version sorter_v6 --extractor-prompt-version contracts_specialist_v11
-python scripts/eval/run_langfuse_extraction_eval.py --prompt-version contracts_specialist_v11
-python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_v6
+python scripts/eval/run_langfuse_extraction_eval.py --dataset mailroom-cuad-contracts \
+    --prompt-version contracts_specialist_v11 --chunked --manifest data/manifests/extract_chunked.jsonl
+python scripts/eval/run_langfuse_classification_eval.py --dataset mailroom-cuad-contracts \
+    --prompt-version sorter_v6
 python scripts/eval/run_langfuse_classification_eval.py --dataset mailroom-lb-hearsay \
     --prompt-mode task --valid-classes Yes,No --prompt-version legalbench_task_v0  # LegalBench task mode
+
+# LOCAL / RESUME path (no Braintrust experiment; Braintrust logging off by default):
+python scripts/eval/run_classification_eval.py --dataset mailroom-cuad-contracts \
+    --input-mode vision --prompt-version sorter_vision_v0          # vision, all pages
+python scripts/eval/run_classification_eval.py --dataset mailroom-cuad-contracts \
+    --input-mode text --prompt-version sorter_v0                    # full text
+python scripts/eval/run_extraction_eval.py --dataset mailroom-cuad-contracts \
+    --prompt-version contracts_specialist_v2 --manifest data/manifests/extract_v2.jsonl
+python scripts/eval/run_chained_eval.py --dataset mailroom-cuad-contracts \
+    --sorter-prompt-version sorter_v5 --extractor-prompt-version contracts_specialist_v11 \
+    --manifest data/manifests/chained_5.jsonl                      # sorter -> extractor
+python scripts/eval/run_chained_eval.py ... --handoff-scope none   # legacy handoff (no subtype cue)
+python scripts/eval/run_chained_eval.py ... --handoff-scope ground_truth  # error-propagation ablation:
+                            # specialist ALSO runs with the GT-subtype handoff; scores.ablation
+                            # splits sorter routing loss from specialist error
+python scripts/eval/run_model_matrix.py --task subtype --models qwen/qwen3.7-flash,deepseek/deepseek-v4-flash \
+                            --prompts sorter_v5,sorter_v6 --sample 10 --seed 42  # cross-model matrix
+python scripts/eval/evaluate_prompt_version.py --dataset mailroom-cuad-contracts \
+    --prompt-a sorter_vision_v0 --prompt-b sorter_vision_v1         # A/B
 
 # HITL annotation queue (llm-dojo mirror): filter IN low performers / failed classifications
 python scripts/eval/run_annotation_queue.py build --dry-run --threshold 0.85   # extraction: scan + rank, no writes

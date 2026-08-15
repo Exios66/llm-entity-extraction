@@ -47,9 +47,11 @@ import braintrust
 
 from agents.sorter_agent import DOC_CLASS_KEYS, SorterAgent
 from src.braintrust_config import load_braintrust_config
+from src.braintrust_logging import braintrust_logging_enabled, langsmith_enabled
 from src.braintrust_utils import load_braintrust_dataset, load_braintrust_image_dataset
 from src.env_utils import require_env
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.eval_shims import run_local_eval
 from src.experiment_log import (
     append_experiment,
     append_markdown,
@@ -355,6 +357,7 @@ def main_with_args(argv: list[str]) -> int:
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
+    bt_enabled = braintrust_logging_enabled()
 
     # ---- input mode resolution ----
     if args.pdf_dir:
@@ -446,7 +449,13 @@ def main_with_args(argv: list[str]) -> int:
         return 0
 
     # Hook LangChain tracing into Braintrust BEFORE any model call.
-    setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    if bt_enabled:
+        setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
+    else:
+        print("Braintrust experiment logging DISABLED (BRAINTRUST_LOGGING=disabled) — "
+              "results sink to the repo experiment log"
+              + (" and LangSmith (LANGSMITH_TRACING=true)" if langsmith_enabled() else "")
+              + "; use the run_langfuse_*_eval.py runner for Langfuse traces.")
 
     from src.prompts import get_prompt
 
@@ -580,9 +589,46 @@ def main_with_args(argv: list[str]) -> int:
     def _report_run(results, verbose, jsonl):
         return all(results)
 
-    result = braintrust.Eval(
-        args.project,
-        data=lambda: [
+    if bt_enabled:
+        result = braintrust.Eval(
+            args.project,
+            data=lambda: [
+                {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
+                           "doc_text": d.get("doc_text", ""), "prompt": d.get("prompt", ""),
+                           "image_b64": d.get("image_b64", ""),
+                           "image_format": d.get("image_format", "png"),
+                           "pages_b64": d.get("pages_b64", [])},
+                 "expected": d["expected"],
+                 "filename": d["filename"]}
+                for i, d in enumerate(dataset)
+            ],
+            task=classify_document,
+            scores=scorer_list,
+            max_concurrency=args.max_concurrency,
+            reporter=braintrust.Reporter("classification-only",
+                                         report_eval=_report_eval, report_run=_report_run),
+            project_id=args.project_id,
+            experiment_name=experiment_name,
+            metadata={
+                "prompt": prompt_text,
+                "prompt_version": args.prompt_version,
+                "model": args.model,
+                "temperature": args.temperature,
+                "max_tokens": args.max_tokens,
+                "input_mode": args.input_mode,
+                "prompt_mode": args.prompt_mode,
+                "vision_pages": args.vision_pages,
+                "valid_classes": valid_classes,
+                "dataset": f"{args.dataset_project}/{args.dataset}",
+                "dataset_size": len(dataset),
+                "dataset_fingerprint": dataset_fingerprint(dataset),
+                "manifest": str(args.manifest) if args.manifest else None,
+            },
+            description=(f"{args.model} | prompt {args.prompt_version} | "
+                         f"{args.prompt_mode} | {args.input_mode} | temperature {args.temperature}"),
+        )
+    else:
+        rows = [
             {"input": {"index": i, "filename": d["filename"], "expected": d["expected"],
                        "doc_text": d.get("doc_text", ""), "prompt": d.get("prompt", ""),
                        "image_b64": d.get("image_b64", ""),
@@ -591,38 +637,21 @@ def main_with_args(argv: list[str]) -> int:
              "expected": d["expected"],
              "filename": d["filename"]}
             for i, d in enumerate(dataset)
-        ],
-        task=classify_document,
-        scores=scorer_list,
-        max_concurrency=args.max_concurrency,
-        reporter=braintrust.Reporter("classification-only",
-                                     report_eval=_report_eval, report_run=_report_run),
-        project_id=args.project_id,
-        experiment_name=experiment_name,
-        metadata={
-            "prompt": prompt_text,
-            "prompt_version": args.prompt_version,
-            "model": args.model,
-            "temperature": args.temperature,
-            "max_tokens": args.max_tokens,
-            "input_mode": args.input_mode,
-            "prompt_mode": args.prompt_mode,
-            "vision_pages": args.vision_pages,
-            "valid_classes": valid_classes,
-            "dataset": f"{args.dataset_project}/{args.dataset}",
-            "dataset_size": len(dataset),
-            "dataset_fingerprint": dataset_fingerprint(dataset),
-            "manifest": str(args.manifest) if args.manifest else None,
-        },
-        description=(f"{args.model} | prompt {args.prompt_version} | "
-                     f"{args.prompt_mode} | {args.input_mode} | temperature {args.temperature}"),
-    )
+        ]
+        result = run_local_eval(classify_document, rows, args.max_concurrency)
 
     print_classifications(result, dataset)
     log_experiment_to_repo(result, dataset, args, experiment_name,
-                           cost_by_index, usage_by_index, log_path, md_log_path)
+                           cost_by_index, usage_by_index, log_path, md_log_path,
+                           tracing_backend="braintrust" if bt_enabled else "none",
+                           tracing_meta=None if bt_enabled else {
+                               "braintrust_logging": False,
+                               "langsmith": langsmith_enabled(),
+                               "hint": "run_langfuse_*_eval.py for Langfuse traces",
+                           })
 
-    braintrust.flush()
+    if bt_enabled:
+        braintrust.flush()
     return 0
 
 
