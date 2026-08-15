@@ -54,6 +54,28 @@ The eval loops exercise the same LangChain agents the mailroom runs:
 | Specialists | `agents/specialist_agents.py` | per-doc-class field extraction (contract, corporate record, due diligence, correspondence, compliance filing, court opinion) + shared JSON schemas |
 | `JudgeAgent` | `agents/judge_agent.py` | offline LLM-as-a-judge: classification / completeness / extraction correctness |
 
+### Recommended production configuration (extraction)
+
+Determined from the ko-vs-overall A/B on the 50-doc seed-42 surface
+(`V16_PROPOSITION.md` §15.1, memo `contracts_specialist_v23.md`):
+
+| Config | key_obligations (ko) | overall | cost / 50 docs | rows ok | ellipsis |
+|---|---:|---:|---:|---:|---:|
+| **overall arm** (`reasoning_effort=none`) | 0.8294 (v22) | **0.9512** | $0.039 | 50/0 | 19.5% |
+| **ko arm** (`reasoning_effort=max`) | **0.8510** (v23×max) | 0.9363 | $0.103 (2.6×) | 50/0 | **18.7%** |
+| *(rejected)* v19×max | 0.8840 | 0.9135 | $0.098 | 49/1 | 27.1% |
+
+**Decision: split.** The default production config is the **overall arm**
+(`reasoning_effort=none` — the extractor's default; the champion line is now
+`contracts_specialist_v31`, 0.8737 @ full-509 corpus, chunked, seed 42). The
+**ko arm** (`--reasoning-effort max`) is a documented opt-in for
+compliance/covenant-heavy reviews where key_obligations recall is the
+deliverable: `v23×max` (ko 0.8510, **0 parse errors**, lowest ellipsis 18.7%)
+is the defensible ko config — **not** `v19×max` (ko peak 0.8840 but 1/50 parse
+error, worst overall 0.9135, highest ellipsis 27.1%). Max reasoning buys
++2.2pp ko at 2.6× cost and −1.5pp overall — worth it only when
+key_obligations fidelity outweighs the cost/overall tradeoff.
+
 ## Scoring (deterministic, field-type-aware)
 
 Exact-match-on-extraction treats every field identically, which is wrong. The

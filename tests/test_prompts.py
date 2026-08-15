@@ -170,6 +170,33 @@ def test_sorter_v11_affiliate_carve_out():
     assert "27. AFFILIATE IS NOT MARKETING" not in SORTER_PROMPT_V10
 
 
+def test_sorter_v12_strategic_alliance_title_wins():
+    from src.prompts import SORTER_PROMPT_V11, SORTER_PROMPT_V12
+
+    # v12 is a strict derivation of v11: the base is untouched, the derived
+    # prompt adds the strategic_alliance title-wins guard for the 5-fail cell
+    # at 509 (Iovance/Adaptimmune -> collaboration by rule-21 inversion,
+    # Intricon -> license, Giggles -> consulting, FTE -> service), all five
+    # explicitly titled "STRATEGIC ALLIANCE AGREEMENT" with a verified 0-risk
+    # counterfactual (all 32 alliance-titled docs GT alliance).
+    assert SORTER_PROMPT_V12 != SORTER_PROMPT_V11
+    assert SORTER_PROMPT_V12.startswith(SORTER_PROMPT_V11[:300])
+    assert "sorter_v12" in PROMPT_VERSIONS
+
+    v12 = SORTER_PROMPT_V12
+    assert "28. STRATEGIC ALLIANCE TITLE WINS" in v12
+    assert "strategic_alliance, not collaboration" in v12
+    assert "strategic_alliance, not license" in v12
+    assert "strategic_alliance, not consulting" in v12
+    assert "strategic_alliance, not service" in v12
+    assert "27. AFFILIATE IS NOT MARKETING" in v12
+    assert "26. MARKETING TITLE WINS" in v12
+    assert "VALID CONTRACT SUBTYPE KEYS" in v12
+    # v11 predates the rule.
+    assert "28. STRATEGIC ALLIANCE TITLE WINS" not in SORTER_PROMPT_V11
+
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt

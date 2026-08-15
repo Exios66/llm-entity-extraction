@@ -459,6 +459,40 @@ SORTER_PROMPT_V11 = SORTER_PROMPT_V10.replace(
 
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v12 (strategic alliance title wins)
+# -----------------------------------------------------------------------------
+# v12 = v11 + the strategic_alliance title-wins guard, the first banked
+# cluster from the KANBAN-013 close-out. The v9 full-509 benchmark
+# (qwen3.7-flash_sorter_v9_subtype_langfuse: strict 0.9116, 45 fails) leaves
+# the strategic_alliance cell at 22/27 (5 fails @509), all FIVE explicitly
+# titled "STRATEGIC ALLIANCE AGREEMENT" and all family_confusion
+# (title-vs-machinery): Iovance + Adaptimmune -> collaboration (rule-21
+# INVERSION — reasoning "Under Rule 21, collaborative governance structures
+# (like a JSC)... classify them as 'collaboration'", quoting the rule
+# backwards), Intricon -> license (royalty/exclusivity/IP-retention substance
+# read), Giggles -> consulting (independent-contractor read), FTE -> service
+# (master-services/subcontracting read). Counterfactual verified 0-risk: all
+# 32 alliance-titled docs at 509 are GT strategic_alliance. Rule 28 mirrors
+# the validated title-wins doctrine (rules 23/24/26: promotion, outsourcing,
+# marketing titles beat machinery) and explicitly overrides rule 21's
+# collaboration reading for alliance titles. Target: strict > 0.9259 on the
+# full-509 surface with a v9@509 rerun bounding the noise floor (the 243-doc
+# surface cannot resolve a 5-doc cluster — it holds only 1 strategic_alliance
+# fail). One rule per iteration: the cooperation-title (3 fails) and
+# rule-21-inversion (non-alliance) lessons stay banked for v13+.
+# =============================================================================
+
+SORTER_PROMPT_V12 = SORTER_PROMPT_V11.replace(
+    """or the affiliate performs active marketing/solicitation ("MARKETING AFFILIATE AGREEMENT" granting the right to advertise, market and sell with sales quotas -> affiliate, not marketing).""",
+    """or the affiliate performs active marketing/solicitation ("MARKETING AFFILIATE AGREEMENT" granting the right to advertise, market and sell with sales quotas -> affiliate, not marketing).
+
+28. STRATEGIC ALLIANCE TITLE WINS: an agreement whose TITLE names the alliance family — "Strategic Alliance Agreement", "Alliance Agreement" — is strategic_alliance even when its operative machinery reads as collaboration (a joint steering committee, a joint research program and shared governance), license (royalties, exclusivity terms, IP ownership retention), consulting (independent-contractor services, investor introductions, branding), or service/subcontracting (labor, materials and site acquisition under purchase orders): the corpus files these documents under Strategic Alliance and the ground truth follows the title, mirroring the title-wins doctrine (rules 23/24/26 — promotion, outsourcing, marketing titles beat their machinery). Rule 21's collaboration reading does NOT override the alliance title ("STRATEGIC ALLIANCE AGREEMENT" with a JSC and a joint research program -> strategic_alliance, not collaboration; a "Strategic Alliance Agreement" granting a technology license with royalty payments -> strategic_alliance, not license; a "Strategic Alliance Agreement" engaging an independent contractor for investor introductions and branding -> strategic_alliance, not consulting; a "Strategic Alliance Agreement" for labor, materials and site acquisition under purchase orders -> strategic_alliance, not service).""",
+)
+
+
+
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2797,6 +2831,7 @@ PROMPT_VERSIONS = {
     "sorter_v9": SORTER_PROMPT_V9,
     "sorter_v10": SORTER_PROMPT_V10,
     "sorter_v11": SORTER_PROMPT_V11,
+    "sorter_v12": SORTER_PROMPT_V12,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

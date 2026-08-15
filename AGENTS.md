@@ -693,7 +693,13 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   families need deliberation — verified +4.6pp strict on the 200-doc sample);
   the EXTRACTOR defaults to `none` — thinking models burn the whole token
   budget on reasoning otherwise. Flags: `--reasoning-effort` (subtype /
-  extraction) and `--sorter-reasoning-effort` (chained).
+  extraction) and `--sorter-reasoning-effort` (chained). **Production
+  decision (KANBAN-008): the recommended config is a SPLIT** — the default is
+  the overall arm (`reasoning_effort=none`; the ko/overall tradeoff is in
+  README "Recommended production configuration"); the ko-justified arm
+  (`--reasoning-effort max`, `v23×max`: ko 0.8510, 0 parse errors, lowest
+  ellipsis 18.7%) is a documented opt-in for compliance/covenant-heavy reviews
+  at 2.6× cost — NOT `v19×max` (1/50 parse error + worst overall).
 - **Extractor reasoning trace (v24+)**: the contracts specialist emits a
   REQUIRED per-field reasoning trace (`predicted.reasoning` — `summary` +
   `entries[{field, evidence, section_ref}]`) BEFORE finalizing the
