@@ -372,8 +372,9 @@ python scripts/reporting/confusion_matrix.py --experiment <name>        # fetche
 python scripts/reporting/score_extraction_manifest.py data/manifests/extract_v2.jsonl
 python scripts/reporting/render_experiment_log.py                       # rebuild md log from jsonl
 
-# Tests (never hit the network)
-python -m pytest tests/ -v
+# Tests (never hit the network) — surgical by default; full suite only for significant changes / releases
+python -m pytest tests/test_<area>.py -v                       # surgically relevant area
+python -m pytest tests/ -v                                     # full suite (significant changes / release gate only)
 ```
 
 Always run `--dry-run` on an unfamiliar eval before paying for LLM calls.
@@ -463,9 +464,11 @@ accounting). The rules below are the invariants:
    IS the experiment identity; never mutate a prompt string after it has run.
    Keep the change surgical and cite the data that motivates it in the
    prompt's section banner comment.
-3. **Unit-test the change** — mock-level tests (prompt content assertions,
-   option-list ↔ schema-enum wiring tests, runner smoke tests). Run
-   `python -m pytest tests/ -q` before spending money.
+ 3. **Unit-test the change** — mock-level tests (prompt content assertions,
+    option-list ↔ schema-enum wiring tests, runner smoke tests). Run the
+    surgically relevant tests (`python -m pytest tests/test_<area>.py -q`)
+    before spending money — not the full suite (that is reserved for
+    significant changes / the release gate).
 4. **Dry-run** — `--dry-run` on the eval runner to confirm the plan
    (dataset size, prompt versions, experiment name).
 5. **Run a cheap pilot** — small sample with the same seed as the previous
@@ -573,9 +576,11 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
 4. **Regenerate derived artifacts** — `render_experiment_log.py` (new runs)
    + `scripts/site/build_site.py` (site data) + the headless render audit
    (`node tests/assets/site_render_audit.js`).
-5. **Run the full suite** — `python -m pytest tests/ -q` (network-free) and
-   `python scripts/release.py --check` (version/changelog consistency, site
-   data freshness, tests, render audit).
+ 5. **Run the full suite** — a release is the definition of a significant
+    change, so the full gate applies: `python -m pytest tests/ -q`
+    (network-free) and
+    `python scripts/release.py --check` (version/changelog consistency, site
+    data freshness, tests, render audit).
 6. **Commit** — one commit covering changelog + docs + pyproject + derived
    artifacts, message `vX.Y.Z: <summary>`.
 7. **Tag and push** — annotated tag matching the changelog header exactly;
@@ -645,6 +650,16 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
 
 ## Testing rules
 
+- **Test surgically by default; run the full suite only for significant
+  changes.** Routine work — a new prompt version, a runner flag, a scorer
+  tweak, a doc edit — runs ONLY the surgically relevant tests (the files
+  listed below for the area changed) plus any tangentially related suites
+  (e.g. the eval smoke tests when a runner's flags change). Run the FULL
+  suite (`python -m pytest tests/ -q`) only when the change is significant:
+  cross-cutting refactors, packaging/import changes, scorer/metrics or
+  site/asset changes — and ALWAYS before a release (`release.py --check`
+  enforces it at the gate). Full-suite-by-default wastes minutes per
+  iteration; surgical-by-default keeps the loop cheap.
 - All tests must be network-free (mocked LLM calls, tmp Braintrust config).
   Check `tests/conftest.py` for shared fixtures.
 - New eval logic → add a smoke test (see `test_extraction_eval_smoke.py`,
@@ -662,8 +677,10 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   and CLI wiring of `run_annotation_queue.py`).
 - New streamer parsing → `test_cuad_streamer.py` /
   `test_legalbench_streamer.py` / `test_streamers.py`.
-- Run the full suite before committing: `python -m pytest tests/ -q`
-  (currently 303 tests, all passing).
+- Run the relevant tests before committing: `python -m pytest
+  tests/test_<area>.py -q` for the areas you touched (surgically relevant +
+  tangential only — see the first bullet; the full suite is NOT required for
+  routine commits).
 
 ## Gotchas
 

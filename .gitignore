@@ -19,6 +19,7 @@ htmlcov/
 data/manifests/
 data/samples/
 data/legalbench_local/
+data/cuad_pdfs/            # the full CUAD v1 PDF corpus (~510 contracts) — local only
 reports/*.png
 reports/*.csv
 

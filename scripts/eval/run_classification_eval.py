@@ -183,7 +183,10 @@ def load_local_pdfs(pdf_dir: Path, expected: str, valid: list[str] | None = None
     """Render ACTUAL PDFs to full page images for evaluation (no .txt files).
 
     Each PDF becomes one dataset row with ``pages_b64`` (every rendered page);
-    the vision sorter classifies the full document via page vote.
+    the vision sorter classifies the full document via page vote. Discovery is
+    RECURSIVE (``rglob``), so a nested corpus tree such as the local CUAD
+    mirror (``data/cuad_pdfs/CUAD_v1/full_contract_pdf/Part_I/.../*.pdf``) is
+    found as-is — point ``--pdf-dir`` at the corpus root.
     """
     import base64
 
@@ -193,7 +196,7 @@ def load_local_pdfs(pdf_dir: Path, expected: str, valid: list[str] | None = None
     if expected not in allowed:
         raise SystemExit(f"--expected must be one of {allowed}, got {expected!r}")
     records = []
-    for path in sorted(pdf_dir.glob("*.pdf")):
+    for path in sorted(pdf_dir.rglob("*.pdf")):
         pdf_bytes = path.read_bytes()
         pages = []
         page_num = 0

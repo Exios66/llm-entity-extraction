@@ -26,6 +26,9 @@ Usage:
     python scripts/eval/sync_langfuse_datasets.py --tasks hearsay --test    # train + 94-row test
     python scripts/eval/sync_langfuse_datasets.py --tasks hearsay --env-file langfuse.env \\
         --env-file langfuse-llm-mailroom.env                                # multiple projects
+    python scripts/eval/sync_langfuse_datasets.py --cuad --dry-run          # LOCAL CUAD corpus
+    python scripts/eval/sync_langfuse_datasets.py --cuad                    # -> mailroom-cuad-contracts
+    python scripts/eval/sync_langfuse_datasets.py --cuad --cuad-dir data/cuad_pdfs
 """
 
 from __future__ import annotations
@@ -159,6 +162,77 @@ def _sync_project(env_file: Path, tasks: list[str], with_test: bool,
             "total": sum(1 for _ in tasks), "skipped_env": False}
 
 
+def _sync_cuad(env_file: Path, cuad_dir: Path, dry_run: bool) -> dict:
+    """Mirror the LOCAL CUAD corpus into a Langfuse dataset.
+
+    Builds TEXT rows offline — full contract text + clause-QA ground truth +
+    category metadata from the local ``CUAD_v1.json`` and the PDF tree under
+    ``data/cuad_pdfs/`` (downloaded by ``scripts/datasets/download_cuad_pdfs.py``)
+    — and upserts them into the ``mailroom-cuad-contracts`` dataset in the
+    project (llm-dojo). This is the Langfuse-side twin of streaming the corpus
+    to Braintrust when dataset-row writes are unavailable, so the CUAD data is
+    versioned + queryable in the same environment the eval traces land.
+    """
+    from scripts.datasets.stream_cuad_to_bt import build_records, clause_labels_from_local
+
+    project = "unknown-project"
+    public_key = secret_key = None
+    base_url = DEFAULT_BASE_URL
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            value = value.strip().strip("'\"")
+            if key == "LANGFUSE_PUBLIC_KEY":
+                public_key = value
+            elif key == "LANGFUSE_SECRET_KEY":
+                secret_key = value
+            elif key == "LANGFUSE_PROJECT":
+                project = value
+            elif key in ("LANGFUSE_BASE_URL", "LANGFUSE_HOST"):
+                base_url = value or DEFAULT_BASE_URL
+
+    public_key = os.environ.get("LANGFUSE_PUBLIC_KEY") or public_key
+    secret_key = os.environ.get("LANGFUSE_SECRET_KEY") or secret_key
+    project = os.environ.get("LANGFUSE_PROJECT") or project
+    base_url = (os.environ.get("LANGFUSE_BASE_URL")
+                or os.environ.get("LANGFUSE_HOST") or base_url).rstrip("/")
+    if not public_key or not secret_key:
+        return {"project": project, "skipped_env": True, "items": 0, "datasets": 0, "total": 1}
+
+    cuad_dir = Path(cuad_dir)
+    json_path = cuad_dir / "CUAD_v1.json"
+    if not json_path.exists():
+        print(f"  [warn] {json_path} not found — download the corpus first with "
+              f"scripts/datasets/download_cuad_pdfs.py", file=sys.stderr)
+        return {"project": project, "items": 0, "datasets": 0, "total": 1, "skipped_env": False}
+    pdf_paths = sorted(str(p.relative_to(cuad_dir)) for p in cuad_dir.rglob("*.pdf"))
+    if not pdf_paths:
+        print(f"  [warn] no PDFs under {cuad_dir} — download the corpus first", file=sys.stderr)
+        return {"project": project, "items": 0, "datasets": 0, "total": 1, "skipped_env": False}
+
+    labels = clause_labels_from_local(json_path)
+    records = build_records(
+        pdf_paths,
+        pages_per_doc="all",
+        target_size=(1024, 1024),
+        api_key="",  # text-only rows never fetch/render PDFs
+        clause_labels=labels,
+        text_only=True,
+    )
+    dataset_name = "mailroom-cuad-contracts"
+    client = Langfuse(public_key=public_key, secret_key=secret_key, host=base_url)
+    n, _ = _sync_records(client, dataset_name, records, dry_run)
+    if not dry_run:
+        client.flush()
+        client.shutdown()
+    print(f"  {dataset_name}: {n} text items -> {dataset_name}"
+          + (" (would)" if dry_run else ""))
+    return {"project": project, "items": n, "datasets": 1, "total": 1, "skipped_env": False}
+
+
 def main_with_args(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tasks", default="hearsay",
@@ -169,11 +243,32 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--env-file", action="append", default=[],
                         help="Langfuse env file with keys + project label (repeatable). "
                              f"Defaults to {DEFAULT_ENV_FILE}")
+    parser.add_argument("--cuad", action="store_true",
+                        help="Mirror the LOCAL CUAD corpus (data/cuad_pdfs) into a "
+                             "Langfuse 'mailroom-cuad-contracts' dataset instead of "
+                             "LegalBench tasks (offline text rows from CUAD_v1.json)")
+    parser.add_argument("--cuad-dir", type=Path, default=Path("data/cuad_pdfs"),
+                        help="Local CUAD mirror root (default: data/cuad_pdfs)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report what would sync without writing")
     args = parser.parse_args(argv)
 
     env_files = [Path(p) for p in (args.env_file or [DEFAULT_ENV_FILE])]
+    if args.cuad:
+        print(f"Syncing the LOCAL CUAD corpus ({args.cuad_dir}) into Langfuse datasets")
+        for env_file in env_files:
+            if not env_file.exists():
+                print(f"  [warn] {env_file} not found — skipped (add it with --env-file to sync that project)")
+                continue
+            report = _sync_cuad(env_file, args.cuad_dir, args.dry_run)
+            if report.get("skipped_env"):
+                print(f"  [warn] {env_file}: no Langfuse keys found — skipped")
+                continue
+            mode = "would upsert" if args.dry_run else "upserted"
+            print(f"  {report['project']}: {mode} {report['items']} items across "
+                  f"{report['datasets']} datasets")
+        return 0
+
     tasks = [t.strip() for t in args.tasks.split(",") if t.strip()]
     if not tasks:
         parser.error("--tasks requires at least one task name")

@@ -50,6 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from agents.sorter_agent import DOC_CLASS_KEYS, SorterAgent  # noqa: E402
 from scripts.eval.run_classification_eval import (  # noqa: E402
     _answer_task,
+    load_local_pdfs,
     load_task_dataset,
     log_experiment_to_repo,
 )
@@ -97,6 +98,17 @@ def main_with_args(argv: list[str]) -> int:
                         help="Local LegalBench task JSONL (streamer --local-dump output: "
                              "{filename, doc_text, prompt, expected, metadata} per line) to "
                              "evaluate instead of a Braintrust dataset")
+    parser.add_argument("--pdf-dir", type=Path, default=None,
+                        help="Local directory of ACTUAL PDFs to classify instead of a "
+                             "Braintrust dataset (e.g. the local CUAD mirror "
+                             "data/cuad_pdfs/CUAD_v1/full_contract_pdf — discovery is "
+                             "recursive). Each PDF is rendered to pages and classified "
+                             "by the VISION sorter, with one Langfuse trace per document.")
+    parser.add_argument("--expected", default="contract",
+                        help="Expected doc_type for --pdf-dir rows (default: contract)")
+    parser.add_argument("--vision-pages", choices=("all", "first"), default="all",
+                        help="--pdf-dir mode: 'all' sends every rendered page in one "
+                             "vision call (default); 'first' sends only page 1")
     parser.add_argument("--prompt-mode", choices=("sorter", "task"), default="sorter",
                         help="sorter: classify doc_type with the sorter prompt over doc text; "
                              "task: answer a LegalBench-style task question from the row's "
@@ -132,7 +144,8 @@ def main_with_args(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
-    require_env("BRAINTRUST_API_KEY")  # still needed to load the Braintrust dataset
+    if args.pdf_dir is None:
+        require_env("BRAINTRUST_API_KEY")  # needed only to load a Braintrust dataset
 
     if args.prompt_version is None:
         args.prompt_version = "legalbench_task_v0" if args.prompt_mode == "task" else "sorter"
@@ -154,7 +167,12 @@ def main_with_args(argv: list[str]) -> int:
         f"{args.model.split('/')[-1]}_{args.prompt_version}_classification_langfuse"
     )
 
-    if args.task_dataset:
+    if args.pdf_dir:
+        if not args.pdf_dir.exists():
+            parser.error(f"--pdf-dir not found: {args.pdf_dir}")
+        dataset = load_local_pdfs(args.pdf_dir, args.expected, DOC_CLASS_KEYS)
+        args.input_mode = "vision"  # local PDFs are classified by the vision sorter
+    elif args.task_dataset:
         if not args.task_dataset.exists():
             parser.error(f"--task-dataset not found: {args.task_dataset}")
         dataset = load_task_dataset(args.task_dataset, valid_classes or set(DOC_CLASS_KEYS))
@@ -252,7 +270,14 @@ def main_with_args(argv: list[str]) -> int:
                             sorter, input_data, sorted(valid_classes), args.prompt_version
                         )
                     else:
-                        result = sorter.classify_json(input_data["doc_text"])
+                        pages = input_data.get("pages_b64") or []
+                        if pages and args.vision_pages == "all":
+                            # ONE row = ONE PDF: every page in a single vision call.
+                            result = sorter.classify_document(pages)
+                        elif pages:
+                            result = sorter.classify_image(pages[0], image_format="png")
+                        else:
+                            result = sorter.classify_json(input_data["doc_text"])
                 except Exception as exc:  # noqa: BLE001 - one bad row must not abort
                     msg = f"ERROR {filename}: {type(exc).__name__}: {exc}"
                     print(msg, file=sys.stderr)
@@ -310,7 +335,8 @@ def main_with_args(argv: list[str]) -> int:
 
     rows = [
         {"index": i, "filename": d["filename"], "expected": d["expected"],
-         "doc_text": d["doc_text"], "prompt": d.get("prompt", "")}
+         "doc_text": d.get("doc_text", ""), "prompt": d.get("prompt", ""),
+         "pages_b64": d.get("pages_b64", [])}
         for i, d in enumerate(dataset)
     ]
     results: list[EvalResultShim] = [None] * len(rows)  # type: ignore[list-item]
@@ -328,13 +354,19 @@ def main_with_args(argv: list[str]) -> int:
     tracer.shutdown()
 
     # The shared logger reads the Braintrust runner's full flag surface; the
-    # mirror records the text-only configuration faithfully (prompt_mode is
-    # already set from the CLI).
-    args.input_mode = "text"
+    # mirror records the configuration faithfully (prompt_mode is already set
+    # from the CLI). Local --pdf-dir runs classify by vision; the text path
+    # stays text.
+    if args.pdf_dir:
+        args.input_mode = "vision"
+    else:
+        args.input_mode = "text"
     args.vision_pages = "all"
     args.scorers = None
     args.no_scorers = True
-    args.documents_dir = args.images_dir = args.pdf_dir = None
+    args.documents_dir = args.images_dir = None
+    if not args.pdf_dir:
+        args.pdf_dir = None
     args.samples_per_class = None
     args.sample_seed = 42
 

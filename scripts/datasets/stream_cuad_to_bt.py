@@ -82,16 +82,13 @@ def _norm(s: str) -> str:
     return _NORM_CACHE[key]
 
 
-def load_clause_labels() -> dict[str, dict]:
-    """Load CUAD_v1.json clause QA annotations, keyed by normalized title.
+def _clause_labels_from_data(data: dict) -> dict[str, dict]:
+    """Parse the CUAD_v1.json payload into title-keyed clause labels.
 
     Each value: ``{"title": ..., "doc_text": <full contract text>,
     "clauses": [{question, answer, answer_start}]}`` — the extraction agent's
     ground truth for the Atticus corpus (41 clause categories).
     """
-    resp = requests.get(CUAD_JSON_URL, headers={"User-Agent": _USER_AGENT}, timeout=600)
-    resp.raise_for_status()
-    data = resp.json()
     by_title: dict[str, dict] = {}
     for doc in data.get("data", []):
         title = (doc.get("title") or "").strip()
@@ -121,6 +118,33 @@ def load_clause_labels() -> dict[str, dict]:
             "clauses": clauses,
         }
     return by_title
+
+
+def load_clause_labels() -> dict[str, dict]:
+    """Load CUAD_v1.json clause QA annotations, keyed by normalized title.
+
+    Each value: ``{"title": ..., "doc_text": <full contract text>,
+    "clauses": [{question, answer, answer_start}]}`` — the extraction agent's
+    ground truth for the Atticus corpus (41 clause categories).
+    """
+    resp = requests.get(CUAD_JSON_URL, headers={"User-Agent": _USER_AGENT}, timeout=600)
+    resp.raise_for_status()
+    return _clause_labels_from_data(resp.json())
+
+
+def clause_labels_from_local(json_path: Path) -> dict[str, dict]:
+    """Load CUAD_v1.json clause QA annotations from a LOCAL copy of the file
+    (e.g. ``data/cuad_pdfs/CUAD_v1.json`` after ``download_cuad_pdfs.py``).
+
+    Offline twin of :func:`load_clause_labels` — identical output shape, no
+    network. This is what the Langfuse dataset mirror consumes when Braintrust
+    dataset-row writes are unavailable.
+    """
+    import json as _json
+
+    return _clause_labels_from_data(
+        _json.loads(Path(json_path).read_text(encoding="utf-8"))
+    )
 
 
 def list_pdf_paths() -> list[str]:
