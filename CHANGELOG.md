@@ -9,6 +9,34 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **`sorter_v10` + `sorter_v11` — marketing title-wins arm (KANBAN-013)** —
+  the v9 close-out's "1-off long tail" plateau reading is superseded by
+  cluster analysis: the **marketing cell ran 0.5/10 (243-doc) and 7/17
+  (full-509) — the worst family accuracy on both surfaces, unchanged since
+  v6** (v8/v9 both 10/17), all fails being marketing-titled docs
+  re-classified by operative machinery (Monsanto→agency, Zounds→
+  manufacturing, Principal→endorsement = rule-6 over-fire, Pacira→
+  distributor, Todos→reseller, Vertex→JV, Audible→co_branding). **v10** =
+  v9 + rule 26 MARKETING TITLE WINS (the R23/R24 title-wins doctrine
+  mirrored to marketing; carve-outs: license-primary titles per annex
+  inheritance, operational-service families transportation/hosting);
+  **v11** = v10 + rule 27 AFFILIATE IS NOT MARKETING (boundary for the
+  measured rule-26 over-fire: Cybergy + SteelVault, content-titled
+  "Marketing Affiliate Agreement"). Same-surface 243-doc A/B (fp
+  fb9f939d, seed 42, temp 0.1): **champion rerun noise floor = ±1 doc
+  (0.9259 → 0.9300); v10 0.9342 and v11 0.9342 strict / 0.9424 equiv —
+  delta +0.4pp inside the band (paired bootstrap CI [−0.0247, +0.0165],
+  P(Δ≤0)=0.710) → logic repair, not a claimed win**. Rule-driven
+  accounting: 4 deterministic recoveries (Monsanto, Principal, Todos,
+  Dynamex), 2 affiliate restorations, 1 R27-wording regression (LinkPlus,
+  equiv-recovered via affiliate↔joint_venture); **marketing cell 0.5 → 0.8
+  at 243**. Banked lessons for the next arm (KANBAN-023): strategic_alliance
+  title-wins (5 fails @509, 0-risk counterfactual), cooperation-title is
+  collaboration (3 fails), rule-21 inversion mechanism. Memo
+  `memos/sorter_v10_v11.md`; 357 tests green. (One append-only artifact: the
+  first v11 launch hit a transient OpenRouter weekly-limit 403 and logged a
+  strict-0.0 record; the rerun 15 min later succeeded — both records remain
+  in the log.)
 - **`contracts_specialist_v31` — token-efficiency refactor (KANBAN-021)** —
   same operative rules as v30, compressed: **−8.0% (2,679 chars; 8,377 →
   7,700 system tokens)** with every constraint preserved (28 family-catalog

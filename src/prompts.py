@@ -394,6 +394,69 @@ SORTER_PROMPT_V9 = SORTER_PROMPT_V8.replace(
 25. CUSTOMIZATION SCHEDULES ARE MAINTENANCE: a "Customization Schedule" (or customization addendum/exhibit) attached to a license, customization and maintenance parent agreement is maintenance per annex inheritance (rule 17) — customization of the licensed software is maintenance work, not development ("Customization Schedule" to a "Software License, Customization and Maintenance Agreement" -> maintenance, not development).""",
 )
 
+# =============================================================================
+# SORTER AGENT — Text Classification, v10 (marketing title wins)
+# -----------------------------------------------------------------------------
+# v10 = v9 + the marketing-title guard for the worst persistent cell on both
+# measurement surfaces. v9 243-doc stratified A/B
+# (qwen3.7-flash_sorter_v9_subtype_langfuse: strict 0.9259, 18 fails) and the
+# v9 full-509 benchmark (strict 0.9116, 45 fails) both leave the marketing
+# cell at 0.5–0.588 (5/10 and 7/17) — UNCHANGED since v6 (v8: 10/17), the
+# lowest accuracy of any family on either surface. All 7 fails at 509 are
+# marketing-titled docs re-classified by their machinery: Monsanto
+# "EXCLUSIVE AGENCY AND MARKETING" -> agency ("the primary legal structure is
+# that of an agency relationship"), Zounds "MANUFACTURING DESIGN MARKETING"
+# -> manufacturing, Principal "Broker Dealer Marketing and Servicing" ->
+# endorsement (rule-6 over-fire: a broker-dealer appointment is NOT an
+# endorsement rider), Pacira "STRATEGIC LICENSING, DISTRIBUTION AND
+# MARKETING" -> distributor, Todos "MARKETING AND RESELLER" -> reseller,
+# Vertex pure "Marketing Agreement" -> joint_venture (JV governance read,
+# "not establishing a joint venture" disclaimer ignored), Audible
+# "Co-Branding... Marketing" -> co_branding. Rule 16 only covers the pure
+# "Marketing Agreement" + supply/reseller shape; it does not fire when
+# marketing is named alongside other families. v10 adds the mirror of the
+# v9 title-wins doctrine (rules 23/24: promotion/outsourcing titles beat
+# machinery — validated +2.88pp strict at 243): marketing titles beat
+# agency/distributor/reseller/manufacturing/servicing/co-branding machinery,
+# with two carve-outs (license-primary titles per annex inheritance rule 17;
+# operational-service families transportation/hosting) that protect the only
+# counterfactuals at risk (Playboy "Content License Agreement" + marketing
+# annex, GT license; Dynamex "MARKETING AND TRANSPORTATION SERVICES", GT
+# transportation — the rule-16 over-fire mirror). Counterfactual at 509:
+# reward 7 + Dynamex, risk 1 (carve-out-protected), keep 10; at 243: reward
+# 5, risk 0, keep 5. Target: strict > 0.94 on the 250-doc stratified A/B
+# with the v9 champion rerun bounding the noise floor.
+# =============================================================================
+
+SORTER_PROMPT_V10 = SORTER_PROMPT_V9.replace(
+    '25. CUSTOMIZATION SCHEDULES ARE MAINTENANCE: a "Customization Schedule" (or customization addendum/exhibit) attached to a license, customization and maintenance parent agreement is maintenance per annex inheritance (rule 17) — customization of the licensed software is maintenance work, not development ("Customization Schedule" to a "Software License, Customization and Maintenance Agreement" -> maintenance, not development).',
+    '25. CUSTOMIZATION SCHEDULES ARE MAINTENANCE: a "Customization Schedule" (or customization addendum/exhibit) attached to a license, customization and maintenance parent agreement is maintenance per annex inheritance (rule 17) — customization of the licensed software is maintenance work, not development ("Customization Schedule" to a "Software License, Customization and Maintenance Agreement" -> maintenance, not development).\n\n26. MARKETING TITLE WINS: when the TITLE names marketing — alone or alongside agency, distributor, reseller, manufacturing, servicing, or co-branding — the agreement is MARKETING when its core is the promotion, placement, marketing, or servicing of the owner\'s products or services, even when the operative machinery reads as agency, distributor, reseller, manufacturing, or co-branding ("EXCLUSIVE AGENCY AND MARKETING AGREEMENT" -> marketing, not agency; "MANUFACTURING, DESIGN AND MARKETING AGREEMENT" -> marketing, not manufacturing; "MARKETING AND RESELLER AGREEMENT" -> marketing, not reseller; a "Broker Dealer Marketing and Servicing Agreement" -> marketing, not endorsement — a broker-dealer, distribution, or servicing appointment for insurance/annuity products is NOT an endorsement rider under rule 6). A pure "Marketing Agreement" is marketing even when it contains joint-venture or co-marketing provisions (a "JOINT SUPPLY AND MARKETING AGREEMENT" with a joint decision-making body and a shared profit/loss ledger -> marketing, not joint_venture — "not establishing a joint venture" disclaimers are standard and do not reclassify the agreement). Carve-outs: (a) when the title\'s PRIMARY family is another specific family — license ("Content License Agreement" with a marketing annex) or an operational service family, transportation or hosting ("MARKETING AND TRANSPORTATION SERVICES AGREEMENT" whose core is reciprocal carriage -> transportation) — that family wins, per annex inheritance (rule 17); (b) rule 16 covers only the pure "Marketing Agreement" shape (a "Marketing Agreement" with supply or reseller machinery).',
+)
+
+# =============================================================================
+# =============================================================================
+# SORTER AGENT — Text Classification, v11 (affiliate carve-out for rule 26)
+# -----------------------------------------------------------------------------
+# v11 = v10 + the affiliate boundary for the rule-26 over-fire measured in the
+# v10 243-doc A/B (qwen3.7-flash_sorter_v10_subtype_langfuse: strict 0.9342 vs
+# champion rerun 0.9300, P(delta<=0)=0.717 — inside the noise band). R26
+# recovered Monsanto/Principal/Todos (marketing titles, stable v9 failures) +
+# Dynamex (transportation carve-out) but REGRESSED Cybergy + SteelVault — both
+# content-titled "Marketing Affiliate Agreement" — because the model extended
+# R26's "alongside" list to affiliate/referral machinery. The affiliate family
+# ("Affiliate/referral program agreements") files "Marketing Affiliate"
+# documents under Affiliate (Cybergy wrong at v9-509 too; SteelVault correct in
+# both v9 runs). Rule 27 draws the boundary: affiliate/referral machinery is
+# affiliate, never marketing, even when recitals call it a marketing agreement.
+# =============================================================================
+
+SORTER_PROMPT_V11 = SORTER_PROMPT_V10.replace(
+    """26. MARKETING TITLE WINS: when the TITLE names marketing — alone or alongside agency, distributor, reseller, manufacturing, servicing, or co-branding — the agreement is MARKETING when its core is the promotion, placement, marketing, or servicing of the owner's products or services, even when the operative machinery reads as agency, distributor, reseller, manufacturing, or co-branding ("EXCLUSIVE AGENCY AND MARKETING AGREEMENT" -> marketing, not agency; "MANUFACTURING, DESIGN AND MARKETING AGREEMENT" -> marketing, not manufacturing; "MARKETING AND RESELLER AGREEMENT" -> marketing, not reseller; a "Broker Dealer Marketing and Servicing Agreement" -> marketing, not endorsement — a broker-dealer, distribution, or servicing appointment for insurance/annuity products is NOT an endorsement rider under rule 6). A pure "Marketing Agreement" is marketing even when it contains joint-venture or co-marketing provisions (a "JOINT SUPPLY AND MARKETING AGREEMENT" with a joint decision-making body and a shared profit/loss ledger -> marketing, not joint_venture — "not establishing a joint venture" disclaimers are standard and do not reclassify the agreement). Carve-outs: (a) when the title's PRIMARY family is another specific family — license ("Content License Agreement" with a marketing annex) or an operational service family, transportation or hosting ("MARKETING AND TRANSPORTATION SERVICES AGREEMENT" whose core is reciprocal carriage -> transportation) — that family wins, per annex inheritance (rule 17); (b) rule 16 covers only the pure "Marketing Agreement" shape (a "Marketing Agreement" with supply or reseller machinery).""",
+    """26. MARKETING TITLE WINS: when the TITLE names marketing — alone or alongside agency, distributor, reseller, manufacturing, servicing, or co-branding — the agreement is MARKETING when its core is the promotion, placement, marketing, or servicing of the owner's products or services, even when the operative machinery reads as agency, distributor, reseller, manufacturing, or co-branding ("EXCLUSIVE AGENCY AND MARKETING AGREEMENT" -> marketing, not agency; "MANUFACTURING, DESIGN AND MARKETING AGREEMENT" -> marketing, not manufacturing; "MARKETING AND RESELLER AGREEMENT" -> marketing, not reseller; a "Broker Dealer Marketing and Servicing Agreement" -> marketing, not endorsement — a broker-dealer, distribution, or servicing appointment for insurance/annuity products is NOT an endorsement rider under rule 6). A pure "Marketing Agreement" is marketing even when it contains joint-venture or co-marketing provisions (a "JOINT SUPPLY AND MARKETING AGREEMENT" with a joint decision-making body and a shared profit/loss ledger -> marketing, not joint_venture — "not establishing a joint venture" disclaimers are standard and do not reclassify the agreement). Carve-outs: (a) when the title's PRIMARY family is another specific family — license ("Content License Agreement" with a marketing annex) or an operational service family, transportation or hosting ("MARKETING AND TRANSPORTATION SERVICES AGREEMENT" whose core is reciprocal carriage -> transportation) — that family wins, per annex inheritance (rule 17); (b) rule 16 covers only the pure "Marketing Agreement" shape (a "Marketing Agreement" with supply or reseller machinery).
+
+27. AFFILIATE IS NOT MARKETING: an agreement whose title names affiliate — "Marketing Affiliate Agreement", "Affiliate Agreement" — or whose operative core is affiliate/referral machinery (referral fees, affiliate links or display placements for referral commissions, recruiting other parties to the program) is AFFILIATE, not marketing: affiliate/referral programs are their own family and rule 26 does NOT apply to them, even when the document's recitals call the arrangement a "marketing agreement" or the affiliate performs active marketing/solicitation ("MARKETING AFFILIATE AGREEMENT" granting the right to advertise, market and sell with sales quotas -> affiliate, not marketing).""",
+)
+
 
 # =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
@@ -2316,6 +2379,46 @@ CONTRACTS_SPECIALIST_PROMPT_V30 = CONTRACTS_SPECIALIST_PROMPT_V29.replace(
     '   - CHUNK DUTY: the document may arrive in overlapping CHUNKS, each labeled\n     "EXTRACTION CHUNK N OF M". Extract every family occurrence present in the chunk\n     you see — a visible family clause is never skippable because it looks\n     incomplete. A clause may begin before the chunk or continue past it (the\n     overlap window re-quotes the boundary); quote the VISIBLE operative language\n     faithfully and stop at what you can see — never fabricate a clause that is\n     not in your chunk, and never guess at the omitted text between chunks. Your\n     items are merged across chunks, so a boundary-truncated clause still counts\n     when the neighboring chunk holds the rest. SCALAR fields keep\n     their exact field rules IN EVERY CHUNK — the chunk window never relaxes them:\n     `term_length` still leads with the canonical duration phrase and then quotes\n     the FULL verbatim clause, opener first, as visible in this chunk; a prefix-\n     only term_length ("five (5) years" alone) is never acceptable, and a null\n     term_length in a chunk that contains the term clause is a MISS, not a chunk-\n     mode shortcut. When the clause is only partially visible, quote the full\n     visible portion including its opener.',
 )
 
+# CONTRACTS SPECIALIST — Contract Extraction, v31 (token-efficiency refactor)
+# -----------------------------------------------------------------------------
+# v31 = v30 with the SAME operative rules, compressed (KANBAN-021, GEPA
+# efficiency principle: lean prompts over bloat). Token audit: v1 555 ->
+# v22 6309 -> v30 8377 system tokens (+33% since v22 in 8 versions; v23's
+# worked-example set alone was 2810 chars of verbatim quotes). v31 (six
+# surgical compressions): (1) v23 worked examples distilled from verbatim
+# quotes into one-line family-boundary guidance — the lesson, not the text;
+# (2) EXHAUSTIVENESS opening merged with its own boilerplate; (3) RE-SCAN
+# DUTY tightened; (4) VERBATIM COMPLETENESS merged with the fragment rule;
+# (5) SIZE CALIBRATION tightened; (6) atomic-fragment preamble list +
+# example contrast compressed. Every operative constraint preserved:
+# family catalog (v10), multi-item family sections + CoC carve-out +
+# additive re-scan (v27-v29), chunk-mode scalar quoting (v30), term_length
+# opener discipline (v26), reasoning trace + formats (v24). Measured at the
+# 510-doc full-corpus chunked A/B vs v30: tokens/doc must drop >8%, overall
+# must stay inside the large-surface noise band.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V31 = CONTRACTS_SPECIALIST_PROMPT_V30.replace(
+    '+ "ISO shall make available to SERVICERS annual audited financial statements\n       prepared by an independent auditing firm within 90 days of the end of each\n       fiscal year" — audited-financial-statement delivery IS an Audit Rights item.\n     + "Fox will remit all VGSL Revenue to Licensee" — a one-sentence revenue\n       remittance IS a Revenue/Profit Sharing item.\n     + "Qualigen shall supply Sekisui with all of Sekisui\'s commercial requirements\n       for the Product in the Applicable Markets" — an all-requirements supply\n       commitment IS an item (Exclusivity/Minimum Commitment).\n     + "Neither Party shall register, use or claim ownership or other rights in any\n       logo, trade name, brand name" — mark-OWNERSHIP-USE restrictions ARE IP\n       Ownership items.\n     + "The Company shall not tarnish or bring into disrepute the reputation of or\n       goodwill associated with the Seller Licensed Trademarks" — mark non-\n       tarnishment IS a Non-Disparagement item.\n     + "TL will trademark the series name in joint names of TL and Integrity" —\n       joint trademark registration IS a Joint IP Ownership item.\n     + "The aggregate liability of Supplier under this Agreement shall be equal to\n       the amounts paid" / "... is limited to, and shall not exceed $31,200.00" —\n       a liability cap, even as a fragment, IS a Cap On Liability item.\n     + "Upon termination, ENVISION shall have eighteen (18) months to exhaust any\n       inventories, packaging and advertising materials" — post-termination\n       exhaustion IS a Post-Termination Services item.\n     + "Arizona may sublicense the licenses granted herein to its Affiliates and\n       Third Parties in the ordinary course of business" — sublicense rights ARE\n       License Grant items.\n     + "Any revenues received by Licensee for the Wireless Products during the Sell\n       Off Period will be subject to Licensee\'s obligation to pay Fox Royalties" —\n       sell-off revenues subject to royalties ARE Revenue/Profit Sharing items.\n     + "the EP\'s services on such projects for the benefit of PFHOF shall be charged\n       to PFHOF at cost without markup" — "at cost without markup" IS a Price\n       Restriction item.\n     NEGATIVE examples — never emit these:\n     - "Sekisui shall not deface, cover, obscure, erase, alter or remove any Qualigen\n       trade names, brand names, trademarks or logos" — trademark-HYGIENE duties\n       (how a party handles marks on its goods) and product-marketing duties are\n       operational, NOT family clauses — BUT mark-ownership-use restrictions\n       ("shall not register, use or claim ownership") and mark non-tarnishment\n       clauses ARE items (see the positives above).\n      - ',
+    '+ Family-boundary guidance (one line per lesson, distilled from measured\n     misses — the lesson, not the quote): audited-financial-statement delivery\n     and revenue remittance ARE Audit Rights / Revenue/Profit Sharing items;\n     all-requirements supply commitments ARE Exclusivity/Minimum Commitment\n     items; post-termination inventory exhaustion IS a Post-Termination\n     Services item; "at cost without markup" IS a Price Restriction item;\n     sell-off revenues subject to royalties ARE Revenue/Profit Sharing items;\n     liability caps count even as fragments ("is limited to, and shall not\n     exceed $31,200.00"); sublicense-to-affiliates rights ARE License Grant\n     items; mark-OWNERSHIP-USE restrictions and mark non-tarnishment ARE IP\n     Ownership / Non-Disparagement items; joint trademark registration IS\n     Joint IP Ownership.\n+ Never emit: mark-HYGIENE duties on goods ("shall not deface... trade\n     names") and product-marketing duties — operational, NOT family clauses\n     (but mark-ownership-use and mark non-tarnishment ARE items, above).',
+).replace(
+    'scan the document section by section (Section 1,\n     2, 3, ... in order, plus the closing portion after a truncation marker) and extract\n     EVERY clause belonging to a listed family — never stop after a few items. A typical\n     contract yields 5-15 family clauses, but an agreement dense with restrictions yields\n     20+; the list is complete only when every present family occurrence appears. A clause\n     stating a restriction, covenant, or special provision named below is a family clause\n     even when it is buried inside a section about something else (an exclusivity sentence\n     inside a supply section, a license grant inside a marketing section, an audit right\n     inside an accounting section).',
+    'scan every section in order (plus the closing portion after a truncation\n     marker) and extract EVERY clause of a listed family — never stop after a few\n     items; an agreement dense with restrictions yields 20+ family clauses, and a\n     family clause counts even when buried inside a section about something else\n     (an exclusivity sentence inside a supply section, a license grant inside a\n     marketing section, an audit right inside an accounting section).',
+).replace(
+    'RE-SCAN DUTY: after building the list, re-scan the document for the families most often missed — volume restrictions and minimum order sizes, caps on liability, uncapped liability, audit rights, third-party beneficiary, change of control, and anti-assignment — and add each present occurrence as its own verbatim item. When the document text contains a truncation marker, scan BOTH sides of the marker; the omitted middle is unrecoverable — never fabricate a clause for it. Never treat the truncation\n     marker as the end of the document: the closing portion after the marker carries\n     the deal-critical sections AND often the restriction/covenant families\n     (anti-assignment, license grants, caps on liability, audit rights, exclusivity,\n     non-compete, post-termination services, IP ownership, change of control) — scan\n     it section by section and extract every family occurrence found there.\n   - ',
+    'RE-SCAN DUTY: after building the list, re-scan for the families most often\n     missed — volume restrictions and minimum order sizes, caps/uncapped liability,\n     audit rights, third-party beneficiary, change of control, anti-assignment — and\n     add each present occurrence as its own verbatim item. When a truncation marker\n     is present, scan BOTH sides of it; the omitted middle is unrecoverable — never\n     fabricate. The closing portion after the marker carries the deal-critical\n     sections and often the restriction/covenant families — scan it section by\n     section and extract every family occurrence found there.\n   ',
+).replace(
+    'VERBATIM COMPLETENESS: every item is a complete, verbatim quote of its\n     operative span — NEVER abbreviate with ellipses ("..."), never skip the\n     middle of a clause, never truncate a quote. A truncated item does not\n     match the ground-truth span and scores as a miss. If a clause is long,\n     quote its operative core in full at the 10-25-word grain — completeness\n     over brevity. NEVER include document titles, recitals, or\n     definitions. (This fragment rule applies to key_obligations only;\n     termination_clauses keep their full-provision quoting.)\n   - ',
+    'VERBATIM COMPLETENESS: quote each operative span in full, verbatim — never\n     ellipses, never a skipped middle, never a truncated quote (a truncated item\n     scores as a miss). For long clauses, quote the operative core at the\n     10-25-word grain. NEVER include titles, recitals, or definitions.\n     (key_obligations only; termination_clauses keep full-provision quoting.)\n   - ',
+).replace(
+    'SIZE CALIBRATION: the ground truth averages 7.4 obligation spans per contract and\n     reaches 22 (min 1); an agreement dense with restrictions yields 20+. Use this only\n     as a sanity check that your items are at span granularity — never as a quota to\n     pad or cap the list. A list of a few long merged sentences is the symptom of\n     missed spans: split them.\n   - ',
+    'SIZE CALIBRATION: the ground truth averages 7.4 obligation spans per contract\n     and reaches 22 (min 1). Use this only as a sanity check that items are at span\n     granularity — never as a quota; a list of a few long merged sentences signals\n     missed spans: split them.\n   - ',
+).replace(
+    'STRIP sentence preamble and riders — "During the Term\n     of this Agreement,", "Except as otherwise set forth herein,", "Subject to\n     Section N,", "Nothing in this Agreement is intended to ...", and\n     cross-references are NOT part of the fragment. When one sentence states\n     several obligations, emit each operative right as its OWN fragment: a\n     compound "shall not assign, sublicense, or transfer" clause yields one\n     fragment per right; an exclusivity clause with territory/term/renewal\n     limitations yields one fragment per distinct limitation. EXAMPLE of the required\n     grain — the ground truth holds "Licensee shall not sublicense, sell, or\n     otherwise transfer the Software to any third party without the prior\n     written consent of Licensor" (15 words). Do NOT emit the 60-word sentence\n     with its "Except as otherwise set forth herein" preamble, and do NOT emit\n     the 5-word sliver "shall not sublicense" alone — keep the obligation core\n     with its operative qualifiers, at the span\'s length. ',
+    'STRIP sentence preamble and riders — "During the Term of this Agreement,",\n     "Except as otherwise set forth herein,", "Subject to Section N,", and\n     cross-references are NOT part of the fragment. When one sentence states\n     several obligations, emit each operative right as its OWN fragment (a\n     "shall not assign, sublicense, or transfer" clause yields one per right;\n     an exclusivity clause yields one per distinct limitation). EXAMPLE — the\n     ground truth holds "Licensee shall not sublicense, sell, or otherwise\n     transfer the Software to any third party without the prior written\n     consent of Licensor" (15 words): keep the obligation core at the span\'s\n     length — neither the 60-word sentence with its preamble nor the 5-word\n     sliver "shall not sublicense". Quote each fragment',
+)
+
+# =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2692,6 +2795,8 @@ PROMPT_VERSIONS = {
     "sorter_v7": SORTER_PROMPT_V7,
     "sorter_v8": SORTER_PROMPT_V8,
     "sorter_v9": SORTER_PROMPT_V9,
+    "sorter_v10": SORTER_PROMPT_V10,
+    "sorter_v11": SORTER_PROMPT_V11,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,
@@ -2731,6 +2836,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "contracts_specialist_v29": CONTRACTS_SPECIALIST_PROMPT_V29,
     "contracts_specialist_v30": CONTRACTS_SPECIALIST_PROMPT_V30,
+    "contracts_specialist_v31": CONTRACTS_SPECIALIST_PROMPT_V31,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

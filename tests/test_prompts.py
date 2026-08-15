@@ -124,6 +124,52 @@ def test_sorter_v9_title_wins_rules():
     assert "CUSTOMIZATION SCHEDULES ARE MAINTENANCE" not in SORTER_PROMPT_V8
 
 
+def test_sorter_v10_marketing_title_wins():
+    from src.prompts import SORTER_PROMPT_V9, SORTER_PROMPT_V10
+
+    # v10 is a strict derivation of v9: the base is untouched, the derived
+    # prompt adds the marketing-title guard for the worst persistent cell
+    # (marketing 0.5/10 at 243 and 7/17 at 509 on v9 — unchanged since v6).
+    assert SORTER_PROMPT_V10 != SORTER_PROMPT_V9
+    assert SORTER_PROMPT_V10.startswith(SORTER_PROMPT_V9[:300])
+    assert "sorter_v10" in PROMPT_VERSIONS
+
+    v10 = SORTER_PROMPT_V10
+    assert "26. MARKETING TITLE WINS" in v10
+    assert "EXCLUSIVE AGENCY AND MARKETING AGREEMENT" in v10
+    assert "MARKETING AND RESELLER AGREEMENT" in v10
+    assert "Broker Dealer Marketing and Servicing Agreement" in v10
+    assert "JOINT SUPPLY AND MARKETING AGREEMENT" in v10
+    assert "not joint_venture" in v10
+    assert "MARKETING AND TRANSPORTATION SERVICES AGREEMENT" in v10
+    assert "Content License Agreement" in v10  # license-primary carve-out (annex inheritance)
+    assert "VALID CONTRACT SUBTYPE KEYS" in v10
+    # v9 predates the rule.
+    assert "26. MARKETING TITLE WINS" not in SORTER_PROMPT_V9
+    assert "Broker Dealer Marketing and Servicing Agreement" not in SORTER_PROMPT_V9
+
+
+def test_sorter_v11_affiliate_carve_out():
+    from src.prompts import SORTER_PROMPT_V10, SORTER_PROMPT_V11
+
+    # v11 is a strict derivation of v10: the base is untouched, the derived
+    # prompt adds the affiliate boundary for the rule-26 over-fire measured
+    # in the v10 A/B (Cybergy + SteelVault, both "Marketing Affiliate
+    # Agreement" in content, regressed by rule 26).
+    assert SORTER_PROMPT_V11 != SORTER_PROMPT_V10
+    assert SORTER_PROMPT_V11.startswith(SORTER_PROMPT_V10[:300])
+    assert "sorter_v11" in PROMPT_VERSIONS
+
+    v11 = SORTER_PROMPT_V11
+    assert "27. AFFILIATE IS NOT MARKETING" in v11
+    assert "Marketing Affiliate Agreement" in v11
+    assert "affiliate, not marketing" in v11
+    assert "26. MARKETING TITLE WINS" in v11
+    assert "VALID CONTRACT SUBTYPE KEYS" in v11
+    # v10 predates the rule.
+    assert "27. AFFILIATE IS NOT MARKETING" not in SORTER_PROMPT_V10
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt
@@ -654,3 +700,50 @@ def test_contracts_v30_chunk_mode_scalar_quoting():
     assert "canonical duration phrase" in v30
     v29 = CONTRACTS_SPECIALIST_PROMPT_V29
     assert "SCALAR fields keep" not in v29
+
+
+def test_contracts_v31_token_efficiency_refactor():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V30,
+        CONTRACTS_SPECIALIST_PROMPT_V31,
+    )
+
+    # v31 = v30 with the SAME operative rules, compressed (KANBAN-021, GEPA
+    # efficiency): the v23 worked-example block (2810 chars of verbatim
+    # quotes) is distilled into one-line family-boundary guidance, and the
+    # EXHAUSTIVENESS/RE-SCAN/VERBATIM/SIZE-CALIBRATION boilerplate is merged
+    # with its overlapping neighbours — 2679 chars (-8.0%) with every
+    # operative constraint preserved.
+    assert CONTRACTS_SPECIALIST_PROMPT_V31 != CONTRACTS_SPECIALIST_PROMPT_V30
+    assert CONTRACTS_SPECIALIST_PROMPT_V31.startswith(
+        CONTRACTS_SPECIALIST_PROMPT_V30[:300]
+    )
+    assert "contracts_specialist_v31" in PROMPT_VERSIONS
+
+    v30 = CONTRACTS_SPECIALIST_PROMPT_V30
+    v31 = CONTRACTS_SPECIALIST_PROMPT_V31
+    assert len(v31) < len(v30) * 0.93, "compression must exceed 7%"
+    # Distilled guidance replaces the verbatim worked-example quotes.
+    assert "audited-financial-statement" in v31
+    assert "mark-OWNERSHIP-USE restrictions" in v31
+    assert '"ISO shall make available' not in v31
+    assert "Fox will remit all VGSL" not in v31
+    assert "NEGATIVE examples" not in v31
+    # Every operative constraint survives.
+    for probe in (
+        "The families (mirroring the CUAD clause categories",
+        "A FAMILY SECTION IS MULTI-ITEM",
+        "item ONLY when the definition itself is the family clause",
+        "the re-scan only ADDS items",
+        "SCALAR fields keep",
+        "never reuse wording from these instructions",
+        "REASONING BEFORE OUTPUT",
+        "PLAIN currency phrase",
+        "scan BOTH sides",
+        "never fabricate",
+        "10-25 words",
+        "Output strict JSON only",
+    ):
+        assert probe in v31, probe
+    # The 15-word grain example stays (short, load-bearing).
+    assert "Licensee shall not sublicense, sell, or" in v31
