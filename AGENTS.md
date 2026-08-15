@@ -731,6 +731,27 @@ The agents under test and the llm-mailroom pipeline under evaluation are
 built on LangChain + LangGraph — invoke the matching skill before writing or
 changing any agent/graph code.
 
+## Agents (this repo)
+
+Project agents under `.opencode/agents/` (opencode loads `<name>.md`; the
+body becomes the agent's prompt):
+
+- **prompt-engineer** (`prompt-engineer.md`) — the master diagnostic
+  evaluator and prompt engineer: its SOLE role is to review all traces,
+  reasoning logic, failures, error messages, and results of every evaluated
+  prompt and produce a stronger, refined, data-backed mutation (new
+  version key) that is free of local plateaus and overfitting to the tested
+  sample. Runs the full diagnose → root-cause → mutate → same-surface A/B →
+  land loop: failure-insight + diagnostics review (MAE/R² with support
+  sizes, span-count drift, error decomposition), cluster-based rule
+  drafting with data-backed tests, same-seed pilots and same-surface A/Bs
+  with bootstrap-CI significance, plateau/overfit detection, and board +
+  CHANGELOG close-out with proof. Delegate prompt iterations to it; never
+  mutate a prompt version it has validated without a new iteration.
+- **experiment-log-sync** (`experiment-log-sync.md`) — keeps the experiment
+  log and the GH Pages site in sync with the latest Braintrust/Langfuse
+  runs.
+
 ## Docs & READMEs
 
 - Per-directory READMEs are the map: `src/README.md`, `agents/README.md`,

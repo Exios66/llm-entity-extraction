@@ -184,6 +184,8 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
 | Card | Issue | Status | Task (summary) | Owner | Target release | CHANGELOG / evidence |
 |---|---|---|---|---|---|---|
+| KANBAN-018 | — | `in_progress` | **prompt-engineer agent (master diagnostic evaluator & prompt engineer)** — dedicated `.opencode/agents/prompt-engineer.md` whose SOLE role is reviewing all traces/reasoning/failures/errors/results of evaluated prompts and producing stronger data-backed mutations (new version keys): diagnose → root-cause taxonomy (boundary-shift/abbreviation/wrong-span/hallucination/scope + sorter modes) → one-rule-per-version mutation with data-backed tests → same-seed pilot → same-surface A/B with bootstrap-CI verdicts → plateau/overfit doctrine (clusters not outliers, generalization test, evidence floor) → board + CHANGELOG + memo close-out. AGENTS.md "Agents (this repo)" section documents it next to experiment-log-sync. | opencode (2026-08-15) | v0.18.0 | tree: `.opencode/agents/prompt-engineer.md`, AGENTS.md §Agents |
+| KANBAN-017 | — | `in_progress` | **term_length containment dip (v24 leading-phrase arm)** — v24's canonical-duration-prefix rule made the model REPLACE the clause opener ("This Agreement will become effective as of the Effective Date and, unless sooner terminated pursuant to Sections 3.1") instead of prefixing it — Ediets containment 1.0→0.3333 (the CUAD span IS the opener). Fix: `contracts_specialist_v25` — prefix is ADDITIVE, full verbatim clause (opener first) must follow; same-surface 5-doc A/B vs v24 (seed 42) to verify recovery + no regression. | opencode (2026-08-15) | v0.18.0 | flagged on KANBAN-016 close-out; v24 run: qwen3.7-flash_contracts_specialist_v24_sample5 |
 | KANBAN-013 | [#11](https://github.com/Exios66/llm-entity-extraction/issues/11) | `backlog` | **Sorter >0.93 tail-sampling iteration** — the v9 A/B left 18 fails, a 1-off long tail (no cluster >2); ~0.93 is the practical plateau on this corpus revision. 0.95 strict needs either tail-sampling iterations (per-error-class rules on the long tail) or a corpus re-baseline; proposal + data first (`V16_PROPOSITION.md` §18 risk register). | unclaimed | v0.18.0 | `V16_PROPOSITION.md` §18; v9 run: qwen3.7-flash_sorter_v9_subtype_langfuse (strict 0.9259, 18 fails) |
 | KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.18.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
 | KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.18.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
@@ -202,6 +204,20 @@ re-targeted to v0.18.0.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-15 — opencode — KANBAN-018 claimed** The **prompt-engineer agent**
+  (`prompt-engineer.md`) — the master diagnostic evaluator and prompt
+  engineer — claimed `in_progress`. Its sole role: review every trace,
+  reasoning trace, failure, error message, and result of evaluated prompts
+  and produce stronger, refined, DATA-BACKED prompt mutations (new version
+  keys) free of local plateaus and sample overfitting. The agent file
+  encodes the repo's full iteration contract: the six-phase diagnose →
+  root-cause → mutate → verify → land loop with the failure taxonomy,
+  same-surface A/B discipline (bootstrap-CI verdicts), the plateau/overfit
+  doctrine (rules for clusters, not 1-off outliers; generalization test;
+  evidence floor on MAE/R² pair counts), board + CHANGELOG + memo close-out
+  rules, and the version-key identity invariant. `AGENTS.md` gains the
+  "Agents (this repo)" section documenting it alongside
+  experiment-log-sync. Board-only card (single-session tooling, no issue).
 - **2026-08-15 — opencode — KANBAN-015 close-out extended (final scope)** The
   card's shipped scope is now complete end-to-end: (1) **money MAE + span-count
   drift + support sizes** (money_mae_usd/median + per-field, span_count_mae/
@@ -221,6 +237,7 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
   modules + gotcha, docs/README.md, wiki/Scoring.md + wiki synced).
   337 tests green, site render audit green. Chained-eval diagnostics remain
   out of scope (own runner, future card). Archive row updated.
+- **2026-08-15 — opencode — KANBAN-017 claimed** term_length containment arm claimed `in_progress` (board-only): v24's leading-phrase rule caused the model to REPLACE the clause opener with the canonical duration phrase — the CUAD ground-truth span for Ediets IS the opener ("This Agreement will become effective as of the Effective Date and, unless sooner terminated pursuant to Sections 3.1"), so containment dropped 1.0→0.3333. Fix = `contracts_specialist_v25` (derived from v24, base untouched): the prefix is ADDITIVE, the ENTIRE verbatim term clause (opener first, exactly as written) must follow — never start at the duration phrase. Planned run: `qwen3.7-flash_contracts_specialist_v25_sample5` (seed 42, 5 docs, same surface as the v23/v24 A/B) — name reserved here.
 - **2026-08-15 — opencode — v0.17.0 release sweep (KANBAN-014/015/016 done)** Board
   swept for the **v0.17.0** release (`scripts/release.py --bump minor`): the
   `[Unreleased]` block — full-corpus EDA (KANBAN-014), extraction regression

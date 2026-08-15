@@ -10,6 +10,25 @@ history of the repository's tags. Format follows
 
 > Extraction regression diagnostics (date/duration/money MAE + R² vs master labels, span-count drift, error decomposition), contracts specialist v24 reasoning trace + metrics-aligned formats, inter-agent workflow (AGENTS.md), full-corpus CUAD EDA, sorter v9 full-scale benchmark, annotation-queue status fix
 
+### Added
+- **`prompt-engineer` agent — the master diagnostic evaluator & prompt
+  engineer** — new `.opencode/agents/prompt-engineer.md` (project agent,
+  `mode: all`): its SOLE role is to review all traces, reasoning logic,
+  failures, error messages, and results of every evaluated prompt and
+  produce a stronger, refined, data-backed mutation (new `PROMPT_VERSIONS`
+  key, never an edit to a run prompt). Encodes the repo's full iteration
+  contract: the diagnose → root-cause → mutate → verify → land loop, the
+  failure taxonomy (extraction: boundary-shift / abbreviation / wrong-span
+  / hallucination / scope; sorter: `function_over_form` /
+  `other_fallback` / `equivalent_family` / `family_confusion`),
+  same-surface A/B discipline with bootstrap-CI verdicts and per-row
+  recovered-vs-regressed checks, the **plateau/overfit doctrine** (rules
+  for failure CLUSTERS not 1-off outliers, family-level generalization
+  test, MAE/R² evidence floor on pair counts, cost-as-tradeoff), and
+  board + CHANGELOG + memo close-out with proof. `AGENTS.md` gains the
+  "Agents (this repo)" section documenting it alongside
+  experiment-log-sync. KANBAN-018.
+
 ## [v0.17.0] - 2026-08-15
 
 ### Changed
