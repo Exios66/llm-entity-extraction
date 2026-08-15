@@ -25,8 +25,14 @@ taxonomy/prompts.
    (``--vision-pages all``, the default).
 2. **Multi-class LegalBench classification** — the sorter answers the
    LegalBench multi-class classification tasks (`cuad_*` Yes/No clause tasks,
-   the 13k-row MAUD per-question suite, hearsay, and 60+ more) via
-   `--prompt-mode task` with the `legalbench_task_v0` prompt.
+   the 13k-row MAUD per-question suite, and 60+ more) via
+   `--prompt-mode task` with the `legalbench_task_v0` prompt. Synced
+   per-task datasets are named `mailroom-lb-<task>`; e.g. **hearsay** (binary
+   Yes/No: does the evidence qualify as hearsay under the Federal Rules of
+   Evidence — 100 samples, 5 train / 95 test, 5 slices: statement made
+   in-court, non-assertive conduct, standard hearsay, non-verbal hearsay,
+   not-introduced-to-prove-truth; CC BY 4.0) lives in `mailroom-lb-hearsay`
+   and evaluates with `--valid-classes Yes,No`.
 
 The sorter receives **full documents** — either the full extracted text
 (100k-char hard safety cap; past the cap the input becomes a HEAD + TAIL
@@ -301,8 +307,11 @@ python scripts/datasets/stream_legalbench_to_bt.py --limit 6 --dry-run
 python scripts/datasets/stream_legalbench_to_bt.py
 
 # 3. LegalBench multi-class classification tasks (cuad_*, hearsay, and more)
-#    from the GitHub raw data — one Braintrust dataset per task
+#    from the GitHub raw data — one Braintrust dataset per task; synced rows
+#    carry deterministic ids (reruns upsert, never duplicate)
 python scripts/datasets/stream_legalbench_tasks_to_bt.py --dry-run
+python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay   # e.g. the hearsay task:
+                                                                           # 5 train rows, Yes/No, 5 slices
 python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks all
 
 # OPTIONAL — keep the FULL CUAD corpus locally instead of streaming to Braintrust:
@@ -337,6 +346,20 @@ python scripts/eval/run_classification_eval.py \
 # LegalBench multi-class task eval (Yes/No clause classification)
 python scripts/eval/run_classification_eval.py \
     --dataset mailroom-lb-cuad_governing_law --prompt-mode task \
+    --valid-classes Yes,No --prompt-version legalbench_task_v0
+
+# The hearsay task (binary: does the evidence qualify as hearsay? 5 train
+# rows, 2 Yes / 3 No; dry-run first — it spends LLM money)
+python scripts/eval/run_classification_eval.py \
+    --dataset mailroom-lb-hearsay --prompt-mode task \
+    --valid-classes Yes,No --prompt-version legalbench_task_v0 --dry-run
+python scripts/eval/run_classification_eval.py \
+    --dataset mailroom-lb-hearsay --prompt-mode task \
+    --valid-classes Yes,No --prompt-version legalbench_task_v0
+
+# Same surface traced into the llm-dojo Langfuse project
+python scripts/eval/run_langfuse_classification_eval.py \
+    --dataset mailroom-lb-hearsay --prompt-mode task \
     --valid-classes Yes,No --prompt-version legalbench_task_v0
 
 # A/B two prompt versions on the same dataset
@@ -413,7 +436,7 @@ never collide.
 | `run_langfuse_subtype_eval.py` | **Langfuse mirror** of `run_subtype_eval` (same data/task/scorers) — traces into the SEPARATE `llm-mailroom-experiments` project, zero Braintrust scored-run quota |
 | `run_langfuse_chained_eval.py` | **Langfuse mirror** of the chained eval: per-agent spans (`sorter`, `contracts_specialist`) with each agent's designated task scores attached to its own observation; `--handoff-scope subtype` (default) cues the specialist with the predicted subtype's CUAD field groups |
 | `run_langfuse_extraction_eval.py` | **Langfuse mirror** of the specialist-only extraction eval |
-| `run_langfuse_classification_eval.py` | **Langfuse mirror** of the doc-type classification eval (text mode) |
+| `run_langfuse_classification_eval.py` | **Langfuse mirror** of the doc-type classification eval (text mode); `--prompt-mode task` + `--valid-classes` mirror the LegalBench task eval too (e.g. `mailroom-lb-hearsay`), one `legalbench_task` observation per row |
 
 Every runner supports `--samples-per-class`/`--sample`, `--sample-seed`/`--seed`,
 `--limit`, `--dry-run`, `--experiment-log`, and stamps the full prompt text
@@ -503,6 +526,36 @@ python -m pytest tests/ -v
 helpers, config loading, field scoring, CUAD ground truth, the subtype
 handoff cue, page voting, the chained/extraction/classification/subtype/langfuse
 eval smoke loops, and the streamer parsers are all mocked.
+
+## Credits
+
+This project builds on — and evaluates against — the following openly
+licensed corpora, benchmarks, and frameworks:
+
+- **[LegalBench](https://github.com/HazyResearch/legalbench)** (Guha et al.,
+  "LegalBench: A Collaboratively Built Benchmark for Measuring Legal
+  Reasoning in Large Language Models," NeurIPS 2023, CC BY 4.0) — the
+  multi-class classification tasks (`cuad_*`, `maud_*`, `hearsay`,
+  `personal_jurisdiction`, `rule_qa`, and 60+ more) synced as
+  `mailroom-lb-<task>` Braintrust datasets. The **hearsay** task
+  (binary Yes/No, 100 samples) was contributed by Neel Guha.
+- **[CUAD](https://huggingface.co/datasets/theatticusproject/cuad)** — the
+  Contract Understanding Atticus Dataset (Hendrycks et al., "CUAD: An Expert-
+  Annotated NLP Dataset for Legal Contract Review," NeurIPS 2021), created by
+  **The Atticus Project** — the 510-contract PDF corpus and the 41-category
+  clause-QA ground truth behind the extraction evals and the sorter's
+  contract-subtype taxonomy.
+- **[MAUD](https://zenodo.org/records/7500064)** — the Merger Agreement
+  Understanding Dataset (CC BY 4.0) behind LegalBench's `maud_*` tasks,
+  synced from the official v1 release.
+- **[GEPA](https://arxiv.org/abs/2507.19457)** — the Genetic-Pareto (GEPA)
+  framework for reflective prompt evolution (arXiv:2507.19457), the
+  methodology the `prompt-engineer` agent applies to every prompt
+  iteration in this repo.
+- **[LangChain](https://github.com/langchain-ai/langchain)** /
+  **[LangGraph](https://github.com/langchain-ai/langgraph)** — the agent
+  framework under test; **[Braintrust](https://braintrust.dev)** and
+  **[Langfuse](https://langfuse.com)** — the tracing/eval backends.
 
 ## Docs
 

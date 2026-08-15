@@ -24,6 +24,19 @@ train answers + the README task type), so eval runners can validate and score
 with ``--valid-classes``. A ``--classes-manifest`` JSONL is also written
 locally with per-task classes/questions for the eval suite.
 
+Rows carry DETERMINISTIC ids (content-addressed by ``upload_text_dataset``),
+so reruns UPSERT in place — never duplicate rows.
+
+Example — the **hearsay** task (Neel Guha, CC BY 4.0): binary Yes/No
+classification of whether a piece of evidence qualifies as hearsay under the
+Federal Rules of Evidence (out-of-court statement introduced to prove the
+truth of the matter asserted). 100 samples total: 5 train rows (one per
+slice) + 95 test; the 5 slices are statement made in-court, non-assertive
+conduct, standard hearsay, non-verbal hearsay, and not-introduced-to-prove-
+truth. ``--tasks hearsay`` syncs the 5-row train set to ``mailroom-lb-hearsay``
+with ``valid_classes ["No", "Yes"]``; the base_prompt is a few-shot (4
+exemplars) ``Q: ... Is there hearsay?\\nA:`` template.
+
 Data is streamed from GitHub raw (the canonical LegalBench source; the HF
 mirror is empty/broken). Nothing is committed to the repo.
 
@@ -31,7 +44,7 @@ Usage:
     python scripts/datasets/stream_legalbench_tasks_to_bt.py                 # maud + cuad + curated
     python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks all     # every classification task
     python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks maud_type_of_consideration,hearsay
-    python scripts/datasets/stream_legalbench_tasks_to_bt.py --dry-run
+    python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay --dry-run
 """
 
 from __future__ import annotations

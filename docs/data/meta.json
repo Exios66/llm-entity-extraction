@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-15T19:19:42.846923+00:00",
+ "built_at": "2026-08-15T19:39:23.637186+00:00",
  "surfaces": [
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -12,19 +12,20 @@
   "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
   "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
+  "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509",
   "fb9f939d925bc6c55b500422309d7e5eeeda145ee45d91ba72c11be789899240:42:243"
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 78,
+ "run_count": 83,
  "tasks": {
-  "contract_entity_extraction": 42,
+  "contract_entity_extraction": 45,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 18,
+  "subtype_classification": 20,
   "sorter_classification": 2
  },
  "models": {
-  "qwen/qwen3.7-flash": 76,
+  "qwen/qwen3.7-flash": 81,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -59,19 +60,21 @@
   "contracts_specialist_v23": 3,
   "sorter_v7": 1,
   "sorter_v8": 2,
-  "sorter_v9": 3,
+  "sorter_v9": 4,
   "contracts_specialist_v24": 1,
   "contracts_specialist_v25": 1,
   "contracts_specialist_v26": 3,
   "contracts_specialist_v27": 2,
-  "contracts_specialist_v28": 4,
+  "contracts_specialist_v28": 5,
   "contracts_specialist_v29": 1,
-  "contracts_specialist_v30": 1
+  "contracts_specialist_v30": 1,
+  "sorter_v10": 1,
+  "contracts_specialist_v31": 2
  },
- "n_rows": 5787,
- "n_ok": 5785,
- "n_error": 2,
- "total_tokens": 84653450,
+ "n_rows": 7293,
+ "n_ok": 6488,
+ "n_error": 805,
+ "total_tokens": 96045749,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -96,18 +99,18 @@
  },
  "task_aggregates": {
   "contract_entity_extraction": {
-   "runs": 42,
+   "runs": 43,
    "best": {
     "run_id": 64,
     "value": 0.991
    },
-   "median": 0.91385,
+   "median": 0.9135,
    "worst": {
     "run_id": 1,
     "value": 0.6563
    },
-   "documents": 1223,
-   "tokens": 26433226
+   "documents": 2243,
+   "tokens": 30975939
   },
   "chained_sorter_extractor": {
    "runs": 16,
@@ -124,18 +127,18 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 18,
+   "runs": 20,
    "best": {
     "run_id": 20,
     "value": 1.0
    },
-   "median": 0.88185,
+   "median": 0.89215,
    "worst": {
     "run_id": 15,
     "value": 0.7897
    },
-   "documents": 4478,
-   "tokens": 55084167
+   "documents": 4964,
+   "tokens": 61933753
   },
   "sorter_classification": {
    "runs": 2,

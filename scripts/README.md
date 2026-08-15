@@ -12,7 +12,7 @@
 | `stream_cuad_to_bt.py` | CUAD corpus -> Braintrust dataset (`--text-only`, `--dry-run`, `--limit`) |
 | `download_cuad_pdfs.py` | keep the CUAD PDF corpus locally |
 | `stream_legalbench_to_bt.py` | LegalBench MAUD agreements -> Braintrust |
-| `stream_legalbench_tasks_to_bt.py` | LegalBench multi-class task suites -> Braintrust |
+| `stream_legalbench_tasks_to_bt.py` | LegalBench multi-class task suites -> Braintrust (one `mailroom-lb-<task>` dataset per task, e.g. `--tasks hearsay`; deterministic row ids => reruns upsert) |
 
 ## `scripts/eval/` — the runners (see wiki: Eval-Runners)
 

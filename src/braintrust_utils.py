@@ -160,6 +160,23 @@ def resolve_prompt_version(experiment_meta: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _deterministic_record_id(record: dict) -> str:
+    """Derive a deterministic Braintrust dataset row id from a record.
+
+    Content-addressed over the canonical JSON of the full record, so (a) a
+    rerun of a streamer lands on the SAME ids and upserts in place, and
+    (b) a changed record (new metadata, different expected label) gets a new
+    id instead of silently overwriting. Braintrust's ``Dataset.insert``
+    assigns a fresh random UUID when no id is passed, which would append
+    duplicate rows on every rerun.
+    """
+    import hashlib
+    import json as _json
+
+    blob = _json.dumps(record, sort_keys=True, default=str, ensure_ascii=False)
+    return "rec-" + hashlib.sha256(blob.encode("utf-8")).hexdigest()[:32]
+
+
 def load_braintrust_dataset(
     project: str,
     dataset_name: str,
@@ -257,6 +274,11 @@ def upload_text_dataset(
     Returns ``{"inserted": n, "failed": m, "failure_details": [...]}`` and
     logs one summary experiment row (``create-<dataset>``) so dataset
     creation is traceable in the project.
+
+    Rows carry a DETERMINISTIC id derived from the record's content
+    (``_deterministic_record_id``), so reruns UPSERT in place instead of
+    appending duplicate rows — Braintrust's ``insert`` otherwise assigns a
+    fresh random UUID per call.
     """
     import braintrust
 
@@ -280,6 +302,7 @@ def upload_text_dataset(
                 input=record["input"],
                 expected=record["expected"],
                 metadata=record.get("metadata", {}),
+                id=_deterministic_record_id(record),
             )
             inserted += 1
         except Exception as exc:  # noqa: BLE001 - one bad row shouldn't abort

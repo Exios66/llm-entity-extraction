@@ -8,6 +8,56 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Added
+- **`contracts_specialist_v31` — token-efficiency refactor (KANBAN-021)** —
+  same operative rules as v30, compressed: **−8.0% (2,679 chars; 8,377 →
+  7,700 system tokens)** with every constraint preserved (28 family-catalog
+  entries, multi-item family-section rule, CoC-definition carve-out,
+  additive re-scan, chunk-mode scalar quoting, term_length opener
+  discipline, reasoning trace, formats). The v23 worked-example block
+  (2,810 chars of verbatim quotes) is distilled into one-line
+  family-boundary guidance — the lesson, not the text — and the
+  EXHAUSTIVENESS/RE-SCAN/VERBATIM/SIZE-CALIBRATION boilerplate is merged
+  with its overlapping neighbours. Prompt-level compression verified (349
+  tests green incl. `test_contracts_v31_token_efficiency_refactor`);
+  **accuracy A/B BLOCKED by the OpenRouter weekly key limit (403)** — v28@510
+  completed 217/509 rows, v31@510 0/509; resumes after the key reset via
+  the resumable manifests (~$0.19/run, `mailroom-cuad-contracts-full`
+  surface). Memo `memos/contracts_specialist_v31.md` (v22→v31 token
+  audit: 6,309 → 8,377 → 7,700). The full-corpus v28 baseline remains
+  incomplete — the partial 0.8558 (217 docs) is a biased subset, not a
+  full-corpus number.
+- **LegalBench HEARSAY task fully wired (KANBAN-022)** — the half-done sync
+  completed end-to-end: `mailroom-lb-hearsay` synced from the actual
+  LegalBench task data (binary Yes/No, 5 train rows / 95 test, 5 slices —
+  statement made in-court, non-assertive conduct, standard hearsay,
+  non-verbal hearsay, not-introduced-to-prove-truth; CC BY 4.0, Neel Guha),
+  classes manifest written (`data/legalbench_classes.jsonl`), Braintrust
+  task-mode eval path verified (`run_classification_eval.py --prompt-mode
+  task --valid-classes Yes,No`), and **`run_langfuse_classification_eval.py`
+  gains `--prompt-mode task`** (the mirror previously hardcoded the sorter
+  doc-type path) — LegalBench tasks now trace into the llm-dojo Langfuse
+  project with one `legalbench_task` observation per row carrying
+  exact_match/confidence; task mode requires `--valid-classes` and defaults
+  the prompt to `legalbench_task_v0`; 3 new smoke tests + 3
+  `_deterministic_record_id` tests.
+- **`upload_text_dataset` now inserts rows with deterministic
+  content-addressed ids** (`src/braintrust_utils.py
+  _deterministic_record_id`) — Braintrust's `insert` otherwise assigns a
+  fresh random UUID per call, so every streamer rerun APPENDED duplicate
+  rows (observed: `mailroom-lb-hearsay` held 2×5 identical rows after a
+  partial + rerun). Reruns now upsert in place as the streamer docstrings
+  always promised. KANBAN-022.
+- **Root README credits section** — LegalBench (NeurIPS 2023, CC BY 4.0),
+  CUAD / The Atticus Project (NeurIPS 2021), MAUD (Zenodo), the GEPA
+  framework (arXiv 2507.19457), and the LangChain/LangGraph/Braintrust/
+  Langfuse stack. KANBAN-022.
+- **LegalBench-task docs updated with the actual hearsay data** — README
+  (sorter's two jobs, sync step 3, loop examples incl. the Langfuse task
+  mode), AGENTS.md cheatsheet, wiki/Eval-Runners.md (classification task
+  mode + Langfuse mirrors + datasets), scripts/README.md,
+  `stream_legalbench_tasks_to_bt.py` docstring. KANBAN-022.
+
 ## [v0.18.0] - 2026-08-15
 
 > v0.18.0 — contracts specialist v26-v30 (term_length containment, multi-item family-section rule +4.48pp, noise-floor follow-up arm), extraction runner chunking, GEPA prompt-engineer agent, slides post-mortem decks

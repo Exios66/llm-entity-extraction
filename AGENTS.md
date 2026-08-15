@@ -259,6 +259,9 @@ python scripts/datasets/stream_cuad_to_bt.py --text-only            # 510 rows, 
 python scripts/datasets/download_cuad_pdfs.py --dry-run             # keep the corpus locally
 python scripts/datasets/stream_legalbench_to_bt.py --limit 6 --dry-run
 python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks all
+python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay  # e.g. the hearsay task
+                                    # (binary Yes/No, 5 train rows / 95 test, 5 slices; reruns
+                                    # UPSERT via deterministic row ids — never duplicate)
 
 # Evals (each tests ONE prompt version; naming is {model-slug}_{prompt-version}[_suffix])
 python scripts/eval/run_classification_eval.py --dataset mailroom-cuad-contracts \
@@ -307,6 +310,8 @@ python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
     --sorter-prompt-version sorter_v6 --extractor-prompt-version contracts_specialist_v11
 python scripts/eval/run_langfuse_extraction_eval.py --prompt-version contracts_specialist_v11
 python scripts/eval/run_langfuse_classification_eval.py --prompt-version sorter_v6
+python scripts/eval/run_langfuse_classification_eval.py --dataset mailroom-lb-hearsay \
+    --prompt-mode task --valid-classes Yes,No --prompt-version legalbench_task_v0  # LegalBench task mode
 
 # HITL annotation queue (llm-dojo mirror): filter IN low performers / failed classifications
 python scripts/eval/run_annotation_queue.py build --dry-run --threshold 0.85   # extraction: scan + rank, no writes

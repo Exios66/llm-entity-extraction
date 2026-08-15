@@ -15,6 +15,13 @@ The sorter-only task: doc-type classification (or LegalBench multi-class
 ```bash
 python scripts/eval/run_classification_eval.py --dataset mailroom-cuad-contracts \
     --input-mode text --prompt-version sorter_v0
+
+# LegalBench task mode: the row's own base_prompt is the user message, the
+# versioned legalbench_task_v0 system prompt is constrained to --valid-classes.
+# e.g. the hearsay task (binary Yes/No — does the evidence qualify as hearsay?
+# 100 samples, 5 train / 95 test, 5 slices; dataset mailroom-lb-hearsay):
+python scripts/eval/run_classification_eval.py --dataset mailroom-lb-hearsay \
+    --prompt-mode task --valid-classes Yes,No --prompt-version legalbench_task_v0
 ```
 
 ## Subtype (`scripts/eval/run_subtype_eval.py`)
@@ -83,8 +90,17 @@ python scripts/eval/run_model_matrix.py --task subtype \
 
 ## Langfuse mirrors (`scripts/eval/run_langfuse_*_eval.py`)
 
-Same runners traced to the `llm-mailroom-experiments` Langfuse project
+Same runners traced to the `llm-dojo` Langfuse project
 (one trace per document, per-agent spans with task scores).
+`run_langfuse_classification_eval.py` mirrors BOTH classification modes:
+`--prompt-mode sorter` (one `sorter` observation per row) and
+`--prompt-mode task` (one `legalbench_task` observation per row — the LegalBench
+task surface, e.g. `mailroom-lb-hearsay`, traces into llm-dojo too):
+
+```bash
+python scripts/eval/run_langfuse_classification_eval.py --dataset mailroom-lb-hearsay \
+    --prompt-mode task --valid-classes Yes,No --prompt-version legalbench_task_v0
+```
 
 ## Datasets (`scripts/datasets/`)
 
@@ -92,7 +108,11 @@ Same runners traced to the `llm-mailroom-experiments` Langfuse project
   (`--text-only` / vision page images)
 - `download_cuad_pdfs.py` — keep the CUAD PDF corpus locally
 - `stream_legalbench_to_bt.py` / `stream_legalbench_tasks_to_bt.py` —
-  LegalBench MAUD agreements + the multi-class task suites
+  LegalBench MAUD agreements + the multi-class task suites (one
+  `mailroom-lb-<task>` dataset per task; synced rows carry deterministic ids,
+  so reruns upsert in place — e.g. `--tasks hearsay` syncs the 5-row binary
+  Yes/No hearsay train set and writes the per-task classes manifest
+  `data/legalbench_classes.jsonl`)
 
 ## Reporting (`scripts/reporting/`)
 

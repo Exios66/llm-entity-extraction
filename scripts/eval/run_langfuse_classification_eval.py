@@ -1,23 +1,36 @@
 #!/usr/bin/env python3
-"""LANGFUSE MIRROR of the sorter DOC-TYPE classification evaluation (TEXT mode).
+"""LANGFUSE MIRROR of the classification evaluation (TEXT mode).
 
 Runs the EXACT SAME experiment as ``run_classification_eval.py`` in text
-mode — same Braintrust dataset, same SorterAgent doc-type task, same
-deterministic scorers (exact_match, failure, cost), same manifest resume,
-same append-only repo experiment log — but traces into a SEPARATE Langfuse
+mode — same Braintrust dataset, same SorterAgent task, same deterministic
+scorers (exact_match, failure, cost), same manifest resume, same
+append-only repo experiment log — but traces into a SEPARATE Langfuse
 environment (own project keys in ``langfuse.env``; every trace tagged with
 ``LANGFUSE_ENVIRONMENT``).
 
-Per-agent designated task: every trace carries ONE observation per document
-named ``sorter`` with the sorter's task scores (exact_match, confidence)
-attached to the agent's own observation. Vision input is not mirrored (the
-Langfuse media-attachment path is a separate mechanism).
+Two prompt modes:
+
+- ``--prompt-mode sorter`` (default): doc-type classification of full
+  documents, one ``sorter`` observation per document with the sorter's task
+  scores (exact_match, confidence) attached to its own observation.
+- ``--prompt-mode task``: answers a LegalBench-style task question from the
+  row's ``prompt`` field (base_prompt with the example filled in) with the
+  versioned ``legalbench_task_v0`` system prompt constrained to
+  ``--valid-classes`` — one ``legalbench_task`` observation per row.
+  Example: ``--dataset mailroom-lb-hearsay --prompt-mode task
+  --valid-classes Yes,No``.
+
+Vision input is not mirrored (the Langfuse media-attachment path is a
+separate mechanism).
 
 Usage:
     python scripts/eval/run_langfuse_classification_eval.py --dry-run
     python scripts/eval/run_langfuse_classification_eval.py --sample 5 --seed 42
     python scripts/eval/run_langfuse_classification_eval.py \
         --prompt-version sorter_v6
+    python scripts/eval/run_langfuse_classification_eval.py \
+        --dataset mailroom-lb-hearsay --prompt-mode task \
+        --valid-classes Yes,No --prompt-version legalbench_task_v0
 """
 
 from __future__ import annotations
@@ -32,7 +45,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from agents.sorter_agent import DOC_CLASS_KEYS, SorterAgent  # noqa: E402
-from scripts.eval.run_classification_eval import log_experiment_to_repo  # noqa: E402
+from scripts.eval.run_classification_eval import (  # noqa: E402
+    _answer_task,
+    log_experiment_to_repo,
+)
 from src.braintrust_config import load_braintrust_config  # noqa: E402
 from src.braintrust_utils import load_braintrust_dataset  # noqa: E402
 from src.env_utils import require_env  # noqa: E402
@@ -73,8 +89,13 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--project-id", default=_CONFIG.project_id, help="Braintrust project id (dataset source)")
     parser.add_argument("--dataset-project", default=_CONFIG.dataset_project, help="Project holding the dataset")
     parser.add_argument("--dataset", default=DEFAULT_DATASET, help="Braintrust dataset to evaluate")
+    parser.add_argument("--prompt-mode", choices=("sorter", "task"), default="sorter",
+                        help="sorter: classify doc_type with the sorter prompt over doc text; "
+                             "task: answer a LegalBench-style task question from the row's "
+                             "'prompt' field (base_prompt with the example filled in)")
     parser.add_argument("--valid-classes", default=None,
-                        help="Comma-separated allowed expected labels (default: the taxonomy doc classes)")
+                        help="Comma-separated allowed expected labels (default: the taxonomy doc classes; "
+                             "REQUIRED for --prompt-mode task, e.g. Yes,No or A,B,C,D)")
     parser.add_argument("--limit", type=int, default=None, help="Evaluate only the first N documents")
     parser.add_argument("--sample", type=int, default=0, help="Random sample of N documents")
     parser.add_argument("--seed", type=int, default=42, help="Seed for --sample")
@@ -92,8 +113,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="JSONL checkpoint manifest for resuming an interrupted run")
     parser.add_argument("--lf-project", default=None, help="Override the Langfuse project name")
     parser.add_argument("--lf-environment", default=None, help="Override the trace environment tag")
-    parser.add_argument("--lf-trace-name", default="doc_type_classification",
-                        help="Langfuse trace name for each document")
+    parser.add_argument("--lf-trace-name", default=None,
+                        help="Langfuse trace name for each document "
+                             "(default: doc_type_classification, or legalbench_task_classification "
+                             "in --prompt-mode task)")
     parser.add_argument("--experiment-log", type=Path, default=None,
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH)")
     parser.add_argument("--dry-run", action="store_true",
@@ -104,7 +127,7 @@ def main_with_args(argv: list[str]) -> int:
     require_env("BRAINTRUST_API_KEY")  # still needed to load the Braintrust dataset
 
     if args.prompt_version is None:
-        args.prompt_version = "sorter"
+        args.prompt_version = "legalbench_task_v0" if args.prompt_mode == "task" else "sorter"
     available = list_prompts()
     if args.prompt_version not in available:
         parser.error(f"Unknown prompt version {args.prompt_version!r}. Available: {available}")
@@ -112,6 +135,12 @@ def main_with_args(argv: list[str]) -> int:
     valid_classes = None
     if args.valid_classes:
         valid_classes = {c.strip() for c in args.valid_classes.split(",") if c.strip()}
+    if args.prompt_mode == "task" and not valid_classes:
+        parser.error("--prompt-mode task requires --valid-classes "
+                     "(the task's answer space, e.g. Yes,No)")
+    if args.lf_trace_name is None:
+        args.lf_trace_name = ("legalbench_task_classification" if args.prompt_mode == "task"
+                              else "doc_type_classification")
 
     experiment_name = args.experiment_name or (
         f"{args.model.split('/')[-1]}_{args.prompt_version}_classification_langfuse"
@@ -132,7 +161,7 @@ def main_with_args(argv: list[str]) -> int:
 
     if args.dry_run:
         print(f"Dry run: {len(dataset)} documents -> experiment '{experiment_name}'")
-        print(f"  prompt_version={args.prompt_version} model={args.model}")
+        print(f"  prompt_version={args.prompt_version} prompt_mode={args.prompt_mode} model={args.model}")
         print(f"  classes: {sorted({d['expected'] for d in dataset})}")
         print(f"  tracing=langfuse session={experiment_name} trace_name={args.lf_trace_name}")
         return 0
@@ -146,6 +175,7 @@ def main_with_args(argv: list[str]) -> int:
             "dataset_fingerprint": dataset_fingerprint(dataset),
             "model": args.model,
             "prompt_version": args.prompt_version,
+            "prompt_mode": args.prompt_mode,
             "tracing_backend": "langfuse",
         })
         manifest.initialize()
@@ -176,7 +206,7 @@ def main_with_args(argv: list[str]) -> int:
     cost_by_index: dict[int, float] = {}
 
     def classify_one(input_data: dict) -> EvalResultShim:
-        """Classify one document's doc_type with the LangChain SorterAgent."""
+        """Classify one document (doc_type or LegalBench task answer)."""
         index = input_data["index"]
         filename = input_data["filename"]
         expected = input_data["expected"]
@@ -189,20 +219,27 @@ def main_with_args(argv: list[str]) -> int:
         with tracer.trace_document(
             filename, expected,
             {"dataset": args.dataset, "prompt_version": args.prompt_version,
-             "model": args.model},
+             "model": args.model, "prompt_mode": args.prompt_mode},
         ) as trace_handle:
+            observation_name = "legalbench_task" if args.prompt_mode == "task" else "sorter"
             with tracer.agent_observation(
-                "sorter",
-                {"prompt_version": args.prompt_version, "model": args.model},
-            ) as sorter_handle:
+                observation_name,
+                {"prompt_version": args.prompt_version, "model": args.model,
+                 "prompt_mode": args.prompt_mode},
+            ) as agent_handle:
                 sorter = SorterAgent(
                     model=args.model, api_key=openrouter_key,
                     prompt_version=args.prompt_version,
-                    callbacks=[sorter_handle.handler] if sorter_handle.handler else None)
+                    callbacks=[agent_handle.handler] if agent_handle.handler else None)
                 sorter._max_input_chars = args.max_input_chars
                 sorter._max_tokens = args.max_tokens
                 try:
-                    result = sorter.classify_json(input_data["doc_text"])
+                    if args.prompt_mode == "task":
+                        result = _answer_task(
+                            sorter, input_data, sorted(valid_classes), args.prompt_version
+                        )
+                    else:
+                        result = sorter.classify_json(input_data["doc_text"])
                 except Exception as exc:  # noqa: BLE001 - one bad row must not abort
                     msg = f"ERROR {filename}: {type(exc).__name__}: {exc}"
                     print(msg, file=sys.stderr)
@@ -215,23 +252,39 @@ def main_with_args(argv: list[str]) -> int:
                 usage_by_index[index] = sorter._last_usage or {}
                 cost_by_index[index] = (sorter._last_usage or {}).get("cost") or 0.0
 
-                predicted = str(result.get("doc_type", "")).strip().lower()
-                if predicted not in DOC_CLASS_KEYS:
-                    predicted = "correspondence"
+                if args.prompt_mode == "task":
+                    # Case-preserving, validated against the task's class set.
+                    predicted = str(result.get("doc_type", "")).strip()
+                    allowed = sorted(valid_classes)
+                    canonical = {c.lower(): c for c in allowed}
+                    predicted = canonical.get(predicted.lower(), predicted)
+                    if not predicted or predicted.lower() not in {c.lower() for c in allowed}:
+                        msg = f"ERROR {filename}: model returned invalid class {predicted!r}"
+                        print(msg, file=sys.stderr)
+                        if manifest:
+                            manifest.append({"filename": filename, "expected": expected,
+                                             "status": "error", "tag": "ERROR!", "predicted": predicted,
+                                             "error": f"invalid class {predicted!r}"})
+                        return EvalResultShim(input_data, expected, msg, error=msg)
+                else:
+                    predicted = str(result.get("doc_type", "")).strip().lower()
+                    if predicted not in DOC_CLASS_KEYS:
+                        predicted = "correspondence"
                 try:
                     confidence = float(result.get("confidence", 0.0))
                 except (TypeError, ValueError):
                     confidence = 0.0
 
-                sorter_handle.set_output({
+                agent_handle.set_output({
                     "doc_type": predicted,
                     "expected": expected,
                     "confidence": confidence,
+                    "prompt_mode": args.prompt_mode,
                 })
-                sorter_handle.score("exact_match", 1.0 if predicted == expected else 0.0,
-                                    comment=f"doc_type == {expected}")
-                sorter_handle.score("confidence", confidence,
-                                    comment="model-reported confidence")
+                agent_handle.score("exact_match", 1.0 if predicted == expected else 0.0,
+                                   comment=f"{args.prompt_mode} == {expected}")
+                agent_handle.score("confidence", confidence,
+                                   comment="model-reported confidence")
 
                 if manifest:
                     manifest.append({"filename": filename, "expected": expected,
@@ -244,7 +297,7 @@ def main_with_args(argv: list[str]) -> int:
 
     rows = [
         {"index": i, "filename": d["filename"], "expected": d["expected"],
-         "doc_text": d["doc_text"]}
+         "doc_text": d["doc_text"], "prompt": d.get("prompt", "")}
         for i, d in enumerate(dataset)
     ]
     results: list[EvalResultShim] = [None] * len(rows)  # type: ignore[list-item]
@@ -262,9 +315,9 @@ def main_with_args(argv: list[str]) -> int:
     tracer.shutdown()
 
     # The shared logger reads the Braintrust runner's full flag surface; the
-    # mirror records the text-only configuration faithfully.
+    # mirror records the text-only configuration faithfully (prompt_mode is
+    # already set from the CLI).
     args.input_mode = "text"
-    args.prompt_mode = "sorter"
     args.vision_pages = "all"
     args.scorers = None
     args.no_scorers = True

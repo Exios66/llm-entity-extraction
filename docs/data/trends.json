@@ -588,6 +588,20 @@
     "n_rows": 50,
     "seed": 42,
     "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50"
+   },
+   {
+    "id": 81,
+    "experiment_name": "qwen3.7-flash_contracts_specialist_v28_extraction_langfuse_510",
+    "timestamp": "2026-08-15T19:36:16.952017+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "contracts_specialist_v28",
+    "headline_value": 0.8558,
+    "headline_label": "extraction",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.189352,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509"
    }
   ],
   "chained_sorter_extractor": [
@@ -1180,6 +1194,44 @@
      "family_confusion": 36,
      "function_over_form": 2,
      "other_fallback": 3
+    }
+   },
+   {
+    "id": 79,
+    "experiment_name": "qwen3.7-flash_sorter_v9_subtype_langfuse_rerun",
+    "timestamp": "2026-08-15T19:34:50.200417+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v9",
+    "headline_value": 0.93,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.126739,
+    "n_rows": 243,
+    "seed": 42,
+    "sample_key": "fb9f939d925bc6c55b500422309d7e5eeeda145ee45d91ba72c11be789899240:42:243",
+    "mode_counts": {
+     "family_confusion": 14,
+     "function_over_form": 2,
+     "other_fallback": 1
+    }
+   },
+   {
+    "id": 80,
+    "experiment_name": "qwen3.7-flash_sorter_v10_subtype_langfuse",
+    "timestamp": "2026-08-15T19:34:56.276749+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v10",
+    "headline_value": 0.9342,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.130718,
+    "n_rows": 243,
+    "seed": 42,
+    "sample_key": "fb9f939d925bc6c55b500422309d7e5eeeda145ee45d91ba72c11be789899240:42:243",
+    "mode_counts": {
+     "family_confusion": 13,
+     "function_over_form": 2,
+     "other_fallback": 1
     }
    }
   ],
