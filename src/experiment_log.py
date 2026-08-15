@@ -173,6 +173,8 @@ def _nested_scores_tables(scores: dict, heading: str) -> list[str]:
     scalar: list[tuple[str, str]] = []
     nested: list[tuple[str, dict]] = []
     for key, value in scores.items():
+        if key == "diagnostics":
+            continue  # rendered by _diagnostics_lines, not flattened here
         if isinstance(value, dict):
             nested.append((key, value))
         else:
@@ -187,6 +189,162 @@ def _nested_scores_tables(scores: dict, heading: str) -> list[str]:
         lines.append("")
         lines.extend(sub)
         lines.append("")
+    return lines
+
+
+def _diagnostics_lines(diagnostics: dict) -> list[str]:
+    """Render the run-level extraction diagnostics (``src/metrics.py``) as
+    grouped tables, each with its own scientific reading:
+
+    - **List quality** — raw (not GT-coverage) precision/recall/F1 over the
+      entity-list bipartite match: macro over ``key_obligations`` plus the
+      span-pooled micro numbers, and the per-field raw ratios.
+    - **Regression error** — mean/median absolute error (MAE) and
+      coefficient of determination (R²) for dates, durations and money
+      amounts vs the ground truth (master-labels answers preferred), with
+      the pair counts each number rests on, plus per-field buckets.
+    - **Span-count drift** — symmetric MAE of the item-count delta and its
+      signed mean (positive = systematic over-extraction).
+    - **Error decomposition** — share of scored (doc, field) pairs at
+      exact / partial / miss, with per-field rates + population share.
+    """
+    lines: list[str] = []
+
+    def _kv(key: str, label: str) -> None:
+        if diagnostics.get(key) is not None:
+            _rows.append((label, _fmt(diagnostics[key])))
+
+    # 1. List quality -----------------------------------------------------
+    _rows: list[tuple[str, str]] = []
+    for key, label in (
+        ("list_precision", "Precision (macro, key_obligations)"),
+        ("list_recall", "Recall (macro)"),
+        ("list_f1", "F1 (macro)"),
+        ("list_micro_precision", "Precision (micro, span-pooled)"),
+        ("list_micro_recall", "Recall (micro)"),
+        ("list_micro_f1", "F1 (micro)"),
+    ):
+        _kv(key, label)
+    if diagnostics.get("list_micro_n_predicted") is not None:
+        _rows.append(("Pooled items (predicted/expected/matched)",
+                      f"{_fmt(diagnostics['list_micro_n_predicted'])} / "
+                      f"{_fmt(diagnostics['list_micro_n_expected'])} / "
+                      f"{_fmt(diagnostics['list_micro_matched'])}"))
+    if _rows:
+        lines.append("**List quality — raw precision/recall/F1 (bipartite match ≥ 0.6); GT-coverage fields score recall-of-labels, these are the raw matched-item ratios**")
+        lines.append("")
+        lines.extend(_md_table(["Metric", "Value"], _rows))
+        lines.append("")
+        per_field = sorted(set(
+            (diagnostics.get("entity_list_precision") or {}).keys()) | set(
+            (diagnostics.get("entity_list_recall") or {}).keys()) | set(
+            (diagnostics.get("entity_list_raw_f1") or {}).keys()))
+        if per_field:
+            lines.extend(_md_table(
+                ["Field", "Precision", "Recall", "F1 (raw)"],
+                [[f,
+                  _fmt((diagnostics.get("entity_list_precision") or {}).get(f)),
+                  _fmt((diagnostics.get("entity_list_recall") or {}).get(f)),
+                  _fmt((diagnostics.get("entity_list_raw_f1") or {}).get(f))]
+                 for f in per_field]))
+            lines.append("")
+
+    # 2. Regression error -------------------------------------------------
+    domains = (
+        ("Date", "date_mae_days", "date_median_ae_days", "date_r2", "date_n_pairs"),
+        ("Duration", "duration_mae_days", "duration_median_ae_days",
+         "duration_r2", "duration_n_pairs"),
+        ("Money", "money_mae_usd", "money_median_ae_usd", None, "money_n_pairs"),
+    )
+    reg_rows: list[list[str]] = []
+    for label, mae, med, r2, n in domains:
+        if diagnostics.get(mae) is None:
+            continue
+        reg_rows.append([label,
+                         _fmt(diagnostics[mae]),
+                         _fmt(diagnostics.get(med)),
+                         _fmt(diagnostics.get(r2)),
+                         _fmt(diagnostics.get(n))])
+    if reg_rows:
+        lines.append("**Regression error vs ground truth** — MAE/R² computed only over (predicted, expected) pairs where both sides parse; R² = 1 − SS_res/SS_tot (1.0 perfect, 0.0 = predicting the mean, negative = worse than the mean); n pairs shows the evidence behind each row")
+        lines.append("")
+        lines.extend(_md_table(["Domain", "MAE", "Median AE", "R²", "n pairs"], reg_rows))
+        lines.append("")
+        per_field = sorted(set(
+            (diagnostics.get("date_mae_per_field") or {}).keys()) | set(
+            (diagnostics.get("duration_mae_per_field") or {}).keys()) | set(
+            (diagnostics.get("money_mae_per_field") or {}).keys()))
+        if per_field:
+            rows = []
+            for field in per_field:
+                for domain, mae_key, r2_key in (
+                        ("date", "date_mae_per_field", "date_r2_per_field"),
+                        ("duration", "duration_mae_per_field", "duration_r2_per_field"),
+                        ("money", "money_mae_per_field", None)):
+                    mae_val = (diagnostics.get(mae_key) or {}).get(field)
+                    if mae_val is None:
+                        continue
+                    r2_val = (diagnostics.get(r2_key) or {}).get(field) if r2_key else None
+                    rows.append([field, domain, _fmt(mae_val), _fmt(r2_val)])
+            lines.extend(_md_table(["Field", "Domain", "MAE", "R²"], rows))
+            lines.append("")
+
+    # 3. Span-count drift -------------------------------------------------
+    _rows = []
+    for key, label in (
+        ("span_count_mae", "MAE (items per document)"),
+        ("span_count_signed_mean", "Signed mean (positive = over-extraction)"),
+        ("span_count_n_docs", "Documents"),
+    ):
+        _kv(key, label)
+    if _rows:
+        lines.append("**Span-count drift (list fields)** — how far the model's item counts drift from the annotator's, in items")
+        lines.append("")
+        lines.extend(_md_table(["Metric", "Value"], _rows))
+        lines.append("")
+        fields = sorted(set(
+            (diagnostics.get("span_count_mae_per_field") or {}).keys()) | set(
+            (diagnostics.get("span_count_signed_mean_per_field") or {}).keys()))
+        if fields:
+            lines.extend(_md_table(
+                ["Field", "MAE", "Signed mean"],
+                [[f,
+                  _fmt((diagnostics.get("span_count_mae_per_field") or {}).get(f)),
+                  _fmt((diagnostics.get("span_count_signed_mean_per_field") or {}).get(f))]
+                 for f in fields]))
+            lines.append("")
+
+    # 4. Error decomposition ----------------------------------------------
+    _rows = []
+    for key, label in (
+        ("field_exact_rate", "Exact (score = 1.0)"),
+        ("field_partial_rate", "Partial (0 < score < 1)"),
+        ("field_miss_rate", "Miss (score = 0.0)"),
+        ("n_fields_scored", "Scored (doc, field) pairs"),
+    ):
+        _kv(key, label)
+    if _rows:
+        lines.append("**Field-level error decomposition** — per-field content scores binned into exact / partial / miss")
+        lines.append("")
+        lines.extend(_md_table(["Band", "Share"], _rows))
+        lines.append("")
+        decomposition = diagnostics.get("error_decomposition") or {}
+        presence = diagnostics.get("field_presence_per_field") or {}
+        if decomposition:
+            lines.extend(_md_table(
+                ["Field", "exact", "partial", "miss", "presence"],
+                [[f,
+                  _fmt((d or {}).get("exact_rate")),
+                  _fmt((d or {}).get("partial_rate")),
+                  _fmt((d or {}).get("miss_rate")),
+                  _fmt(presence.get(f))]
+                 for f, d in sorted(decomposition.items())]))
+            lines.append("")
+
+    if not lines:
+        return lines
+    lines.insert(0, "### Run-level diagnostics")
+    lines.insert(1, "")
     return lines
 
 
@@ -439,6 +597,15 @@ def experiment_markdown(record: dict) -> str:
         else:
             lines.extend(_nested_scores_tables(scores, "Scores"))
         lines.append("")
+
+    # ---------------------------------------------------------- diagnostics
+    # Run-level extraction diagnostics (list quality, MAE/R² vs ground
+    # truth, span-count drift, error decomposition) — src/metrics.py.
+    if task == "contract_entity_extraction":
+        diagnostics = scores.get("diagnostics")
+        if isinstance(diagnostics, dict) and diagnostics:
+            lines.extend(_diagnostics_lines(diagnostics))
+            lines.append("")
 
     # ----------------------------------------------------------------- results
     results = record.get("results") or []

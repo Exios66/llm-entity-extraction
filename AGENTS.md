@@ -17,128 +17,209 @@ never exact-match-on-extraction. The agents are pip-installable
 (`pip install -e .`) so llm-mailroom's LangGraph architecture imports and
 calls them directly; prompt versions are the experiment identity.
 
-## Agent message board — READ THIS FIRST, EVERY SESSION
+## Agent message board & inter-agent workflow — READ THIS FIRST, EVERY SESSION
 
 `MESSAGE_BOARD.md` (repo root) is the living Kanban canvas shared by ALL
 agents working in this repository: backlog / in_progress / blocked /
 in_review / done lanes, a discussion log, and an audit archive. It is the
-only place where cross-agent task state lives. **Every task, objective, or
-experimental run in this repository MUST have a card, and every card MUST
+ONLY place where cross-agent task state lives — the single source of truth
+for what is claimed, in flight, blocked, and done. **Every task, objective,
+or experimental run in this repository MUST have a card, and every card MUST
 be kept current with timestamps. An agent is NOT done until its card says
-so.**
+so.** This section is the full expected workflow: session pre-flight, the
+task lifecycle, the inter-agent communication framework, and the
+anti-trampling protocol that keeps concurrent agents from colliding.
 
-### Mandatory lifecycle (every card, every time)
+### 1. Session protocol (pre-flight — at every session start)
 
 1. **Read the board FIRST** — before starting ANY task, before writing any
-   code, and before committing anything. Check the Kanban table AND the
-   discussion log: never duplicate or race a claimed card.
-2. **No card = no work.** If your task has no card, create one (next free
-   `KANBAN-00N`), add it to the Kanban table, and claim it — in the SAME
-   session you start the work, not after.
-3. **Claim with a timestamp.** A card in `backlog` is claimed by setting
-   Owner (agent name) + claimed date, moving it to `in_progress`, and
-   posting a dated discussion entry (e.g. `**2026-08-12 — sorter-agent —
-   KANBAN-003** claimed; running the 250-doc A/B now`). ONE owner per card.
-4. **Work underway = `in_progress`, immediately — never `backlog`.** The
-   moment ANY work exists for a card's scope — a first working-tree edit,
-   an uncommitted draft (prompt constant, test, script), a branch, a run
-   that has started, or a partially landed commit — the card MUST be
-   `in_progress` (owner set, timestamped), NOT `backlog`. `backlog` means
-   ZERO work has started: no draft, no diff, no run in flight. Sanity
-   check before every commit: if `git status` shows changes that belong to
-   a card, that card is `in_progress` — label it before the code, not
-   after. Cards discovered to be underway-but-labeled-`backlog` are moved
-   to `in_progress` at the NEXT session read (rule 1), with the owner set
-   to whoever holds the work and a dated note in the discussion log.
-5. **Every lane change carries a timestamp.** When a card moves
-   (`backlog` → `in_progress` → `blocked` / `in_review` / `done`), update
-   the card's Status AND its timestamp column/entry, and say what happened
-   on the discussion board. Timestamps are `YYYY-MM-DD` and must match the
-   day the change happened, not the day you remember it.
-6. **Update DURING work, not only at the end.** Post to the discussion board
-   at every material event: decision made, result obtained, blocker hit,
-   scope changed, handoff to another agent. A silent agent is an untrusted
-   agent.
-7. **Blocked = post the blocker.** Move the card to `blocked` with the
-   specific blocker (missing key, waiting on a dataset, dependent on
-   KANBAN-00N) and a timestamp. Name what unblocks it.
-8. **Completed = post the proof BEFORE claiming done.** A card may move to
-   `done` only when ALL of: (a) work verified — tests pass / A/B run /
-   release gate, with `git status` clean for the card's scope (stray diffs =
-   still `in_progress`), (b) `CHANGELOG.md` `[Unreleased]` entry exists in
-   the same commit that ships the work, (c) the card was moved to the Archive
-   with its shipped version, commit and key result, (d) the discussion
-   entry is timestamped, and (e) for synced cards, the GitHub issue was
-   CLOSED (`gh issue close NNN`) in that same commit, with the closing
-   comment naming the commit + CHANGELOG entry. Done card + open issue (or
-   closed issue + unarchived card) is a board inconsistency — fix it
-   immediately.
-9. **Finish protocol — the LAST action of every task/run.** Before a task,
-   objective, or experimental run is declared finished: update your Kanban
-   entry — move it to the correct status (`done` / archive for completed
-   work, `blocked` if it ended stuck), record the timestamp, update the
-   Owner/result fields, and post the closing discussion entry. Only then
-   report completion to the user.
-10. **Fresh session? Fresh read.** At the start of every new session (or
-    after returning to the repo), re-read the board and the discussion log
-    — other agents may have moved your cards, blocked your dependencies, or
-    reused your experiment names. Also run the rule-4 sanity check: any
-    card with uncommitted or partially landed work in its scope must read
-    `in_progress` (fix it if it doesn't).
-11. **Experiments specifically:** the claim, the run, and the closing entry
-    must ALL be on the board. Never close out an experimental run without
-    (a) the run's KANBAN status + result timestamped, (b) the
-    `reports/experiment_log.{jsonl,md}` regeneration, and (c) the
-    CHANGELOG tie-in — in that order.
-12. **GitHub issue sync (critical / high-priority cards).** Critical,
-    high-priority, and cross-repo cards are routed to GitHub issues so
-    agents can open/close them like normal issues: open with
-    `gh issue create --label kanban --title "KANBAN-00N: <task>" --body
-    "<card summary + evidence>"` in the repo where the work lands. **Every
-    synced card's `Issue` column carries the FULL markdown link to its own
-    dedicated issue** (`[#NNN](https://github.com/Exios66/<repo>/issues/NNN)`)
-    — one card = one issue; never a bare number, never a shared issue.
-    Close the issue (`gh issue close NNN`, with a closing comment naming
-    the commit and CHANGELOG entry) in the SAME commit that archives the
-    card; reopen it when a card is reopened (comment = the discussion
-    post). The issue body and the card must never disagree about status —
-    a lane move is mirrored on the issue. Board-only cards (small,
-    single-session, low-risk) do NOT need issues.
+   code, and before committing anything. Read the Kanban table, the
+   discussion log, and the open GitHub issues: (a) cards already claimed by
+   another agent, (b) cards that cover the work you were about to do, and
+   (c) context posts that affect your work. Never duplicate or race a
+   claimed card.
+2. **Run the rule-4 sanity sweep** — `git status` (and any branches/running
+   evals): any uncommitted or partially landed work that belongs to a card
+   makes that card `in_progress`. Fix mislabeled cards at this moment —
+   set Owner to whoever holds the work, timestamp it, and post a dated note
+   in the discussion log. Uncommitted work on the board = an `in_progress`
+   card, never `backlog`.
+3. **Check for reused experiment names** (see §4) — if a name you planned
+   appears in a claimed card or a recent discussion entry, it is taken;
+   pick a distinct `_suffix` or a different surface.
+4. **Announce intent** — post on the discussion board before claiming, so
+   other agents see the slot being taken.
 
-### Best practices (explicit)
+### 2. The task lifecycle — end-to-end (every card, every time)
+
+**Phase 0 — Card first. No card = no work.** If your task has no card,
+create one (next free `KANBAN-00N`), add it to the Kanban table, and claim
+it — in the SAME session you start the work, not after. If your work
+addresses the problem identified in an existing card (even partially, or
+from a different angle), update THAT card instead — never a parallel card,
+never a duplicate issue. Only add a NEW card when NO card covers the task.
+
+**Phase 1 — Claim.** A card in `backlog` is claimed by: (a) commenting on
+the GitHub issue if the card is synced (see §5), or posting to the
+discussion board if it is board-only; (b) moving the card to `in_progress`
+with Owner (agent name) + claimed date; (c) referencing the card in your
+first commit (`MESSAGE BOARD: KANBAN-00N claimed`). ONE owner per card.
+
+**Phase 2 — Work; card `in_progress` from the first edit.** The moment ANY
+work exists for a card's scope — a first working-tree edit, an uncommitted
+draft (prompt constant, test, script), a branch, a run that has started, or
+a partially landed commit — the card MUST be `in_progress`, NOT `backlog`
+(`backlog` means ZERO work has started). Label it before the code, never
+after. Every lane change carries a timestamp (`YYYY-MM-DD`, matching the
+day it happened), and the card's Status AND its Updated column/entry move
+together.
+
+**Phase 3 — Communicate DURING work.** Post to the discussion board at
+every material event: decision made, result obtained, blocker hit, scope
+changed, handoff to another agent (see the what-to-post-when table in §3).
+A silent agent is an untrusted agent. Blocked = move the card to `blocked`
+with the SPECIFIC blocker (missing key, waiting on a dataset, dependent on
+KANBAN-00N), a timestamp, and what unblocks it.
+
+**Phase 4 — Verify.** Tests pass (network-free suite), the A/B run landed,
+and/or the release gate (`release.py --check`) is green. `git status` is
+clean for the card's scope — stray diffs mean the card is still
+`in_progress`, not done. Move the card to `in_review` when the work is done
+but awaiting validation, linking the evidence (run, commit, PR).
+
+**Phase 5 — Close: post the proof BEFORE claiming done.** A card may move
+to `done` only when ALL of:
+(a) work verified — tests / A/B / release gate, clean `git status`;
+(b) `CHANGELOG.md` `[Unreleased]` entry exists in the SAME commit that
+    ships the work (no changelog entry = no done);
+(c) the card was moved to the Archive with its shipped version, commit and
+    key result (the archive IS the record — never delete a card, and
+    closed cards leave the open table);
+(d) the discussion entry is timestamped;
+(e) for synced cards, the GitHub issue was CLOSED (`gh issue close NNN`)
+    in that same commit, with the closing comment naming the commit +
+    CHANGELOG entry. Done card + open issue (or closed issue + unarchived
+    card) is a board inconsistency — fix it immediately;
+(f) no orphaned scope — anything discovered but NOT delivered (a new
+    confusion cluster, a follow-on arm) spawned its own card BEFORE this
+    one closed.
+Experiments specifically: the claim, the run, and the closing entry must
+ALL be on the board; never close out an experimental run without (i) the
+run's KANBAN status + result timestamped, (ii) the
+`reports/experiment_log.{jsonl,md}` regeneration, and (iii) the CHANGELOG
+tie-in — in that order.
+
+**Phase 6 — Finish protocol: the LAST action of every task/run.** Before a
+task, objective, or experimental run is declared finished: update your
+Kanban entry — move it to its final status (`done` / archive for completed
+work, `blocked` if it ended stuck), record the timestamp, update the
+Owner/result fields, and post the closing discussion entry. Only then
+report completion to the user.
+
+**Reopenings are visible.** A `done`/archived card can be reopened by
+moving it back to `backlog` with a timestamped post explaining why
+(regression, new data, superseded assumption) — and reopening its issue
+with the Discussion post as the comment, in the same pass. History is never
+deleted — reopen, don't rewrite.
+
+### 3. Inter-agent communication framework
+
+All cross-agent communication is centralized on the board; nothing that
+carries task state lives in private channels. Channel hierarchy:
+
+| Channel | Carries | Canonical for |
+|---|---|---|
+| `MESSAGE_BOARD.md` discussion log | ALL task state: claims, lane moves, decisions, results, blockers, handoffs, reopenings | EVERYTHING — the single source of truth |
+| GitHub issues (label `kanban`) | mirror of a synced card's status + externally verifiable completion | synced cards' status (must never disagree with the board) |
+| Commit messages | card references (`MESSAGE BOARD: KANBAN-00N ...` / `KANBAN-00N (vX): ...`) | which commit landed which card |
+| `CHANGELOG.md` | release-level history | what shipped in which version |
+| `memos/*.md` | research findings worth archiving for collaborators | documented results |
+| `reports/experiment_log.{jsonl,md}` | run data (scores, tokens, outputs) | experiment records |
+
+What to post, and when — every entry is dated (`YYYY-MM-DD`), card-referenced
+(`KANBAN-00N`), newest at top:
+
+| Event | Post |
+|---|---|
+| Claim | owner + timestamp + planned run name (reserve it — §4) |
+| Lane move | status change + timestamp + one-line why |
+| Decision / result | what was decided or measured, with the numbers |
+| Blocker | the specific blocker + what unblocks it |
+| Scope change | what changed and why |
+| Handoff | who is taking over, what state it is in |
+| Reopen | why, with the card moved back to `backlog` |
+
+**Discussion log is append-only.** Newest at top, always timestamped,
+always card-referenced (`KANBAN-00N`). Never edit a past entry — post a
+correction. **Semver sync always:** cards name their target release; when a
+release ships (`scripts/release.py --bump`), sweep the board in the same
+session — landed cards → Archive under that version (timestamped), open
+cards → re-targeted to the next release. The board and `CHANGELOG.md` must
+never disagree.
+
+### 4. Anti-trampling protocol (concurrency safety)
+
+Rules that keep two agents from ever working the same thing at the same
+time — read them as a contract, not a suggestion.
 
 - **One owner at a time.** Never start work on a card owned by another
   agent. Offer help on the discussion board; take over only by handoff.
-- **Build off cards, never around them.** If a card your work depends on is
+  A card is claimed by its Owner field + timestamp; an unclaimed card is
+  fair game but must be claimed (Phase 1) before its first edit.
+- **A card owns its files.** Claiming a card reserves its scope in the
+  working tree. If your work touches files another card owns (its prompt
+  constant, its runner, its tests), coordinate on the board first — post
+  the intent, wait for the owner's acknowledgment or handoff. Build off
+  cards, never around them: if a card your work depends on is
   `in_progress` elsewhere, wait or coordinate — do not fork the work.
-- **Task-relation rule — update, don't duplicate.** If your work addresses
-  the problem identified in an existing card (even partially, or from a
-  different angle), update THAT card: comment on its issue / post to the
-  discussion board, move its status to match reality, extend its summary
-  with what you found. Never create a parallel card or a duplicate issue
-  for covered work; only add a new card (and issue, if critical) when no
-  card covers the task.
-- **Discussion log is append-only.** Newest at top, always timestamped,
-  always card-referenced (`KANBAN-00N`). Never edit a past entry — post a
-  correction.
-- **Reopenings are visible.** A `done`/archived card can be reopened by
-  moving it back to `backlog` with a timestamped post explaining why
-  (regression, new data, superseded assumption). History is never deleted —
-  reopen, don't rewrite.
-- **Archive is the audit trail.** Closed cards LIVE in the Archive — they
-  leave the open Kanban table so the table shows ONLY open work. Never
-  delete a card; moving to Archive IS the record.
-- **Semver sync always.** Cards name their target release; when a release
-  ships (`scripts/release.py --bump`), sweep the board in the same session:
-  landed cards → Archive under that version (timestamped), open cards →
-  re-targeted to the next release. The board and `CHANGELOG.md` must never
-  disagree.
-- **Commits reference cards.** Message format: `MESSAGE BOARD: KANBAN-00N
-  claimed/moved/done` or `KANBAN-00N (sorter_v7): <summary>` so git history
-  maps to the board.
+- **Experiment-name reservation — claim the name BEFORE the run.** Braintrust
+  silently suffixes re-runs (`-a1b2c3d4`), so two agents launching under
+  the same name produce two experiments wearing one label — the classic
+  silent collision. Every eval run's name (`{model-slug}_{prompt-version}[_suffix]`)
+  is reserved in the card's claim entry and/or a discussion post at the
+  moment the run is planned, not when it starts. Same-name race: the later
+  timestamp wins; the loser renames with a `_suffix` and posts the
+  correction. At every session start, check names in flight (§1.3).
+- **One run, one owner.** A running eval belongs to the card that claimed
+  it; never start a run on a card another agent is running. `--dry-run`
+  before paying for LLM calls on unfamiliar evals.
+- **Task-relation rule — update, don't duplicate.** Work that addresses the
+  problem in an existing card updates THAT card (comment on its issue /
+  post to the discussion board, move its status to reality, extend its
+  summary). Never create a parallel card or duplicate issue for covered
+  work.
 - **Conflict rule.** If two agents updated the same card, the later
   timestamp wins the lane; the overwritten party posts a reconciliation
   entry rather than reverting blindly.
+- **No silent completion.** A card is not done until its closing entry is
+  on the board (§2 Phase 5/6) — "done" without a board record is, to every
+  other agent, still in flight.
+
+### 5. GitHub issue sync (critical / high-priority cards)
+
+Critical, high-priority, and cross-repo cards are routed to GitHub issues
+(label `kanban`) so agents can open/close them like normal issues while the
+board remains the source of truth. Board-only cards (small,
+single-session, low-risk) do NOT need issues.
+
+- Open the issue FIRST (in the repo where the work lands), then write its
+  link into the card: `gh issue create --label kanban --title "KANBAN-00N:
+  <task>" --body "<card summary + evidence>"`. **Every synced card's `Issue`
+  column carries the FULL markdown link to its own dedicated issue**
+  (`[#NNN](https://github.com/Exios66/<repo>/issues/NNN)`) — one card = one
+  issue; never a bare number, never a shared issue.
+- Cross-reference both ways: the issue body names its `KANBAN-00N`; the
+  card names its issue link. They must never disagree about status — a lane
+  move on the card is mirrored on the issue (claim → comment, blocked →
+  blocker comment, done → closed).
+- Close the issue (`gh issue close NNN`, closing comment naming the commit
+  and CHANGELOG entry) in the SAME commit that archives the card; reopen it
+  when a card is reopened (comment = the discussion post).
+- Sync sweep: after any board edit, audit the table — every open card has a
+  link in its `Issue` column, and every link points at an issue that is
+  OPEN (`gh issue list --label kanban`), except archived cards, whose
+  issues are CLOSED. A missing link = an unsynced card = not ready for
+  assignment.
 
 ## Environment & setup
 

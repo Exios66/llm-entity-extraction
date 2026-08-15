@@ -280,11 +280,18 @@ def breakdown(record: dict) -> dict:
     task = record.get("task")
     scores = record.get("scores") or {}
     if task == "contract_entity_extraction":
+        diagnostics = scores.get("diagnostics") or {}
         return {
             "overall_extraction_score": scores.get("overall_extraction_score"),
             "field_presence": scores.get("field_presence"),
             "schema_valid": scores.get("schema_valid"),
             "per_field": scores.get("per_field") or {},
+            "field_exact_rate": diagnostics.get("field_exact_rate"),
+            "list_f1": diagnostics.get("list_f1"),
+            "date_mae_days": diagnostics.get("date_mae_days"),
+            "date_r2": diagnostics.get("date_r2"),
+            "duration_mae_days": diagnostics.get("duration_mae_days"),
+            "duration_r2": diagnostics.get("duration_r2"),
         }
     if task == "chained_sorter_extractor":
         sorter = scores.get("sorter") or {}

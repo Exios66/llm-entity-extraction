@@ -78,6 +78,30 @@ contract came from decides which categories apply (`ground_truth_mode
 verifies every predicted list item against a label or the source document and
 reports `verified_precision` / `hallucination_rate`.
 
+Every extraction run ALSO carries run-level diagnostics (`scores.diagnostics`
+in the experiment log, `src/metrics.py`), so a researcher can see not just
+the composite score but WHY it is what it is:
+
+- **Precision / recall / F1** — raw list-match ratios, macro over
+  `key_obligations` plus span-pooled micro, and per-field (bipartite match).
+- **Regression error (MAE)** — date/duration MAE in calendar days and money
+  MAE in USD vs ground truth (mean + median, per-field buckets, pair counts),
+  so a day-shifted date or $1-off amount counts as a near-miss, not a binary
+  wrong answer.
+- **R²** — coefficient of determination over the same parseable pairs: how
+  much ground-truth variance the predictions explain (negative = worse than
+  predicting the mean).
+- **Span-count drift** — symmetric item-count MAE + signed mean per list
+  field: systematic over- vs under-extraction in one number.
+- **Error decomposition** — exact / partial / miss rates per field (+
+  presence), the direct read on where content-score loss comes from.
+
+The regression diagnostics parse the curated **master labels CSV**
+(`src/master_labels.py`, default `../llm-mailroom/data/cuad/master_clauses.csv`
+— normalized answers like `"5/8/14"`, `"2 years"`) and degrade gracefully to
+the raw CUAD clause text when it is absent. See `SCORING.md` §4 and the
+worked examples in `docs/slides/`.
+
 ## Layout
 
 ```

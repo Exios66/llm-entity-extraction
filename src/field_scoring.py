@@ -281,6 +281,22 @@ def _parse_date(text) -> object | None:
         return None
 
 
+def parse_date(text) -> object | None:
+    """Public alias of :func:`_parse_date` — canonical datetime.date for any
+    CUAD-style date string (ISO, slashed, prose, ordinal "N day of MONTH
+    YEAR"), or None when unparseable. Used by the MAE diagnostics in
+    ``src/metrics.py``."""
+    return _parse_date(text)
+
+
+def parse_money(text) -> float | None:
+    """Public alias of :func:`_parse_money` — canonical USD float for any
+    money-style string (dollar amounts, K/M/B suffixes, "USD"/"DOLLARS"
+    tails), or None when unparseable. Used by the MAE diagnostics in
+    ``src/metrics.py``."""
+    return _parse_money(text)
+
+
 def score_id_field(pred, exp, embedding=None) -> float:
     """Normalize (upper, strip punctuation/whitespace), then exact match."""
     np_, ne = normalize_text(pred), normalize_text(exp)

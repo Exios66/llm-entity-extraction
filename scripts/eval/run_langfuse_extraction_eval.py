@@ -113,6 +113,11 @@ def main_with_args(argv: list[str]) -> int:
                         help="Langfuse trace name for each document")
     parser.add_argument("--experiment-log", type=Path, default=None,
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH)")
+    parser.add_argument("--master-labels", type=Path, default=None,
+                        help="Master ground-truth labels CSV (default: MASTER_LABELS_CSV env "
+                             "or ../llm-mailroom/data/cuad/master_clauses.csv). The curated "
+                             "normalized per-category answers feed the MAE/R² diagnostics "
+                             "(dates, durations) in the experiment log.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, print the plan without running")
     args = parser.parse_args(argv)
@@ -145,6 +150,11 @@ def main_with_args(argv: list[str]) -> int:
     field_types = get_field_types("contract")
     scored_fields = sorted({f for d in with_truth for f in d["expected_fields"]})
     validate_dataset(with_truth)
+
+    from src.master_labels import DEFAULT_MASTER_LABELS, load_master_labels
+    master_labels_path = args.master_labels or DEFAULT_MASTER_LABELS
+    master_labels = load_master_labels(master_labels_path)
+    master_labels_used = bool(master_labels)
 
     log_path = args.experiment_log or default_jsonl_path()
     md_log_path = default_md_path()
@@ -359,6 +369,9 @@ def main_with_args(argv: list[str]) -> int:
             "trace_name": args.lf_trace_name,
             "disabled": tracer.disabled,
         },
+        field_types=field_types,
+        master_labels=master_labels if master_labels_used else None,
+        master_labels_path=str(master_labels_path) if master_labels_used else None,
     )
     print(f"\nExperiment logged to {log_path}")
     return 0

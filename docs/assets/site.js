@@ -674,6 +674,100 @@ function kvCard(title, body, flush = false) {
   return `<div class="card"><h2>${esc(title)}</h2><div class="body${flush ? " flush" : ""}">${body}</div></div>`;
 }
 
+/* Run-level extraction diagnostics (src/metrics.py — scores.diagnostics):
+ * list quality (raw P/R/F1), regression error (MAE + R² vs ground truth),
+ * span-count drift, and the field-level error decomposition. These are the
+ * numbers researchers use to diagnose WHY the composite score is what it
+ * is: MAE quantifies near-misses a binary score throws away, R² shows fit
+ * vs the mean predictor, span-count shows over/under-extraction direction,
+ * and the decomposition bins per-field outcomes into exact/partial/miss. */
+function diagnosticsCard(run) {
+  const diag = run.scores?.diagnostics;
+  if (!diag || !Object.keys(diag).length) return "";
+  const kv = (obj) => `<table class="kv">${kvRowsTyped(obj)}</table>`;
+  const kvTable = (rows) => `<table class="data" style="max-width:720px">${rows}</table>`;
+  const th = (...cells) => `<tr>${cells.map((c) => `<th>${esc(c)}</th>`).join("")}</tr>`;
+  const td = (...cells) => `<tr>${cells.map((c) => `<td class="num">${c == null ? "—" : esc(String(c))}</td>`).join("")}</tr>`;
+  const blocks = [];
+
+  const list = {};
+  ["list_precision", "list_recall", "list_f1",
+    "list_micro_precision", "list_micro_recall", "list_micro_f1"].forEach((k) => {
+    if (diag[k] != null) list[k] = diag[k];
+  });
+  if (diag.list_micro_n_predicted != null) {
+    list["pooled items (predicted / expected / matched)"] =
+      `${diag.list_micro_n_predicted} / ${diag.list_micro_n_expected} / ${diag.list_micro_matched}`;
+  }
+  if (Object.keys(list).length) {
+    let perField = "";
+    const pf = ["entity_list_precision", "entity_list_recall", "entity_list_raw_f1"];
+    const fields = Object.keys(diag.entity_list_precision || {});
+    if (fields.length) {
+      perField = kvTable(th("Field", "Precision", "Recall", "F1 (raw)") +
+        fields.map((f) => td(f,
+          diag.entity_list_precision?.[f], diag.entity_list_recall?.[f],
+          diag.entity_list_raw_f1?.[f])).join(""));
+    }
+    blocks.push(`<div class="diag-block"><h3>List quality — raw precision / recall / F1 (bipartite match ≥ 0.6; GT-coverage fields score recall-of-labels)</h3>${kv(list)}${perField}</div>`);
+  }
+
+  const reg = [];
+  [["Date", "date_mae_days", "date_median_ae_days", "date_r2", "date_n_pairs"],
+   ["Duration", "duration_mae_days", "duration_median_ae_days", "duration_r2", "duration_n_pairs"],
+   ["Money", "money_mae_usd", "money_median_ae_usd", null, "money_n_pairs"],
+  ].forEach(([label, mae, med, r2, n]) => {
+    if (diag[mae] != null) reg.push([label, diag[mae], diag[med], diag[r2], diag[n]]);
+  });
+  if (reg.length) {
+    let perField = "";
+    const pf = [];
+    ["date_mae_per_field", "duration_mae_per_field", "money_mae_per_field"].forEach((key, i) => {
+      const domain = ["date", "duration", "money"][i];
+      Object.keys(diag[key] || {}).forEach((f) => pf.push([f, domain, diag[key][f],
+        (diag.date_r2_per_field?.[f] ?? diag.duration_r2_per_field?.[f]) ?? null]));
+    });
+    if (pf.length) perField = kvTable(th("Field", "Domain", "MAE", "R²") + pf.map((r) => td(...r)).join(""));
+    blocks.push(`<div class="diag-block"><h3>Regression error vs ground truth — MAE over parseable (predicted, expected) pairs; R² = 1 − SS<sub>res</sub>/SS<sub>tot</sub> (1.0 perfect · 0.0 = mean predictor · negative = worse than the mean)</h3>
+      ${kvTable(th("Domain", "MAE", "Median AE", "R²", "n pairs") + reg.map((r) => td(...r)).join(""))}${perField}</div>`);
+  }
+
+  const span = {};
+  ["span_count_mae", "span_count_signed_mean", "span_count_n_docs"].forEach((k) => {
+    if (diag[k] != null) span[k] = diag[k];
+  });
+  if (Object.keys(span).length) {
+    let perField = "";
+    const pf = Object.keys(diag.span_count_mae_per_field || {});
+    if (pf.length) {
+      perField = kvTable(th("Field", "MAE", "Signed mean") +
+        pf.map((f) => td(f, diag.span_count_mae_per_field?.[f],
+          diag.span_count_signed_mean_per_field?.[f])).join(""));
+    }
+    blocks.push(`<div class="diag-block"><h3>Span-count drift (list fields) — item-count deltas vs the annotator; signed mean &gt; 0 = systematic over-extraction</h3>${kv(span)}${perField}</div>`);
+  }
+
+  const decomp = {};
+  ["field_exact_rate", "field_partial_rate", "field_miss_rate", "n_fields_scored"].forEach((k) => {
+    if (diag[k] != null) decomp[k] = diag[k];
+  });
+  if (Object.keys(decomp).length) {
+    let perField = "";
+    const dec = diag.error_decomposition || {};
+    const presence = diag.field_presence_per_field || {};
+    const fields = Object.keys(dec);
+    if (fields.length) {
+      perField = kvTable(th("Field", "exact", "partial", "miss", "presence") +
+        fields.map((f) => td(f, dec[f]?.exact_rate, dec[f]?.partial_rate,
+          dec[f]?.miss_rate, presence[f])).join(""));
+    }
+    blocks.push(`<div class="diag-block"><h3>Field-level error decomposition — per-field content scores binned into exact / partial / miss (+ population share)</h3>${kv(decomp)}${perField}</div>`);
+  }
+
+  if (!blocks.length) return "";
+  return kvCard("Run-level diagnostics", blocks.join(""));
+}
+
 function metricCard(k, v, opts = {}) {
   const isRatio = opts.kind !== "count";
   const b = isRatio ? band(v) : null;
@@ -868,6 +962,7 @@ async function renderRun(id) {
   const sections = [];
   sections.push(`<div class="score-grid">${cards.join("")}</div>`);
   sections.push(compositionCard(run));
+  if (task === "contract_entity_extraction") sections.push(diagnosticsCard(run));
 
   /* Issue #1: judge-calibration tracker (extraction --judge runs) and the
    * chained error-propagation ablation (--handoff-scope ground_truth). */

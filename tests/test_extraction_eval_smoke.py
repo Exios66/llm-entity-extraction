@@ -183,6 +183,25 @@ def test_extraction_loop_wiring(fake_extraction_eval, monkeypatch, tmp_path):
     assert fake_extraction_eval.scores["overall_extraction_score"] == [output["overall_score"]]
     assert fake_extraction_eval.scores["field_presence"] == [1.0]
 
+    # Run-level diagnostics ride on the logged record: field-level error
+    # decomposition + date MAE/R² (effective_date expected "January 15, 2024"
+    # vs predicted "2024-01-15" — a perfect date -> 0 days MAE).
+    import json as _json
+    from pathlib import Path
+
+    log_path = Path(runner.default_jsonl_path())
+    record = _json.loads(log_path.read_text().splitlines()[-1])
+    diag = record["scores"]["diagnostics"]
+    assert diag["n_fields_scored"] > 0
+    assert diag["field_exact_rate"] > 0.0
+    assert diag["error_decomposition"]["effective_date"]["exact_rate"] == 1.0
+    assert diag["date_mae_days"] == 0.0
+    assert diag["date_r2"] is None  # a single parseable date pair — R² undefined
+    assert diag["field_presence_per_field"]["effective_date"] == 1.0
+    # Master labels load best-effort: absent here, or the sibling CSV path on
+    # dev machines — the record names whatever was used.
+    assert "master_labels" in record["data_source"]
+
 
 def test_extraction_eval_bt_scores_full(fake_extraction_eval, monkeypatch, tmp_path):
     """--bt-scores full registers the whole per-field set (opt-in burn)."""

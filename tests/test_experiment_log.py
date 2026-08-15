@@ -172,6 +172,59 @@ def test_experiment_markdown_renders_score_tables():
     assert "| mean |" in text
 
 
+def test_experiment_markdown_renders_diagnostics_section():
+    from src.experiment_log import experiment_markdown
+
+    record = {
+        "experiment_name": "exp_diag",
+        "task": "contract_entity_extraction",
+        "model": "m",
+        "scores": {
+            "overall_extraction_score": 0.8,
+            "diagnostics": {
+                "n_fields_scored": 6,
+                "field_exact_rate": 0.5,
+                "field_partial_rate": 0.3333,
+                "field_miss_rate": 0.1667,
+                "error_decomposition": {"parties": {"exact_rate": 0.5,
+                                                    "partial_rate": 0.5,
+                                                    "miss_rate": 0.0}},
+                "field_presence_per_field": {"parties": 1.0},
+                "list_precision": 0.6,
+                "list_recall": 0.7,
+                "list_f1": 0.6452,
+                "entity_list_precision": {"parties": 0.6},
+                "entity_list_recall": {"parties": 0.7},
+                "entity_list_raw_f1": {"parties": 0.6452},
+                "date_mae_days": 30.0,
+                "date_median_ae_days": 30.0,
+                "date_r2": 0.9,
+                "date_n_pairs": 3,
+                "date_mae_per_field": {"effective_date": 30.0},
+                "date_r2_per_field": {"effective_date": 0.9},
+                "span_count_mae": 1.0,
+                "span_count_signed_mean": 1.0,
+                "span_count_n_docs": 3,
+                "span_count_mae_per_field": {"key_obligations": 1.0},
+                "span_count_signed_mean_per_field": {"key_obligations": 1.0},
+            },
+        },
+        "results": [],
+    }
+    text = experiment_markdown(record)
+    # Dedicated section with grouped tables...
+    assert "### Run-level diagnostics" in text
+    assert "**List quality" in text
+    assert "| Precision (macro, key_obligations) | 0.6 |" in text
+    assert "**Regression error vs ground truth**" in text
+    assert "| Date | 30 | 30 | 0.9 | 3 |" in text
+    assert "**Span-count drift (list fields)**" in text
+    assert "**Field-level error decomposition**" in text
+    # ...and the raw diagnostics dict is NOT double-rendered by the generic
+    # nested-scores path.
+    assert "Scores — diagnostics" not in text
+
+
 def test_experiment_markdown_renders_confusion_matrix():
     from src.experiment_log import experiment_markdown
 

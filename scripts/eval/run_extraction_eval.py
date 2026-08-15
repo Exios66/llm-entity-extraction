@@ -147,6 +147,11 @@ def main_with_args(argv: list[str]) -> int:
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH or "
                              "reports/experiment_log.jsonl); a markdown section is appended "
                              "to $EXPERIMENT_LOG_MD_PATH or reports/experiment_log.md")
+    parser.add_argument("--master-labels", type=Path, default=None,
+                        help="Master ground-truth labels CSV (default: MASTER_LABELS_CSV env "
+                             "or ../llm-mailroom/data/cuad/master_clauses.csv). The curated "
+                             "normalized per-category answers feed the MAE diagnostics (dates, "
+                             "durations) in the experiment log.")
     args = parser.parse_args(argv)
 
     log_path = args.experiment_log or default_jsonl_path()
@@ -182,6 +187,14 @@ def main_with_args(argv: list[str]) -> int:
     # The union of expected fields across the sample determines which
     # per-field scorers get registered.
     scored_fields = sorted({f for d in with_truth for f in d["expected_fields"]})
+
+    # Master labels CSV: curated normalized ground-truth answers (dates like
+    # "5/8/14", durations like "2 years") used by the MAE diagnostics. Best
+    # effort — diagnostics degrade to raw clause-text parsing when absent.
+    from src.master_labels import DEFAULT_MASTER_LABELS, load_master_labels
+    master_labels_path = args.master_labels or DEFAULT_MASTER_LABELS
+    master_labels = load_master_labels(master_labels_path)
+    master_labels_used = bool(master_labels)
 
     validate_dataset(with_truth)
 
@@ -551,7 +564,9 @@ def main_with_args(argv: list[str]) -> int:
 
     print_extraction_summary(result, scored_fields)
     log_experiment_to_repo(result, scored_fields, with_truth, args, experiment_name,
-                           usage_by_index, log_path, md_log_path)
+                           usage_by_index, log_path, md_log_path, field_types=field_types,
+                           master_labels=master_labels if master_labels_used else None,
+                           master_labels_path=str(master_labels_path) if master_labels_used else None)
     braintrust.flush()
     return 0
 
@@ -560,7 +575,10 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
                            args, experiment_name: str, usage_by_index: dict[int, dict],
                            log_path: Path, md_log_path: Path,
                            tracing_backend: str = "braintrust",
-                           tracing_meta: dict | None = None) -> None:
+                           tracing_meta: dict | None = None,
+                           field_types: dict[str, str] | None = None,
+                           master_labels: dict | None = None,
+                           master_labels_path: str | None = None) -> None:
     """Append ONE record of this experiment to the repo experiment log.
 
     The record carries every score (overall, presence, schema validity,
@@ -665,6 +683,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "predicted": output.get("predicted"),
             "field_scores": output.get("field_scores"),
             "entity_list_f1": output.get("entity_list_f1"),
+            "entity_list_scores": output.get("entity_list_scores"),
             "entity_list_audit": output.get("entity_list_audit"),
             "overall_verified_precision": output.get("overall_verified_precision"),
             "category_presence": output.get("category_presence"),
@@ -674,6 +693,32 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "n_chunks": output.get("n_chunks"),
             "tokens": usage_by_index.get(index) or {},
         })
+
+    # ---- run-level diagnostic metrics --------------------------------------
+    # Precision/recall/F1 (raw list matching, macro + micro), date/duration
+    # MAE vs the master-labels normalized answers, and the field-level error
+    # decomposition (exact / partial / miss rates). See src/metrics.py.
+    from src.metrics import extraction_diagnostics
+
+    expected_by_index = {i: d.get("expected_fields") or {}
+                         for i, d in enumerate(dataset)}
+    diag_rows = []
+    for r in result.results:
+        if r.error is not None:
+            continue
+        output = r.output if isinstance(r.output, dict) else {}
+        if output.get("error"):
+            continue
+        index = r.input.get("index", -1) if isinstance(r.input, dict) else -1
+        diag_rows.append({
+            "filename": r.input.get("filename") if isinstance(r.input, dict) else "",
+            "predicted": output.get("predicted") or {},
+            "expected_fields": expected_by_index.get(index) or {},
+            "field_scores": output.get("field_scores") or {},
+            "entity_list_scores": output.get("entity_list_scores") or {},
+        })
+    diagnostics = extraction_diagnostics(
+        diag_rows, field_types or {}, master=master_labels) if diag_rows else {}
 
     record = {
         "type": "experiment",
@@ -686,6 +731,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "project": f"{args.dataset_project}/{args.dataset}",
             "ground_truth": "cuad_v1_clause_labels",
             "ground_truth_mode": "cuad_type_aware",
+            "master_labels": master_labels_path,
             "dataset_fingerprint": dataset_fingerprint(dataset),
             "n_samples": len(dataset),
             "sample_requested": args.sample,
@@ -722,6 +768,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "entity_list_f1": entity_f1,
             "verified_precision": verified,
             "hallucination_rate": hallucinations,
+            **({"diagnostics": diagnostics} if diagnostics else {}),
         },
         "n_rows": len(result.results),
         "n_ok": len(ok_outputs),

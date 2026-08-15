@@ -194,6 +194,20 @@ main { max-width: 1080px; margin: 0 auto; padding: 24px; }
 .card .body { padding: 16px; }
 .card .body.flush { padding: 0; }
 
+/* ---------- run-level diagnostics card (extraction runs) ---------- */
+
+.diag-block { margin: 0 0 14px; }
+.diag-block:last-child { margin-bottom: 0; }
+.diag-block h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-soft);
+}
+.diag-block table { margin-bottom: 10px; }
+.diag-block table:last-child { margin-bottom: 0; }
+
 /* ---------- stat cards ---------- */
 
 .stats {

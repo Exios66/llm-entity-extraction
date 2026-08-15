@@ -8,6 +8,20 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Changed
+- **`AGENTS.md` board section restructured into the full inter-agent
+  workflow** — "Agent message board & inter-agent workflow": session
+  pre-flight protocol (board read → rule-4 sanity sweep → name check →
+  announce intent), the six-phase task lifecycle (card-first → claim →
+  in_progress-from-first-edit → communicate-during → verify → close with
+  proof → finish protocol), the inter-agent communication framework
+  (channel hierarchy with the board discussion log canonical, what-to-post-
+  when table), and the anti-trampling protocol (one owner per card, card-
+  owned files, **experiment-name reservation before any run** — Braintrust
+  silently suffixes re-runs so a shared name is a silent collision — one
+  run one owner, task-relation rule, conflict rule, no silent completion).
+  GitHub issue sync formalized as §5. KANBAN-015.
+
 ### Added
 - **Full-corpus EDA of the CUAD contracts dataset** — new
   `scripts/eda/explore_cuad.py` (Braintrust full-corpus text aligned 510/510
@@ -22,6 +36,19 @@ history of the repository's tags. Format follows
   categories) averages 16.0 spans/doc (49 contracts null); Anti-Assignment +
   Change Of Control co-occur in 98% of the less-common docs; 131 contracts
   carry `[***]`-style redaction markers. KANBAN-014.
+- **Extraction regression diagnostics — MAE + R² as tracked performance
+  metrics** — new `src/metrics.py` (run-level `scores.diagnostics`:
+  field-level error decomposition, raw list P/R/F1 macro+micro, date and
+  duration MAE, and the **coefficient of determination** `date_r2` /
+  `duration_r2` = `1 − SS_res/SS_tot` over predicted-vs-expected
+  date/duration pairs, negative kept as a signal) + new
+  `src/master_labels.py` (curated `master_clauses.csv` loader; preferred
+  parse source for the expected values, raw CUAD clause text the fallback)
+  + `--master-labels` flag / `MASTER_LABELS_CSV` env on the extraction
+  runners (Braintrust + Langfuse mirror); `field_scoring.parse_date` public
+  alias; GH Pages per-run breakdown surfaces the headline diagnostics.
+  18 new network-free tests (`tests/test_metrics.py` + smoke coverage).
+  KANBAN-015.
 
 ### Fixed
 - **`run_annotation_queue.py status` unbounded trace scan** — `status` now
