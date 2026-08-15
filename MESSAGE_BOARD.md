@@ -203,6 +203,8 @@ re-targeted to v0.19.0.)
 
 ## Discussion board
 
+- **2026-08-15 — prompt-engineer — KANBAN-023 (noise-floor control re-run reserved)** The first v9 @509 noise-floor rerun (`qwen3.7-flash_sorter_v9_subtype_langfuse_rerun_509`) was DEGRADED — 42/509 transient `generator didn't stop after throw()` errors left only 467 rows scored (0.9143 on the subset). Reserving a CLEAN control rerun: **`qwen3.7-flash_sorter_v9_subtype_langfuse_rerun_509_clean`** (fresh manifest `data/manifests/subtype_v9_rerun_509_clean.jsonl`, full 509, fp c2341957, seed 42, temp 0.1, reasoning medium) — same-surface identical-prompt control so the v12 candidate delta (0.9234 vs the 0.9116 clean v9 benchmark) is interpreted against a valid band. Candidate `qwen3.7-flash_sorter_v12_subtype_langfuse` already logged (strict 0.9234, 509/509, 0 errors).
+
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
