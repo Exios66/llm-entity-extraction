@@ -30,6 +30,24 @@ history of the repository's tags. Format follows
   disabled-path smoke test).
 
 ### Added
+- **LegalBench test-set eval path (KANBAN-026)** — the official
+  `nguha/legalbench` HF TEST splits are now evaluable despite the Braintrust
+  org's log-bytes cap dropping dataset-row writes:
+  `scripts/datasets/stream_legalbench_tasks_to_bt.py --test` fetches each
+  task's test split via `fetch_hf_split`/`normalize_hf_rows` (paginated HF
+  `/rows`), and `--local-dump <dir>` writes the SAME LegalBench-formatted
+  records (filled few-shot `prompt`, `expected` label, metadata) to local
+  JSONL instead of Braintrust (`write_local_jsonl`). Both
+  `run_classification_eval.py` and `run_langfuse_classification_eval.py`
+  gain `--task-dataset <jsonl>` (`load_task_dataset`) to evaluate those
+  files directly — the local path is byte-for-byte the same row shape as a
+  Braintrust dataset, so results stay same-surface comparable. New
+  `scripts/eval/sync_langfuse_datasets.py` mirrors train + test records into
+  Langfuse datasets (llm-dojo; `mailroom-lb-hearsay` 5 / `mailroom-lb-hearsay-test`
+  94, deterministic content-addressed item ids → reruns upsert). `data/legalbench_local/`
+  is gitignored. Tests: streamer `write_local_jsonl`↔runner `load_task_dataset`
+  round-trip, `_sync_records` unit test, `--task-dataset` langfuse smoke
+  (372 tests green).
 - **`sorter_v10` + `sorter_v11` — marketing title-wins arm (KANBAN-013)** —
   the v9 close-out's "1-off long tail" plateau reading is superseded by
   cluster analysis: the **marketing cell ran 0.5/10 (243-doc) and 7/17

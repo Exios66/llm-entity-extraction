@@ -18,6 +18,7 @@ htmlcov/
 # Local run artifacts
 data/manifests/
 data/samples/
+data/legalbench_local/
 reports/*.png
 reports/*.csv
 

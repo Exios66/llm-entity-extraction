@@ -215,3 +215,45 @@ def test_langfuse_task_mode_invalid_prediction(fake_langfuse_classification, mon
         record = json.loads(line)
         assert record["n_error"] == 1
         assert record["scores"]["failure"] == 1.0
+
+
+def test_langfuse_task_mode_task_dataset(fake_langfuse_classification, monkeypatch, tmp_path):
+    """``--task-dataset`` feeds the local JSONL the streamer's ``--local-dump``
+    writes, bypassing Braintrust entirely (its writes are billing-blocked)."""
+    import scripts.eval.run_langfuse_classification_eval as runner
+
+    row = _hearsay_row()
+    jsonl = tmp_path / "hearsay-test.jsonl"
+    jsonl.write_text(json.dumps({
+        "filename": row["filename"], "doc_text": row["doc_text"],
+        "prompt": row["prompt"], "expected": row["expected"],
+        "metadata": row["metadata"],
+    }) + "\n")
+
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    for name in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL",
+                 "LANGFUSE_PROJECT", "LANGFUSE_ENVIRONMENT"):
+        monkeypatch.setenv(name, f"fake-{name}")
+    monkeypatch.setattr(runner, "_answer_task",
+                        lambda *a, **k: {"doc_type": "No", "confidence": 1.0})
+
+    rc = runner.main_with_args([
+        "--task-dataset", str(jsonl),
+        "--prompt-mode", "task",
+        "--valid-classes", "Yes,No",
+        "--prompt-version", "legalbench_task_v0",
+        "--experiment-name", "smoke_langfuse_hearsay_local",
+        "--experiment-log", str(tmp_path / "exp.jsonl"),
+        "--manifest", str(tmp_path / "manifest.jsonl"),
+    ])
+    assert rc == 0
+
+    assert fake_langfuse_classification.calls["sorter"] == 0
+    names = [s.kwargs["name"] for s in fake_langfuse_classification.spans]
+    assert names == ["legalbench_task_classification", "legalbench_task"]
+
+    for line in open(tmp_path / "exp.jsonl"):
+        record = json.loads(line)
+        assert record["task"] == "task_classification"
+        assert record["scores"]["exact_match"] == 1.0
+        assert record["data_source"]["source"].endswith("hearsay-test.jsonl")

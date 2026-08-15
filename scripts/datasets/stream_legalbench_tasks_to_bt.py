@@ -38,12 +38,16 @@ with ``valid_classes ["No", "Yes"]``; the base_prompt is a few-shot (4
 exemplars) ``Q: ... Is there hearsay?\\nA:`` template.
 
 Data is streamed from GitHub raw (the canonical LegalBench source; the HF
-mirror is empty/broken). Nothing is committed to the repo.
+mirror is empty/broken). The TEST splits (absent from GitHub) come from the
+task authors' ``nguha/legalbench`` HF dataset. Nothing is committed to the repo.
 
 Usage:
     python scripts/datasets/stream_legalbench_tasks_to_bt.py                 # maud + cuad + curated
     python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks all     # every classification task
     python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks maud_type_of_consideration,hearsay
+    python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay --test   # + mailroom-lb-hearsay-test
+    python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay --test \
+        --local-dump data/legalbench_local/                      # write local JSONL instead of Braintrust
     python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay --dry-run
 """
 
@@ -66,6 +70,10 @@ from src.env_utils import require_env  # noqa: E402
 
 LB_BASE = "https://raw.githubusercontent.com/HazyResearch/legalbench/main/tasks"
 LB_TASKS_API = "https://api.github.com/repos/HazyResearch/legalbench/contents/tasks?per_page=200"
+# The canonical LegalBench release by the task authors (GitHub ships only
+# train.tsv; the train + test splits live here, e.g. hearsay train 5 / test 94).
+HF_DATASET = "nguha/legalbench"
+HF_ROWS_API = "https://datasets-server.huggingface.co/rows"
 DATASET_PREFIX = "mailroom-lb"
 
 _CUAD = load_braintrust_config()
@@ -146,6 +154,61 @@ def parse_train_tsv(task: str, raw: str) -> list[dict]:
             "source": row.get("source", ""),
         })
     return rows
+
+
+def fetch_hf_split(task: str, split: str) -> list[dict]:
+    """Fetch a task's train/test split rows from the canonical HF dataset.
+
+    The GitHub repo ships only ``train.tsv`` per task; the authoritative
+    train + test splits live in the task authors' ``nguha/legalbench`` HF
+    dataset (e.g. hearsay train 5 / test 94). Paginated ``/rows`` fetch (the
+    datasets-server rows endpoint caps at 100 per request). Returns the raw
+    row dicts (``index``/``answer``/``text``/``slice`` + task columns).
+    """
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        url = (f"{HF_ROWS_API}?dataset={HF_DATASET}&config={task}&split={split}"
+               f"&offset={offset}&length=100")
+        resp = requests.get(url, timeout=120)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("error"):
+            raise RuntimeError(f"HF split {task}/{split}: {data['error'][:200]}")
+        batch = data.get("rows", [])
+        if not batch:
+            break
+        rows.extend(r["row"] for r in batch)
+        offset += len(batch)
+        if len(batch) < 100:
+            break
+    return rows
+
+
+def normalize_hf_rows(raw_rows: list[dict]) -> list[dict]:
+    """Map HF dataset rows onto the ``train.tsv`` row shape.
+
+    The HF release uses the same LegalBench columns (``index``/``answer``/
+    ``text``/``slice`` plus task columns), so the records built from the test
+    split are byte-for-byte the same format as the train split — clean,
+    LegalBench-formatted inputs for the eval loop.
+    """
+    out: list[dict] = []
+    for i, row in enumerate(raw_rows):
+        text = str(row.get("text") or "").strip()
+        answer = str(row.get("answer") or "").strip()
+        if not text or not answer:
+            continue
+        out.append({
+            "index": row.get("index", i),
+            "text": text,
+            "answer": answer,
+            "document_name": row.get("document_name", ""),
+            "slice": row.get("slice", ""),
+            "option": row.get("option", ""),
+            "source": row.get("source", ""),
+        })
+    return out
 
 
 def build_prompt(base_prompt: str, text: str) -> str:
@@ -253,6 +316,39 @@ def build_records(task_meta: dict) -> list[dict]:
     return records
 
 
+def write_local_jsonl(records: list[dict], path: Path) -> int:
+    """Write Braintrust record dicts to a local JSONL for the eval loop.
+
+    Each line is flattened to the record shape ``run_classification_eval
+    --task-dataset`` consumes: ``{filename, doc_text, prompt, expected,
+    metadata}`` where ``expected`` is the task label (the same string the
+    Braintrust rows would carry). ``metadata`` merges the input metadata
+    (slice, valid_classes, task, ...) with the top-level record metadata.
+    """
+    import json as _json
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    written = 0
+    with path.open("w", encoding="utf-8") as fh:
+        for record in records:
+            input_data = record.get("input") or {}
+            expected = record.get("expected") or {}
+            label = expected.get("doc_type") if isinstance(expected, dict) else expected
+            row = {
+                "filename": (input_data.get("filename") if isinstance(input_data, dict) else ""),
+                "doc_text": (input_data.get("doc_text") if isinstance(input_data, dict) else ""),
+                "prompt": (input_data.get("prompt") if isinstance(input_data, dict) else ""),
+                "expected": label,
+                "metadata": {
+                    **(input_data.get("metadata") or {} if isinstance(input_data, dict) else {}),
+                    **(record.get("metadata") or {}),
+                },
+            }
+            fh.write(_json.dumps(row, ensure_ascii=False) + "\n")
+            written += 1
+    return written
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-id", default=DEFAULT_PROJECT_ID, help="Braintrust project id")
@@ -264,10 +360,25 @@ def main() -> int:
                         help="Local JSONL with per-task valid classes (for the eval suite)")
     parser.add_argument("--skip-prompt", action="store_true",
                         help="Don't fetch base_prompt.txt (smaller, faster, no per-task prompt)")
+    parser.add_argument("--test", action="store_true",
+                        help="Also sync each task's TEST split (from the canonical "
+                             "nguha/legalbench HF dataset — GitHub ships only train.tsv) "
+                             "into a <task>-test dataset, e.g. mailroom-lb-hearsay-test "
+                             "(94 rows, binary Yes/No)")
+    parser.add_argument("--local-dump", type=Path, default=None,
+                        help="Write the SAME LegalBench-formatted records to local JSONL "
+                             "instead of Braintrust (useful when Braintrust writes are "
+                             "unavailable): <dir>/<task>.jsonl (train) + <dir>/<task>-test.jsonl "
+                             "(test, when --test). Each line: {filename, doc_text, prompt, "
+                             "expected, metadata} — the record shape run_classification_eval "
+                             "reads via --task-dataset.")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing to Braintrust")
     args = parser.parse_args()
 
-    (api_key,) = require_env("BRAINTRUST_API_KEY")
+    if not args.local_dump:
+        (api_key,) = require_env("BRAINTRUST_API_KEY")
+    else:
+        api_key = None
 
     print("Listing LegalBench task directories...")
     all_dirs = list_task_dirs()
@@ -300,6 +411,54 @@ def main() -> int:
         if not records:
             print("  no records; skipping")
             continue
+
+        test_records: list[dict] = []
+        if args.test:
+            test_raw = fetch_hf_split(task, "test")
+            test_rows = normalize_hf_rows(test_raw)
+            if test_rows:
+                test_meta = {
+                    **meta,
+                    "rows": test_rows,
+                    "valid_classes": valid_classes_for(test_rows, meta["task_type"]),
+                }
+                test_records = build_records(test_meta)
+            else:
+                print("  [test] no test rows on HF; skipping")
+
+        if args.local_dump:
+            train_path = args.local_dump / f"{task}.jsonl"
+            n_train = write_local_jsonl(records, train_path)
+            print(f"  -> {train_path} ({n_train} rows)")
+            total_synced += n_train
+            if test_records:
+                test_path = args.local_dump / f"{task}-test.jsonl"
+                n_test = write_local_jsonl(test_records, test_path)
+                print(f"  -> {test_path} ({n_test} rows)")
+                total_synced += n_test
+            continue
+
+        if test_records:
+            test_dataset_name = f"{DATASET_PREFIX}-{task}-test"
+            if args.dry_run:
+                print(f"  would sync {len(test_records)} rows -> {test_dataset_name}")
+                total_synced += len(test_records)
+            else:
+                test_summary = upload_text_dataset(
+                    test_records,
+                    project_id=args.project_id,
+                    dataset_name=test_dataset_name,
+                    api_key=api_key,
+                    description=f"LegalBench task {task} TEST split ({meta['task_type']}, "
+                                f"{len(test_records)} rows, CC BY 4.0)",
+                    metadata={"source": "legalbench", "task": task, "task_type": meta["task_type"],
+                              "split": "test", "valid_classes": test_meta["valid_classes"]},
+                    on_progress=lambda done, n: print(f"  [test] Inserted {done}/{n}..." ),
+                )
+                total_synced += test_summary["inserted"]
+                total_failed += test_summary["failed"]
+                print(f"  -> {test_dataset_name}: {test_summary['inserted']} inserted, "
+                      f"{test_summary['failed']} failed")
 
         dataset_name = f"{DATASET_PREFIX}-{task}"
         if args.dry_run:

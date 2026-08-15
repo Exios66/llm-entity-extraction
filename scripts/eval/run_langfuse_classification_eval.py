@@ -31,6 +31,9 @@ Usage:
     python scripts/eval/run_langfuse_classification_eval.py \
         --dataset mailroom-lb-hearsay --prompt-mode task \
         --valid-classes Yes,No --prompt-version legalbench_task_v0
+    python scripts/eval/run_langfuse_classification_eval.py \
+        --task-dataset data/legalbench_local/hearsay-test.jsonl --prompt-mode task \
+        --valid-classes Yes,No --prompt-version legalbench_task_v0
 """
 
 from __future__ import annotations
@@ -47,6 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from agents.sorter_agent import DOC_CLASS_KEYS, SorterAgent  # noqa: E402
 from scripts.eval.run_classification_eval import (  # noqa: E402
     _answer_task,
+    load_task_dataset,
     log_experiment_to_repo,
 )
 from src.braintrust_config import load_braintrust_config  # noqa: E402
@@ -89,6 +93,10 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--project-id", default=_CONFIG.project_id, help="Braintrust project id (dataset source)")
     parser.add_argument("--dataset-project", default=_CONFIG.dataset_project, help="Project holding the dataset")
     parser.add_argument("--dataset", default=DEFAULT_DATASET, help="Braintrust dataset to evaluate")
+    parser.add_argument("--task-dataset", type=Path, default=None,
+                        help="Local LegalBench task JSONL (streamer --local-dump output: "
+                             "{filename, doc_text, prompt, expected, metadata} per line) to "
+                             "evaluate instead of a Braintrust dataset")
     parser.add_argument("--prompt-mode", choices=("sorter", "task"), default="sorter",
                         help="sorter: classify doc_type with the sorter prompt over doc text; "
                              "task: answer a LegalBench-style task question from the row's "
@@ -146,9 +154,14 @@ def main_with_args(argv: list[str]) -> int:
         f"{args.model.split('/')[-1]}_{args.prompt_version}_classification_langfuse"
     )
 
-    dataset = load_braintrust_dataset(args.dataset_project, args.dataset,
-                                      project_id=_CONFIG.project_id,
-                                      valid=valid_classes or set(DOC_CLASS_KEYS))
+    if args.task_dataset:
+        if not args.task_dataset.exists():
+            parser.error(f"--task-dataset not found: {args.task_dataset}")
+        dataset = load_task_dataset(args.task_dataset, valid_classes or set(DOC_CLASS_KEYS))
+    else:
+        dataset = load_braintrust_dataset(args.dataset_project, args.dataset,
+                                          project_id=_CONFIG.project_id,
+                                          valid=valid_classes or set(DOC_CLASS_KEYS))
     if args.sample:
         dataset = random.Random(args.seed).sample(dataset, min(args.sample, len(dataset)))
     if args.limit:

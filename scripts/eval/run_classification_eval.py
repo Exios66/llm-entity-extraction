@@ -26,6 +26,8 @@ Usage:
     python scripts/eval/run_classification_eval.py --documents-dir ./docs --expected contract
     python scripts/eval/run_classification_eval.py --samples-per-class 5 --sample-seed 42
     python scripts/eval/run_classification_eval.py --manifest data/manifests/cuad_sorter_v0.jsonl
+    python scripts/eval/run_classification_eval.py --task-dataset data/legalbench_local/hearsay-test.jsonl \\
+        --prompt-mode task --valid-classes Yes,No --prompt-version legalbench_task_v0
 """
 
 from __future__ import annotations
@@ -118,6 +120,45 @@ def load_local_documents(documents_dir: Path, expected: str, valid: list[str] | 
                 "expected": expected,
             })
     return records
+
+
+def load_task_dataset(path: Path, valid: set[str] | None = None) -> list[dict]:
+    """Load a local LegalBench task JSONL written by the streamer's ``--local-dump``.
+
+    Each line is ``{filename, doc_text, prompt, expected, metadata}`` — the
+    record shape ``write_local_jsonl`` emits (the same records a Braintrust
+    upload would carry, including the filled few-shot ``prompt``). Rows map
+    onto the ``load_braintrust_dataset`` row shape, so the eval loop is
+    byte-for-byte identical whether the task data came from Braintrust or
+    this local file.
+    """
+    import json as _json
+
+    rows: list[dict] = []
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            row = _json.loads(line)
+            expected = str(row.get("expected") or "").strip()
+            if valid and expected not in valid:
+                continue
+            doc_text = str(row.get("doc_text") or "")
+            prompt = str(row.get("prompt") or "")
+            if not doc_text.strip() and not prompt.strip():
+                continue
+            rows.append({
+                "doc_text": doc_text,
+                "prompt": prompt,
+                "filename": str(row.get("filename") or f"row_{len(rows) + 1}"),
+                "expected": expected,
+                "metadata": dict(row.get("metadata") or {}),
+                "expected_output": {},
+                "expected_fields": {},
+                "clause_labels": [],
+            })
+    return rows
 
 
 def load_local_images(images_dir: Path, expected: str, valid: list[str] | None = None) -> list[dict]:
@@ -302,6 +343,10 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--project-id", default=_CONFIG.project_id, help="Braintrust project id")
     parser.add_argument("--dataset-project", default=_CONFIG.dataset_project, help="Project holding the dataset")
     parser.add_argument("--dataset", default=DEFAULT_DATASET, help="Braintrust dataset name to evaluate")
+    parser.add_argument("--task-dataset", type=Path, default=None,
+                        help="Local LegalBench task JSONL (streamer --local-dump output: "
+                             "{filename, doc_text, prompt, expected, metadata} per line) to "
+                             "evaluate instead of a Braintrust dataset")
     parser.add_argument("--input-mode", choices=("auto", "text", "vision"), default="auto",
                         help="auto: image attachments -> vision, doc_text -> text; "
                              "text: classify full document text; vision: classify page images")
@@ -391,7 +436,15 @@ def main_with_args(argv: list[str]) -> int:
     scorers = parse_scorers(args.scorers) if args.scorers is not None else None
 
     # ---- dataset ----
-    if args.pdf_dir:
+    if args.task_dataset:
+        if not args.task_dataset.exists():
+            parser.error(f"--task-dataset not found: {args.task_dataset}")
+        dataset = load_task_dataset(
+            args.task_dataset,
+            set(valid_classes) if valid_classes else None,
+        )
+        args.input_mode = "text"
+    elif args.pdf_dir:
         if not args.pdf_dir.exists():
             parser.error(f"--pdf-dir not found: {args.pdf_dir}")
         dataset = load_local_pdfs(args.pdf_dir, args.expected, valid_classes)
@@ -706,8 +759,8 @@ def log_experiment_to_repo(result, dataset: list[dict], args, experiment_name: s
     per_class_acc = {cls: round(mean(values), 4) for cls, values in sorted(per_class.items())}
 
     data_source = f"{args.dataset_project}/{args.dataset}" if not any(
-        (args.documents_dir, args.images_dir, args.pdf_dir)
-    ) else "local"
+        (args.documents_dir, args.images_dir, args.pdf_dir, args.task_dataset)
+    ) else str(args.task_dataset or "local")
 
     record = {
         "type": "experiment",
