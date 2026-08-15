@@ -420,6 +420,34 @@
     "n_rows": 5,
     "seed": 42,
     "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5"
+   },
+   {
+    "id": 67,
+    "experiment_name": "qwen3.7-flash_contracts_specialist_v25_sample5",
+    "timestamp": "2026-08-15T17:19:50.438337+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "contracts_specialist_v25",
+    "headline_value": 0.9154,
+    "headline_label": "extraction",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.005094,
+    "n_rows": 5,
+    "seed": 42,
+    "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5"
+   },
+   {
+    "id": 68,
+    "experiment_name": "qwen3.7-flash_contracts_specialist_v26_sample5",
+    "timestamp": "2026-08-15T17:23:26.179137+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "contracts_specialist_v26",
+    "headline_value": 0.9447,
+    "headline_label": "extraction",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.00526,
+    "n_rows": 5,
+    "seed": 42,
+    "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5"
    }
   ],
   "chained_sorter_extractor": [

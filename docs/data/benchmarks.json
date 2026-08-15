@@ -23288,11 +23288,11 @@
    "model_permaslug": "deepseek/deepseek-v4-pro-20260423",
    "display_name": "DeepSeek: DeepSeek V4 Pro",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.866194809908999,
-   "accuracy_stddev": 0.013146302181559977,
-   "avg_cost_per_task": 0.04023432221098753,
-   "total_tasks": 2967,
-   "last_run_timestamp": "2026-08-08T09:06:06.218Z"
+   "accuracy": 0.8659294454976303,
+   "accuracy_stddev": 0.01277030815994664,
+   "avg_cost_per_task": 0.03942620758293839,
+   "total_tasks": 3165,
+   "last_run_timestamp": "2026-08-15T14:45:23.619Z"
   },
   {
    "source": "openrouter",
@@ -23516,17 +23516,6 @@
   },
   {
    "source": "openrouter",
-   "model_permaslug": "qwen/qwen3.5-35b-a3b-20260224",
-   "display_name": "Qwen: Qwen3.5-35B-A3B",
-   "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.8269651304347827,
-   "accuracy_stddev": 0.024577260008079135,
-   "avg_cost_per_task": 0.015685188071188072,
-   "total_tasks": 4554,
-   "last_run_timestamp": "2026-08-08T17:33:55.879Z"
-  },
-  {
-   "source": "openrouter",
    "model_permaslug": "qwen/qwen3.6-35b-a3b-20260415",
    "display_name": "Qwen: Qwen3.6 35B A3B",
    "benchmark_type": "gpqa_diamond",
@@ -23571,13 +23560,24 @@
   },
   {
    "source": "openrouter",
+   "model_permaslug": "qwen/qwen3.5-35b-a3b-20260224",
+   "display_name": "Qwen: Qwen3.5-35B-A3B",
+   "benchmark_type": "gpqa_diamond",
+   "accuracy": 0.8214785,
+   "accuracy_stddev": 0.035654521677948976,
+   "avg_cost_per_task": 0.016244120064279156,
+   "total_tasks": 4752,
+   "last_run_timestamp": "2026-08-15T16:07:22.487Z"
+  },
+  {
+   "source": "openrouter",
    "model_permaslug": "xiaomi/mimo-v2-flash-20251210",
    "display_name": "Xiaomi: MiMo-V2-Flash",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.8086867600000001,
-   "accuracy_stddev": 0.0410881431532553,
+   "accuracy": 0.80787025,
+   "accuracy_stddev": 0.0417362125669963,
    "avg_cost_per_task": 0.003185003282828282,
-   "total_tasks": 4950,
+   "total_tasks": 4752,
    "last_run_timestamp": "2026-06-13T08:37:07.102Z"
   },
   {
@@ -24091,11 +24091,11 @@
    "model_permaslug": "deepseek/deepseek-chat-v3-0324",
    "display_name": "DeepSeek: DeepSeek V3 0324",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.6100849630541871,
-   "accuracy_stddev": 0.10280123351400018,
-   "avg_cost_per_task": 0.0011298544117647057,
-   "total_tasks": 4872,
-   "last_run_timestamp": "2026-08-08T17:39:53.837Z"
+   "accuracy": 0.6095333372781064,
+   "accuracy_stddev": 0.1008181503237887,
+   "avg_cost_per_task": 0.001243433380084151,
+   "total_tasks": 5070,
+   "last_run_timestamp": "2026-08-15T16:14:40.337Z"
   },
   {
    "source": "openrouter",
@@ -24143,6 +24143,17 @@
   },
   {
    "source": "openrouter",
+   "model_permaslug": "qwen/qwen3-vl-8b-instruct",
+   "display_name": "Qwen: Qwen3 VL 8B Instruct",
+   "benchmark_type": "gpqa_diamond",
+   "accuracy": 0.5206190651319484,
+   "accuracy_stddev": 0.016729536511109425,
+   "avg_cost_per_task": 0.0038098361760370617,
+   "total_tasks": 5343,
+   "last_run_timestamp": "2026-08-01T18:08:24.732Z"
+  },
+  {
+   "source": "openrouter",
    "model_permaslug": "qwen/qwen3-coder-30b-a3b-instruct",
    "display_name": "Qwen: Qwen3 Coder 30B A3B Instruct",
    "benchmark_type": "gpqa_diamond",
@@ -24151,17 +24162,6 @@
    "avg_cost_per_task": 0.0035723956228956226,
    "total_tasks": 594,
    "last_run_timestamp": "2026-08-15T08:46:42.897Z"
-  },
-  {
-   "source": "openrouter",
-   "model_permaslug": "qwen/qwen3-vl-8b-instruct",
-   "display_name": "Qwen: Qwen3 VL 8B Instruct",
-   "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.5197017807255009,
-   "accuracy_stddev": 0.017104903330706262,
-   "avg_cost_per_task": 0.0038098361760370617,
-   "total_tasks": 5541,
-   "last_run_timestamp": "2026-08-01T18:08:24.732Z"
   },
   {
    "source": "openrouter",
@@ -25733,7 +25733,7 @@
   }
  ],
  "meta": {
-  "as_of": "2026-08-15T15:42:52.853Z",
+  "as_of": "2026-08-15T16:14:40.337Z",
   "version": "v1",
   "source": null,
   "source_url": null,

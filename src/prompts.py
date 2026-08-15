@@ -2167,6 +2167,74 @@ CONTRACTS_SPECIALIST_PROMPT_V24 = CONTRACTS_SPECIALIST_PROMPT_V23.replace(
   then the full duration language including riders)""",
 )
 
+CONTRACTS_SPECIALIST_PROMPT_V25 = CONTRACTS_SPECIALIST_PROMPT_V24.replace(
+    """   - `term_length`: when the agreement states a duration, LEAD the field with the
+     canonical duration phrase — "two (2) years", "thirty (30) days", "3 years",
+     "12 months" — followed by the full duration language and any riders. The
+     leading phrase is what the duration diagnostics parse; the quoted language
+     after it carries the evidence. When only dates express the term, quote the
+     language carrying those dates.""",
+    """   - `term_length`: when the agreement states a duration, LEAD the field with the
+     canonical duration phrase — "two (2) years", "thirty (30) days", "3 years",
+     "12 months". The prefix is ADDITIVE and NEVER replaces the clause's own
+     language: quote the ENTIRE term clause verbatim AFTER it — its opening
+     riders exactly as they appear in the document, then the operative duration
+     language and any riders. NEVER start the quote at the duration phrase, and
+     NEVER drop, reorder, or abridge the clause opener. The ground-truth span is
+     often the clause's OPENING fragment, so a quote that begins at the duration
+     loses containment credit even though the duration itself is present.
+     EXAMPLE — for a clause reading "This Agreement will become effective as of
+     the Effective Date and, unless sooner terminated pursuant to Sections 3.1
+     or 10.2, shall remain effective for two (2) years from and after the
+     Effective Date (the "Initial Term")", output the prefix "two (2) years" at
+     the very front, then the clause verbatim and IN FULL — the opener
+     ("This Agreement will become effective as of the Effective Date and,
+     unless sooner terminated...") FIRST. The leading phrase is what the
+     duration diagnostics parse; the verbatim clause after it carries the
+     evidence and the score. When only dates express the term, quote the
+     language carrying those dates.""",
+)
+
+CONTRACTS_SPECIALIST_PROMPT_V26 = CONTRACTS_SPECIALIST_PROMPT_V25.replace(
+    """   - `term_length`: when the agreement states a duration, LEAD the field with the
+     canonical duration phrase — "two (2) years", "thirty (30) days", "3 years",
+     "12 months". The prefix is ADDITIVE and NEVER replaces the clause's own
+     language: quote the ENTIRE term clause verbatim AFTER it — its opening
+     riders exactly as they appear in the document, then the operative duration
+     language and any riders. NEVER start the quote at the duration phrase, and
+     NEVER drop, reorder, or abridge the clause opener. The ground-truth span is
+     often the clause's OPENING fragment, so a quote that begins at the duration
+     loses containment credit even though the duration itself is present.
+     EXAMPLE — for a clause reading "This Agreement will become effective as of
+     the Effective Date and, unless sooner terminated pursuant to Sections 3.1
+     or 10.2, shall remain effective for two (2) years from and after the
+     Effective Date (the "Initial Term")", output the prefix "two (2) years" at
+     the very front, then the clause verbatim and IN FULL — the opener
+     ("This Agreement will become effective as of the Effective Date and,
+     unless sooner terminated...") FIRST. The leading phrase is what the
+     duration diagnostics parse; the verbatim clause after it carries the
+     evidence and the score. When only dates express the term, quote the
+     language carrying those dates.""",
+    """   - `term_length`: when the agreement states a duration, LEAD the field with the
+     canonical duration phrase — "two (2) years", "thirty (30) days", "3 years",
+     "12 months". The prefix is ADDITIVE and NEVER replaces the clause's own
+     language: quote the ENTIRE term clause verbatim AFTER it — its opening
+     riders exactly as they appear in THIS document, then the operative duration
+     language and any riders. NEVER start the quote at the duration phrase, and
+     NEVER drop, reorder, or abridge the clause opener — whatever the opener
+     says in THIS document ("The term of this Agreement (the "Term") will
+     commence...", "The initial term of this Agreement shall commence...",
+     "This Agreement will become effective as of the Effective Date and,
+     unless sooner terminated...", or any other opening) must appear in full.
+     The ground-truth span is often the clause's OPENING fragment, so a quote
+     that begins at the duration loses containment credit even though the
+     duration itself is present. The quoted clause is the language OF THIS
+     DOCUMENT — never reuse wording from these instructions. The leading
+     phrase is what the duration diagnostics parse; the verbatim clause after
+     it carries the evidence and the score. When only dates express the term,
+     quote the language carrying those dates.""",
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2576,6 +2644,8 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v22": CONTRACTS_SPECIALIST_PROMPT_V22,
     "contracts_specialist_v23": CONTRACTS_SPECIALIST_PROMPT_V23,
     "contracts_specialist_v24": CONTRACTS_SPECIALIST_PROMPT_V24,
+    "contracts_specialist_v25": CONTRACTS_SPECIALIST_PROMPT_V25,
+    "contracts_specialist_v26": CONTRACTS_SPECIALIST_PROMPT_V26,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

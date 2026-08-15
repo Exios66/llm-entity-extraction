@@ -8,6 +8,22 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Changed
+- **`contracts_specialist_v26` — term_length containment fix (KANBAN-017
+  arm)** — v24's canonical-duration-prefix rule made the model REPLACE the
+  clause opener with the duration phrase (the CUAD ground-truth span IS the
+  opener: Ediets "This Agreement will become effective as of the Effective
+  Date and, unless sooner terminated pursuant to Sections 3.1" — containment
+  1.0→0.3333). v25's additive-prefix wording + worked example recovered
+  Ediets (containment 1.0) but leaked the example's sentence template into
+  OTHER documents (Ritter/Phasebio quoted the example clause with the
+  duration swapped in). **v26** keeps the additive prefix and forbids
+  dropping the opener, shows opener variants to match THIS document's
+  wording, and bans reusing the instructions' wording — no template
+  leakage. Same-surface 5-doc A/B (seed 42): **v26 term_length 1.0000 and
+  overall 0.9447 — best of the arm** (v23 0.9366, v24 0.9336, v25 0.9154);
+  all three term_length docs containment 1.0. KANBAN-017.
+
 > Extraction regression diagnostics (date/duration/money MAE + R² vs master labels, span-count drift, error decomposition), contracts specialist v24 reasoning trace + metrics-aligned formats, inter-agent workflow (AGENTS.md), full-corpus CUAD EDA, sorter v9 full-scale benchmark, annotation-queue status fix
 
 ### Added

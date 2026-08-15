@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-15T17:05:56.333684+00:00",
+ "built_at": "2026-08-15T17:23:55.197530+00:00",
  "surfaces": [
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -16,15 +16,15 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 66,
+ "run_count": 68,
  "tasks": {
-  "contract_entity_extraction": 30,
+  "contract_entity_extraction": 32,
   "chained_sorter_extractor": 16,
   "subtype_classification": 18,
   "sorter_classification": 2
  },
  "models": {
-  "qwen/qwen3.7-flash": 64,
+  "qwen/qwen3.7-flash": 66,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -60,12 +60,14 @@
   "sorter_v7": 1,
   "sorter_v8": 2,
   "sorter_v9": 3,
-  "contracts_specialist_v24": 1
+  "contracts_specialist_v24": 1,
+  "contracts_specialist_v25": 1,
+  "contracts_specialist_v26": 1
  },
- "n_rows": 5502,
- "n_ok": 5500,
+ "n_rows": 5512,
+ "n_ok": 5510,
  "n_error": 2,
- "total_tokens": 77018562,
+ "total_tokens": 77293923,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -90,18 +92,18 @@
  },
  "task_aggregates": {
   "contract_entity_extraction": {
-   "runs": 30,
+   "runs": 32,
    "best": {
     "run_id": 64,
     "value": 0.991
    },
-   "median": 0.9132,
+   "median": 0.91385,
    "worst": {
     "run_id": 1,
     "value": 0.6563
    },
-   "documents": 938,
-   "tokens": 18798338
+   "documents": 948,
+   "tokens": 19073699
   },
   "chained_sorter_extractor": {
    "runs": 16,

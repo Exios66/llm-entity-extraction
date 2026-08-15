@@ -444,3 +444,64 @@ def test_contracts_v24_reasoning_and_format_discipline():
     assert "REASONING BEFORE OUTPUT" not in v23
     assert "canonical duration phrase" not in v23
     assert "never emit commentary outside" not in v23
+
+
+def test_contracts_v25_additive_term_length_prefix():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V24,
+        CONTRACTS_SPECIALIST_PROMPT_V25,
+    )
+
+    # v25 is a strict derivation of v24 fixing the containment regression
+    # flagged on KANBAN-016: the canonical duration phrase is an ADDITIVE
+    # prefix — the full verbatim clause (opener first) must follow; the
+    # model must never start the quote at the duration phrase (the CUAD
+    # ground-truth span is often the clause's OPENING fragment).
+    assert CONTRACTS_SPECIALIST_PROMPT_V25 != CONTRACTS_SPECIALIST_PROMPT_V24
+    assert CONTRACTS_SPECIALIST_PROMPT_V25.startswith(CONTRACTS_SPECIALIST_PROMPT_V24[:300])
+    assert "contracts_specialist_v25" in PROMPT_VERSIONS
+
+    v25 = CONTRACTS_SPECIALIST_PROMPT_V25
+    assert "ADDITIVE and NEVER replaces the clause's own" in v25
+    assert "NEVER start the quote at the duration phrase" in v25
+    assert "NEVER drop, reorder, or abridge the clause opener" in v25
+    assert "often the clause's OPENING fragment" in v25
+    assert "EXAMPLE — for a clause reading" in v25
+    # The rest of the v24 content is intact (reasoning duty, formats).
+    assert "REASONING BEFORE OUTPUT" in v25
+    assert "PLAIN currency phrase" in v25
+    # v24 predates the additive-prefix clarification.
+    v24 = CONTRACTS_SPECIALIST_PROMPT_V24
+    assert "ADDITIVE and NEVER replaces" not in v24
+    assert "clause opener" not in v24
+
+
+def test_contracts_v26_no_template_leakage():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V25,
+        CONTRACTS_SPECIALIST_PROMPT_V26,
+    )
+
+    # v26 kills the v25 worked-example TEMPLATE LEAKAGE: the verbatim example
+    # clause made the model copy its sentence structure into documents with
+    # DIFFERENT openers (Ritter "The initial term...", Phasebio "The term of
+    # this Agreement (the "Term")..."). v26 shows openers as short variants
+    # the model must match to THIS document's wording, and forbids reusing
+    # the instructions' wording.
+    assert CONTRACTS_SPECIALIST_PROMPT_V26 != CONTRACTS_SPECIALIST_PROMPT_V25
+    assert CONTRACTS_SPECIALIST_PROMPT_V26.startswith(CONTRACTS_SPECIALIST_PROMPT_V25[:300])
+    assert "contracts_specialist_v26" in PROMPT_VERSIONS
+
+    v26 = CONTRACTS_SPECIALIST_PROMPT_V26
+    assert "ADDITIVE and NEVER replaces the clause's own" in v26
+    assert "NEVER start the quote at the duration phrase" in v26
+    assert "says in THIS document" in v26
+    assert "The initial term of this Agreement shall commence..." in v26
+    assert 'The term of this Agreement (the "Term") will' in v26
+    assert "never reuse wording from these instructions" in v26
+    # The full verbatim worked example is GONE — that was the leakage vector.
+    assert "EXAMPLE — for a clause reading" not in v26
+    assert "shall remain effective for two (2) years from and after the" not in v26
+    v25 = CONTRACTS_SPECIALIST_PROMPT_V25
+    assert "EXAMPLE — for a clause reading" in v25
+    assert "never reuse wording from these instructions" not in v25
