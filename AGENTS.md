@@ -230,6 +230,16 @@ single-session, low-risk) do NOT need issues.
   `src/braintrust_config.py`) and `.env` (OpenRouter key + provider overrides).
   Copy from the `.example` files. `src/env_utils.py` loads both; real shell
   env vars always win.
+- **LangSmith tracing** (optional, off by default): set `LANGSMITH_TRACING=true`
+  + `LANGSMITH_API_KEY` + `LANGSMITH_PROJECT` in `.env` (see `.env.example`) and
+  every LangChain LLM call (sorter/specialists via OpenRouter) auto-traces to
+  that LangSmith project — verified to coexist with Braintrust's
+  `setup_langchain` patch. The `llm-mailroom` project
+  (`bbf45300-ca81-4126-99a0-2e02a49c2ceb`) additionally receives OpenRouter's
+  OWN OTEL export (runs named `OpenRouter Request` / `provider attempt N: …`
+  with `provider_responses` metadata) when the OpenRouter dashboard integration
+  is configured — that export is where per-provider 429/limit spans come from;
+  analyze with the `langsmith` SDK (`Client(api_key=…).list_runs(project_name=…)`).
 - Vision classification needs poppler (`brew install poppler` /
   `apt install poppler-utils`) for PDF→PNG rendering.
 - `OPENROUTER_BASE_URL` can point at any OpenAI-compatible endpoint (Ollama,
