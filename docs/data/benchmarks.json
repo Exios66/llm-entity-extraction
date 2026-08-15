@@ -1274,7 +1274,7 @@
    "agentic_index": null,
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {
@@ -9476,7 +9476,7 @@
    },
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {
@@ -10829,7 +10829,7 @@
    },
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {
@@ -11159,7 +11159,7 @@
    },
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {
@@ -11369,7 +11369,7 @@
    },
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {
@@ -11723,7 +11723,7 @@
    },
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {
@@ -13568,7 +13568,7 @@
    },
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {
@@ -18380,7 +18380,7 @@
    },
    "pricing": {
     "prompt": "0.00000027",
-    "completion": "0.00000095"
+    "completion": "0.000001"
    }
   },
   {

@@ -17,6 +17,7 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
 | `index.html` | The viewer (single page, hash-routed: `#/` index, `#/task/{slug}` / `#/prompt/{v}` / `#/model/{m}` group views, `#/run/{n}` detail, `#/run/{n}/doc/{i}` single-document trace) |
 | `assets/` | `site.css` + `site.js` — dependency-free, no CDN, no build step; dark "gradient night" theme via masthead toggle, `?theme=dark`, or system preference |
 | `data/` | **Generated** — `meta.json`, `index.json` (run summaries), `runs/{n}.json` (full records) |
+| `slides/` | **Scoring-method decks** (hand-written markdown) — worked example inputs/outputs + concise scientific explanations of every scoring method, written for parallel researchers who do not have time to read all the docs: field-type scoring, entity lists + bipartite matching, MAE/R² regression diagnostics, factuality audit, failure analysis, and how to read the experiment log |
 | `README.md` | this file |
 
 ## Viewer features
@@ -40,7 +41,11 @@ experiment log: a clean, filterable, searchable viewer over every eval run in
   composition line.
 - **Run detail** — banded metric cards, task-specific **score composition**
   card, per-field content scores, per-subtype accuracy + confusion matrix +
-  failure insights, and a per-document results table.
+  failure insights, a **Run-level diagnostics** card for extraction runs
+  (raw list precision/recall/F1, date/duration/money MAE + R² vs ground
+  truth, span-count drift, field-level error decomposition —
+  `scores.diagnostics`, see `SCORING.md` §4), and a per-document results
+  table.
 - **Trace view** — `#/run/{n}/doc/{i}` shows the full record: classification
   verdicts + reasoning, and — where applicable — **interpreted extraction
   scores** (what each metric means, type-aware field scoring, entity-list

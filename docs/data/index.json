@@ -55,7 +55,7 @@
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
-  "global_best_pp": -29.490000000000006,
+  "global_best_pp": -33.47,
   "delta_best_pp": -26.1,
   "timestamp": "2026-08-09T20:39:28.310699+00:00",
   "git": {
@@ -121,7 +121,7 @@
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
-  "global_best_pp": -3.84000000000001,
+  "global_best_pp": -7.820000000000005,
   "delta_best_pp": -0.45000000000000595,
   "timestamp": "2026-08-09T20:51:26.683008+00:00",
   "git": {
@@ -187,7 +187,7 @@
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
-  "global_best_pp": -3.390000000000004,
+  "global_best_pp": -7.369999999999999,
   "delta_best_pp": 0.0,
   "timestamp": "2026-08-09T21:12:22.005966+00:00",
   "git": {
@@ -254,7 +254,7 @@
   "fingerprint": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028",
   "seed": 42,
   "sample_key": "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
-  "global_best_pp": -15.360000000000007,
+  "global_best_pp": -19.340000000000003,
   "delta_best_pp": -11.970000000000002,
   "timestamp": "2026-08-09T21:53:28.344141+00:00",
   "git": {
@@ -321,7 +321,7 @@
   "fingerprint": "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2",
   "seed": 42,
   "sample_key": "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
-  "global_best_pp": -16.64,
+  "global_best_pp": -20.619999999999994,
   "delta_best_pp": 0.0,
   "timestamp": "2026-08-09T22:01:06.299175+00:00",
   "git": {
@@ -1682,7 +1682,7 @@
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": 42,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
-  "global_best_pp": -11.250000000000004,
+  "global_best_pp": -15.229999999999999,
   "delta_best_pp": 0.0,
   "timestamp": "2026-08-11T01:41:32.800650+00:00",
   "git": {
@@ -1809,7 +1809,7 @@
   "fingerprint": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82",
   "seed": 42,
   "sample_key": "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
-  "global_best_pp": -15.000000000000002,
+  "global_best_pp": -18.979999999999997,
   "delta_best_pp": -3.749999999999998,
   "timestamp": "2026-08-11T01:45:31.314472+00:00",
   "git": {
@@ -2100,7 +2100,7 @@
   "fingerprint": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7",
   "seed": 42,
   "sample_key": "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
-  "global_best_pp": -1.1300000000000088,
+  "global_best_pp": -5.110000000000003,
   "delta_best_pp": 0.0,
   "timestamp": "2026-08-11T02:48:39.285382+00:00",
   "git": {
@@ -2287,7 +2287,7 @@
   "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
   "seed": 42,
   "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
-  "global_best_pp": -6.810000000000005,
+  "global_best_pp": -10.79,
   "delta_best_pp": 0.0,
   "timestamp": "2026-08-11T02:53:15.024257+00:00",
   "git": {
@@ -2353,7 +2353,7 @@
   "fingerprint": "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10",
   "seed": 42,
   "sample_key": "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30",
-  "global_best_pp": -5.6499999999999995,
+  "global_best_pp": -9.629999999999994,
   "delta_best_pp": -0.34999999999999476,
   "timestamp": "2026-08-12T17:47:52.474951+00:00",
   "git": {
@@ -2419,7 +2419,7 @@
   "fingerprint": "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10",
   "seed": 42,
   "sample_key": "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30",
-  "global_best_pp": -5.300000000000004,
+  "global_best_pp": -9.28,
   "delta_best_pp": 0.0,
   "timestamp": "2026-08-12T17:52:20.492039+00:00",
   "git": {
@@ -2485,7 +2485,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -5.75,
+  "global_best_pp": -9.729999999999993,
   "delta_best_pp": -5.75,
   "timestamp": "2026-08-12T18:13:49.707451+00:00",
   "git": {
@@ -2551,7 +2551,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -5.05000000000001,
+  "global_best_pp": -9.030000000000005,
   "delta_best_pp": -5.05000000000001,
   "timestamp": "2026-08-12T18:16:10.366592+00:00",
   "git": {
@@ -2617,7 +2617,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -3.83,
+  "global_best_pp": -7.809999999999995,
   "delta_best_pp": -3.83,
   "timestamp": "2026-08-12T18:49:24.076872+00:00",
   "git": {
@@ -2683,7 +2683,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -6.530000000000003,
+  "global_best_pp": -10.509999999999998,
   "delta_best_pp": -6.530000000000003,
   "timestamp": "2026-08-12T19:22:59.179690+00:00",
   "git": {
@@ -2749,7 +2749,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -4.380000000000006,
+  "global_best_pp": -8.360000000000001,
   "delta_best_pp": -4.380000000000006,
   "timestamp": "2026-08-12T19:34:50.399499+00:00",
   "git": {
@@ -2815,7 +2815,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -2.8200000000000003,
+  "global_best_pp": -6.799999999999995,
   "delta_best_pp": -2.8200000000000003,
   "timestamp": "2026-08-12T19:53:58.730400+00:00",
   "git": {
@@ -2881,7 +2881,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -5.000000000000004,
+  "global_best_pp": -8.979999999999999,
   "delta_best_pp": -5.000000000000004,
   "timestamp": "2026-08-12T20:20:02.147146+00:00",
   "git": {
@@ -2947,7 +2947,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -2.2300000000000098,
+  "global_best_pp": -6.210000000000004,
   "delta_best_pp": -2.2300000000000098,
   "timestamp": "2026-08-12T20:36:23.845408+00:00",
   "git": {
@@ -3013,7 +3013,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -3.7700000000000067,
+  "global_best_pp": -7.750000000000002,
   "delta_best_pp": -3.7700000000000067,
   "timestamp": "2026-08-13T01:51:03.553322+00:00",
   "git": {
@@ -3079,7 +3079,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -3.7000000000000033,
+  "global_best_pp": -7.679999999999998,
   "delta_best_pp": -3.7000000000000033,
   "timestamp": "2026-08-13T02:19:50.512646+00:00",
   "git": {
@@ -3145,7 +3145,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -2.290000000000003,
+  "global_best_pp": -6.269999999999998,
   "delta_best_pp": -2.290000000000003,
   "timestamp": "2026-08-13T02:44:54.560241+00:00",
   "git": {
@@ -3211,7 +3211,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -1.1600000000000055,
+  "global_best_pp": -5.140000000000001,
   "delta_best_pp": -1.1600000000000055,
   "timestamp": "2026-08-13T02:51:19.853947+00:00",
   "git": {
@@ -3277,7 +3277,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": 0.0,
+  "global_best_pp": -3.9799999999999947,
   "delta_best_pp": 0.0,
   "timestamp": "2026-08-13T03:18:09.012563+00:00",
   "git": {
@@ -3343,7 +3343,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -0.660000000000005,
+  "global_best_pp": -4.64,
   "delta_best_pp": -0.660000000000005,
   "timestamp": "2026-08-13T03:33:22.652706+00:00",
   "git": {
@@ -3409,7 +3409,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -1.970000000000005,
+  "global_best_pp": -5.949999999999999,
   "delta_best_pp": -1.970000000000005,
   "timestamp": "2026-08-13T03:44:09.278266+00:00",
   "git": {
@@ -3475,7 +3475,7 @@
   "fingerprint": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e",
   "seed": 42,
   "sample_key": "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
-  "global_best_pp": -1.4900000000000024,
+  "global_best_pp": -5.469999999999997,
   "delta_best_pp": -1.4900000000000024,
   "timestamp": "2026-08-13T04:08:04.282928+00:00",
   "git": {
@@ -3896,5 +3896,71 @@
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
   "data_source_n_samples": 509
+ },
+ {
+  "id": 64,
+  "experiment_name": "pilot_diag_v22_sample2",
+  "task": "contract_entity_extraction",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracts_specialist_v22",
+  "headline": {
+   "label": "extraction",
+   "value": 0.991
+  },
+  "ci95": {
+   "lo": 0.9821,
+   "hi": 1.0,
+   "half": 0.009,
+   "n": 2,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "overall_extraction_score": 0.991,
+   "field_presence": 1.0,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 1.0,
+    "effective_date": 1.0,
+    "governing_law": 1.0,
+    "key_obligations": 0.9285,
+    "parties": 1.0,
+    "renewal_terms": 1.0,
+    "term_length": 1.0,
+    "termination_clauses": 1.0
+   },
+   "field_exact_rate": 0.9167,
+   "list_f1": 0.4609,
+   "date_mae_days": 0.0,
+   "date_r2": 1.0,
+   "duration_mae_days": 185.0,
+   "duration_r2": null
+  },
+  "n_rows": 2,
+  "n_ok": 2,
+  "n_error": 0,
+  "total_tokens": 42681,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.001462,
+  "cost_estimated_per_doc_usd": 0.000731,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37",
+  "seed": 42,
+  "sample_key": "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
+  "global_best_pp": 0.0,
+  "delta_best_pp": 0.0,
+  "timestamp": "2026-08-15T01:53:18.428925+00:00",
+  "git": {
+   "commit": "284eae8",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts",
+  "data_source_n_samples": 2
  }
 ]

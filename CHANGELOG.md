@@ -49,6 +49,35 @@ history of the repository's tags. Format follows
   alias; GH Pages per-run breakdown surfaces the headline diagnostics.
   18 new network-free tests (`tests/test_metrics.py` + smoke coverage).
   KANBAN-015.
+- **Diagnostics extended: money MAE + span-count drift + support sizes** —
+  `src/metrics.py` gains `money_mae_usd`/`money_median_ae_usd` (+
+  per-field buckets; `parse_money` public alias in `src/field_scoring.py`),
+  `span_count_mae` / `span_count_signed_mean` (+ per-field buckets,
+  `span_count_n_docs` — symmetric item-count error vs signed
+  over/under-extraction direction over list fields), and evidence
+  denominators `date_n_pairs` / `duration_n_pairs` / `money_n_pairs` on
+  every MAE/R² row. 4 new network-free tests (30 in `tests/test_metrics.py`).
+  KANBAN-015.
+- **Run-level diagnostics rendered in the experiment log + site** — new
+  `_diagnostics_lines()` in `src/experiment_log.py` renders
+  `scores.diagnostics` as grouped markdown tables (list quality with
+  macro+micro P/R/F1, regression error with MAE/R² + pair counts, span-count
+  drift, field error decomposition); the generic nested-scores path now
+  skips `diagnostics` (dedicated section only). The GH Pages run-detail view
+  gains a **Run-level diagnostics card** (`docs/assets/site.js`
+  `diagnosticsCard()` + `.diag-block` styles). Renderer test added
+  (`test_experiment_markdown_renders_diagnostics_section`); site render
+  audit green. KANBAN-015.
+- **Scoring-method slide decks** — `docs/slides/` (7 decks + index): example
+  inputs/outputs and concise scientific explanations of every scoring
+  method (field-type scoring, entity-list bipartite matching + P/R/F1
+  macro/micro, MAE/R² regression diagnostics with the master-labels ground
+  truth, factuality audit, failure analysis, reading the experiment log) —
+  written for parallel researchers without time for the full docs. Includes
+  a REAL diagnostics block captured from a 2-doc pilot
+  (`pilot_diag_v22_sample2`, seed 42, master labels CSV active: dates MAE 0 /
+  R² 1.0; `key_obligations` 43 predicted vs 18 expected → span-count +10.5,
+  raw precision 0.31 — a textbook over-extraction signal). KANBAN-015.
 
 ### Fixed
 - **`run_annotation_queue.py status` unbounded trace scan** — `status` now

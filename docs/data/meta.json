@@ -1,10 +1,11 @@
 {
- "built_at": "2026-08-15T00:40:28.911651+00:00",
+ "built_at": "2026-08-15T01:54:20.157749+00:00",
  "surfaces": [
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
   "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
   "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
+  "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
   "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
   "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30",
@@ -15,15 +16,15 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 63,
+ "run_count": 64,
  "tasks": {
-  "contract_entity_extraction": 27,
+  "contract_entity_extraction": 28,
   "chained_sorter_extractor": 16,
   "subtype_classification": 18,
   "sorter_classification": 2
  },
  "models": {
-  "qwen/qwen3.7-flash": 61,
+  "qwen/qwen3.7-flash": 62,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -54,20 +55,20 @@
   "contracts_specialist_v19": 1,
   "contracts_specialist_v20": 1,
   "contracts_specialist_v21": 2,
-  "contracts_specialist_v22": 2,
+  "contracts_specialist_v22": 3,
   "contracts_specialist_v23": 2,
   "sorter_v7": 1,
   "sorter_v8": 2,
   "sorter_v9": 3
  },
- "n_rows": 5490,
- "n_ok": 5488,
+ "n_rows": 5492,
+ "n_ok": 5490,
  "n_error": 2,
- "total_tokens": 76702923,
+ "total_tokens": 76745604,
  "best_per_task": {
   "contract_entity_extraction": {
-   "run_id": 53,
-   "value": 0.9512,
+   "run_id": 64,
+   "value": 0.991,
    "label": "extraction"
   },
   "chained_sorter_extractor": {
@@ -88,18 +89,18 @@
  },
  "task_aggregates": {
   "contract_entity_extraction": {
-   "runs": 27,
+   "runs": 28,
    "best": {
-    "run_id": 53,
-    "value": 0.9512
+    "run_id": 64,
+    "value": 0.991
    },
-   "median": 0.9128,
+   "median": 0.9128499999999999,
    "worst": {
     "run_id": 1,
     "value": 0.6563
    },
-   "documents": 926,
-   "tokens": 18482699
+   "documents": 928,
+   "tokens": 18525380
   },
   "chained_sorter_extractor": {
    "runs": 16,

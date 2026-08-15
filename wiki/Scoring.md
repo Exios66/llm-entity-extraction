@@ -101,6 +101,57 @@ verified_precision = (GT-matched + doc-grounded) / n_predicted
 hallucination_rate  = (n_predicted - true_items) / n_predicted
 ```
 
+**Run-level regression diagnostics** (`scores.diagnostics` in the experiment
+log, computed by `src/metrics.py`) — post-hoc aggregates over the stored
+rows, NOT Braintrust trackers (run-level, not per-row):
+
+- **Error decomposition** — `field_exact_rate` / `field_partial_rate` /
+  `field_miss_rate`: share of scored (doc, field) pairs at 1.0, `0 < s < 1`,
+  and 0.0, with `error_decomposition.<field>` per field and
+  `field_presence_per_field` (per-field population share).
+- **List quality** — raw (not GT-coverage) precision/recall/F1:
+  `entity_list_precision/recall/raw_f1` per field, macro `list_*` over
+  `key_obligations`, and span-summed micro `list_micro_*` (each contract
+  weighted by its number of spans).
+- **Regression error (MAE)** — `date_mae_days` / `duration_mae_days` /
+  `money_mae_usd` (+ median AE and per-field buckets): mean/median ABSOLUTE
+  error between predicted and expected values over rows where BOTH sides
+  parse — dates (`effective_date`) and durations (`term_length`,
+  `renewal_terms`) in calendar days, money amounts (`contract_value`,
+  `demand_amount`) in USD. A day-shifted date or a $1-off amount is a
+  near-miss, not a binary wrong answer. Support sizes (`date_n_pairs`,
+  `duration_n_pairs`, `money_n_pairs`) state the evidence behind every row.
+- **Regression fit (R²)** — `date_r2` / `duration_r2` (+ per-field
+  buckets): coefficient of determination over the SAME parseable pairs:
+
+  ```
+  R² = 1 − SS_res / SS_tot
+  SS_res = Σ (pred − exp)²        SS_tot = Σ (exp − mean(exp))²
+  ```
+
+  1.0 = the predictions reproduce the ground truth exactly; 0.0 = as good
+  as predicting the mean; **negative = worse than the mean** (kept, not
+  clamped — it signals the extraction is anti-correlated with the truth).
+  Undefined (`null`) with fewer than 2 parseable pairs or zero expected
+  variance (all expected values identical — `SS_tot = 0`). Dates are
+  encoded as ordinal days (translation-invariant, so the offset is
+  irrelevant).
+- **Span-count drift** — `span_count_mae` / `span_count_signed_mean`
+  (+ per-field buckets, `span_count_n_docs`): over list fields, the
+  model-vs-annotator item-count delta per document. MAE is symmetric
+  (over- AND under-extraction both hurt); the signed mean shows the
+  DIRECTION — positive = systematic over-extraction (invented/split
+  spans), negative = systematic under-extraction (merged/omitted spans).
+
+Parse sources: expected values prefer the curated master-labels CSV
+(`src/master_labels.py`, default `../llm-mailroom/data/cuad/master_clauses.csv`
+— normalized answers like `"5/8/14"`, `"2 years"`), falling back to the raw
+CUAD clause-label text. A `term_length` expected value that is actually an
+expiration date ("...shall terminate on June 30, 2010") feeds the date
+buckets, not the duration buckets. The optional `--master-labels` flag and
+the `MASTER_LABELS_CSV` env var point at the CSV; the diagnostics degrade
+gracefully (raw text parsing) when it is absent.
+
 ## 5. Chained eval metrics (`run_chained_eval.py`)
 
 Per-stage trackers, registered with `--bt-scores overall|full`:

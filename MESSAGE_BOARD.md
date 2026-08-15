@@ -202,6 +202,25 @@ re-targeted to v0.17.0.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-15 — opencode — KANBAN-015 close-out extended (final scope)** The
+  card's shipped scope is now complete end-to-end: (1) **money MAE + span-count
+  drift + support sizes** (money_mae_usd/median + per-field, span_count_mae/
+  signed_mean + per-field + n_docs, date/duration/money_n_pairs — `src/metrics.py`,
+  `parse_money` alias, 4 new tests); (2) **dedicated run-level diagnostics
+  renderer** in `src/experiment_log.py` (`_diagnostics_lines`: list quality,
+  regression error, span-count drift, error decomposition; `diagnostics`
+  excluded from the generic nested-scores path) + **GH Pages run-detail
+  diagnostics card** (`docs/assets/site.js` `diagnosticsCard()` + styles);
+  (3) **scoring-method slide decks** `docs/slides/` (7 decks + index — worked
+  example inputs/outputs + concise scientific explanations of every scoring
+  method, for parallel researchers); (4) **real-pilot evidence** —
+  `pilot_diag_v22_sample2` (2 docs, seed 42, master labels CSV active) whose
+  diagnostics block (dates MAE 0 / R² 1.0; key_obligations 43 pred vs 18 exp
+  → span-count +10.5, raw precision 0.31 = textbook over-extraction) is
+  embedded in the decks; (5) docs updated (SCORING.md §4, README, AGENTS.md
+  modules + gotcha, docs/README.md, wiki/Scoring.md + wiki synced).
+  337 tests green, site render audit green. Chained-eval diagnostics remain
+  out of scope (own runner, future card). Archive row updated.
 - **2026-08-14 — opencode — KANBAN-015 done (reconciliation: parallel-edit merge)** Extraction
   regression diagnostics landed in commit `91392ea` (v0.17.0 prep; CHANGELOG
   `[Unreleased]` Added + Changed entries in the same commit; 337 tests green).
@@ -333,7 +352,7 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
-| KANBAN-015 | v0.17.0 prep (2026-08-14) | commit `91392ea` (merged with a parallel edit) | Extraction regression diagnostics shipped: **R² (coefficient of determination) + MAE tracked for dates/durations** (`date_r2`/`duration_r2` = 1 − SS_res/SS_tot, negative kept), money MAE (USD), span-count drift (MAE + signed mean), field error decomposition, pair counts — all in `scores.diagnostics` (experiment-log JSONL + md render + GH Pages breakdown); `src/metrics.py` + `src/master_labels.py` (curated CSV preferred, raw clause-text fallback), `--master-labels`/`MASTER_LABELS_CSV` on both extraction runners; 31 new tests, 337 total green |
+| KANBAN-015 | v0.17.0 prep (2026-08-14/15) | commits `91392ea` + follow-up | Extraction regression diagnostics shipped end-to-end: **R² + MAE tracked for dates/durations** (`date_r2`/`duration_r2` = 1 − SS_res/SS_tot, negative kept), **money MAE (USD)**, **span-count drift (MAE + signed mean)**, field error decomposition, pair counts — all in `scores.diagnostics` (JSONL + dedicated md-log section + GH Pages run-detail diagnostics card); `src/metrics.py` + `src/master_labels.py` (curated CSV preferred, raw clause-text fallback), `--master-labels`/`MASTER_LABELS_CSV` on both extraction runners; **scoring-method slide decks `docs/slides/`** (7 decks + index, worked examples incl. real pilot block `pilot_diag_v22_sample2`); SCORING.md §4 + README + AGENTS.md + wiki updated; 31+4 new tests, 337 total green |
 | KANBAN-014 | v0.17.0 prep (2026-08-14) | commit `2fe4103` | Full-corpus CUAD EDA shipped: `scripts/eda/explore_cuad.py` + `data/eda/{report.md,findings.md,figures/01–10}` all git-tracked. Headlines: median 33,425 chars (max 338,211), 17.1% over the 90k chunk window, `key_obligations` scope mean 16.0 spans/doc (49 null docs), 131 docs with `[***]` redaction markers, Anti-Assignment+Change Of Control 98% co-occurrence |
 | KANBAN-012 | v0.16.0 (2026-08-13) | commit `6697ea9` | sorter_v9 A/B landed: **v9 wins (+2.88pp strict, 0.9259)** — promotion/outsourcing/customization-schedule clusters eliminated, 25→18 fails, v6→v9 +5.8pp; ~0.93 practical plateau → follow-on KANBAN-013; issue #10 closed |
 | KANBAN-010 | v0.16.0 (2026-08-13) | commit `25aa942` | **Resolved by decision** — site cost telemetry intentionally REMOVED (costs meta + per-run cost gone from `docs/data/`); "restore cost accounting" superseded; issue #8 closed |

@@ -376,6 +376,8 @@ Key modules:
 | `src/prompts.py` | ALL prompts, versioned in `PROMPT_VERSIONS`; `get_prompt(version)`, `list_prompts()`. The version key IS the experiment identity. |
 | `src/field_scoring.py` | field-type-aware content scorer: date/money/id/name/free_text/entity_list (bipartite matching), embedding rescue (local sentence-transformers, OpenRouter fallback, empty-string guard), factuality verification, ambiguous band. |
 | `src/cuad_ground_truth.py` | CUAD 41-category catalog → per-document expected fields (type-aware by CUAD folder) + YES/NO presence expectations + `build_subtype_handoff()` (the subtype-scoped specialist cue used by `--handoff-scope subtype`). |
+| `src/master_labels.py` | loader for the curated master ground-truth CSV (`master_clauses.csv`, default `../llm-mailroom/data/cuad/master_clauses.csv`; overridable via `MASTER_LABELS_CSV` / `--master-labels`) — per-category NORMALIZED answers ("5/8/14", "2 years") preferred over raw clause text by the MAE diagnostics; degrades to `{}` when absent. |
+| `src/metrics.py` | run-level extraction diagnostics (`scores.diagnostics` in the experiment log): raw list precision/recall/F1 (macro + micro), field exact/partial/miss error decomposition + per-field presence, date/duration MAE (days) + money MAE (USD) with median + per-field buckets + pair counts, R² for dates/durations, span-count drift (MAE + signed mean). Consumes the per-row composite; the experiment-log renderer and the site display it. |
 | `src/langfuse_tracing.py` | Langfuse mirror tracer: one trace per document (session-scoped deterministic id), `agent_observation()` opens one span per pipeline agent with its designated task scores attached to that observation; graceful no-op when keys are missing. |
 | `src/experiment_log.py` | append-only JSONL + markdown renderer (tables, confusion matrices, scoring matrices, outputs, failure insights); `render_full_log()` for the rebuild. |
 | `src/evaluation.py` | dataset validation, fingerprints, `ManifestStore` (thread-safe JSONL resume checkpoints). |
@@ -678,6 +680,13 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
 - **CUAD ground truth is type-aware**: expected fields derive from the
   contract's CUAD folder via `build_expected_fields`; don't assume all 41
   categories apply to every document.
+- **Extraction diagnostics are run-level, not trackers**: `scores.diagnostics`
+  (`src/metrics.py`) is computed post-hoc from the stored rows and lives in
+  the experiment-log record + md render + site — it is NOT a Braintrust
+  tracker. MAE/R² rows are only as good as their parseable-pair counts
+  (`date_n_pairs` etc.) — always read the support size with the number.
+  `--master-labels` is best-effort: absent CSV ⇒ raw clause-text parsing.
+  Chained-eval runs do not produce diagnostics (own runner, future card).
 - **Packaging**: the layout (`llm-mailroom/src/{agents,config,...}` with `src/` on the
   import path) is what llm-mailroom imports; after adding a new module, confirm it is covered by
   `pip install -e .` (setuptools `packages` list) and the out-of-repo import
