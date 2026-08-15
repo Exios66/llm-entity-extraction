@@ -7,7 +7,12 @@ full documentation set (`SCORING.md`, README, AGENTS.md).
 
 Each deck is standalone: a ~5–8 slide markdown file with the method, a
 worked example (input → output → calculation), interpretation, and common
-pitfalls. Read them in order, or jump to what you need.
+pitfalls. Read them in order, or jump to what you need. Decks 01–07
+explain the scoring methods; **decks 08–11 are the prompt-iteration
+post-mortems** — the problems encountered while tuning the sorter and the
+contracts specialist, and the fixes each version applied, with the A/B
+numbers that validated them (sorter problems → sorter fixes, specialist
+problems → specialist fixes).
 
 ## The decks
 
@@ -20,6 +25,10 @@ pitfalls. Read them in order, or jump to what you need.
 | [05-factuality-audit](05-factuality-audit.md) | Verified precision, hallucination rate, document grounding | You care about fabrication, not just coverage |
 | [06-failure-analysis](06-failure-analysis.md) | Error decomposition, confusion matrices, failure insights → prompt iteration | You are diagnosing WHY a run scored what it did |
 | [07-reading-the-log](07-reading-the-log.md) | How to read `reports/experiment_log.md` / `.jsonl` and the GH Pages site (CIs, same-surface rule) | You want to compare runs without being misled by sample size |
+| [08-problems-sorter](08-problems-sorter.md) | Problems encountered across the sorter prompt iterations (v5→v9): near-synonymous families, title-vs-machinery, development/IP confusions, plateau & revision confounds | You want to know WHY the sorter misroutes documents |
+| [09-fixes-sorter](09-fixes-sorter.md) | Fixes applied to the sorter across versions (v7→v9 rule sets, reasoning effort, equivalence framework) with A/B numbers | You want to see what fixed each sorter confusion and by how much |
+| [10-problems-contracts-specialist](10-problems-contracts-specialist.md) | Problems encountered across the specialist prompt iterations (v15→v26): scope/grain divergence, over-extraction, ellipsis/dedupe losses, the reasoning confound, the self-inflicted v24/v25 format regressions | You want to know WHY the extractor misses or breaks spans |
+| [11-fixes-contracts-specialist](11-fixes-contracts-specialist.md) | Fixes applied to the specialist across versions (v18 family-fidelity catalog → v26 containment fix) with A/B numbers | You want the full fix history, wave by wave, with the numbers that validated each version |
 
 ## One-paragraph summary (the whole project's scoring in 90 seconds)
 
