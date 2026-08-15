@@ -1,9 +1,10 @@
 {
- "built_at": "2026-08-15T19:39:23.637186+00:00",
+ "built_at": "2026-08-15T19:50:13.241062+00:00",
  "surfaces": [
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
   "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
+  "365479db6d77aa1a26a509222bcf355b72ba3ee3f9712afc108b9dd0f23f9768:42:5",
   "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
   "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
@@ -17,15 +18,16 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 83,
+ "run_count": 91,
  "tasks": {
-  "contract_entity_extraction": 45,
+  "contract_entity_extraction": 47,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 20,
-  "sorter_classification": 2
+  "subtype_classification": 22,
+  "sorter_classification": 2,
+  "task_classification": 4
  },
  "models": {
-  "qwen/qwen3.7-flash": 81,
+  "qwen/qwen3.7-flash": 89,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -69,12 +71,14 @@
   "contracts_specialist_v29": 1,
   "contracts_specialist_v30": 1,
   "sorter_v10": 1,
-  "contracts_specialist_v31": 2
+  "contracts_specialist_v31": 4,
+  "sorter_v11": 2,
+  "legalbench_task_v0": 4
  },
- "n_rows": 7293,
- "n_ok": 6488,
- "n_error": 805,
- "total_tokens": 96045749,
+ "n_rows": 7803,
+ "n_ok": 6996,
+ "n_error": 807,
+ "total_tokens": 99610467,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -99,18 +103,18 @@
  },
  "task_aggregates": {
   "contract_entity_extraction": {
-   "runs": 43,
+   "runs": 44,
    "best": {
     "run_id": 64,
     "value": 0.991
    },
-   "median": 0.9135,
+   "median": 0.91385,
    "worst": {
     "run_id": 1,
     "value": 0.6563
    },
-   "documents": 2243,
-   "tokens": 30975939
+   "documents": 2247,
+   "tokens": 31035272
   },
   "chained_sorter_extractor": {
    "runs": 16,
@@ -127,18 +131,18 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 20,
+   "runs": 22,
    "best": {
     "run_id": 20,
     "value": 1.0
    },
    "median": 0.89215,
    "worst": {
-    "run_id": 15,
-    "value": 0.7897
+    "run_id": 84,
+    "value": 0.0
    },
-   "documents": 4964,
-   "tokens": 61933753
+   "documents": 5450,
+   "tokens": 65432421
   },
   "sorter_classification": {
    "runs": 2,

@@ -24,7 +24,6 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
@@ -190,13 +189,33 @@ class BaseAgent(ABC):
         prompt = ChatPromptTemplate.from_messages(
             [SystemMessage(content=system), ("human", "{text}")]
         )
-        chain = prompt | llm | StrOutputParser()
+        chain = prompt | llm
 
         logger.info("llm_call", agent=self.agent_name, model=self.model)
-        content = chain.invoke(
+        raw: Any = chain.invoke(
             {"text": user_message},
             config={"callbacks": self._callbacks} if self._callbacks else None,
         )
+
+        # Capture usage/cost from the raw AIMessage (same accounting as the
+        # structured + vision paths) so plain-text completions — e.g. the
+        # LegalBench task-mode answers — carry token/cost records too.
+        usage = getattr(raw, "usage_metadata", None) or (raw.response_metadata or {}).get("usage") or {}
+        self._last_usage = {
+            "prompt_tokens": usage.get("input_tokens") or usage.get("prompt_tokens") or 0,
+            "completion_tokens": usage.get("output_tokens") or usage.get("completion_tokens") or 0,
+            "total_tokens": usage.get("total_tokens") or 0,
+            "cost": (raw.response_metadata or {}).get("cost"),
+        }
+        if isinstance(raw.content, str):
+            content = raw.content
+        elif isinstance(raw.content, list):
+            content = "".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in raw.content
+            )
+        else:
+            content = str(raw.content or "")
         logger.info("llm_response", agent=self.agent_name, length=len(content))
         return content
 

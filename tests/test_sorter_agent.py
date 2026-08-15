@@ -2,6 +2,7 @@
 parsing (LLM mocked)."""
 
 import pytest
+from langchain_core.messages import AIMessage
 
 from agents.sorter_agent import (
     CONTRACT_SUBTYPES,
@@ -14,6 +15,62 @@ from agents.sorter_agent import (
     SUBTYPE_EQUIVALENCES,
     equivalent_subtypes,
 )
+
+
+class _FakeLLM:
+    """Callable Runnable stand-in returning an AIMessage with usage."""
+
+    def __init__(self, content, usage_metadata, cost=0.01):
+        self._content = content
+        self._usage = usage_metadata
+        self._cost = cost
+
+    def __call__(self, *args, **kwargs):
+        return AIMessage(
+            content=self._content,
+            usage_metadata=self._usage,
+            response_metadata={"cost": self._cost},
+        )
+
+    def bind(self, **kwargs):
+        return self
+
+
+def test_call_llm_captures_usage(mocker):
+    """Plain-text completions (the LegalBench task-mode path) must carry
+    token/cost accounting like the structured + vision paths."""
+    sorter = SorterAgent(prompt_version="sorter_v0")
+    mocker.patch.object(
+        sorter,
+        "llm",
+        return_value=_FakeLLM(
+            content="Yes",
+            usage_metadata={"input_tokens": 120, "output_tokens": 3, "total_tokens": 123},
+            cost=0.0004,
+        ),
+    )
+    text = sorter._call_llm("Q: is this hearsay?\nA:")
+    assert text == "Yes"
+    assert sorter._last_usage == {
+        "prompt_tokens": 120,
+        "completion_tokens": 3,
+        "total_tokens": 123,
+        "cost": 0.0004,
+    }
+
+
+def test_call_llm_non_string_content(mocker):
+    """AIMessage content that is not a plain str still returns text."""
+    sorter = SorterAgent(prompt_version="sorter_v0")
+    mocker.patch.object(
+        sorter,
+        "llm",
+        return_value=_FakeLLM(
+            content=[{"type": "text", "text": "No"}],
+            usage_metadata={"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
+        ),
+    )
+    assert sorter._call_llm("Q:\nA:") == "No"
 
 
 def test_system_prompt_uses_version():

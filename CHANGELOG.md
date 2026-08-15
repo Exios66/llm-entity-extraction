@@ -57,6 +57,28 @@ history of the repository's tags. Format follows
   mode), AGENTS.md cheatsheet, wiki/Eval-Runners.md (classification task
   mode + Langfuse mirrors + datasets), scripts/README.md,
   `stream_legalbench_tasks_to_bt.py` docstring. KANBAN-022.
+- **First hearsay benchmark (KANBAN-022 live run)** —
+  `qwen3.7-flash_legalbench_task_v0` on `mailroom-lb-hearsay` (5 rows, 2 Yes
+  / 3 No, one row per slice): **exact_match 1.0 (5/5), failure 0.0,
+  per-class no 1.0 / yes 1.0** — run twice, identical results on both the
+  Braintrust-named surface (`_usage` rerun, 3,441 tokens, ~$0.00024) and the
+  llm-dojo Langfuse mirror (`_classification_langfuse_usage`, 3,276 tokens,
+  ~$0.00022, 5 `legalbench_task_classification` traces with exact_match +
+  confidence scores, verified in llm-dojo). Caveats: the OpenRouter key used
+  had a fresh weekly budget; the Braintrust ORG is at its monthly
+  log-bytes plan limit (`num_log_bytes_calendar_months`), so the experiment
+  row data does NOT upload to Braintrust until billing is addressed — the
+  repo experiment log records (source of truth) are complete either way.
+
+### Fixed
+- **`BaseAgent._call_llm` now captures usage/cost** (`agents/base_agent.py`)
+  — the plain-text completion path (LegalBench `--prompt-mode task`
+  answers, judge calls) previously returned the string through
+  `StrOutputParser` and NEVER set `_last_usage`, so task-mode experiment
+  records carried `tokens: 0` / `cost: 0`. Now reads usage_metadata +
+  response cost from the raw AIMessage, mirroring the structured + vision
+  paths; content blocks are joined for list-form AIMessage content. 2 new
+  unit tests. KANBAN-022.
 
 ## [v0.18.0] - 2026-08-15
 

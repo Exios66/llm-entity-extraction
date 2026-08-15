@@ -202,6 +202,35 @@ re-targeted to v0.19.0.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-15 — opencode — KANBAN-022 done (live run; re-closed)** The
+  deferred hearsay eval ran with the fresh OpenRouter key — **exact_match
+  1.0 (5/5), per-class no 1.0 / yes 1.0** on `qwen3.7-flash_legalbench_task_v0`,
+  replicated on the llm-dojo Langfuse mirror (`legalbench_task_classification`
+  traces + exact_match/confidence scores verified, 5 traces per session).
+  Run records: `qwen3.7-flash_legalbench_task_v0` + `_classification_langfuse`
+  (usage-less, superseded), `_usage` reruns carry full accounting (3,441 /
+  3,276 tokens, ~$0.0002 each, `rows_with_usage 5/5`). **Two findings during
+  the run:** (1) `BaseAgent._call_llm` never captured usage (only the
+  structured + vision paths did) — task-mode records had tokens 0 / cost 0;
+  FIXED in `agents/base_agent.py` (raw AIMessage usage_metadata + cost,
+  content-block join) + 2 unit tests, 359 tests green; (2) the **Braintrust
+  ORG is at its monthly log-bytes plan limit** (`num_log_bytes_calendar_months`
+  → 400 BadRequest on every batch) — hearsay experiment row data does NOT
+  upload to Braintrust until the org's billing is addressed; the repo
+  experiment log (source of truth) + Langfuse traces are complete.
+  Re-committed (`_call_llm` fix + records + site + CHANGELOG `[Unreleased]`
+  Added + Fixed entries), card re-archived, issue #13 re-closed.
+- **2026-08-15 — opencode — KANBAN-022 REOPENED (live hearsay eval run)** The
+  deferred piece of the card (the actual LLM eval, not just the wiring) is
+  being executed now — the OpenRouter weekly key limit that blocked it is
+  cleared (fresh key provided by the human). **Runs reserved here:**
+  `qwen3.7-flash_legalbench_task_v0` (Braintrust) + `qwen3.7-flash_legalbench_task_v0_classification_langfuse`
+  (llm-dojo mirror) — both on `mailroom-lb-hearsay`, `--prompt-mode task
+  --valid-classes Yes,No --prompt-version legalbench_task_v0` (5 rows, 2 Yes
+  / 3 No). After the runs: experiment-log regen, site regen, result into the
+  KANBAN-022 changelog entry, board re-archive + issue #13 re-close. NOTE for
+  KANBAN-021's owner: if the key limit is truly cleared, the v28/v31@510
+  resume is unblocked (`--manifest data/manifests/v28_510_chunked.jsonl`).
 - **2026-08-15 — opencode — KANBAN-022 done** LegalBench **hearsay** task
   wired end-to-end in commit `f417227` (CHANGELOG `[Unreleased]` Added
   entries in the same commit, 356 tests green; issue #13 closed). **The
@@ -470,7 +499,7 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
-| KANBAN-022 | v0.19.0 prep (2026-08-15) | commit `f417227` | LegalBench **hearsay** task wired end-to-end: `mailroom-lb-hearsay` synced from the ACTUAL task data (5 train rows, binary Yes/No, 5 slices, CC BY 4.0, Neel Guha) + classes manifest `data/legalbench_classes.jsonl`; Braintrust task-mode dry-run green; **`upload_text_dataset` now inserts deterministic content-addressed ids** (`_deterministic_record_id` — Braintrust's `insert()` assigned fresh UUIDs per call, so reruns APPENDED duplicates, observed 2×5; reruns now upsert); **`run_langfuse_classification_eval.py` gains `--prompt-mode task`** (mirror previously hardcoded the sorter path and dropped the row's `prompt`) — hearsay/LegalBench tasks trace into llm-dojo with one `legalbench_task` observation per row; LegalBench-task docs updated with the actual task data (README, AGENTS.md, wiki, scripts/README, streamer docstring); README Credits (LegalBench, CUAD/The Atticus Project, MAUD, GEPA, LangChain/Braintrust/Langfuse); 6 new tests, 356 total green; issue #13 closed |
+| KANBAN-022 | v0.19.0 prep (2026-08-15) | commits `f417227` (wiring) + live-run follow-up | LegalBench **hearsay** task wired end-to-end: `mailroom-lb-hearsay` synced from the ACTUAL task data (5 train rows, binary Yes/No, 5 slices, CC BY 4.0, Neel Guha) + classes manifest `data/legalbench_classes.jsonl`; **`upload_text_dataset` now inserts deterministic content-addressed ids** (`_deterministic_record_id` — Braintrust's `insert()` assigned fresh UUIDs per call, so reruns APPENDED duplicates, observed 2×5; reruns now upsert); **`run_langfuse_classification_eval.py` gains `--prompt-mode task`** (mirror previously hardcoded the sorter path and dropped the row's `prompt`) — hearsay/LegalBench tasks trace into llm-dojo with one `legalbench_task` observation per row; **`BaseAgent._call_llm` captures usage/cost** (task-mode records previously had tokens 0 / cost 0); LegalBench-task docs updated with the actual task data; README Credits (LegalBench, CUAD/The Atticus Project, MAUD, GEPA, LangChain/Braintrust/Langfuse); **first benchmark: exact_match 1.0 (5/5, per-class 1.0/1.0)** on qwen3.7-flash × legalbench_task_v0, replicated on the Langfuse mirror (5 traces/session verified); 10 new tests, 359 total green; issue #13 closed (reopened for the live run, re-closed). NOTE: Braintrust ORG at monthly log-bytes plan limit — experiment row data does not upload to Braintrust until billing is addressed |
 | KANBAN-020 | v0.18.0 (2026-08-15) | `contracts_specialist_v29` + `contracts_specialist_v30` + runner chunking + GEPA agent | Follow-up arm with a noise-floor control: **identical-prompt rerun band ±0.03 overall** (v28 0.9228 → rerun 0.8935) — v29 (CoC-definition carve-out, Ediets 0.692→0.769) and v30 (chunk-mode scalar quoting) ship as UNMEASURED logic repairs inside the band; v28 remains champion (re-validated +0.0448 vs v26, P=0.004). Per-span diffs: Ediets rule-driven (fixed), 3 others noise; renewal_terms = 1 doc; Gridiron = 1-off; `run_extraction_eval.py` gains `--chunked` + confound warning; prompt-engineer agent now runs the full GEPA reflective loop (frontier, noise floor, Pareto selection); memo `contracts_specialist_v30.md` |
 | KANBAN-004 | v0.18.0 (2026-08-15) | `contracts_specialist_v27` + `contracts_specialist_v28` | key_obligations span residual: sim-matrix diagnosis (wrong-span at sentence level in multi-requirement family sections; ~60–70% NEAR 0.35–0.59) → multi-item family-section rule (v27) sharpened (v28: operative-vs-definitional + additive re-scan). **50-doc chunked A/B: v28 0.9228 vs v26 0.8780 (+4.48pp, CI [+0.0094, +0.0907], P=0.004); ko +11.4pp, 20 recovered / 4 regressed; term +0.040; tokens +6.7%.** Truncation confound on sample5 surface documented; memo `contracts_specialist_v28.md`; issue #3 closed |
 | KANBAN-017 | v0.18.0 (2026-08-15) | `contracts_specialist_v26` | term_length containment fixed through TWO iterations: v25 additive-prefix + worked example recovered Ediets but leaked the example template (Ritter/Phasebio containment 0.7059/0.2222); v26 (opener variants + "never reuse the instructions' wording") — **overall 0.9447 best of the arm** (v23 0.9366 / v24 0.9336 / v25 0.9154), term_length 1.0000, all three term docs containment 1.0, no leakage |
