@@ -64,6 +64,25 @@ class TestChangelog:
         assert text.index("- feature one.") < text.index("## [v0.14.0]")
         assert text.index("## [Unreleased]") < text.index("## [v0.15.0]")
 
+    def test_release_changelog_does_not_duplicate_entries(self, tmp_path):
+        # Regression: the pre-fix conversion inserted the new release section
+        # after the [Unreleased] header but left the original Unreleased body
+        # below it — every entry shipped TWICE (v0.15.0/v0.17.0/v0.18.0 all
+        # had to be deduped by hand). The converted file must contain each
+        # bullet exactly once, and the note must live inside the new section
+        # (not be parsed back as an unreleased bullet).
+        root = _write_tmp_repo(tmp_path)
+        release.release_changelog((0, 15, 0), "note line", root)
+        text = (root / "CHANGELOG.md").read_text()
+        # the fixture also carries "feature one" in the v0.14.0 section, so
+        # scope the duplication check to the converted v0.15.0 section.
+        v15 = text[text.index("## [v0.15.0]"):text.index("## [v0.14.0]")]
+        assert v15.count("- feature one.") == 1, "bullets duplicated"
+        assert v15.count("### Added") == 1
+        assert "> note line" in v15
+        bullets, _ = release.parse_changelog(root)
+        assert bullets == [], f"Unreleased placeholder must be empty, got {bullets}"
+
     def test_write_version(self, tmp_path):
         root = _write_tmp_repo(tmp_path)
         release.write_version((0, 15, 0), root)

@@ -99,13 +99,21 @@ def release_changelog(version: tuple[int, int, int], note: str,
     ver = f"{version[0]}.{version[1]}.{version[2]}"
     today = _dt.date.today().isoformat()
     body = "\n".join(bullets) if bullets else ""
-    note_line = f"\n> {note}\n" if note else ""
-    section = f"## [v{ver}] - {today}\n\n{body}\n" if body else f"## [v{ver}] - {today}\n"
-    new_text = text.replace(
-        "## [Unreleased]", f"## [Unreleased]\n{note_line}\n{section}", 1
-    )
-    if new_text == text:
-        fail("failed to rewrite CHANGELOG.md")
+    note_block = f"> {note}\n\n" if note else ""
+    if body:
+        section = f"## [v{ver}] - {today}\n\n{note_block}{body}\n"
+    else:
+        section = f"## [v{ver}] - {today}\n\n{note_block}"
+    # Replace the ENTIRE [Unreleased] section (header + body) with the empty
+    # placeholder + the new release section. The original body must NOT stay
+    # below the inserted section — the pre-fix implementation inserted the
+    # release section right after the header and left the old body in place,
+    # so every converted section shipped DUPLICATED (v0.15.0, v0.17.0 and
+    # v0.18.0 all had to be deduped by hand).
+    m = re.search(r"^## \[Unreleased\].*?(?=^## |\Z)", text, re.M | re.S)
+    if not m:
+        fail("CHANGELOG.md has no [Unreleased] header")
+    new_text = text[:m.start()] + f"## [Unreleased]\n\n{section}" + text[m.end():]
     link = f"[v{ver}]: {REPO_URL}/releases/tag/v{ver}"
     if f"[v{ver}]: " not in new_text:
         new_text = new_text.replace(

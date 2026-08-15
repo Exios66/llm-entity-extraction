@@ -8,6 +8,10 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+## [v0.18.0] - 2026-08-15
+
+> v0.18.0 — contracts specialist v26-v30 (term_length containment, multi-item family-section rule +4.48pp, noise-floor follow-up arm), extraction runner chunking, GEPA prompt-engineer agent, slides post-mortem decks
+
 ### Changed
 - **`contracts_specialist_v29` + `contracts_specialist_v30` — follow-up
   logic repairs (KANBAN-020 arm)** — the v28 residuals, resolved with a
@@ -78,9 +82,7 @@ history of the repository's tags. Format follows
   leakage. Same-surface 5-doc A/B (seed 42): **v26 term_length 1.0000 and
   overall 0.9447 — best of the arm** (v23 0.9366, v24 0.9336, v25 0.9154);
   all three term_length docs containment 1.0. KANBAN-017.
-
 > Extraction regression diagnostics (date/duration/money MAE + R² vs master labels, span-count drift, error decomposition), contracts specialist v24 reasoning trace + metrics-aligned formats, inter-agent workflow (AGENTS.md), full-corpus CUAD EDA, sorter v9 full-scale benchmark, annotation-queue status fix
-
 ### Added
 - **`prompt-engineer` agent — the master diagnostic evaluator & prompt
   engineer** — new `.opencode/agents/prompt-engineer.md` (project agent,
@@ -99,6 +101,9 @@ history of the repository's tags. Format follows
   board + CHANGELOG + memo close-out with proof. `AGENTS.md` gains the
   "Agents (this repo)" section documenting it alongside
   experiment-log-sync. KANBAN-018.
+
+
+### Changed
 
 ## [v0.17.0] - 2026-08-15
 
@@ -1247,6 +1252,8 @@ history of the repository's tags. Format follows
 
 [v0.15.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.15.0
 [Unreleased]: https://github.com/Exios66/llm-entity-extraction
+[v0.18.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.18.0
+https://github.com/Exios66/llm-entity-extraction
 [v0.17.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.17.0
 https://github.com/Exios66/llm-entity-extraction
 [v0.16.0]: https://github.com/Exios66/llm-entity-extraction/releases/tag/v0.16.0

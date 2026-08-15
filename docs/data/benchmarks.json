@@ -23362,6 +23362,17 @@
   },
   {
    "source": "openrouter",
+   "model_permaslug": "moonshotai/kimi-k2.5-0127",
+   "display_name": "MoonshotAI: Kimi K2.5",
+   "benchmark_type": "gpqa_diamond",
+   "accuracy": 0.8443728616251007,
+   "accuracy_stddev": 0.027849401787117006,
+   "avg_cost_per_task": 0.061258132913291324,
+   "total_tasks": 3729,
+   "last_run_timestamp": "2026-08-15T14:45:06.682Z"
+  },
+  {
+   "source": "openrouter",
    "model_permaslug": "minimax/minimax-m2.7-20260318",
    "display_name": "MiniMax: MiniMax M2.7",
    "benchmark_type": "gpqa_diamond",
@@ -23370,17 +23381,6 @@
    "avg_cost_per_task": 0.021700684917617237,
    "total_tasks": 3945,
    "last_run_timestamp": "2026-08-15T14:45:59.747Z"
-  },
-  {
-   "source": "openrouter",
-   "model_permaslug": "moonshotai/kimi-k2.5-0127",
-   "display_name": "MoonshotAI: Kimi K2.5",
-   "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.8431982557349192,
-   "accuracy_stddev": 0.02816938595404196,
-   "avg_cost_per_task": 0.05792228740031898,
-   "total_tasks": 3531,
-   "last_run_timestamp": "2026-08-08T16:45:29.359Z"
   },
   {
    "source": "openrouter",
