@@ -9,6 +9,28 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Changed
+- **`contracts_specialist_v27` + `contracts_specialist_v28` — multi-item
+  family-section rule (KANBAN-004 arm)** — the key_obligations span
+  residual: pairwise-similarity classification of every miss on the 50-doc +
+  sample5 surfaces showed ~60–70% of misses are NEAR (sim 0.35–0.59) —
+  **wrong-span at sentence level inside multi-requirement family sections**
+  (the model quotes ONE sentence per insurance/audit/license/ROFR section
+  while the GT holds 3–10 distinct requirement sentences: Ritter emitted
+  insurance-procurement but not primary-of-all-purposes/additional-insured;
+  the audit section's 10 GT spans went ~0). v27 states the rule directly
+  (a family section is MULTI-ITEM — each distinct requirement sentence is
+  its own item); v28 sharpens it with the two trace lessons (definitional
+  sentences — "any X Property or improvements thereto which are used…" —
+  are NEVER items; the completion re-scan only ADDS items, never removes).
+  Same-surface 50-doc chunked A/B (seed 42, qwen3.7-flash, current scorer):
+  **v28 0.9228 vs v26 0.8780 overall (+4.48pp, bootstrap 95% CI [+0.0094,
+  +0.0907], P(Δ≤0)=0.004)**; key_obligations +11.4pp (0.7606→0.8747, 20
+  recovered vs 4 regressed docs — regressions are single-span losses on
+  ≥0.85 docs, no new pattern); term_length +0.040; tokens +6.7%. Also
+  documented: the sample5 A/B surface is truncation-confounded
+  (`chunked=false` — Phasebio 0.125 unchunked vs 0.94 chunked) — pilot
+  surfaces must use `--chunked` for key_obligations to be measurable.
+  KANBAN-004, issue #3 closed.
 - **`contracts_specialist_v26` — term_length containment fix (KANBAN-017
   arm)** — v24's canonical-duration-prefix rule made the model REPLACE the
   clause opener with the duration phrase (the CUAD ground-truth span IS the

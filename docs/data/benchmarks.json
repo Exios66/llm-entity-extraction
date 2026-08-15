@@ -23299,11 +23299,11 @@
    "model_permaslug": "qwen/qwen3.5-397b-a17b-20260216",
    "display_name": "Qwen: Qwen3.5 397B A17B",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.863729344528711,
-   "accuracy_stddev": 0.016540103791463884,
-   "avg_cost_per_task": 0.029128536950602874,
+   "accuracy": 0.8632478234019504,
+   "accuracy_stddev": 0.016875628409576703,
+   "avg_cost_per_task": 0.030088755617977525,
    "total_tasks": 5538,
-   "last_run_timestamp": "2026-08-08T17:07:44.281Z"
+   "last_run_timestamp": "2026-08-15T15:25:29.730Z"
   },
   {
    "source": "openrouter",
@@ -23706,11 +23706,11 @@
    "model_permaslug": "deepseek/deepseek-r1-0528",
    "display_name": "DeepSeek: R1 0528",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.7900934043848965,
-   "accuracy_stddev": 0.018696748367563812,
-   "avg_cost_per_task": 0.02984343831640058,
-   "total_tasks": 4926,
-   "last_run_timestamp": "2026-08-08T17:35:43.650Z"
+   "accuracy": 0.7887718044496488,
+   "accuracy_stddev": 0.019477144141715436,
+   "avg_cost_per_task": 0.030736573868882733,
+   "total_tasks": 5124,
+   "last_run_timestamp": "2026-08-15T15:55:37.394Z"
   },
   {
    "source": "openrouter",
@@ -23816,10 +23816,10 @@
    "model_permaslug": "openai/gpt-oss-120b",
    "display_name": "OpenAI: gpt-oss-120b",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.7594983571027514,
-   "accuracy_stddev": 0.028055580377302308,
+   "accuracy": 0.7589892664723034,
+   "accuracy_stddev": 0.02846781785430866,
    "avg_cost_per_task": 0.006539901152213462,
-   "total_tasks": 5343,
+   "total_tasks": 5145,
    "last_run_timestamp": "2026-08-15T15:13:08.926Z"
   },
   {
@@ -23970,11 +23970,11 @@
    "model_permaslug": "openai/gpt-oss-20b",
    "display_name": "OpenAI: gpt-oss-20b",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.670712630978261,
-   "accuracy_stddev": 0.021948558030944875,
-   "avg_cost_per_task": 0.005777157103825136,
-   "total_tasks": 5520,
-   "last_run_timestamp": "2026-08-08T18:05:18.601Z"
+   "accuracy": 0.6696980928646381,
+   "accuracy_stddev": 0.022221291825409512,
+   "avg_cost_per_task": 0.00581457760240511,
+   "total_tasks": 5718,
+   "last_run_timestamp": "2026-08-15T16:00:17.004Z"
   },
   {
    "source": "openrouter",

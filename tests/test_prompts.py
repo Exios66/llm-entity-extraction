@@ -505,3 +505,85 @@ def test_contracts_v26_no_template_leakage():
     v25 = CONTRACTS_SPECIALIST_PROMPT_V25
     assert "EXAMPLE — for a clause reading" in v25
     assert "never reuse wording from these instructions" not in v25
+
+
+def test_contracts_v27_multi_item_family_sections():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V26,
+        CONTRACTS_SPECIALIST_PROMPT_V27,
+    )
+
+    # v27 = v26 + ONE rule (KANBAN-004): family SECTIONS are multi-item. The
+    # v22/v23 50-doc runs + the v23-v26 sample5 series all show the same
+    # key_obligations cluster — the model quotes ONE sentence per family
+    # section while the GT holds 3-10 DISTINCT requirement sentences from it
+    # (sim-matrix classification: ~60-70% of misses are NEAR, sim 0.35-0.59,
+    # e.g. Ritter emitted insurance-procurement but not primary-of-all-
+    # purposes/additional-insured; ~0 of the audit section's 10 GT spans).
+    assert CONTRACTS_SPECIALIST_PROMPT_V27 != CONTRACTS_SPECIALIST_PROMPT_V26
+    assert CONTRACTS_SPECIALIST_PROMPT_V27.startswith(
+        CONTRACTS_SPECIALIST_PROMPT_V26[:300]
+    )
+    assert "contracts_specialist_v27" in PROMPT_VERSIONS
+
+    v27 = CONTRACTS_SPECIALIST_PROMPT_V27
+    # The multi-item family-section rule is present and explicit.
+    assert "A FAMILY SECTION IS MULTI-ITEM" in v27
+    assert "EACH distinct requirement sentence is its OWN item" in v27
+    assert "3-10 spans from ONE insurance, audit/records, license" in v27
+    assert "primary-of-all-purposes sentence" in v27
+    assert "NEVER collapse a section into its first or most prominent sentence" in v27
+    assert "INCOMPLETE — go back and emit the remaining requirement sentences" in v27
+    # The rule sits inside the EXHAUSTIVENESS paragraph of the v10 family
+    # catalog, so the family scope is untouched (only listed families count).
+    assert "EXHAUSTIVENESS WITHIN THE FAMILIES" in v27
+    assert "belonging to a listed family" in v27
+    # Unchanged v26 discipline: term_length opener variants + no leakage,
+    # reasoning trace, formats.
+    assert "never reuse wording from these instructions" in v27
+    assert "says in THIS document" in v27
+    assert "REASONING BEFORE OUTPUT" in v27
+    assert "PLAIN currency phrase" in v27
+    # v26 predates the rule.
+    v26 = CONTRACTS_SPECIALIST_PROMPT_V26
+    assert "A FAMILY SECTION IS MULTI-ITEM" not in v26
+
+
+def test_contracts_v28_multi_item_sharpened():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V27,
+        CONTRACTS_SPECIALIST_PROMPT_V28,
+    )
+
+    # v28 = v27 + two trace lessons from the v27 A/B (chunked pair: v27
+    # 0.9535 vs v26 0.8944; residuals were Ritter -1 span and a Cardax
+    # precision drop from definitional-fragment items): (1) only OPERATIVE
+    # requirement sentences are items — definitional sentences ("any X
+    # Property or improvements thereto which are used...") never are;
+    # (2) the completion re-scan only ADDS items, never removes/replaces.
+    assert CONTRACTS_SPECIALIST_PROMPT_V28 != CONTRACTS_SPECIALIST_PROMPT_V27
+    assert CONTRACTS_SPECIALIST_PROMPT_V28.startswith(
+        CONTRACTS_SPECIALIST_PROMPT_V27[:300]
+    )
+    assert "contracts_specialist_v28" in PROMPT_VERSIONS
+
+    v28 = CONTRACTS_SPECIALIST_PROMPT_V28
+    assert "A FAMILY SECTION IS MULTI-ITEM" in v28
+    assert "EACH distinct requirement sentence is its OWN item" in v28
+    assert "NEVER collapse a section into its first or most prominent sentence" in v28
+    # The sharpening: operative-vs-definitional criterion + additive re-scan.
+    assert "A requirement sentence is OPERATIVE language" in v28
+    assert "A DEFINITIONAL or descriptive" in v28
+    assert "NEVER an item" in v28
+    assert "RE-SCAN every family-" in v28
+    assert "the re-scan only ADDS items" in v28
+    assert "never removes or replaces one" in v28
+    # v27 predates the sharpening; v26 predates the whole rule.
+    v27 = CONTRACTS_SPECIALIST_PROMPT_V27
+    assert "NEVER an item" not in v27
+    assert "the re-scan only ADDS items" not in v27
+    # Unchanged discipline: family scope, term_length, reasoning, formats.
+    assert "belonging to a listed family" in v28
+    assert "never reuse wording from these instructions" in v28
+    assert "REASONING BEFORE OUTPUT" in v28
+    assert "PLAIN currency phrase" in v28

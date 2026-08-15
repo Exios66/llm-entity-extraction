@@ -2235,6 +2235,50 @@ CONTRACTS_SPECIALIST_PROMPT_V26 = CONTRACTS_SPECIALIST_PROMPT_V25.replace(
      quote the language carrying those dates.""",
 )
 
+# =============================================================================
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v27 (multi-item family sections)
+# -----------------------------------------------------------------------------
+# v27 = v26 + ONE surgical rule: a family SECTION is multi-item. The v22/v23
+# 50-doc runs and the v23-v26 sample5 series share one key_obligations cluster:
+# the model quotes ONE sentence per family section while the ground truth holds
+# 3-10 DISTINCT requirement sentences from that same section. Measured with
+# pairwise similarity matrices on both surfaces (~60-70% of misses are NEAR,
+# sim 0.35-0.59, NOT family omission): Ritter emitted insurance-procurement but
+# not primary-of-all-purposes/additional-insured (Insurance GT n=7) and ~0 of
+# the audit section's 10 GT spans; Buffalo ROFR/insurance/license; NOVO
+# revenue-sharing stock-delivery; Goosehead 8 near-misses; HPIL never emits the
+# "sole and exclusive remedy ... limited to" cap clause (0.5 across versions).
+# v23's worked examples fixed Midwest (0.143->1.0) but the miss SHAPE is
+# structural (sentence choice within a section), so v27 states the rule
+# directly. Unchanged: term_length opener discipline (v26), reasoning trace
+# (v24), formats (v24), family catalog (v10/v11).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V27 = CONTRACTS_SPECIALIST_PROMPT_V26.replace(
+    '   - EXHAUSTIVENESS WITHIN THE FAMILIES: scan the document section by section (Section 1,\n     2, 3, ... in order, plus the closing portion after a truncation marker) and extract\n     EVERY clause belonging to a listed family — never stop after a few items. A typical\n     contract yields 5-15 family clauses, but an agreement dense with restrictions yields\n     20+; the list is complete only when every present family occurrence appears. A clause\n     stating a restriction, covenant, or special provision named below is a family clause\n     even when it is buried inside a section about something else (an exclusivity sentence\n     inside a supply section, a license grant inside a marketing section, an audit right\n     inside an accounting section).',
+    '   - EXHAUSTIVENESS WITHIN THE FAMILIES: scan the document section by section (Section 1,\n     2, 3, ... in order, plus the closing portion after a truncation marker) and extract\n     EVERY clause belonging to a listed family — never stop after a few items. A typical\n     contract yields 5-15 family clauses, but an agreement dense with restrictions yields\n     20+; the list is complete only when every present family occurrence appears. A clause\n     stating a restriction, covenant, or special provision named below is a family clause\n     even when it is buried inside a section about something else (an exclusivity sentence\n     inside a supply section, a license grant inside a marketing section, an audit right\n     inside an accounting section).     A FAMILY SECTION IS MULTI-ITEM: when a section states several distinct\n     requirements, EACH distinct requirement sentence is its OWN item — the ground\n     truth commonly holds 3-10 spans from ONE insurance, audit/records, license,\n     option/ROFR, exclusivity, non-compete, liability, or assignment section (the\n     insurance-procurement sentence, the primary-of-all-purposes sentence, and the\n     additional-insured sentence of one insurance section are THREE items; the\n     price-formula sentence and the payment-terms sentence of one pricing section\n     are TWO). NEVER collapse a section into its first or most prominent sentence:\n     a list that holds one item for a section which states several requirements is\n     INCOMPLETE — go back and emit the remaining requirement sentences, each as\n     its own verbatim item, before finishing.',
+)
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v28 (multi-item rule sharpened)
+# -----------------------------------------------------------------------------
+# v28 = v27 + the two trace lessons from the v27 sample5 A/Bs (chunked pair:
+# v27 0.9535 vs v26 0.8944 — Phasebio +2 spans, Ediets +2, Ritter -1, Cardax
+# definitional-fragment precision drop 0.89->0.80). (1) A requirement sentence
+# is OPERATIVE language; DEFINITIONAL sentences ("any X Property or
+# improvements thereto which are used...") are never items — Cardax's IP
+# section definition fragments displaced the royalty/merger-assignment spans.
+# (2) The completion check is ADDITIVE: re-scan adds items, never removes or
+# replaces — v27's "go back and emit" wording shifted attention away from
+# other families (Ritter dropped mark-ownership + liquidated damages).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V28 = CONTRACTS_SPECIALIST_PROMPT_V27.replace(
+    '   - EXHAUSTIVENESS WITHIN THE FAMILIES: scan the document section by section (Section 1,\n     2, 3, ... in order, plus the closing portion after a truncation marker) and extract\n     EVERY clause belonging to a listed family — never stop after a few items. A typical\n     contract yields 5-15 family clauses, but an agreement dense with restrictions yields\n     20+; the list is complete only when every present family occurrence appears. A clause\n     stating a restriction, covenant, or special provision named below is a family clause\n     even when it is buried inside a section about something else (an exclusivity sentence\n     inside a supply section, a license grant inside a marketing section, an audit right\n     inside an accounting section).',
+    '   - EXHAUSTIVENESS WITHIN THE FAMILIES: scan the document section by section (Section 1,\n     2, 3, ... in order, plus the closing portion after a truncation marker) and extract\n     EVERY clause belonging to a listed family — never stop after a few items. A typical\n     contract yields 5-15 family clauses, but an agreement dense with restrictions yields\n     20+; the list is complete only when every present family occurrence appears. A clause\n     stating a restriction, covenant, or special provision named below is a family clause\n     even when it is buried inside a section about something else (an exclusivity sentence\n     inside a supply section, a license grant inside a marketing section, an audit right\n     inside an accounting section).     A FAMILY SECTION IS MULTI-ITEM: when a section states several distinct\n     requirements, EACH distinct requirement sentence is its OWN item — the ground\n     truth commonly holds 3-10 spans from ONE insurance, audit/records, license,\n     option/ROFR, exclusivity, non-compete, liability, or assignment section (the\n     insurance-procurement sentence, the primary-of-all-purposes sentence, and the\n     additional-insured sentence of one insurance section are THREE items; the\n     price-formula sentence and the payment-terms sentence of one pricing section\n     are TWO). NEVER collapse a section into its first or most prominent sentence.\n     A requirement sentence is OPERATIVE language — what a party SHALL, WILL, MAY\n     NOT do, must consent to, or is entitled to. A DEFINITIONAL or descriptive\n     sentence ("X means ...", "any X Property or improvements thereto which are\n     used, improved, modified or developed by ...") is NOT a requirement and is\n     NEVER an item. After the rest of the list is built, RE-SCAN every family-\n     heavy section sentence by sentence and ADD any requirement sentence not yet\n     emitted — the re-scan only ADDS items; it never removes or replaces one\n     already on the list.',
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2646,6 +2690,9 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v24": CONTRACTS_SPECIALIST_PROMPT_V24,
     "contracts_specialist_v25": CONTRACTS_SPECIALIST_PROMPT_V25,
     "contracts_specialist_v26": CONTRACTS_SPECIALIST_PROMPT_V26,
+    "contracts_specialist_v27": CONTRACTS_SPECIALIST_PROMPT_V27,
+    "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
+    "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,
