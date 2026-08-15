@@ -107,6 +107,16 @@ history of the repository's tags. Format follows
   response cost from the raw AIMessage, mirroring the structured + vision
   paths; content blocks are joined for list-form AIMessage content. 2 new
   unit tests. KANBAN-022.
+- **HEARSAY v0 baseline (KANBAN-025, iteration-series step 1)** —
+  `qwen3.7-flash_legalbench_task_v0_baseline` on `mailroom-lb-hearsay`
+  (5 rows, one per slice): **exact_match 1.0 (5/5), per-class no 1.0 / yes
+  1.0**, 3,585 tokens / ~$0.0003, replicated on the llm-dojo Langfuse mirror
+  (`_classification_langfuse_baseline`, 3,481 tokens, 5
+  `legalbench_task_classification` traces verified). **Read: the v0 prompt
+  SATURATES the 5-row train surface — there is no headroom to measure
+  iterative prompt improvements on this sample. Follow-on arm must sync the
+  95-row LegalBench test set (``test.tsv``) so A/B deltas have resolution
+  beyond the ceiling.**
 
 ## [v0.18.0] - 2026-08-15
 
