@@ -184,7 +184,6 @@ Status codes: `backlog` · `in_progress` · `blocked` · `in_review` · `done`
 
 | Card | Issue | Status | Task (summary) | Owner | Target release | CHANGELOG / evidence |
 |---|---|---|---|---|---|---|
-| KANBAN-015 | — | `in_progress` | **Extraction regression diagnostics (MAE + R²) vs master labels** — new `src/metrics.py` (date/duration MAE), `src/master_labels.py` (curated `master_clauses.csv` loader), R² (coefficient of determination) for dates + durations as tracked metrics; wire `scores.diagnostics` into the experiment log + site, unit tests, SCORING.md. | opencode (2026-08-14) | v0.17.0 | tree work `src/metrics.py`, `src/master_labels.py`, `field_scoring.parse_date`, `run_extraction_eval.py --master-labels` |
 | KANBAN-013 | [#11](https://github.com/Exios66/llm-entity-extraction/issues/11) | `backlog` | **Sorter >0.93 tail-sampling iteration** — the v9 A/B left 18 fails, a 1-off long tail (no cluster >2); ~0.93 is the practical plateau on this corpus revision. 0.95 strict needs either tail-sampling iterations (per-error-class rules on the long tail) or a corpus re-baseline; proposal + data first (`V16_PROPOSITION.md` §18 risk register). | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §18; v9 run: qwen3.7-flash_sorter_v9_subtype_langfuse (strict 0.9259, 18 fails) |
 | KANBAN-004 | [#3](https://github.com/Exios66/llm-entity-extraction/issues/3) | `backlog` | **Extraction next arm (v24 candidate)** — attack the 30-span residual: span-choice/boundary divergence at token level (34→30 spans still missed; ko ~0.85 ceiling at reasoning=none). Diagnostic first: classify the 30 misses (boundary-shift vs abbreviation vs wrong-span) before writing prompt rules. | unclaimed | v0.17.0 | `V16_PROPOSITION.md` §14.3/§15.1; `reports/same_scorer_scores.json` |
 | KANBAN-005 | [#4](https://github.com/Exios66/llm-entity-extraction/issues/4) | `backlog` | **Mirror sync → llm-mailroom (cross-repo)** — apply the v22/v23 champion prompts to the llm-mailroom pipeline project (Langfuse key file drop-in + `sync_langfuse_prompts.py --env-file`); regenerate its synced experiment log. | unclaimed | v0.17.0 | AGENTS.md "Langfuse projects" / "Mirror sync"; `scripts/eval/sync_langfuse_prompts.py` |
@@ -203,6 +202,22 @@ re-targeted to v0.17.0.)
 Dated, append-only log. Newest entry goes at the TOP. Format:
 `**YYYY-MM-DD — <agent/human> — <card ref(s)>** <what happened / decision / question / blocker>`. No editing history.
 
+- **2026-08-14 — opencode — KANBAN-015 done (reconciliation: parallel-edit merge)** Extraction
+  regression diagnostics landed in commit `91392ea` (v0.17.0 prep; CHANGELOG
+  `[Unreleased]` Added + Changed entries in the same commit; 337 tests green).
+  **Concurrent-edit note for future agents:** mid-session, a parallel edit
+  landed in the same files (a diagnostics renderer in `src/experiment_log.py`,
+  money-MAE + span-count-drift metrics in `src/metrics.py`, `parse_money`
+  alias, `tests/test_experiment_log.py`, site display + regenerated
+  `docs/data/*`) — this card's scope and the parallel scope overlapped. Per
+  the anti-trampling protocol (AGENTS.md §4), both were MERGED, not reverted:
+  the parallel agent's `UPDATES` commit swept the whole tree (my R² work +
+  their renderer/metrics) into one coherent feature — R² + MAE for
+  dates/durations, money MAE (USD), span-count drift, field error
+  decomposition, pair counts, all tracked in `scores.diagnostics`
+  (experiment-log JSONL + md render + GH Pages breakdown). Net effect: the
+  merged commit is a superset of this card's scope. Chained-eval diagnostics
+  remain out of scope (own runner, future card). Card archived.
 - **2026-08-14 — opencode — KANBAN-015 claimed** Extraction regression diagnostics claimed `in_progress`: the working tree already holds uncommitted work with NO card (board rule 4) — `src/metrics.py` (date/duration MAE), `src/master_labels.py` (curated master-clauses CSV loader, default `../llm-mailroom/data/cuad/master_clauses.csv`), `field_scoring.parse_date` alias, `run_extraction_eval.py --master-labels` + diagnostics plumbing. This card ships that work PLUS **R² (coefficient of determination) as a tracked performance metric** (`duration_r2`, `date_r2`, per-field buckets), wires `scores.diagnostics` into the experiment log + GH Pages breakdown, adds network-free tests, and documents formulas in SCORING.md. Chained-eval diagnostics stay out of scope (own runner, future card).
 - **2026-08-14 — opencode — KANBAN-014 done** Full-corpus CUAD EDA landed in
   commit `2fe4103` (v0.17.0 prep, CHANGELOG `[Unreleased]` Added entry in the
@@ -318,6 +333,7 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|
+| KANBAN-015 | v0.17.0 prep (2026-08-14) | commit `91392ea` (merged with a parallel edit) | Extraction regression diagnostics shipped: **R² (coefficient of determination) + MAE tracked for dates/durations** (`date_r2`/`duration_r2` = 1 − SS_res/SS_tot, negative kept), money MAE (USD), span-count drift (MAE + signed mean), field error decomposition, pair counts — all in `scores.diagnostics` (experiment-log JSONL + md render + GH Pages breakdown); `src/metrics.py` + `src/master_labels.py` (curated CSV preferred, raw clause-text fallback), `--master-labels`/`MASTER_LABELS_CSV` on both extraction runners; 31 new tests, 337 total green |
 | KANBAN-014 | v0.17.0 prep (2026-08-14) | commit `2fe4103` | Full-corpus CUAD EDA shipped: `scripts/eda/explore_cuad.py` + `data/eda/{report.md,findings.md,figures/01–10}` all git-tracked. Headlines: median 33,425 chars (max 338,211), 17.1% over the 90k chunk window, `key_obligations` scope mean 16.0 spans/doc (49 null docs), 131 docs with `[***]` redaction markers, Anti-Assignment+Change Of Control 98% co-occurrence |
 | KANBAN-012 | v0.16.0 (2026-08-13) | commit `6697ea9` | sorter_v9 A/B landed: **v9 wins (+2.88pp strict, 0.9259)** — promotion/outsourcing/customization-schedule clusters eliminated, 25→18 fails, v6→v9 +5.8pp; ~0.93 practical plateau → follow-on KANBAN-013; issue #10 closed |
 | KANBAN-010 | v0.16.0 (2026-08-13) | commit `25aa942` | **Resolved by decision** — site cost telemetry intentionally REMOVED (costs meta + per-run cost gone from `docs/data/`); "restore cost accounting" superseded; issue #8 closed |
