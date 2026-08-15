@@ -43,6 +43,12 @@ class FakeClient:
     def create_dataset_item(self, **kwargs):
         self.items.append(kwargs)
 
+    def flush(self):
+        pass
+
+    def shutdown(self):
+        pass
+
 
 def test_sync_records_upserts_deterministic_items():
     client = FakeClient()
@@ -75,3 +81,56 @@ def test_sync_records_dry_run_writes_nothing():
     assert upserted == 2  # counted as "would upsert"
     assert client.items == []
     assert client.datasets == set()
+
+
+def _cuad_corpus(tmp_path):
+    """A minimal local CUAD mirror: one contract (CUAD_v1.json) + its PDF in
+    the nested Part_II/License_Agreements tree, filenames mirroring HF so
+    ``_norm(stem) == _norm(title)`` matches."""
+    import json
+
+    cuad_dir = tmp_path / "cuad"
+    pdf_dir = (cuad_dir / "CUAD_v1" / "full_contract_pdf"
+               / "Part_II" / "License_Agreements")
+    pdf_dir.mkdir(parents=True)
+    (pdf_dir / "Acme_License_Agreement.pdf").write_bytes(b"fake-pdf")
+    data = {"data": [{
+        "title": "Acme License Agreement",
+        "paragraphs": [{
+            "context": "This License Agreement between Acme and Beta sets the terms.",
+            "qas": [{"question": "What is the term?",
+                     "answers": [{"text": "2 years", "answer_start": 12}]}],
+        }],
+    }]}
+    (cuad_dir / "CUAD_v1.json").write_text(json.dumps(data), encoding="utf-8")
+    return cuad_dir
+
+
+def test_sync_cuad_mirrors_local_corpus(monkeypatch, tmp_path):
+    """``--cuad`` mirrors the LOCAL corpus into ``mailroom-cuad-contracts`` as
+    TEXT rows (offline: doc_text + clause QA + category metadata), upserted with
+    deterministic ids — the Langfuse twin of streaming the corpus to Braintrust."""
+
+    from scripts.eval import sync_langfuse_datasets
+
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-fake")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-fake")
+    monkeypatch.setenv("LANGFUSE_PROJECT", "llm-dojo")
+    client = FakeClient()
+    monkeypatch.setattr(sync_langfuse_datasets, "Langfuse", lambda **kwargs: client)
+
+    cuad_dir = _cuad_corpus(tmp_path)
+    report = sync_langfuse_datasets._sync_cuad(tmp_path / "langfuse.env", cuad_dir, dry_run=False)
+
+    assert report["skipped_env"] is False
+    assert report["datasets"] == 1
+    assert report["items"] == 1
+    assert "mailroom-cuad-contracts" in client.datasets
+    assert len(client.items) == 1
+    item = client.items[0]
+    assert item["dataset_name"] == "mailroom-cuad-contracts"
+    assert item["expected_output"] == "contract"
+    assert item["input"]["doc_text"].startswith("This License Agreement")
+    assert item["input"]["metadata"]["category"] == "License_Agreements"
+    assert item["input"]["metadata"]["page_count"] == 0  # text rows carry no page images
+    assert item["metadata"]["source"] == "cuad_v1"

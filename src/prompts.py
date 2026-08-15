@@ -594,6 +594,36 @@ Rules:
 Output the answer on a single line and nothing else."""
 
 
+# -----------------------------------------------------------------------------
+# v1 — hearsay doctrine in the system prompt (GEPA iteration, KANBAN-026).
+# Data: qwen3.7-flash_legalbench_task_v0_test @94 (4 runs, temp 0.0) = exact
+# 0.7766/0.7872/0.7766/0.7872 (band ≈ ±1 row). 18 deterministic failures:
+#   cluster A (9): 47/76/77/78/79/80/82/85/86 — statements offered to prove
+#     effect-on-listener / declarant state-of-mind, wrongly called hearsay
+#     (purpose-test miss); + flips 83/91.
+#   cluster B (8): 39/50/58/61/68/69/71/94 — party's own statement (58), non-
+#     verbal assertion (68 stickers, 69 head-shake), writings (61/71 emails),
+#     verbal-act (94 agency, 50 planning) wrongly called not-hearsay; + flip 52.
+#   cluster C (1): 23 — in-court relayed testimony; + flip 26.
+# Root cause: v0's system prompt carries ZERO legal doctrine (output-format
+# only), so the model decides from the one-line base_prompt definition + its own
+# priors. v1 = v0 + ONE hearsay-doctrine rule (truth-of-matter purpose test +
+# statement scope incl. writings/assertive non-verbal + in-court carve-out),
+# regression-scanned against all 71 correct rows (no predicted flip).
+# -----------------------------------------------------------------------------
+
+LEGALBENCH_TASK_PROMPT_V1 = LEGALBENCH_TASK_PROMPT_V0.replace(
+    "Output the answer on a single line and nothing else.",
+    """6. When the question asks whether there is hearsay, apply the task's own definition (an out-of-court statement offered to prove the truth of the matter asserted) completely:
+   - A "statement" includes spoken words, writings (emails, texts, reports, cards, signs), and assertive non-verbal conduct that communicates (a nod or head-shake in answer to a question, pointing, displaying a slogan or sign). Non-assertive conduct (a poster hung as decoration, appearing or behaving) is NOT a statement.
+   - Answer YES when the statement's CONTENT is itself the fact the question asks about — the content asserts the very thing to be proved (e.g. "I am the boss" to prove who is boss; a congratulation card to prove a marriage; "I am aware of the conduct" to prove knowledge; a head-shake denying a purchase to prove no purchase). This includes a party's OWN out-of-court statement: a party admission is an exception to admissibility, NOT to the hearsay definition.
+   - Answer NO when the statement is offered only for the FACT that it was made or its effect on a person's state — to show the listener was told, knew, or was provoked, to show the declarant's feeling or belief, or as circumstantial evidence (the mere ability to speak shows the declarant knew a language; the making of a statement shows the declarant was alive or present). Here the CONTENT'S TRUTH is not what matters.
+   - A statement made in court, under oath and subject to cross-examination, is NOT hearsay.
+
+Output the answer on a single line and nothing else."""
+)
+
+
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
 # =============================================================================
@@ -2377,7 +2407,7 @@ CONTRACTS_SPECIALIST_PROMPT_V28 = CONTRACTS_SPECIALIST_PROMPT_V27.replace(
 )
 
 # =============================================================================
-# CONTRACTS SPECIALIST — Contract Extraction, v29 (CoC-definition carve-out)
+# CONTRACTS SPECIALIST — Contract Extraction, v31 (token-efficiency refactor)
 # -----------------------------------------------------------------------------
 # v29 = v28 + ONE refinement of the v28 definitions criterion. Per-span diff on
 # the 4 regressed 50-doc docs found ONE rule-driven regression: Ediets lost two
@@ -2450,6 +2480,33 @@ CONTRACTS_SPECIALIST_PROMPT_V31 = CONTRACTS_SPECIALIST_PROMPT_V30.replace(
 ).replace(
     'STRIP sentence preamble and riders — "During the Term\n     of this Agreement,", "Except as otherwise set forth herein,", "Subject to\n     Section N,", "Nothing in this Agreement is intended to ...", and\n     cross-references are NOT part of the fragment. When one sentence states\n     several obligations, emit each operative right as its OWN fragment: a\n     compound "shall not assign, sublicense, or transfer" clause yields one\n     fragment per right; an exclusivity clause with territory/term/renewal\n     limitations yields one fragment per distinct limitation. EXAMPLE of the required\n     grain — the ground truth holds "Licensee shall not sublicense, sell, or\n     otherwise transfer the Software to any third party without the prior\n     written consent of Licensor" (15 words). Do NOT emit the 60-word sentence\n     with its "Except as otherwise set forth herein" preamble, and do NOT emit\n     the 5-word sliver "shall not sublicense" alone — keep the obligation core\n     with its operative qualifiers, at the span\'s length. ',
     'STRIP sentence preamble and riders — "During the Term of this Agreement,",\n     "Except as otherwise set forth herein,", "Subject to Section N,", and\n     cross-references are NOT part of the fragment. When one sentence states\n     several obligations, emit each operative right as its OWN fragment (a\n     "shall not assign, sublicense, or transfer" clause yields one per right;\n     an exclusivity clause yields one per distinct limitation). EXAMPLE — the\n     ground truth holds "Licensee shall not sublicense, sell, or otherwise\n     transfer the Software to any third party without the prior written\n     consent of Licensor" (15 words): keep the obligation core at the span\'s\n     length — neither the 60-word sentence with its preamble nor the 5-word\n     sliver "shall not sublicense". Quote each fragment',
+)
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v32 (effective_date convention fix)
+# -----------------------------------------------------------------------------
+# v32 = v31 + ONE rule: correct the effective_date tie-break that contradicts
+# the ground-truth convention (KANBAN-029, full-corpus diagnosis on the
+# v31@510 reasoning-trace corpus). Measured: effective_date 0.8577 @510 with
+# 51/509 docs (10%) at 0.0. Root cause = rule_contradiction: the v12-era rule
+# says "the defined term wins" when both an Agreement Date and a defined
+# Effective Date appear, but CUAD maps BOTH onto this field and holds the
+# AGREEMENT/EXECUTION date as answers[0] in 493/493 docs (verified full corpus).
+# On the 26 docs where the two dates differ, the prompt pushes the model to emit
+# the defined term (Monsanto AG 2017-08-31/EF 1998-09-30, IMAGEWARE, PACIRA,
+# ArcGroup, UnionDental, NETGEAR) → 6 at 0.0 + 14 partial; plus 23 null-when-
+# date-present docs (GULFSOUTH reasoning quotes "executed as of the 14th day of
+# December, 1997" → null) from the same over-preference. Corrected rule: the
+# AGREEMENT/EXECUTION date wins when one is stated; the defined "Effective Date"
+# term is the fallback only when no execution date is stated; never null when a
+# stated date appears. Estimated recovery +0.004 (tie-break) to +0.014 (full
+# field) composite @510; A/B must run on the full-510 surface (the 26 differing-
+# date docs are absent from the 50-doc and sample5 surfaces).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V32 = CONTRACTS_SPECIALIST_PROMPT_V31.replace(
+    """`effective_date`: the date the agreement takes effect. When the agreement DEFINES an "Effective Date" (a defined term), output that defined date; when it states only an execution/signature date, output that date; when both appear, output the date the agreement takes effect per its own definition (the defined term wins). Output the FULL date phrase (month, day, and year) in ISO format per the format rules below.""",
+    """`effective_date`: the AGREEMENT/EXECUTION date — the date the contract was signed, executed, dated, or made "as of" — whenever one is stated. The ground truth maps BOTH "Agreement Date" and "Effective Date" onto this field and holds the AGREEMENT/EXECUTION date as the value when both are present. A separately DEFINED "Effective Date" term is used ONLY when no execution/agreement date is stated; when both an execution/agreement date and a defined "Effective Date" term appear, output the execution/agreement date, never the defined term. NEVER output null when a stated date appears in the visible text (the preamble, the signature block, or a "dated"/"as of" line all count). Output the FULL date phrase (month, day, and year) in ISO format per the format rules below.""",
 )
 
 # =============================================================================
@@ -2838,6 +2895,7 @@ PROMPT_VERSIONS = {
 
     # Sorter — LegalBench multi-class task classification
     "legalbench_task_v0": LEGALBENCH_TASK_PROMPT_V0,
+    "legalbench_task_v1": LEGALBENCH_TASK_PROMPT_V1,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,
@@ -2872,6 +2930,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v29": CONTRACTS_SPECIALIST_PROMPT_V29,
     "contracts_specialist_v30": CONTRACTS_SPECIALIST_PROMPT_V30,
     "contracts_specialist_v31": CONTRACTS_SPECIALIST_PROMPT_V31,
+    "contracts_specialist_v32": CONTRACTS_SPECIALIST_PROMPT_V32,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

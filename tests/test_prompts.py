@@ -205,6 +205,49 @@ def test_contracts_v2_is_completeness_first():
     assert "confidence" in prompt
 
 
+def test_legalbench_task_v1_hearsay_doctrine():
+    """legalbench_task_v1 is a strict derivation of v0 that adds ONE hearsay-
+    doctrine rule to the system prompt (KANBAN-026 GEPA iteration).
+
+    Data: qwen3.7-flash_legalbench_task_v0_test @94 (4 runs, temp 0.0) =
+    0.7766/0.7872/0.7766/0.7872 (band ±1 row); 18 deterministic failures:
+    cluster A purpose-test misses (9: 47/76/77/78/79/80/82/85/86, statements
+    offered for effect-on-listener / declarant state-of-mind wrongly called
+    hearsay), cluster B statement-scope escapes (8: 39/50/58/61/68/69/71/94,
+    party-admission / non-verbal assertion / writings / verbal-act wrongly
+    called not-hearsay), cluster C in-court carve-out (1: 23). v1 = v0 + the
+    truth-of-matter purpose test + statement scope (writings, assertive non-
+    verbal conduct) + in-court carve-out, regression-scanned against all 71
+    correct rows (no predicted flip).
+    """
+    from src.prompts import LEGALBENCH_TASK_PROMPT_V0, LEGALBENCH_TASK_PROMPT_V1
+
+    # v1 is a strict derivation of v0: base untouched, ONE doctrine rule added.
+    assert LEGALBENCH_TASK_PROMPT_V1 != LEGALBENCH_TASK_PROMPT_V0
+    assert LEGALBENCH_TASK_PROMPT_V1.startswith(LEGALBENCH_TASK_PROMPT_V0[:300])
+    assert "legalbench_task_v1" in PROMPT_VERSIONS
+
+    v1 = LEGALBENCH_TASK_PROMPT_V1
+    # v0's output-format rules survive intact.
+    assert "Output ONLY the answer" in v1
+    assert "{{valid_classes}}" in v1
+    assert "Output the answer on a single line and nothing else." in v1
+    # The doctrine rule: purpose test (truth of the matter asserted).
+    assert "offered to prove the truth of the matter asserted" in v1
+    assert "the listener was told, knew, or was provoked" in v1
+    # Statement scope: writings + assertive non-verbal conduct.
+    assert "emails, texts, reports, cards, signs" in v1
+    assert "non-verbal conduct" in v1
+    # Party's own statement is still hearsay (admission = admissibility only).
+    assert "party admission" in v1.lower()
+    assert "exception to admissibility" in v1
+    # In-court carve-out.
+    assert "in court, under oath" in v1
+    # v0 predates the doctrine.
+    assert "offered to prove the truth of the matter asserted" not in LEGALBENCH_TASK_PROMPT_V0
+    assert "effect on the listener" not in LEGALBENCH_TASK_PROMPT_V0
+
+
 def test_sorter_prompt_mentions_classes():
     prompt = get_prompt("sorter")
     for cls in ("contract", "corporate_record", "due_diligence", "court_opinion"):
@@ -774,3 +817,43 @@ def test_contracts_v31_token_efficiency_refactor():
         assert probe in v31, probe
     # The 15-word grain example stays (short, load-bearing).
     assert "Licensee shall not sublicense, sell, or" in v31
+
+
+def test_contracts_v32_effective_date_convention_fix():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V31,
+        CONTRACTS_SPECIALIST_PROMPT_V32,
+    )
+
+    # v32 = v31 + ONE rule (KANBAN-029, full-corpus diagnosis on the v31@510
+    # reasoning-trace corpus): the v12-era effective_date tie-break said "the
+    # defined term wins" when both an Agreement Date and a defined Effective
+    # Date appear, but CUAD maps BOTH onto the field and holds the
+    # AGREEMENT/EXECUTION date as answers[0] in 493/493 docs. On the 26
+    # differing-date docs that pushes the model to emit the wrong date (6 at
+    # 0.0 + 14 partial) and feeds 23 null-when-date-present docs (field
+    # 0.8577 @510, 51/509 at 0.0). Corrected rule: the AGREEMENT/EXECUTION
+    # date wins whenever one is stated; a defined "Effective Date" term is
+    # fallback only when no execution date appears; never null with a stated
+    # date visible.
+    assert CONTRACTS_SPECIALIST_PROMPT_V32 != CONTRACTS_SPECIALIST_PROMPT_V31
+    assert CONTRACTS_SPECIALIST_PROMPT_V32.startswith(
+        CONTRACTS_SPECIALIST_PROMPT_V31[:300]
+    )
+    assert "contracts_specialist_v32" in PROMPT_VERSIONS
+
+    v31 = CONTRACTS_SPECIALIST_PROMPT_V31
+    v32 = CONTRACTS_SPECIALIST_PROMPT_V32
+    # The new convention rule is present; the v12-era "defined term wins"
+    # tie-break is gone from v32 (but intact in the untouched v31 base).
+    assert "the AGREEMENT/EXECUTION date" in v32
+    assert "holds the AGREEMENT/EXECUTION date as the value" in v32
+    assert "used ONLY when no execution/agreement date is stated" in v32
+    assert "never the defined term" in v32
+    assert "NEVER output null when a stated date appears" in v32
+    assert 'the defined term wins' not in v32
+    assert "when both appear, output the date the agreement takes effect" not in v32
+    # Predecessor stays intact — only ONE effective_date field rule exists.
+    assert 'the defined term wins' in v31
+    assert v32.count("`effective_date`") == 1
+    assert "ISO format per the format rules below" in v32

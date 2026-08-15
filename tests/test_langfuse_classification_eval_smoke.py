@@ -257,3 +257,61 @@ def test_langfuse_task_mode_task_dataset(fake_langfuse_classification, monkeypat
         assert record["task"] == "task_classification"
         assert record["scores"]["exact_match"] == 1.0
         assert record["data_source"]["source"].endswith("hearsay-test.jsonl")
+
+
+def test_langfuse_classification_pdf_dir(fake_langfuse_classification, monkeypatch, tmp_path):
+    """``--pdf-dir`` wires the LOCAL corpus into the Langfuse mirror: a nested
+    CUAD tree is discovered recursively, each PDF is classified by the VISION
+    sorter (one trace per document), and the repo record carries
+    ``input_mode: vision`` — with zero Braintrust involvement."""
+
+    import scripts.eval.run_langfuse_classification_eval as runner
+
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    pdfs = tmp_path / "corpus"
+    nested = pdfs / "CUAD_v1" / "full_contract_pdf" / "Part_II" / "License_Agreements"
+    nested.mkdir(parents=True)
+    (nested / "alpha.pdf").write_bytes(b"fake-pdf-a")
+
+    def fake_pdf_to_png(pdf_bytes, page_num=0, target_size=(1024, 1024)):
+        if page_num >= 2:
+            raise ValueError("no more pages")
+        return b"\x89PNG-page" + bytes([page_num])
+
+    monkeypatch.setattr("src.image_utils.pdf_to_png_bytes", fake_pdf_to_png)
+    vision_calls = {"n": 0}
+
+    def fake_classify_document(self, pages_base64, image_format="png"):
+        vision_calls["n"] += 1
+        return {"doc_type": "contract", "contract_subtype": "license",
+                "confidence": 0.9, "reasoning": "full document"}
+
+    monkeypatch.setattr("agents.sorter_agent.SorterAgent.classify_document",
+                        fake_classify_document)
+    for name in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL",
+                 "LANGFUSE_PROJECT", "LANGFUSE_ENVIRONMENT"):
+        monkeypatch.setenv(name, f"fake-{name}")
+
+    rc = runner.main_with_args([
+        "--pdf-dir", str(pdfs),
+        "--prompt-version", "sorter_vision_v0",
+        "--experiment-name", "smoke_langfuse_pdf_dir",
+        "--experiment-log", str(tmp_path / "exp.jsonl"),
+        "--manifest", str(tmp_path / "manifest.jsonl"),
+    ])
+    assert rc == 0
+
+    assert vision_calls["n"] == 1  # one PDF -> one full-document vision call
+    names = [s.kwargs["name"] for s in fake_langfuse_classification.spans]
+    assert names == ["doc_type_classification", "sorter"]
+
+    records = [json.loads(line) for line in open(tmp_path / "exp.jsonl")]
+    assert len(records) == 1
+    record = records[0]
+    assert record["task"] == "sorter_classification"
+    assert record["parameters"]["input_mode"] == "vision"
+    assert record["parameters"]["vision_pages"] == "all"
+    assert record["parameters"]["tracing_backend"] == "langfuse"
+    assert record["data_source"]["source"] == "local"
+    assert record["scores"]["exact_match"] == 1.0
+    assert record["results"][0]["filename"] == "alpha.pdf"

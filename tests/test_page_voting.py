@@ -89,3 +89,28 @@ def test_pdf_dir_loader_renders_all_pages(monkeypatch, tmp_path):
     decoded = [base64.b64decode(p) for p in first["pages_b64"]]
     assert decoded[0].endswith(b"\x00")
     assert decoded[1].endswith(b"\x01")
+
+
+def test_pdf_dir_loader_is_recursive_for_nested_corpus(monkeypatch, tmp_path):
+    """``--pdf-dir`` must find PDFs inside a NESTED corpus tree (the local CUAD
+    mirror layout: CUAD_v1/full_contract_pdf/Part_II/License_Agreements/*.pdf),
+    not just files in the directory's immediate children."""
+
+    from scripts.eval.run_classification_eval import load_local_pdfs
+
+    root = tmp_path / "corpus"
+    nested = root / "CUAD_v1" / "full_contract_pdf" / "Part_II" / "License_Agreements"
+    nested.mkdir(parents=True)
+    (nested / "alpha.pdf").write_bytes(b"fake-pdf-a")
+    (root / "top.pdf").write_bytes(b"fake-pdf-top")
+
+    def fake_pdf_to_png(pdf_bytes, page_num=0, target_size=(1024, 1024)):
+        if page_num >= 1:
+            raise ValueError("no more pages")
+        return b"\x89PNG-page"
+
+    monkeypatch.setattr("src.image_utils.pdf_to_png_bytes", fake_pdf_to_png)
+    records = load_local_pdfs(root, "contract")
+    names = sorted(r["filename"] for r in records)
+    assert names == ["alpha.pdf", "top.pdf"]  # deep + shallow both discovered
+    assert all(r["expected"] == "contract" for r in records)
