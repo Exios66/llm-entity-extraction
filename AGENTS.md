@@ -680,6 +680,15 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   opening 60% + closing 40% (`TRUNCATION_TAIL_FRACTION`); deal-critical
   sections live in the tail. `contracts_specialist_v9+` scan both sides of
   the truncation marker.
+- **Chunked extraction A/Bs (the truncation confound)**: key_obligations /
+  term_length A/Bs MUST run `--chunked` (90k windows, 8k overlap) — an
+  unchunked single pass truncates long documents and drops mid-document
+  restriction/covenant families (measured: Phasebio 0.125 unchunked vs
+  0.94 chunked). Both extraction runners support it; `run_extraction_eval.py`
+  prints a dry-run warning when off. Noise floor on the 50-doc chunked
+  surface at temp 0.1: ±0.03 overall (identical-prompt rerun) — a candidate
+  delta inside that band is a logic repair, not a win (see
+  `memos/contracts_specialist_v30.md`).
 - **Extractor scope (v10/v11)**: `key_obligations` is scoped to the CUAD
   restriction/covenant families (the GT spans — mean 7.4, max 22 items);
   general operative duties are NOT expected items. Output cleanliness
@@ -741,13 +750,21 @@ body becomes the agent's prompt):
   reasoning logic, failures, error messages, and results of every evaluated
   prompt and produce a stronger, refined, data-backed mutation (new
   version key) that is free of local plateaus and overfitting to the tested
-  sample. Runs the full diagnose → root-cause → mutate → same-surface A/B →
-  land loop: failure-insight + diagnostics review (MAE/R² with support
-  sizes, span-count drift, error decomposition), cluster-based rule
-  drafting with data-backed tests, same-seed pilots and same-surface A/Bs
-  with bootstrap-CI significance, plateau/overfit detection, and board +
-  CHANGELOG close-out with proof. Delegate prompt iterations to it; never
-  mutate a prompt version it has validated without a new iteration.
+  sample. Runs the **GEPA (Genetic-Pareto) reflective prompt-evolution
+  loop** — sample trajectories → reflect on failures in natural language →
+  mutate one lesson per version → same-surface A/B with a noise-floor
+  control (champion rerun) → Pareto-aware selection across score/cost/
+  robustness, combining complementary lessons from the candidate frontier —
+  mapped onto the repo's diagnose → root-cause → mutate → verify → land
+  phases: failure-insight + diagnostics review (MAE/R² with support sizes,
+  span-count drift, error decomposition), sim-matrix miss classification,
+  cluster-based rule drafting with data-backed tests, chunked-surface
+  discipline for extraction A/Bs (the truncation confound), same-seed
+  pilots and same-surface A/Bs with paired bootstrap-CI significance,
+  plateau/overfit detection (sub-noise deltas are logic repairs, never
+  claimed wins), and board + CHANGELOG close-out with proof. Delegate
+  prompt iterations to it; never mutate a prompt version it has validated
+  without a new iteration.
 - **experiment-log-sync** (`experiment-log-sync.md`) — keeps the experiment
   log and the GH Pages site in sync with the latest Braintrust/Langfuse
   runs.

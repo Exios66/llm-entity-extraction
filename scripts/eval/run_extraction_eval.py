@@ -126,6 +126,20 @@ def main_with_args(argv: list[str]) -> int:
                              "(150k default: the full corpus's largest contracts run "
                              "106-122k chars; head+tail window when exceeded)")
     parser.add_argument("--max-concurrency", type=int, default=4, help="Concurrent API calls")
+    parser.add_argument("--chunked", action="store_true",
+                        help="Split long documents into overlapping windows, one extraction "
+                             "call per window, and merge (list fields union with dedupe, "
+                             "scalars keep the first non-null value, confidence takes the "
+                             "max). REQUIRED for meaningful key_obligations/term_length "
+                             "measurements: unchunked extraction head+tail-truncates long "
+                             "docs, which drops the mid-document restriction/covenant "
+                             "families and collapses term_length (the Phasebio confound, "
+                             "memos/contracts_specialist_v28.md).")
+    parser.add_argument("--chunk-chars", type=int, default=90_000,
+                        help="Chunk window size for --chunked (default: 90000 chars)")
+    parser.add_argument("--chunk-overlap", type=int, default=8_000,
+                        help="Overlap carried between chunks for --chunked "
+                             "(default: 8000 chars)")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{prompt-version}_extraction)")
     parser.add_argument("--manifest", type=Path, default=None,
@@ -218,6 +232,13 @@ def main_with_args(argv: list[str]) -> int:
         print(f"Dry run: {len(with_truth)} contracts -> experiment '{experiment_name}'")
         print(f"  prompt_version={args.prompt_version} model={args.model}")
         print(f"  fields scored: {scored_fields}")
+        if args.chunked:
+            print(f"  mode=chunked windows={args.chunk_chars} overlap={args.chunk_overlap}")
+        else:
+            print("  WARNING: --chunked off — key_obligations/term_length measurements are "
+                  "truncation-confounded on long documents (the Phasebio confound: 0.125 "
+                  "unchunked vs 0.94 chunked; see memos/contracts_specialist_v28.md). Use "
+                  "--chunked for production-representative extraction A/Bs.")
         return 0
 
     setup_langchain(api_key=braintrust_key, project_id=args.project_id, project_name=args.project)
@@ -298,7 +319,11 @@ def main_with_args(argv: list[str]) -> int:
 
         doc_text = input_data["doc_text"]
         try:
-            predicted = specialist.extract(doc_text)
+            if args.chunked:
+                predicted = specialist.extract_chunked(
+                    doc_text, args.chunk_chars, args.chunk_overlap)
+            else:
+                predicted = specialist.extract(doc_text)
         except Exception as exc:  # noqa: BLE001 - one bad row must not abort
             print(f"ERROR {filename}: {type(exc).__name__}: {exc}", file=sys.stderr)
             composite = {"predicted": {}, "error": str(exc), "schema_valid": 0.0,
@@ -373,6 +398,10 @@ def main_with_args(argv: list[str]) -> int:
             # Truncation auditability: True when the document exceeded the input
             # cap and the specialist saw only head+tail.
             "truncated": bool(specialist._last_truncated),
+            # Chunk auditability: windowed mode + how many windows this doc
+            # needed (1 = single pass).
+            "chunked": bool(getattr(specialist, "_last_chunked", False)),
+            "n_chunks": int(getattr(specialist, "_last_n_chunks", 0) or 0),
         }
 
         span_meta = {

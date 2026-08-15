@@ -587,3 +587,70 @@ def test_contracts_v28_multi_item_sharpened():
     assert "never reuse wording from these instructions" in v28
     assert "REASONING BEFORE OUTPUT" in v28
     assert "PLAIN currency phrase" in v28
+
+
+def test_contracts_v29_coc_definition_carveout():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V28,
+        CONTRACTS_SPECIALIST_PROMPT_V29,
+    )
+
+    # v29 = v28 + ONE refinement: per-span diff on the 4 regressed 50-doc docs
+    # found a rule-driven regression — v28's "X means ... is NEVER an item"
+    # suppressed the Change-of-Control DEFINITION spans on Ediets (1.00 ->
+    # 0.45/0.40), but the CoC family's clause text IS its definition (corpus:
+    # 3 of 121 CoC docs are definitional). The carve-out restores family
+    # definitions as items while keeping section-glossary fragments excluded.
+    assert CONTRACTS_SPECIALIST_PROMPT_V29 != CONTRACTS_SPECIALIST_PROMPT_V28
+    assert CONTRACTS_SPECIALIST_PROMPT_V29.startswith(
+        CONTRACTS_SPECIALIST_PROMPT_V28[:300]
+    )
+    assert "contracts_specialist_v29" in PROMPT_VERSIONS
+
+    v29 = CONTRACTS_SPECIALIST_PROMPT_V29
+    assert "A DEFINITIONAL sentence is an" in v29
+    assert "item ONLY when the definition itself is the family clause" in v29
+    assert 'the Change of' in v29 and 'Control' in v29
+    assert "such definitions ARE items" in v29
+    # Glossary fragments remain excluded.
+    assert "Definitional fragments that describe a" in v29
+    assert "defined term's COMPONENTS" in v29
+    assert "are NEVER items" in v29
+    # The broad v28 phrasing is gone; v28 predates the carve-out.
+    v28 = CONTRACTS_SPECIALIST_PROMPT_V28
+    assert "A DEFINITIONAL or descriptive" in v28
+    assert "A DEFINITIONAL sentence is an" not in v28
+    assert "item ONLY when the definition itself is the family clause" not in v28
+
+
+def test_contracts_v30_chunk_mode_scalar_quoting():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V29,
+        CONTRACTS_SPECIALIST_PROMPT_V30,
+    )
+
+    # v30 = v29 + ONE rule closing the chunked-mode x term_length gap: chunked
+    # v26 collapsed term_length on all three term docs (Ritter prefix-only
+    # "five (5) years" 1.0->0.1765; Phasebio null 1.0->0.0; Ediets opener
+    # dropped 1.0->0.3333) because CHUNK DUTY's "quote the VISIBLE operative
+    # language faithfully and stop at what you can see" licensed the
+    # relaxation. v30: scalar fields keep their exact quoting rules in every
+    # chunk; prefix-only or null term_length with the clause visible is a miss.
+    assert CONTRACTS_SPECIALIST_PROMPT_V30 != CONTRACTS_SPECIALIST_PROMPT_V29
+    assert CONTRACTS_SPECIALIST_PROMPT_V30.startswith(
+        CONTRACTS_SPECIALIST_PROMPT_V29[:300]
+    )
+    assert "contracts_specialist_v30" in PROMPT_VERSIONS
+
+    v30 = CONTRACTS_SPECIALIST_PROMPT_V30
+    assert "SCALAR fields keep" in v30
+    assert "their exact field rules IN EVERY CHUNK" in v30
+    assert "the FULL verbatim clause, opener first" in v30
+    assert "prefix-" in v30 and "never acceptable" in v30
+    assert "a null" in v30 and "is a MISS" in v30
+    assert "visible portion including its opener" in v30
+    # Chunk duty + term_length discipline both intact; v29 predates the rule.
+    assert "CHUNK DUTY" in v30
+    assert "canonical duration phrase" in v30
+    v29 = CONTRACTS_SPECIALIST_PROMPT_V29
+    assert "SCALAR fields keep" not in v29

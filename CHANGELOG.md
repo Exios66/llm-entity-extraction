@@ -9,6 +9,39 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Changed
+- **`contracts_specialist_v29` + `contracts_specialist_v30` — follow-up
+  logic repairs (KANBAN-020 arm)** — the v28 residuals, resolved with a
+  noise-floor control (identical-prompt rerun of the v28 champion on the
+  same 50-doc chunked surface: **±0.03 overall band, ~12 docs move >±0.02
+  per field** — the surface's resolution limit). Per-span sim-matrix diff
+  on the 4 regressed docs: Ediets' Change-of-Control DEFINITION spans were
+  suppressed by v28's "definitions are NEVER items" criterion — a
+  rule-vs-rule contradiction with the v10 re-scan note ("the defined term
+  itself"); **v29 adds the carve-out** (CoC-family definitions ARE items —
+  Ediets recovers 0.692→0.769). **v30 patches CHUNK DUTY** (scalar fields
+  keep their exact quoting rules in every chunk; prefix-only/null
+  term_length with the clause visible is a miss — the chunked-v26 collapse
+  mechanism: Ritter "five (5) years" only, Phasebio null). Both measure
+  INSIDE the noise band (paired deltas −0.0264/−0.0382 vs the identical-
+  prompt rerun's −0.0293) — shipped as unmeasured logic repairs; **v28
+  remains the champion (re-validated vs v26: +0.0448, CI [+0.0087,
+  +0.0891], P=0.004)**. Also resolved: renewal_terms dip = 1 doc (NOVO,
+  quote-truncation variance); Gridiron `":"` = 1-off (fresh runs 1.0);
+  LinkPlus/Innerscope/LegacyTechnology regressions = noise. Memo
+  `memos/contracts_specialist_v30.md`.
+- **`run_extraction_eval.py` gains `--chunked/--chunk-chars/
+  --chunk-overlap`** (the Braintrust runner previously could NOT chunk) +
+  a dry-run truncation-confound warning when unchunked + `chunked`/
+  `n_chunks` audit fields per row (`_last_chunked`/`_last_n_chunks` on
+  `_SpecialistBase`). KANBAN-020.
+- **`.opencode/agents/prompt-engineer.md` now runs the full GEPA workflow**
+  (arXiv 2507.19457 reflective prompt evolution): sample trajectories →
+  natural-language reflection on failures (sim-matrix miss classification)
+  → one-lesson mutations → same-surface A/B with the noise-floor control →
+  Pareto-aware selection across score/cost/robustness with a candidate
+  frontier and cross-candidate lesson combining; plus the chunked-surface
+  discipline and the rule-contradiction check in every mutation. AGENTS.md
+  agent section updated. KANBAN-020.
 - **`contracts_specialist_v27` + `contracts_specialist_v28` — multi-item
   family-section rule (KANBAN-004 arm)** — the key_obligations span
   residual: pairwise-similarity classification of every miss on the 50-doc +

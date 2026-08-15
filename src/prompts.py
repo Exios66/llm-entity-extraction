@@ -2279,6 +2279,43 @@ CONTRACTS_SPECIALIST_PROMPT_V28 = CONTRACTS_SPECIALIST_PROMPT_V27.replace(
     '   - EXHAUSTIVENESS WITHIN THE FAMILIES: scan the document section by section (Section 1,\n     2, 3, ... in order, plus the closing portion after a truncation marker) and extract\n     EVERY clause belonging to a listed family — never stop after a few items. A typical\n     contract yields 5-15 family clauses, but an agreement dense with restrictions yields\n     20+; the list is complete only when every present family occurrence appears. A clause\n     stating a restriction, covenant, or special provision named below is a family clause\n     even when it is buried inside a section about something else (an exclusivity sentence\n     inside a supply section, a license grant inside a marketing section, an audit right\n     inside an accounting section).     A FAMILY SECTION IS MULTI-ITEM: when a section states several distinct\n     requirements, EACH distinct requirement sentence is its OWN item — the ground\n     truth commonly holds 3-10 spans from ONE insurance, audit/records, license,\n     option/ROFR, exclusivity, non-compete, liability, or assignment section (the\n     insurance-procurement sentence, the primary-of-all-purposes sentence, and the\n     additional-insured sentence of one insurance section are THREE items; the\n     price-formula sentence and the payment-terms sentence of one pricing section\n     are TWO). NEVER collapse a section into its first or most prominent sentence.\n     A requirement sentence is OPERATIVE language — what a party SHALL, WILL, MAY\n     NOT do, must consent to, or is entitled to. A DEFINITIONAL or descriptive\n     sentence ("X means ...", "any X Property or improvements thereto which are\n     used, improved, modified or developed by ...") is NOT a requirement and is\n     NEVER an item. After the rest of the list is built, RE-SCAN every family-\n     heavy section sentence by sentence and ADD any requirement sentence not yet\n     emitted — the re-scan only ADDS items; it never removes or replaces one\n     already on the list.',
 )
 
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v29 (CoC-definition carve-out)
+# -----------------------------------------------------------------------------
+# v29 = v28 + ONE refinement of the v28 definitions criterion. Per-span diff on
+# the 4 regressed 50-doc docs found ONE rule-driven regression: Ediets lost two
+# Change-of-Control DEFINITION spans ("For purposes of this Agreement, 'Change
+# in Control' means a merger...", 1.00 -> 0.45/0.40) because v28's "X means ...
+# is NEVER an item" suppressed them — but the CoC family's clause text IS its
+# definition (corpus: 3 of 121 CoC docs are definitional). The carve-out keeps
+# the criterion's win (Cardax chunked 0.8 -> 0.9, definitional Property
+# fragments suppressed) while restoring family definitions as items.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V29 = CONTRACTS_SPECIALIST_PROMPT_V28.replace(
+    '     A requirement sentence is OPERATIVE language — what a party SHALL, WILL, MAY\n     NOT do, must consent to, or is entitled to. A DEFINITIONAL or descriptive\n     sentence ("X means ...", "any X Property or improvements thereto which are\n     used, improved, modified or developed by ...") is NOT a requirement and is\n     NEVER an item.',
+    '     A requirement sentence is OPERATIVE language — what a party SHALL, WILL, MAY\n     NOT do, must consent to, or is entitled to. A DEFINITIONAL sentence is an\n     item ONLY when the definition itself is the family clause — the Change of\n     Control family\'s clause text is typically its definition ("Change in\n     Control" means ...), and such definitions ARE items, as are "License\n     means ..." grant definitions. Definitional fragments that describe a\n     defined term\'s COMPONENTS ("any X Property or improvements thereto which\n     are used, improved, modified or developed by ...") are NOT family clauses\n     and are NEVER items.',
+)
+
+# =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v30 (chunk-mode scalar quoting)
+# -----------------------------------------------------------------------------
+# v30 = v29 + ONE rule closing the chunked-mode x term_length gap: chunked v26
+# collapsed term_length on all three term docs (Ritter 1.0 -> 0.1765 prefix-only
+# "five (5) years"; Phasebio 1.0 -> 0.0 null in every chunk; Ediets 1.0 ->
+# 0.3333 opener dropped) while the reasoning evidence held the full clause —
+# the CHUNK DUTY "quote the VISIBLE operative language faithfully and stop at
+# what you can see" licensed the relaxation. v30: scalar fields keep their
+# exact quoting rules in every chunk; prefix-only or null term_length with the
+# clause visible is a miss. 50-doc chunked term_length drag measured:
+# v26 0.814 vs unchunked 1.0 (sample5).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V30 = CONTRACTS_SPECIALIST_PROMPT_V29.replace(
+    '   - CHUNK DUTY: the document may arrive in overlapping CHUNKS, each labeled\n     "EXTRACTION CHUNK N OF M". Extract every family occurrence present in the chunk\n     you see — a visible family clause is never skippable because it looks\n     incomplete. A clause may begin before the chunk or continue past it (the\n     overlap window re-quotes the boundary); quote the VISIBLE operative language\n     faithfully and stop at what you can see — never fabricate a clause that is\n     not in your chunk, and never guess at the omitted text between chunks. Your\n     items are merged across chunks, so a boundary-truncated clause still counts\n     when the neighboring chunk holds the rest.',
+    '   - CHUNK DUTY: the document may arrive in overlapping CHUNKS, each labeled\n     "EXTRACTION CHUNK N OF M". Extract every family occurrence present in the chunk\n     you see — a visible family clause is never skippable because it looks\n     incomplete. A clause may begin before the chunk or continue past it (the\n     overlap window re-quotes the boundary); quote the VISIBLE operative language\n     faithfully and stop at what you can see — never fabricate a clause that is\n     not in your chunk, and never guess at the omitted text between chunks. Your\n     items are merged across chunks, so a boundary-truncated clause still counts\n     when the neighboring chunk holds the rest. SCALAR fields keep\n     their exact field rules IN EVERY CHUNK — the chunk window never relaxes them:\n     `term_length` still leads with the canonical duration phrase and then quotes\n     the FULL verbatim clause, opener first, as visible in this chunk; a prefix-\n     only term_length ("five (5) years" alone) is never acceptable, and a null\n     term_length in a chunk that contains the term clause is a MISS, not a chunk-\n     mode shortcut. When the clause is only partially visible, quote the full\n     visible portion including its opener.',
+)
+
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2692,6 +2729,8 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v26": CONTRACTS_SPECIALIST_PROMPT_V26,
     "contracts_specialist_v27": CONTRACTS_SPECIALIST_PROMPT_V27,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
+    "contracts_specialist_v29": CONTRACTS_SPECIALIST_PROMPT_V29,
+    "contracts_specialist_v30": CONTRACTS_SPECIALIST_PROMPT_V30,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

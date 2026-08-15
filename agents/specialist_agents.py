@@ -278,6 +278,7 @@ class _SpecialistBase(BaseAgent):
             merged = result if merged is None else self._merge_extractions(merged, result)
         self._last_usage = total_usage
         self._last_truncated = False
+        self._last_chunked = True
         if merged is None:
             return {"_parse_error": True}
         return merged
@@ -370,6 +371,7 @@ class _SpecialistBase(BaseAgent):
         return merged
 
     def extract(self, doc_text: str) -> dict:
+        self._last_chunked = False
         truncated = self.truncate_input(doc_text)
         # When the sorter hands this document off, its classification is
         # prefixed to the extraction call so the specialist extracts with the
@@ -437,6 +439,8 @@ class ContractsSpecialist(_SpecialistBase):
                  prompt_version: str = "contracts_specialist", callbacks: list | None = None):
         super().__init__(model=model, api_key=api_key, callbacks=callbacks)
         self.prompt_version = prompt_version
+        self._last_chunked = False
+        self._last_n_chunks = 0
 
     def system_prompt(self) -> str:
         return get_prompt(self.prompt_version)
