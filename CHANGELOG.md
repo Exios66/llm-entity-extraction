@@ -9,6 +9,25 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Changed
+- **`ContractsSpecialist` extraction carries a full per-field reasoning
+  trace** — `CONTRACTS_SCHEMA` gains a required `reasoning` object (leading
+  the schema: `summary` + `entries[{field, evidence, section_ref}]`),
+  produced BEFORE the extraction values are finalized; the chunked-merge
+  unions reasoning entries across windows (dedupe by field, first-witness
+  evidence wins, summaries joined) so the trace covers the whole document;
+  `_evidence_confidence` excludes the meta field. New prompt
+  `contracts_specialist_v24` (derived from v23, base untouched): the
+  REASONING BEFORE OUTPUT duty + metrics-aligned format discipline —
+  `term_length` leads with the canonical duration phrase ("two (2) years"),
+  `contract_value` stays a plain currency phrase ("$2,000,000") so the
+  date/duration/money regression diagnostics (MAE + R² vs master labels)
+  can parse more predicted values (format alignment only — the master CSV
+  never reaches the model). 5-doc same-surface A/B (seed 42):
+  v24 0.9336 vs v23 0.9366 overall (noise), **key_obligations +10.2pp
+  (0.5984→0.7006)**, reasoning trace on 5/5 rows both runs (schema-driven),
+  tokens +2.5%; term_length containment dipped on 1 doc (leading-phrase
+  quote trades containment credit for parseability — monitored in the next
+  arm). 6 new network-free tests; 341 total green. KANBAN-016.
 - **`AGENTS.md` board section restructured into the full inter-agent
   workflow** — "Agent message board & inter-agent workflow": session
   pre-flight protocol (board read → rule-4 sanity sweep → name check →

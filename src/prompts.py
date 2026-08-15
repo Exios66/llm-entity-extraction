@@ -2098,8 +2098,73 @@ CONTRACTS_SPECIALIST_PROMPT_V23 = CONTRACTS_SPECIALIST_PROMPT_V22.replace(
        operational, NOT family clauses — BUT mark-ownership-use restrictions
        ("shall not register, use or claim ownership") and mark non-tarnishment
        clauses ARE items (see the positives above).
-     - the same clause twice (an exact repeat, or a sentence PLUS its own fragment):
-       one operative requirement, one item.""",
+      - the same clause twice (an exact repeat, or a sentence PLUS its own fragment):
+        one operative requirement, one item.""",
+)
+
+CONTRACTS_SPECIALIST_PROMPT_V24 = CONTRACTS_SPECIALIST_PROMPT_V23.replace(
+    """4. FORMAT DISCIPLINE — the model output must match the schema exactly:
+   - Dates: output STRICTLY as ISO YYYY-MM-DD (e.g. "2002-11-01"). Never output prose
+     dates ("1st day of November, 2002"), US formats, or "as written" text.
+   - Every field in the schema below is returned as its declared type: arrays as arrays
+     of quoted strings, strings as plain strings, null when absent.
+5. For clauses and obligations: extract the ACTUAL OPERATIVE LANGUAGE (quote the
+   contract), not a paraphrase, not a headline.
+6. The `confidence` score must be derived from the evidence in THIS document, not assumed:""",
+    """4. REASONING BEFORE OUTPUT — before finalizing ANY field, reason through its
+   evidence: locate the operative language in the text, verify it against the
+   definitions and aliases, and resolve conflicts between candidate passages.
+   Emit the full reasoning trace in the `reasoning` field of the JSON: a
+   `summary` of the document scan plus ONE entry per POPULATED field with
+   `field` (the schema key), `evidence` (the short verbatim quote or
+   definition/alias note that grounds the value), and `section_ref` (the
+   section number or header where it was found, or null when unlocatable).
+   The reasoning is produced FIRST and describes HOW each value was found —
+   it is never part of the clause text, is never scored, and never replaces
+   an extracted value. Fields left null get no entry.
+5. FORMAT DISCIPLINE — the model output must match the schema exactly, and the
+   formats below are the canonical forms the extraction diagnostics parse:
+   dates, durations, and money amounts are measured by regression error
+   against the ground truth, so an unparseable value cannot be measured:
+   - Dates: output STRICTLY as ISO YYYY-MM-DD (e.g. "2002-11-01"). Never output prose
+     dates ("1st day of November, 2002"), US formats, or "as written" text.
+   - `term_length`: when the agreement states a duration, LEAD the field with the
+     canonical duration phrase — "two (2) years", "thirty (30) days", "3 years",
+     "12 months" — followed by the full duration language and any riders. The
+     leading phrase is what the duration diagnostics parse; the quoted language
+     after it carries the evidence. When only dates express the term, quote the
+     language carrying those dates.
+   - `contract_value`: keep the amount as a PLAIN currency phrase — currency
+     symbol or word plus digits ("$2,000,000", "USD 500,000", "1.5 million
+     dollars") — never bury the number inside a prose sentence alone.
+   - Every field in the schema below is returned as its declared type: arrays as arrays
+     of quoted strings, strings as plain strings, null when absent.
+6. For clauses and obligations: extract the ACTUAL OPERATIVE LANGUAGE (quote the
+   contract), not a paraphrase, not a headline.
+7. The `confidence` score must be derived from the evidence in THIS document, not assumed:""",
+).replace(
+    """   value (e.g. 0.90 or 0.95) — use the full 0.0-1.0 range and pick the number the evidence
+   supports.
+7. Always return one complete JSON object with EVERY field in the schema below — never omit a
+   field, never stop mid-field, never emit commentary. Missing values are null or empty lists.
+8. TRUNCATION-AWARE COMPLETENESS:""",
+    """   value (e.g. 0.90 or 0.95) — use the full 0.0-1.0 range and pick the number the evidence
+   supports.
+8. Always return one complete JSON object with EVERY field in the schema below — never omit a
+   field, never stop mid-field, never emit commentary outside the `reasoning` field. Missing
+   values are null or empty lists.
+9. TRUNCATION-AWARE COMPLETENESS:""",
+).replace(
+    """Return a JSON object with these fields:
+- document_name: string (the contract's name)""",
+    """Return a JSON object with these fields:
+- reasoning: object — {summary: string, entries: [{field, evidence, section_ref}]} — the
+  per-field reasoning trace, produced FIRST (reason before you finalize the extraction)
+- document_name: string (the contract's name)""",
+).replace(
+    """- term_length: string or null (full duration language including riders)""",
+    """- term_length: string or null (canonical duration phrase FIRST — e.g. "two (2) years" —
+  then the full duration language including riders)""",
 )
 
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
@@ -2510,6 +2575,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v21": CONTRACTS_SPECIALIST_PROMPT_V21,
     "contracts_specialist_v22": CONTRACTS_SPECIALIST_PROMPT_V22,
     "contracts_specialist_v23": CONTRACTS_SPECIALIST_PROMPT_V23,
+    "contracts_specialist_v24": CONTRACTS_SPECIALIST_PROMPT_V24,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
     "correspondence_specialist": CORRESPONDENCE_SPECIALIST_PROMPT,

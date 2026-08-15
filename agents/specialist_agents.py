@@ -25,6 +25,30 @@ def _norm(text: str) -> str:
     return " ".join(str(text).split()).casefold()
 
 
+def _merge_reasoning(acc, chunk_reasoning) -> dict:
+    """Union two per-chunk reasoning traces into one.
+
+    Entries dedupe by field name (first-witness evidence + section reference
+    win — the chunk that first located the value holds its evidence); the
+    summaries join in chunk order with a marker so the merged trace covers
+    every window. A missing side degrades gracefully (None-safe).
+    """
+    acc = acc if isinstance(acc, dict) else {}
+    chunk_reasoning = chunk_reasoning if isinstance(chunk_reasoning, dict) else {}
+
+    entries: dict[str, dict] = {}
+    for entry in list(acc.get("entries") or []) + list(chunk_reasoning.get("entries") or []):
+        if not isinstance(entry, dict) or not entry.get("field"):
+            continue
+        entries.setdefault(entry["field"], entry)
+
+    summaries = [s for s in (acc.get("summary"), chunk_reasoning.get("summary")) if s]
+    return {
+        "summary": "\n\n".join(summaries) if summaries else "",
+        "entries": list(entries.values()),
+    }
+
+
 def _nullable_string(description: str = "") -> dict:
     return {"type": ["string", "null"], "description": description}
 
@@ -62,6 +86,33 @@ def normalize_extraction(result: dict, schema: dict) -> dict:
 # =============================================================================
 
 CONTRACTS_SCHEMA = build_structured_schema({
+    "reasoning": {
+        "type": "object",
+        "description": "Per-field reasoning trace, produced BEFORE finalizing the "
+                       "extraction: a summary of the scan plus one entry per populated "
+                       "field naming the field, its evidence (short verbatim quote or "
+                       "definition/alias note), and the section reference where it was "
+                       "found. Describes HOW each value was found — never part of the "
+                       "clause text and never replaces an extracted value.",
+        "properties": {
+            "summary": {"type": "string"},
+            "entries": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "field": {"type": "string"},
+                        "evidence": {"type": "string"},
+                        "section_ref": {"type": ["string", "null"]},
+                    },
+                    "required": ["field", "evidence"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": ["summary", "entries"],
+        "additionalProperties": False,
+    },
     "document_name": _nullable_string("The name of the contract (e.g. 'Web Hosting Agreement')"),
     "parties": _string_array("The names of the contracting parties"),
     "effective_date": _nullable_string("YYYY-MM-DD (ISO)"),
@@ -287,6 +338,11 @@ class _SpecialistBase(BaseAgent):
         so the overlap window re-quoting a clause is a no-op); scalar fields
         keep the FIRST non-null value in document order; confidence takes the
         max across chunks (a clause seen in one window is real evidence).
+        ``reasoning`` is a TRACE: its entries union across chunks (dedupe by
+        field, the first-witness evidence + section reference wins — the chunk
+        that first located the value holds the evidence) and the summaries
+        join with chunk markers, so the merged trace covers the whole
+        document instead of only the first window.
         """
         merged = dict(acc)
         for key, value in chunk.items():
@@ -295,6 +351,10 @@ class _SpecialistBase(BaseAgent):
                     float(merged.get("confidence") or 0.0), float(value or 0.0))
                 continue
             if key == "_parse_error":
+                continue
+            if key == "reasoning":
+                merged["reasoning"] = _merge_reasoning(
+                    merged.get("reasoning"), value)
                 continue
             if isinstance(value, list):
                 seen = {_norm(item) for item in merged.get(key) or []}
@@ -351,7 +411,7 @@ class _SpecialistBase(BaseAgent):
         total = 0
         found = 0
         for key, spec in properties.items():
-            if key == "confidence":
+            if key in ("confidence", "reasoning"):
                 continue
             value = result.get(key)
             type_spec = spec.get("type")

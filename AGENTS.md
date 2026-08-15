@@ -663,6 +663,17 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   the EXTRACTOR defaults to `none` — thinking models burn the whole token
   budget on reasoning otherwise. Flags: `--reasoning-effort` (subtype /
   extraction) and `--sorter-reasoning-effort` (chained).
+- **Extractor reasoning trace (v24+)**: the contracts specialist emits a
+  REQUIRED per-field reasoning trace (`predicted.reasoning` — `summary` +
+  `entries[{field, evidence, section_ref}]`) BEFORE finalizing the
+  extraction. It is a visible trace, not thinking-mode: `reasoning_effort`
+  stays `none`, the reasoning rides inside the structured JSON (schema
+  `reasoning` object, property first) and lands in the experiment log +
+  Langfuse observation outputs. The chunked pass unions entries across
+  windows (first-witness evidence wins). It is NEVER scored — the
+  diagnostics read only the extracted values, which must stay in the
+  canonical parseable forms (v24 format discipline: ISO dates, leading
+  duration phrases, plain currency amounts) for the MAE/R² pair counts.
 - **max_tokens**: extraction of 50+ verbatim clauses exceeds 16k tokens —
   chained default is 32768; a truncated JSON zeroes the row.
 - **Head+tail truncation**: past `--max-input-chars` the input keeps the

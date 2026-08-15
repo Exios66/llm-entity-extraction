@@ -398,3 +398,49 @@ def test_contracts_v23_residual_34_examples():
     v22 = CONTRACTS_SPECIALIST_PROMPT_V22
     assert "audited-financial-statement delivery" not in v22
     assert "mark-HYGIENE duties" not in v22
+
+
+def test_contracts_v24_reasoning_and_format_discipline():
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V23,
+        CONTRACTS_SPECIALIST_PROMPT_V24,
+    )
+
+    # v24 is a strict derivation of v23: the base is untouched, the derived
+    # prompt adds the reasoning-before-output duty and the metrics-aligned
+    # format discipline (canonical parseable forms for the regression
+    # diagnostics; format-level only — the master labels CSV never reaches
+    # the model).
+    assert CONTRACTS_SPECIALIST_PROMPT_V24 != CONTRACTS_SPECIALIST_PROMPT_V23
+    assert CONTRACTS_SPECIALIST_PROMPT_V24.startswith(CONTRACTS_SPECIALIST_PROMPT_V23[:300])
+    assert "contracts_specialist_v24" in PROMPT_VERSIONS
+
+    v24 = CONTRACTS_SPECIALIST_PROMPT_V24
+    # Reasoning duty: reason through each field's evidence BEFORE finalizing,
+    # emit summary + per-field entries, produced first, never scored.
+    assert "REASONING BEFORE OUTPUT" in v24
+    assert "`reasoning` field of the JSON" in v24
+    assert "`section_ref`" in v24
+    assert "it is never part of the clause text, is never scored" in v24
+    assert "reasoning: object" in v24
+    # Metrics-aligned format discipline (canonical parseable forms).
+    assert "canonical duration phrase" in v24
+    assert "two (2) years" in v24
+    assert "PLAIN currency phrase" in v24
+    assert "regression error" in v24
+    # No leakage: the prompt never names the master-labels source.
+    assert "master" not in v24.lower()
+    # Commentary ban now scoped to outside the reasoning field.
+    assert "never emit commentary outside the `reasoning` field" in v24
+    # Rule numbering stays sequential after the insert (4 reasoning,
+    # 5 format, 9 truncation) and ALL prior content is intact.
+    assert "4. REASONING BEFORE OUTPUT" in v24
+    assert "5. FORMAT DISCIPLINE" in v24
+    assert "9. TRUNCATION-AWARE COMPLETENESS" in v24
+    assert "VERBATIM COMPLETENESS" in v24
+    assert "NEGATIVE examples" in v24
+    # v23 predates the reasoning duty and format rules.
+    v23 = CONTRACTS_SPECIALIST_PROMPT_V23
+    assert "REASONING BEFORE OUTPUT" not in v23
+    assert "canonical duration phrase" not in v23
+    assert "never emit commentary outside" not in v23

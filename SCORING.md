@@ -196,6 +196,18 @@ buckets, not the duration buckets. The optional `--master-labels` flag and
 the `MASTER_LABELS_CSV` env var point at the CSV; the diagnostics degrade
 gracefully (raw text parsing) when it is absent.
 
+**Extractor reasoning trace** (`predicted.reasoning` in the per-document
+output) — the contracts specialist emits a per-field reasoning trace
+BEFORE finalizing the extraction (v24+ schema `reasoning`: `summary` +
+`entries[{field, evidence, section_ref}]`). It is a TRACE, never a score:
+none of the metrics read it (the diagnostics consume only the extracted
+values), it rides along for researchers in the experiment log and Langfuse
+observation outputs, and the chunked pass unions entries across windows so
+the trace covers the whole document. The predicted values must stay in the
+canonical parseable forms (ISO dates, leading duration phrases, plain
+currency amounts) for the MAE/R² pairs to be counted — the v24 format
+discipline exists precisely for that.
+
 ## 5. Chained eval metrics (`run_chained_eval.py`)
 
 Per-stage trackers, registered with `--bt-scores overall|full`:

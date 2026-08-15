@@ -91,6 +91,68 @@ def test_merge_unions_dedupes_and_keeps_first_scalar():
     assert merged["confidence"] == 0.9
 
 
+def test_merge_unions_reasoning_across_chunks():
+    """The reasoning trace must cover the WHOLE document: entries union
+    across chunks (dedupe by field, first-witness evidence wins), summaries
+    join — a scalar first-non-null rule would drop every later chunk's
+    evidence and make the trace lie about the document."""
+    a = {
+        "document_name": "License Agreement",
+        "effective_date": "2024-01-15",
+        "governing_law": None,
+        "confidence": 0.7,
+        "reasoning": {
+            "summary": "Chunk 1: opening sections scanned.",
+            "entries": [
+                {"field": "document_name", "evidence": "Header line 1",
+                 "section_ref": "Header"},
+                {"field": "effective_date", "evidence": "Page 1, effective date",
+                 "section_ref": "Section 1"},
+            ],
+        },
+    }
+    b = {
+        "document_name": None,
+        "effective_date": None,
+        "governing_law": "State of Delaware",
+        "confidence": 0.9,
+        "reasoning": {
+            "summary": "Chunk 2: closing sections scanned.",
+            "entries": [
+                # Same field again from the overlap window: first-witness wins.
+                {"field": "effective_date", "evidence": "re-quoted overlap",
+                 "section_ref": "Section 1"},
+                {"field": "governing_law", "evidence": "Miscellaneous section",
+                 "section_ref": "Section 13"},
+            ],
+        },
+    }
+    merged = ContractsSpecialist._merge_extractions(a, b)
+    assert merged["reasoning"]["summary"] == \
+        "Chunk 1: opening sections scanned.\n\nChunk 2: closing sections scanned."
+    assert merged["reasoning"]["entries"] == [
+        {"field": "document_name", "evidence": "Header line 1", "section_ref": "Header"},
+        {"field": "effective_date", "evidence": "Page 1, effective date",
+         "section_ref": "Section 1"},
+        {"field": "governing_law", "evidence": "Miscellaneous section",
+         "section_ref": "Section 13"},
+    ]
+
+
+def test_merge_reasoning_none_safe():
+    """A chunk without reasoning (or a None side) must not corrupt the trace."""
+    a = {"document_name": "x", "confidence": 0.5,
+         "reasoning": {"summary": "s", "entries": [{"field": "document_name",
+                                                    "evidence": "e"}]}}
+    b = {"document_name": None, "confidence": 0.6}
+    merged = ContractsSpecialist._merge_extractions(a, b)
+    assert merged["reasoning"]["summary"] == "s"
+    assert len(merged["reasoning"]["entries"]) == 1
+    # A None reasoning side degrades to an empty-but-valid trace.
+    merged2 = ContractsSpecialist._merge_extractions({}, {"reasoning": None})
+    assert merged2["reasoning"] == {"summary": "", "entries": []}
+
+
 def test_extract_chunked_merges_across_chunks(monkeypatch):
     schema = ContractsSpecialist.schema
     responses = [
