@@ -141,6 +141,16 @@ history of the repository's tags. Format follows
   repo experiment log records (source of truth) are complete either way.
 
 ### Fixed
+- **`run_local_eval` shim now matches the `braintrust.EvalResult` contract**
+  (`src/eval_shims.py`, KANBAN-026) — the no-Braintrust loop stored the FULL
+  row dict as each result's ``input`` (so ``index`` resolved to -1 and
+  ``r.expected`` was missing): the shared ``log_experiment_to_repo`` /
+  ``print_classifications`` crashed on the classification runner, and the
+  subtype/extraction/chained runners silently logged zero usage/cost on the
+  disabled path. Each shim now carries the task's INNER input dict plus the
+  row's ``expected``, so ``r.expected`` and ``index``-keyed usage/cost
+  accounting resolve exactly as on the Braintrust path. Unit tests
+  ``tests/test_eval_shims.py`` (375 tests green).
 - **`BaseAgent._call_llm` now captures usage/cost** (`agents/base_agent.py`)
   — the plain-text completion path (LegalBench `--prompt-mode task`
   answers, judge calls) previously returned the string through

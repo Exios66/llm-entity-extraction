@@ -16,12 +16,22 @@ from typing import Any, Callable
 
 
 class EvalResultShim:
-    """Minimal ``braintrust.EvalResult``-compatible row."""
+    """Minimal ``braintrust.EvalResult``-compatible row.
 
-    def __init__(self, input: dict, output: Any, error: str | None = None):
+    Matches the contract the shared ``log_experiment_to_repo`` and per-runner
+    loggers rely on: ``input`` is the SAME dict handed to the task function
+    (carrying ``index``/``filename``/``expected``), and ``expected`` is the
+    row's expected label — so ``r.expected`` and ``r.input.get("index")`` /
+    ``r.input.get("filename")`` resolve exactly as they do on the Braintrust
+    path.
+    """
+
+    def __init__(self, input: dict, output: Any, error: str | None = None,
+                 expected: Any = None):
         self.input = input
         self.output = output
         self.error = error
+        self.expected = expected
 
 
 class EvalRunShim:
@@ -40,14 +50,20 @@ def run_local_eval(
 
     ``rows`` are the exact ``{"input": ..., "expected": ..., "filename": ...}``
     dicts the Braintrust ``data=lambda`` would produce; ``task`` is the same
-    function the Braintrust path hands to ``braintrust.Eval``.
+    function the Braintrust path hands to ``braintrust.Eval``. Each shim's
+    ``input`` is the row's INNER input dict (the task's argument), so
+    ``index``-keyed usage/cost accounting and ``expected`` resolve identically
+    to the Braintrust path.
     """
     results: list[EvalResultShim] = [None] * len(rows)  # type: ignore[list-item]
     with ThreadPoolExecutor(max_workers=max_concurrency) as pool:
         futures = {pool.submit(task, row["input"]): i for i, row in enumerate(rows)}
         for future, i in futures.items():
+            row = rows[i]
             try:
-                results[i] = EvalResultShim(rows[i], future.result(), None)
+                results[i] = EvalResultShim(row["input"], future.result(), None,
+                                            expected=row.get("expected"))
             except Exception as exc:  # noqa: BLE001 - one bad row must not abort
-                results[i] = EvalResultShim(rows[i], None, str(exc))
+                results[i] = EvalResultShim(row["input"], None, str(exc),
+                                            expected=row.get("expected"))
     return EvalRunShim(results)
