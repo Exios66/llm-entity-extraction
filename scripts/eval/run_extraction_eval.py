@@ -165,9 +165,9 @@ def main_with_args(argv: list[str]) -> int:
                              "to $EXPERIMENT_LOG_MD_PATH or reports/experiment_log.md")
     parser.add_argument("--master-labels", type=Path, default=None,
                         help="Master ground-truth labels CSV (default: MASTER_LABELS_CSV env "
-                             "or ../llm-mailroom/data/cuad/master_clauses.csv). The curated "
-                             "normalized per-category answers feed the MAE diagnostics (dates, "
-                             "durations) in the experiment log.")
+                             "or data/cuad/master_clauses.csv, the repo-local curated table). "
+                             "The curated normalized per-category answers feed the MAE "
+                             "diagnostics (dates, durations) in the experiment log.")
     args = parser.parse_args(argv)
 
     log_path = args.experiment_log or default_jsonl_path()

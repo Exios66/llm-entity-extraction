@@ -23486,10 +23486,10 @@
    "model_permaslug": "moonshotai/kimi-k2-thinking-20251106",
    "display_name": "MoonshotAI: Kimi K2 Thinking",
    "benchmark_type": "gpqa_diamond",
-   "accuracy": 0.8330068072855463,
-   "accuracy_stddev": 0.028958601099101183,
+   "accuracy": 0.834216140586797,
+   "accuracy_stddev": 0.028878716503168905,
    "avg_cost_per_task": 0.04056029011524824,
-   "total_tasks": 5106,
+   "total_tasks": 4908,
    "last_run_timestamp": "2026-08-01T17:53:10.275Z"
   },
   {

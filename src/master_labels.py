@@ -26,10 +26,27 @@ import os
 import re
 from pathlib import Path
 
-# Default location: the sibling llm-mailroom corpus checkout. Overridable via
-# the MASTER_LABELS_CSV env var or the eval runners' --master-labels flag.
-DEFAULT_MASTER_LABELS = Path(os.environ.get(
-    "MASTER_LABELS_CSV", "../llm-mailroom/data/cuad/master_clauses.csv"))
+# Default location: the repo-local copy (data/cuad/master_clauses.csv — the
+# curated 510-doc ground-truth table, committed so the extraction MAE
+# diagnostics are self-contained), with the sibling llm-mailroom checkout as
+# fallback. Overridable via the MASTER_LABELS_CSV env var or the eval
+# runners' --master-labels flag.
+_SIBLING_MASTER_LABELS = Path("../llm-mailroom/data/cuad/master_clauses.csv")
+_REPO_MASTER_LABELS = Path(__file__).resolve().parent.parent / "data" / "cuad" / "master_clauses.csv"
+
+
+def _default_master_labels() -> Path:
+    """Resolve the default master-labels CSV: env override, else the
+    repo-local copy, else the sibling llm-mailroom checkout."""
+    env = os.environ.get("MASTER_LABELS_CSV")
+    if env:
+        return Path(env)
+    if _REPO_MASTER_LABELS.exists():
+        return _REPO_MASTER_LABELS
+    return _SIBLING_MASTER_LABELS
+
+
+DEFAULT_MASTER_LABELS = _default_master_labels()
 
 
 def _norm_filename(value: str) -> str:
@@ -55,11 +72,18 @@ def load_master_labels(path: str | Path | None = None) -> dict[str, dict[str, st
             key = _norm_filename(filename)
             if not key:
                 continue
-            answers = {
-                category: str(value or "").strip()
-                for category, value in row.items()
-                if category.endswith("-Answer") and value not in (None, "")
-            }
+            answers: dict[str, str] = {}
+            for category, value in row.items():
+                if value in (None, ""):
+                    continue
+                if category.endswith("-Answer"):
+                    answers[category] = str(value).strip()
+                elif category.endswith("- Answer"):
+                    # The CSV header carries one variant with a stray space
+                    # ("Notice Period To Terminate Renewal- Answer"); normalize
+                    # it to the canonical "-Answer" so that category's answer
+                    # loads (endswith("-Answer") would otherwise skip it).
+                    answers[category.replace("- Answer", "-Answer")] = str(value).strip()
             out[key] = answers
     return out
 

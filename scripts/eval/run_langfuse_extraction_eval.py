@@ -115,9 +115,9 @@ def main_with_args(argv: list[str]) -> int:
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH)")
     parser.add_argument("--master-labels", type=Path, default=None,
                         help="Master ground-truth labels CSV (default: MASTER_LABELS_CSV env "
-                             "or ../llm-mailroom/data/cuad/master_clauses.csv). The curated "
-                             "normalized per-category answers feed the MAE/R² diagnostics "
-                             "(dates, durations) in the experiment log.")
+                             "or data/cuad/master_clauses.csv, the repo-local curated table). "
+                             "The curated normalized per-category answers feed the MAE/R² "
+                             "diagnostics (dates, durations) in the experiment log.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, print the plan without running")
     args = parser.parse_args(argv)

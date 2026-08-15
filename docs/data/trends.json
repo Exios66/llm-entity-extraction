@@ -1327,6 +1327,81 @@
     "seed": 42,
     "sample_key": "afb2e0e77981c268fd1b9e9c38811053030860fa936a90a7f8e846164f7bf2cd:42:1",
     "mode_counts": {}
+   },
+   {
+    "id": 97,
+    "experiment_name": "qwen3.7-flash_sorter_v12_subtype_langfuse_pilot",
+    "timestamp": "2026-08-15T21:23:42.723018+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v12",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.005435,
+    "n_rows": 10,
+    "seed": 42,
+    "sample_key": "9afcf61251405fbcc15221b96a7e316a46fd5fdfdfe920b75479e4107226385a:42:10",
+    "mode_counts": {}
+   },
+   {
+    "id": 102,
+    "experiment_name": "qwen3.7-flash_sorter_v9_subtype_langfuse_rerun_509",
+    "timestamp": "2026-08-15T21:54:33.759808+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v9",
+    "headline_value": 0.9143,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.259773,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 3,
+     "family_confusion": 73,
+     "function_over_form": 2,
+     "other_fallback": 4
+    }
+   },
+   {
+    "id": 103,
+    "experiment_name": "qwen3.7-flash_sorter_v12_subtype_langfuse",
+    "timestamp": "2026-08-15T22:19:00.259142+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v12",
+    "headline_value": 0.9234,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.270249,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 4,
+     "family_confusion": 29,
+     "function_over_form": 2,
+     "other_fallback": 4
+    }
+   },
+   {
+    "id": 104,
+    "experiment_name": "qwen3.7-flash_sorter_v9_subtype_langfuse_rerun_509_clean",
+    "timestamp": "2026-08-15T22:36:16.617869+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v9",
+    "headline_value": 0.9175,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.260249,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 2,
+     "family_confusion": 35,
+     "function_over_form": 2,
+     "other_fallback": 3
+    }
    }
   ],
   "sorter_classification": [

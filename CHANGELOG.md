@@ -43,6 +43,23 @@ history of the repository's tags. Format follows
   `python scripts/reporting/backfill_cost_estimates.py`; live refs in
   `scripts/README.md` + `wiki/Scoring.md` updated). Docs-only + safe nesting —
   no functional change, 375 tests green, site render audit clean.
+- **Sorter `sorter_v12` — strategic_alliance title-wins (KANBAN-023)** —
+  rule 28 STRATEGIC ALLIANCE TITLE WINS (v12 = v11 + the first banked
+  cluster from KANBAN-013): alliance-titled agreements beat collaboration/
+  license/consulting/service machinery, mirroring the validated R23/24/26
+  title-wins doctrine. Same-surface full-509 A/B (fp `c2341957…`, seed 42,
+  temp 0.1, reasoning medium): **v12 0.9234 vs the v9 clean rerun 0.9175 =
+  +0.0059, paired CI [−0.0098, +0.0216], P(Δ≤0)=0.251 — INSIDE the noise band
+  (identical-prompt v9 rerun itself moved +0.0059) → logic repair, NOT an
+  aggregate win**; the strategic_alliance cell is deterministically fixed
+  **28/32 → 31/32** (Iovance/Giggles/Adaptimmune recovered with rule-28
+  reasoning pinned; Intricon remains — the license carve-out didn't override
+  the substance read), recovered 9 / regressed 6 (all 6 regressions argue
+  from pre-existing Rule 9/13/24 machinery — no rule-28 pattern; 2 equiv-
+  recovered). v9 remains aggregate champion; v12 joins the frontier as the
+  strategic_alliance field specialist. Memo `memos/sorter_v12.md`. (Note: the
+  FIRST v9 @509 rerun control was degraded — 42 transient
+  `generator didn't stop after throw()` errors — replaced by a clean rerun.)
 
 ### Added
 - **LegalBench test-set eval path (KANBAN-026)** — the official
@@ -154,6 +171,18 @@ history of the repository's tags. Format follows
   log-bytes plan limit (`num_log_bytes_calendar_months`), so the experiment
   row data does NOT upload to Braintrust until billing is addressed — the
   repo experiment log records (source of truth) are complete either way.
+- **Master ground-truth CSV added to the repo + repo-local default
+  (KANBAN-028)** — `data/cuad/master_clauses.csv` (the curated 510-contract
+  CUAD ground-truth table, 40 normalized `-Answer` categories) is now
+  committed so the extraction MAE/R² diagnostics no longer depend on the
+  sibling llm-mailroom checkout. `DEFAULT_MASTER_LABELS` in
+  `src/master_labels.py` resolves to the repo-local copy first
+  (`MASTER_LABELS_CSV` env still wins; the sibling `../llm-mailroom/...` path
+  is kept as fallback), and the loader now normalizes the CSV's one
+  stray-space header variant (`Notice Period To Terminate Renewal- Answer`)
+  so that category's answer loads (previously silently dropped by the
+  `endswith("-Answer")` filter). Tests: repo-local CSV loads 510 rows +
+  header-variant tolerance; 377 tests green.
 
 ### Fixed
 - **`run_local_eval` shim now matches the `braintrust.EvalResult` contract**

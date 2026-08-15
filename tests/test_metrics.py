@@ -338,4 +338,38 @@ def test_master_labels_missing_file_degrades():
 
     from src.master_labels import DEFAULT_MASTER_LABELS
     if not os.path.exists(DEFAULT_MASTER_LABELS):
-        assert load_master_labels(None) == {}  # default sibling path absent
+        assert load_master_labels(None) == {}  # default path absent
+
+
+def test_master_labels_repo_local_csv_loads():
+    """The curated 510-doc ground-truth CSV ships in the repo (data/cuad/); the
+    default resolves to it, it parses all rows, and the stray-space header
+    variant ("Notice Period To Terminate Renewal- Answer") still loads so that
+    category's master answer is available to the MAE diagnostics."""
+    import os
+
+    from src.master_labels import DEFAULT_MASTER_LABELS
+    assert os.path.exists(DEFAULT_MASTER_LABELS), DEFAULT_MASTER_LABELS
+    master = load_master_labels(DEFAULT_MASTER_LABELS)
+    assert len(master) == 510, len(master)
+    # The category whose CSV header carries a space before "-Answer" must load.
+    any_answer = any(
+        "Notice Period To Terminate Renewal-Answer" in answers
+        for answers in master.values()
+        if answers
+    )
+    assert any_answer, "the '- Answer' header variant did not normalize to -Answer"
+
+
+def test_master_labels_answer_header_variant(tmp_path):
+    """A CSV column named '<Category>- Answer' (stray space) is normalized to
+    the canonical '<Category>-Answer' key."""
+    csv_path = tmp_path / "master_clauses.csv"
+    csv_path.write_text(
+        "Filename,Notice Period To Terminate Renewal- Answer,Renewal Term-Answer\n"
+        '"AGREEMENT FINAL (1).pdf","120 days","2 years"\n'
+    )
+    master = load_master_labels(csv_path)
+    assert master_answer(master, "AGREEMENT FINAL (1).pdf",
+                         "Notice Period To Terminate Renewal") == "120 days"
+    assert master_answer(master, "AGREEMENT FINAL (1).pdf", "Renewal Term") == "2 years"

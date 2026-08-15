@@ -1,14 +1,16 @@
 {
- "built_at": "2026-08-15T20:53:50.203051+00:00",
+ "built_at": "2026-08-15T23:14:26.693149+00:00",
  "surfaces": [
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
   "2e1fe4b740df85d09f2038851327996bee777eafff085bbd2b537bd3df1c33c5:42:195",
   "365479db6d77aa1a26a509222bcf355b72ba3ee3f9712afc108b9dd0f23f9768:42:5",
+  "40cfb513e040833d4de6e522145aaa6a8c15fe05e66ee3a2ce37df7b8bd99cdc:42:94",
   "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
   "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
   "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
+  "9afcf61251405fbcc15221b96a7e316a46fd5fdfdfe920b75479e4107226385a:42:10",
   "afb2e0e77981c268fd1b9e9c38811053030860fa936a90a7f8e846164f7bf2cd:42:1",
   "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30",
   "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
@@ -19,16 +21,16 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 96,
+ "run_count": 104,
  "tasks": {
   "contract_entity_extraction": 49,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 23,
+  "subtype_classification": 27,
   "sorter_classification": 2,
-  "task_classification": 6
+  "task_classification": 10
  },
  "models": {
-  "qwen/qwen3.7-flash": 94,
+  "qwen/qwen3.7-flash": 102,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -63,7 +65,7 @@
   "contracts_specialist_v23": 3,
   "sorter_v7": 1,
   "sorter_v8": 2,
-  "sorter_v9": 4,
+  "sorter_v9": 6,
   "contracts_specialist_v24": 1,
   "contracts_specialist_v25": 1,
   "contracts_specialist_v26": 3,
@@ -74,12 +76,13 @@
   "sorter_v10": 1,
   "contracts_specialist_v31": 5,
   "sorter_v11": 3,
-  "legalbench_task_v0": 6
+  "legalbench_task_v0": 10,
+  "sorter_v12": 2
  },
- "n_rows": 8832,
- "n_ok": 8020,
+ "n_rows": 10745,
+ "n_ok": 9891,
  "n_error": 812,
- "total_tokens": 118966503,
+ "total_tokens": 140251636,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -132,18 +135,18 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 23,
+   "runs": 27,
    "best": {
     "run_id": 20,
     "value": 1.0
    },
-   "median": 0.8971,
+   "median": 0.9116,
    "worst": {
     "run_id": 84,
     "value": 0.0
    },
-   "documents": 5451,
-   "tokens": 65450115
+   "documents": 6988,
+   "tokens": 86582315
   },
   "sorter_classification": {
    "runs": 2,
