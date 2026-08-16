@@ -19,7 +19,12 @@ htmlcov/
 data/manifests/
 data/samples/
 data/legalbench_local/
-data/cuad_pdfs/            # the full CUAD v1 PDF corpus (~510 contracts) — local only
+# the full CUAD v1 PDF corpus (~510 contracts) — local only
+data/cuad_pdfs/
+# MAUD local dumps (152 agreements, ~168 MB) — regenerate via stream_maud_to_bt.py --local-dump
+data/maud/
+# EDGAR S-1 corporate-record dumps — regenerate via stream_s1_exhibits.py --local-dump
+data/s1_corporate_records/
 reports/*.png
 reports/*.csv
 
