@@ -139,7 +139,7 @@ _KICKER = 16.0
 _SECTION_H = 20.0
 _FOOTER = 16.0
 
-_TOTAL_SLIDES = 16
+_TOTAL_SLIDES = 19
 
 
 def _widths(ws: openpyxl.worksheet.worksheet.Worksheet, widths: list[float]) -> None:
@@ -176,6 +176,9 @@ def new_slide(
         "The 25 CUAD contract subtypes": "subtypes",
         "Equivalences, failure modes & scoring rules": "rules",
         "Hierarchical doc-class diag + sources": "bonus + sources",
+        "Qwen lineage summary v3→v13": "qwen lineage",
+        "Qwen lineage — all 30 runs": "qwen all runs",
+        "Llama runs (Langfuse)": "llama runs",
     }
     name = f"{n:02d}. {_short_tags.get(tag, tag)} · {_short_titles.get(title, title)}"
     if n == 1:
@@ -341,6 +344,18 @@ def load_records(log_path: str) -> dict[str, dict]:
     return records
 
 
+def load_records_list(log_path: str) -> list[dict]:
+    """Every experiment-log record in file order (no dedup)."""
+    records: list[dict] = []
+    with open(log_path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            records.append(json.loads(line))
+    return records
+
+
 def load_contract_fields(taxonomy_path: str) -> dict[str, str]:
     """The contract doc-class field_types from config/taxonomy.yaml."""
     if not _HAS_YAML:
@@ -406,10 +421,11 @@ def slide_contents(wb: openpyxl.Workbook) -> None:
         ws.row_dimensions[row].height = 20.0
         row += 1
     row += 1
-    row = section_row(ws, row, "Part B — Sorter v14 (contract-subtype classification, n=509)")
+    row = section_row(ws, row, "Part B — Sorter (contract-subtype classification, n=509)")
     for s in [
-        "11 · Run metadata & headlines (+ v13 A/B note) · 12 · Failure modes & examples · 13 · Per-subtype accuracy",
-        "14 · Codebook: 25 CUAD subtypes · 15 · Codebook: equivalence families, failure modes, scoring rules",
+        "11 · Sorter v14 run metadata & headlines (+ v13 A/B note) · 12 · Failure modes & examples · 13 · Per-subtype accuracy",
+        "14 · Qwen lineage summary v3→v13 · 15 · Qwen lineage — all 30 runs · 16 · Llama runs (Langfuse)",
+        "17 · Codebook: 25 CUAD subtypes · 18 · Codebook: equivalence families, failure modes, scoring rules",
     ]:
         c = ws.cell(row=row, column=2, value="•  " + s)
         c.font = Font(size=10)
@@ -417,7 +433,7 @@ def slide_contents(wb: openpyxl.Workbook) -> None:
         row += 1
     row += 1
     row = section_row(ws, row, "Part C — Docclass + sources")
-    for s in ["16 · Docclass v5 diag-30 bonus slide + sources & navigation"]:
+    for s in ["19 · Docclass v5 diag-30 bonus slide + sources & navigation"]:
         c = ws.cell(row=row, column=2, value="•  " + s)
         c.font = Font(size=10)
         ws.row_dimensions[row].height = 20.0
@@ -750,9 +766,136 @@ def slide_sorter_per_subtype(wb: openpyxl.Workbook, r: dict) -> None:
     note(ws, row, 2, "Development 0.750 = 7 misses — the development↔license boundary is the single largest confusion cluster (equiv recovers 1).")
 
 
+_VERSION_NOTES = {
+    "sorter_v3": "early lineage baseline (50/195-doc surfaces)",
+    "sorter_v4": "—",
+    "sorter_v5": "first full-509 run",
+    "sorter_v6": "0.9436 @195 (ab200 arm)",
+    "sorter_v7": "+0.82pp @250 (KANBAN-003)",
+    "sorter_v8": "+2.06pp @243 (promotion cluster fixed)",
+    "sorter_v9": "former aggregate champion (KANBAN-012)",
+    "sorter_v10": "marketing title-wins — logic repair (KANBAN-013)",
+    "sorter_v11": "affiliate-is-not-marketing — logic repair (KANBAN-013)",
+    "sorter_v12": "strategic_alliance title-wins — logic repair (KANBAN-023)",
+    "sorter_v13": "AGGREGATE CHAMPION — maintenance title-wins (KANBAN-031)",
+}
+
+
+def _qwen_subtype_runs(records_list: list[dict]) -> list[dict]:
+    """All qwen3.7-flash sorter_v3..v13 subtype runs, chronological.
+
+    Takes the RAW record LIST (not the deduped name->record dict) — several
+    versions reran under the same experiment name (v3 ×4, v6 ×3, v9 ×4,
+    v13 ×2) and deduping would drop runs.
+    """
+    out = []
+    for r in records_list:
+        if r.get("task") != "subtype_classification":
+            continue
+        if (r.get("model") or "") != "qwen/qwen3.7-flash":
+            continue
+        pv = (r.get("prompt_versions") or {}).get("sorter")
+        if not pv or not pv.startswith("sorter_v"):
+            continue
+        try:
+            num = int(pv.rsplit("_v", 1)[1])
+        except ValueError:
+            continue
+        if 3 <= num <= 13:
+            out.append(r)
+    out.sort(key=lambda r: r.get("timestamp", ""))
+    return out
+
+
+def slide_qwen_lineage_summary(wb: openpyxl.Workbook, records_list: list[dict]) -> None:
+    ws, row = new_slide(
+        wb, "PART B · SORTER", "Qwen lineage summary v3→v13", 14,
+        kicker="qwen3.7-flash × sorter prompt lineage — best full-surface run per version (max n, then max strict)",
+    )
+    runs = _qwen_subtype_runs(records_list)
+    by_ver: dict[str, list[dict]] = {}
+    for r in runs:
+        by_ver.setdefault((r.get("prompt_versions") or {}).get("sorter"), []).append(r)
+    rows = []
+    for ver in [f"sorter_v{i}" for i in range(3, 14)]:
+        cands = sorted(by_ver.get(ver, []),
+                       key=lambda r: (r.get("data_source", {}).get("n_samples") or 0,
+                                      r["scores"]["sorter"].get("subtype_accuracy") or 0,
+                                      r.get("timestamp", "")))
+        if not cands:
+            continue
+        best = cands[-1]
+        sc = best["scores"]["sorter"]
+        short = best["experiment_name"].replace("qwen3.7-flash_", "").replace("_subtype_langfuse", "").replace("_subtype", "").replace("_rerun_509_clean", "").replace("_ab200", "").replace("_rerun", "")
+        rows.append([ver, short, best.get("data_source", {}).get("n_samples"),
+                     _num(sc.get("subtype_accuracy")), _num(sc.get("exact_match")),
+                     _VERSION_NOTES.get(ver, "")])
+    row = table(ws, row, 2, ["Version", "Reference run", "n", "Strict", "Exact", "Notes"], rows,
+                widths=[2, 15, 40, 7, 10, 10, 44, 11, 11, 11, 11, 11, 11, 11, 11, 2],
+                highlight_cols={4, 5})
+    note(ws, row, 2, "Reference-run rule: for each version, the run on the LARGEST surface (509 > 243 > 195 > 50); ties broken by strict accuracy then recency — degraded reruns (0.0000 / connection-error runs) never surface here.")
+    note(ws, row, 2, "The 509-doc surfaces are the only directly comparable ones (same seed 42): v5 0.8585 → v6 0.9312 → v8 0.9018 → v9 0.9175 → v12 0.9293 → v13 0.9430. 243-doc runs (v7/v10/v11) are a different surface — never compare across surfaces.")
+
+
+def slide_qwen_lineage_runs(wb: openpyxl.Workbook, records_list: list[dict]) -> None:
+    ws, row = new_slide(
+        wb, "PART B · SORTER", "Qwen lineage — all 30 runs", 15,
+        kicker="all 30 qwen3.7-flash sorter_v3→v13 subtype runs in the experiment log, chronological (both v13 qwen rows: the degraded first run and the clean champion rerun)",
+    )
+    runs = _qwen_subtype_runs(records_list)
+    rows = [[r.get("timestamp", "")[5:16].replace("T", " "), r.get("experiment_name", "").replace("qwen3.7-flash_", ""),
+             r.get("data_source", {}).get("n_samples"), _num(r["scores"]["sorter"].get("subtype_accuracy")),
+             _num(r["scores"]["sorter"].get("exact_match"))] for r in runs]
+    half = (len(rows) + 1) // 2
+    hdr = ["Date", "Run", "n", "Strict", "Exact"]
+    r1 = table(ws, row, 2, hdr, rows[:half], widths=[2, 13, 30, 6, 9, 9, 10, 11, 11, 11, 11, 11, 11, 11, 11, 2],
+               highlight_cols={4, 5})
+    r2 = table(ws, row, 8, hdr, rows[half:], highlight_cols={4, 5})
+    row = max(r1, r2)
+    note(ws, row, 2, "Degraded runs kept for truthfulness: v11 first run (0.0000 — all rows errored) and v13 first run (0.7741 — 93 connection errors, KANBAN-031); each was superseded by a clean rerun within the hour.")
+    note(ws, row, 2, "Surfaces: n=509 (full corpus, seed 42) · n=243 (stratified) · n=195 (stratified) · n=50 · pilots (n=5/10/1). Only same-surface runs are comparable.")
+
+
+def slide_llama(wb: openpyxl.Workbook, llama: dict | None) -> None:
+    ws, row = new_slide(
+        wb, "PART B · SORTER", "Llama runs (Langfuse)", 16,
+        kicker="the ONLY llama run recorded anywhere: llama-4-scout × contracts_specialist_v31 EXTRACTION in Langfuse llm-dojo — there are NO llama sorter-task runs",
+    )
+    row = section_row(ws, row, "Run identity (fetched from Langfuse llm-dojo, 2026-08-16)")
+    row = kv_table(ws, row, 2, [
+        ("Session", llama.get("session_id") if llama else "llama-4-scout_contracts_specialist_v31_extraction_langfuse"),
+        ("Task / prompt", f"{llama.get('task') if llama else 'contract_entity_extraction'} · {llama.get('prompt') if llama else 'contracts_specialist_v31'}"),
+        ("Model", llama.get("model") if llama else "llama-4-scout (OpenRouter)"),
+        ("Traces / scored", f"{llama.get('n_traces') if llama else 509} doc traces · only {llama.get('n_scored') if llama else 20} scored (run truncated)"),
+        ("Window", llama.get("window") if llama else "2026-08-16 06:55–07:22 UTC"),
+        ("Provenance", "Langfuse llm-dojo traces + scores (sourced via langfuse-cli; NOT in reports/experiment_log.jsonl)"),
+    ])
+    row = section_row(ws, row, "Headline scores (n=20 scored docs)")
+    d = llama or {}
+    sc = d.get("scores", {})
+    row = table(ws, row, 2,
+                ["Metric", "Llama-4-scout (n=20)", "Qwen 3.7-Flash v31 (n=509)", "Qwen 3.7-Flash v32 (n=509)"],
+                [
+                    ["Overall extraction score", _num(sc.get("overall_extraction_score", 0.6627)), _num(0.8737), _num(0.8807)],
+                    ["Field presence", _num(sc.get("field_presence", 0.8935)), _num(0.9655), _num(0.9701)],
+                    ["Schema valid", _num(sc.get("schema_valid", 1.0)), _num(1.0), _num(1.0)],
+                    ["Verified precision", _num(sc.get("overall_verified_precision", 0.9589)), _num(0.9799), _num(0.9799)],
+                    ["Category presence", _num(sc.get("category_presence", 0.4782)), _num(0.8474), _num(0.8555)],
+                ],
+                widths=[2, 26, 20, 26, 26, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 2],
+                highlight_cols={2, 3, 4})
+    row = section_row(ws, row, "Usage")
+    row = kv_table(ws, row, 2, [
+        ("Tokens (619 generations incl. chunk windows)", f"{d.get('tokens', 10337518):,} total"),
+        ("Cost recorded", "0 (no Langfuse price for the model — OpenRouter-billed)"),
+    ])
+    note(ws, row, 2, "⚠ NOT comparable to the qwen rows: n=20 vs 509, run truncated mid-scoring. Directionally 0.6627 < 0.8737 (qwen v31 same prompt) — but the 20 scored docs are a self-selected early slice; treat as signal only.")
+    note(ws, row, 2, "Searched before building: reports/experiment_log.jsonl (0 hits), Langfuse llm-dojo (model/session 'llama' filters → this session only), Braintrust (experiment reads 403 Forbidden), LangSmith (LANGSMITH_PROJECT=HEARSAY only). If llama SORTER runs exist, they live outside this repo's reach — point me at them and I'll fold them in.")
+
+
 def slide_codebook_subtypes(wb: openpyxl.Workbook) -> None:
     ws, row = new_slide(
-        wb, "CODEBOOK · SORTER", "The 25 CUAD contract subtypes", 14,
+        wb, "CODEBOOK · SORTER", "The 25 CUAD contract subtypes", 17,
         kicker="agents/sorter_agent.py CONTRACT_SUBTYPES — the option list IS the schema enum (pinned by test)",
     )
     half = (len(CONTRACT_SUBTYPES) + 1) // 2
@@ -774,7 +917,7 @@ def slide_codebook_subtypes(wb: openpyxl.Workbook) -> None:
 
 def slide_codebook_sorter_rules(wb: openpyxl.Workbook, fs: dict[str, Any]) -> None:
     ws, row = new_slide(
-        wb, "CODEBOOK · SORTER", "Equivalences, failure modes & scoring rules", 15,
+        wb, "CODEBOOK · SORTER", "Equivalences, failure modes & scoring rules", 18,
         kicker="how strict vs equivalent accuracy is computed, and how failures are classified",
     )
     row = section_row(ws, row, "Subtype equivalence families (SUBTYPE_EQUIVALENCES)")
@@ -808,7 +951,7 @@ def slide_codebook_sorter_rules(wb: openpyxl.Workbook, fs: dict[str, Any]) -> No
 
 def slide_docclass_and_sources(wb: openpyxl.Workbook, r: dict, records: dict[str, dict]) -> None:
     ws, row = new_slide(
-        wb, "PART C · DOCCLASS v5", "Hierarchical doc-class diag + sources", 16,
+        wb, "PART C · DOCCLASS v5", "Hierarchical doc-class diag + sources", 19,
         kicker=f"{_model(r)} × sorter_docclass_v5 — 30-doc diagnostic over the MERGED surface (CUAD + MAUD + S-1) — diagnostic, NOT comparable to 509-doc runs",
     )
     sc = r["scores"]
@@ -859,9 +1002,19 @@ def slide_docclass_and_sources(wb: openpyxl.Workbook, r: dict, records: dict[str
 # ---------------------------------------------------------------------------
 
 
-def build_deck(log_path: str, taxonomy_path: str, out_path: str) -> str:
+def load_llama_run(json_path: str) -> dict | None:
+    """Load the Langfuse-sourced llama run record (None when absent)."""
+    if not os.path.exists(json_path):
+        return None
+    with open(json_path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def build_deck(log_path: str, taxonomy_path: str, out_path: str,
+               llama_json: str = "reports/sheets/llama4scout_v31_extraction_langfuse.json") -> str:
     """Build the deck workbook; returns the output path."""
     records = load_records(log_path)
+    records_list = load_records_list(log_path)
     missing = [n for n in RUN_NAMES.values() if n not in records]
     if missing:
         raise SystemExit(f"Missing experiment-log records: {missing} — is {log_path} current?")
@@ -870,6 +1023,7 @@ def build_deck(log_path: str, taxonomy_path: str, out_path: str) -> str:
     docclass = records[RUN_NAMES["docclass"]]
     fields = load_contract_fields(taxonomy_path)
     fs = load_field_scoring(taxonomy_path)
+    llama = load_llama_run(llama_json)
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
@@ -887,6 +1041,9 @@ def build_deck(log_path: str, taxonomy_path: str, out_path: str) -> str:
     slide_sorter_headlines(wb, sorter)
     slide_sorter_failures(wb, sorter)
     slide_sorter_per_subtype(wb, sorter)
+    slide_qwen_lineage_summary(wb, records_list)
+    slide_qwen_lineage_runs(wb, records_list)
+    slide_llama(wb, llama)
     slide_codebook_subtypes(wb)
     slide_codebook_sorter_rules(wb, fs)
     slide_docclass_and_sources(wb, docclass, records)
@@ -902,9 +1059,12 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--taxonomy", default=DEFAULT_TAXONOMY, help="taxonomy YAML path")
     parser.add_argument("--outdir", default=DEFAULT_OUTDIR, help="output directory")
     parser.add_argument("--outfile", default=DEFAULT_DECK, help="output workbook filename")
+    parser.add_argument("--llama-json",
+                        default="reports/sheets/llama4scout_v31_extraction_langfuse.json",
+                        help="Langfuse-sourced llama run record (optional)")
     args = parser.parse_args(argv)
     out = os.path.join(args.outdir, args.outfile)
-    built = build_deck(args.log, args.taxonomy, out)
+    built = build_deck(args.log, args.taxonomy, out, args.llama_json)
     wb = openpyxl.load_workbook(built, read_only=True)
     print(f"Wrote {built} — {len(wb.sheetnames)} slides: {', '.join(wb.sheetnames)}")
     return 0
