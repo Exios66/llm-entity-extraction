@@ -567,6 +567,50 @@ SORTER_PROMPT_V14 = SORTER_PROMPT_V13.replace(
 )
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v15 (license-primary title wins)
+# -----------------------------------------------------------------------------
+# v15 = v13 (the CHAMPION — v14's rule 30 was a logic repair, NOT promoted)
+# + rule 31 LICENSE-PRIMARY TITLE WINS, folding in the banked v14 lesson:
+# widen rule 26's carve-out (a) to ANY license-PRIMARY title. The v14 A/B
+# flagged the counterfactual: carve-out (a) cited only the exact phrase
+# "Content License Agreement" and Playboy "CONTENT LICENSE, MARKETING AND
+# SALES AGREEMENT" regressed license->marketing under rule 30. Cross-model
+# failure traces on the SAME v13 prompt (full-509, seed 42, temp 0.1,
+# reasoning medium — qwen3.7-flash champion 0.9430/0.9470, 29 fails;
+# gpt-5-nano 0.8978; gpt-4.1-nano 0.8782; llama-4-scout 0.8880;
+# deepseek-v4-flash 0.9332) identify the universal license-primary cluster:
+# LejuHoldings "Content License Agreement" -> other FAILS IN ALL FIVE MODELS;
+# Playboy "Content License Agreement, Marketing Agreement, Sales-Purchase
+# Agreement" -> other/marketing/manufacturing and DataCall / ChinaRealEstate
+# / Ideanomics x2 / Midwest "Content License Agreement" -> ip and
+# AlliedEsports -> joint_venture and GluMobile -> other in the weaker models.
+# All are "Content License Agreement" titles whose PRIMARY family is license,
+# mis-routed to other/ip/marketing/manufacturing/joint_venture. Rule 31 pins
+# the title-wins doctrine (rules 23/24/26/28/29) to the license-primary shape:
+# license as the primary family wins over co-named marketing/sales/distribution
+# and over an IP-grant/joint-venture core, and a "Content License Agreement"
+# is never "other" (rule 8) and never ip (rule 22 names the IP family, not the
+# license family). Carve-outs preserved: rule 13 (license+maintenance ->
+# maintenance), rule 14 (license+hosting -> hosting), rules 19/21
+# (license+development -> development), rule 26 (marketing-named title with a
+# marketing core -> marketing, "Strategic Licensing, Distribution and Marketing
+# Agreement"). Target: strict >= 0.9430 on the full-509 surface with the
+# v13-clean champion as the baseline and the +-0.006 identical-prompt noise
+# band as the significance floor.
+# =============================================================================
+
+SORTER_PROMPT_V15 = SORTER_PROMPT_V13.replace(
+    """"CONSTRUCTION AND MAINTENANCE AGREEMENT" for infrastructure upkeep -> maintenance, not service).
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """"CONSTRUCTION AND MAINTENANCE AGREEMENT" for infrastructure upkeep -> maintenance, not service).
+
+31. LICENSE-PRIMARY TITLE WINS (widens rule 26 carve-out (a)): an agreement whose TITLE names license as its PRIMARY family — "Content License Agreement" and its co-named variants ("Content License, Marketing and Sales Agreement", "Content License Agreement, Marketing Agreement, Sales-Purchase Agreement") — is LICENSE even when it co-names marketing, sales, or distribution and even when its operative core is structured as an IP grant or a joint venture: the content license is the family and the co-named commercial families are annexes, per annex inheritance (rule 17). A "Content License Agreement" is NEVER "other" (rule 8 — a title naming a family is never "other") and is NOT ip (rule 22's ip title-wins names the IP family, "Intellectual Property Agreement", NOT the license family: a "Content License Agreement" granting a right to use content/software stays license). Carve-outs preserved: rule 13 (a license title co-naming maintenance -> maintenance, "Software License and Maintenance Agreement"), rule 14 (license-and-hosting -> hosting), rules 19/21 (license co-named with development -> development), and rule 26 (a marketing-named title whose operative core is marketing stays marketing — "Strategic Licensing, Distribution and Marketing Agreement" -> marketing, where licensing is merely co-named, not the primary family).
+
+VALID CONTRACT SUBTYPE KEYS""",
+)
+
+# =============================================================================
 # SORTER AGENT — Hierarchical doc-class classification, v0 (MAUD + S-1 records)
 # -----------------------------------------------------------------------------
 # The doc-class eval task (KANBAN-033) runs the sorter over an EXTENDED
@@ -2088,6 +2132,7 @@ PROMPT_VERSIONS = {
     "sorter_v12": SORTER_PROMPT_V12,
     "sorter_v13": SORTER_PROMPT_V13,
     "sorter_v14": SORTER_PROMPT_V14,
+    "sorter_v15": SORTER_PROMPT_V15,
     "sorter_docclass_v0": SORTER_DOCCLASS_PROMPT_V0,
 
     # Sorter — vision (RVL-CDIP-style image classification)

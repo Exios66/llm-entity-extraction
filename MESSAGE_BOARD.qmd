@@ -60,7 +60,7 @@ body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
 ::: {.card .card-in_progress}
 <div class="card-head"><span class="card-id">KANBAN-036</span> · <span class="pill pill-in_progress">in progress</span> · <span class="meta">owner: opencode (2026-08-16)</span> · <span class="meta">target: v0.19.0</span></div>
 
-**Sorter subtype model sweep — deepseek-v4-flash + gpt-4.1-nano + llama-4-scout on the champion prompt (full-509)** — per the human directive, full-509 subtype evals on sorter_v13 (champion), reasoning medium, temp 0.1, Phoenix sink, `--research-funding-key`: (1) **`deepseek/deepseek-v4-flash`** ($0.0629/M prompt + $0.1257/M completion; ~$0.46 est.); (2) **`openai/gpt-4.1-nano`** ($0.10/$0.40; ~$0.78 est.); (3) **`meta-llama/llama-4-scout`** ($0.10/$0.30, 1.31M ctx; smoke1 26.3k tok/1 doc, exact 1.0) — **QUEUED to launch AFTER the gpt-4.1-nano arm completes** (human directive). deepseek + gpt-4.1-nano full runs launched 2026-08-16 01:25; llama-4-scout smoke-tested 01:27. Runs reserved: `deepseek-v4-flash_sorter_v13_subtype_langfuse` + `gpt-4.1-nano_sorter_v13_subtype_langfuse` + `llama-4-scout_sorter_v13_subtype_langfuse`; manifests `data/manifests/{deepseekv4flash,gpt41nano,llama4scout}_sorter_v13_509.jsonl` (gitignored). Companion to KANBAN-035 (gpt-5-nano 0.8978 @509).
+**Sorter subtype model sweep — deepseek-v4-flash + gpt-4.1-nano + llama-4-scout + llama-3.3-70b-instruct on the champion prompt (full-509)** — full-509 subtype evals on sorter_v13 (champion), reasoning medium, temp 0.1, Phoenix sink, `--research-funding-key`. **ALL ARMS COMPLETE (strict subtype_accuracy): `deepseek/deepseek-v4-flash` 0.9332** (equiv 0.9352, 34 fails); **`meta-llama/llama-3.3-70b-instruct` 0.8900** (equiv 0.9116, 56 fails); **`meta-llama/llama-4-scout` 0.8880** (equiv 0.9077, 57 fails); **`openai/gpt-4.1-nano` 0.8782** (equiv 0.8959, 62 fails) — none match the qwen champion 0.9430; cost-floor frontier arms only (with gpt-5-nano 0.8978 from KANBAN-035). llama-3.3-70b-instruct (the human-requested instruct companion to llama-4-scout) edges scout by +0.002 — inside the ±0.006 noise band, effectively a tie. Runs: `{deepseek-v4-flash,gpt-4.1-nano,llama-4-scout,llama-3.3-70b-instruct}_sorter_v13_subtype_langfuse`; manifests `data/manifests/{deepseekv4flash,gpt41nano,llama4scout,llama33_70b}_sorter_v13_509.jsonl` (gitignored).
 
 
 <p class="card-foot"><strong>Evidence:</strong> `reports/experiment_log.{jsonl,md}` regen; sorter_v13</p>
@@ -160,6 +160,16 @@ Finished work is never deleted — it lives here for auditability. Cards are
 listed newest-first.
 :::
 
+::: {.card .card-done}
+
+<div class="card-head"><span class="card-id">KANBAN-038</span><span class="pill pill-done">shipped</span><span class="meta">v0.19.0 (2026-08-16)</span></div>
+
+<p class="card-foot"><strong>Commit / tag:</strong> `sorter_v15` (rule 31)</p>
+
+
+**Sorter license-primary title-wins arm — LOGIC REPAIR, NOT a win (v13 stays champion).** Full-509 A/B (fp `c2341957…`, seed 42, temp 0.1, reasoning medium, Phoenix sink, 0 errors): **v15 0.9450 vs v13-clean 0.9430 = +0.0020, paired CI [−0.0059, +0.0098], P(Δ≤0)=0.4160 — inside the ±0.006 noise band → logic repair, not a claimed win** (equiv 0.9509 vs 0.9470 = +0.0039). Rule 31 (LICENSE-PRIMARY TITLE WINS) recovered PACIRA (marketing — the deterministic cross-model fail named verbatim in the carve-out) + 2 rule-24 outsourcing variance flips (NEXSTAR, ImperialGarden); regressed Paratek (rule-24 variance) + Artara (rules 19/21 as designed, equiv). LejuHoldings "Content License Agreement2" is unfixable — its actual title is "Mutual Termination Agreement" (GT-folder=license is a labeling artifact). v15 = license-primary field specialist on the frontier. Memo `docs/memos/sorter_v15.md`
+
+:::
 ::: {.card .card-done}
 
 <div class="card-head"><span class="card-id">KANBAN-035</span><span class="pill pill-done">shipped</span><span class="meta">v0.19.0 (2026-08-16)</span></div>

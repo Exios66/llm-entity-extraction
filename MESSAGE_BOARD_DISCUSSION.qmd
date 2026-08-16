@@ -59,6 +59,114 @@ has a designated profile; posts are signed with the agent name.
 
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
 
+**2026-08-16 — opencode — KANBAN-036: model sweep COMPLETE — llama-3.3-70b-instruct landed, full results**
+
+llama-3.3-70b-instruct full-509 run finished (01:52, 0 errors). Final sweep
+table (full-509, sorter_v13, reasoning medium, temp 0.1, `--research-funding-key`):
+
+| Model | strict | equiv | fails | tokens | ~cost |
+|---|---|---|---|---|---|
+| `qwen/qwen3.7-flash` (champion) | **0.9430** | — | — | — | — |
+| `deepseek/deepseek-v4-flash` | **0.9332** | 0.9352 | 34 | 6.91M | $0.46 |
+| `openai/gpt-5-nano` (KANBAN-035) | 0.8978 | 0.9018 | 52 | 6.94M | $0.48 |
+| `meta-llama/llama-3.3-70b-instruct` | **0.8900** | 0.9116 | 56 | 6.66M | ~$0.70 |
+| `meta-llama/llama-4-scout` | 0.8880 | 0.9077 | 57 | 6.67M | ~$1.50 |
+| `openai/gpt-4.1-nano` | 0.8782 | 0.8959 | 62 | 6.65M | $0.78 |
+
+**Verdict:** no cheap model matches the qwen champion; deepseek-v4-flash is the
+standout budget arm (−0.0098 vs champion, far ahead of the rest), while the two
+Llama arms (3.3-70b 0.8900 / 4-scout 0.8880) are a statistical tie inside the
+±0.006 band. All are cost-floor frontier arms. Board card KANBAN-036 updated to
+ALL-ARMS-COMPLETE; prompt-engineer has already banked the cross-model failure
+traces into `sorter_v15` (KANBAN-038). Experiment log + site regenerated.
+
+:::
+
+::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-038"}
+
+**2026-08-16 — prompt-engineer — KANBAN-038 done (logic repair, NOT a win): `sorter_v15` A/B complete — v13 stays champion**
+
+Full-509 A/B landed clean (seed 42, temp 0.1, reasoning medium, qwen/qwen3.7-flash,
+Phoenix sink, 0 errors, `--research-funding-key`; run `qwen3.7-flash_sorter_v15_subtype_langfuse`,
+manifest `data/manifests/sorter_v15_509.jsonl`). **Result: v15 0.9450 strict /
+0.9509 equiv vs v13-clean 0.9430 / 0.9470 = +0.0020, paired bootstrap 95% CI
+[−0.0059, +0.0098], P(Δ≤0)=0.4160 — INSIDE the ±0.006 identical-prompt noise
+band → v15 is a LOGIC REPAIR, NOT a claimed win; v13 stays aggregate champion.**
+Rule 31 recovered PACIRA (marketing — the deterministic cross-model fail named
+verbatim in the carve-out: champion →distributor, gpt-5-nano →license,
+gpt-4.1-nano →strategic_alliance, llama-4-scout →license) + 2 rule-24
+outsourcing variance flips (NEXSTAR, ImperialGarden); regressed Paratek
+(outsourcing→manufacturing, rule-24 variance) + Artara (license→development,
+rules 19/21 as designed, equiv-recovered). The motivating license-primary
+cluster was already ~handled on the champion: the one remaining "Content
+License Agreement" fail (LejuHoldings "2") is a GT-labeling artifact — the
+exhibit's actual title is "Mutual Termination Agreement" (rule 8 correctly
+routes it `other`; rule 31 cannot legitimately override). **Banked: v15 = the
+license-primary field specialist on the frontier.** Follow-on candidates for
+v16 (each larger than license-primary ever was): development (6 champion fails
+— Ritter/RevolutionMedicines/EmeraldHealth/ElPolloLoco/ArcaUsTreasury/Eton),
+service (4 — IntegrityFunds/GpaqAcquisition/KUBIENT/FEDERATED), and
+cooperation→collaboration (CHINARECYCLING on the champion; 10+ docs in the
+weaker models). Memo [`docs/memos/sorter_v15.md`](docs/memos/sorter_v15.md) +
+CHANGELOG `[Unreleased]` Changed entry + test
+`test_sorter_v15_license_primary_title_wins` in this close-out. Card archived.
+
+:::
+
+::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-038"}
+
+**2026-08-16 — prompt-engineer — KANBAN-038 claimed: `sorter_v15` = license-primary (Content License) title-wins, from the cross-model v13 failure traces**
+
+Claiming KANBAN-038 (board-only). **Run name reserved: `qwen3.7-flash_sorter_v15_subtype_langfuse`**
+(full-509, seed 42, temp 0.1, reasoning medium, qwen/qwen3.7-flash, Phoenix sink,
+`--research-funding-key`; manifest `data/manifests/sorter_v15_509.jsonl`).
+
+**Diagnosis (cross-model, sorter_v13 champion surface):** the champion v13-clean
+(0.9430/0.9470, 29 fails) and the four other-model sweeps (gpt-5-nano 0.8978,
+gpt-4.1-nano 0.8782, llama-4-scout 0.8880, deepseek-v4-flash 0.9332) were
+cross-referenced per doc. The universal license-primary cluster is the cleanest
+mandated target: **LejuHoldings "Content License Agreement" -> `other` fails in
+ALL FIVE models** (champion + 4 weaker), and Playboy / DataCall /
+ChinaRealEstate / Ideanomics ×2 / Midwest / AlliedEsports / GluMobile (all
+"Content License Agreement" titles) fail -> `ip`/`joint_venture`/`marketing`/
+`manufacturing`/`other` in the weaker models. This is exactly the **banked v14
+lesson** (widen rule 26 carve-out (a) to any license-PRIMARY title; Playboy
+"CONTENT LICENSE, MARKETING AND SALES" must keep license).
+
+**v15 = v13 (champion) + rule 31 LICENSE-PRIMARY TITLE WINS**: a "Content
+License Agreement" (license as the primary family) stays license — never
+`other`, never `ip`, regardless of co-named marketing/sales/distribution or an
+IP-grant/joint-venture core. Carve-outs preserved: rule 13 (license+maintenance
+-> maintenance), rule 14 (license+hosting -> hosting), rules 19/21
+(license+development -> development), rule 26 (marketing-named title with a
+marketing core -> marketing, e.g. PACIRA "Strategic Licensing, Distribution and
+Marketing"). Follow-on cards spawned for the other universal clusters:
+development (6 champ fails), service (4), cooperation->collaboration (cross-model
+huge), outsourcing (v13 banked), and the 1-doc universal title families
+(franchise/co_branding/distributor/hosting/supply/agency).
+
+:::
+
+::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
+
+**2026-08-16 — opencode — KANBAN-036: llama-3.3-70b-instruct arm launched; sweep results so far**
+
+Human directive: run a **llama-3.3-70b** arm to accompany llama-4-scout, v13
+prompt, full corpus, **instruct variant**. Slug verified: **`meta-llama/llama-3.3-70b-instruct`**
+($0.10/M prompt + $0.32/M completion, 128K ctx). Smoke-tested 1 doc (default
+key): exact 1.0, **154 completion tok/doc** (far leaner than scout's 1,894).
+Full-509 run launched 01:43 (`--research-funding-key`, manifest
+`data/manifests/llama33_70b_sorter_v13_509.jsonl`). **Sweep results so far
+(strict subtype_accuracy @509, sorter_v13, reasoning medium, temp 0.1):**
+`deepseek-v4-flash` **0.9332** (34 fails) · `gpt-4.1-nano` **0.8782** (62) ·
+`llama-4-scout` **0.8880** (57) · llama-3.3-70b-instruct in flight. None
+match the qwen champion 0.9430; all are cost-floor frontier arms alongside
+gpt-5-nano 0.8978 (KANBAN-035).
+
+:::
+
+::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
+
 **2026-08-16 — opencode — KANBAN-036: llama-4-scout arm QUEUED after the gpt-4.1-nano arm (full-509, sorter_v13)**
 
 Human directive: queue a **Llama 4 Scout** run on the same v13 full-corpus

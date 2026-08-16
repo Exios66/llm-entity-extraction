@@ -286,6 +286,41 @@ def test_sorter_v14_marketing_title_wins_strengthened():
     assert "30. MARKETING TITLE WINS" not in SORTER_PROMPT_V13
 
 
+def test_sorter_v15_license_primary_title_wins():
+    from src.prompts import SORTER_PROMPT_V13, SORTER_PROMPT_V15
+
+    # v15 is a strict derivation of the v13 CHAMPION (v14's rule 30 was a logic
+    # repair, NOT promoted): the base is untouched and the derived prompt adds
+    # rule 31 LICENSE-PRIMARY TITLE WINS, the banked v14 lesson (widen rule 26
+    # carve-out (a) to any license-PRIMARY title). Cross-model failure traces on
+    # the SAME v13 prompt (full-509, seed 42) show LejuHoldings "Content License
+    # Agreement" -> other fails in ALL FIVE models (champion + gpt-5-nano /
+    # gpt-4.1-nano / llama-4-scout / deepseek-v4-flash) and Playboy + 5 more
+    # "Content License Agreement" docs -> ip/marketing/manufacturing/joint_venture
+    # in the weaker models. Carve-outs preserved: maintenance (rule 13), hosting
+    # (rule 14), development (rules 19/21), marketing-core (rule 26).
+    assert SORTER_PROMPT_V15 != SORTER_PROMPT_V13
+    assert SORTER_PROMPT_V15.startswith(SORTER_PROMPT_V13[:300])
+    assert "sorter_v15" in PROMPT_VERSIONS
+
+    v15 = SORTER_PROMPT_V15
+    assert "31. LICENSE-PRIMARY TITLE WINS" in v15
+    assert "Content License Agreement" in v15
+    assert 'never "other"' in v15 or 'NEVER "other"' in v15
+    assert "NOT ip" in v15
+    # Carve-outs preserved verbatim.
+    assert "rule 13" in v15
+    assert "rule 14" in v15
+    assert "rule 26" in v15
+    # v15 derives from the champion, not v14: rule 30 (v14's marketing
+    # strengthening, a logic repair) must NOT be present.
+    assert "30. MARKETING TITLE WINS" not in v15
+    assert "29. MAINTENANCE TITLE WINS" in v15
+    assert "VALID CONTRACT SUBTYPE KEYS" in v15
+    # v13 predates the rule.
+    assert "31. LICENSE-PRIMARY TITLE WINS" not in SORTER_PROMPT_V13
+
+
 def test_sorter_docclass_v0_registered_and_extends_v14():
     """sorter_docclass_v0 (KANBAN-033) = v14 + the hierarchical doc-class
     rules (merger_agreement class, SEC-exhibit corporate records, doc_subclass
