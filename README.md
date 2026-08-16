@@ -210,7 +210,10 @@ scripts/                 ops + evals + reporting + site + releases (see scripts/
   release.py             semver release automation (--bump / --check / --dry-run)
 tests/                   network-free suite + headless site render audit (see tests/README.md)
 reports/                 the experiment log: experiment_log.{jsonl,md} (see reports/README.md)
-docs/                    the GH Pages site: index.html + assets/ + slides/ + data/ (see docs/README.md)
+docs/                    the GH Pages site: index.html + assets/ + slides/ + data/
+                         + posit/ (Posit Cloud Quarto portal; see docs/README.md)
+site/                    the Posit Cloud portal SOURCES (Quarto project -> docs/posit/)
+                         — theme, pages, _pre-render hook (see site/README.md)
 memos/                   archived research memoranda (see memos/README.md)
 wiki/                    this wiki's pages + wiki/sync-wiki.sh (pushes the GitHub wiki)
 data/                    (gitignored run artifacts: manifests/, legalbench_local/, samples/)
@@ -316,6 +319,12 @@ served by GitHub Pages — **no Actions runners**:
   dependency-free single-page viewer with a filterable/searchable runs index,
   per-run detail pages (scores, per-field breakdowns, per-document results,
   confusion matrices, failure insights), and lazy-loaded run data.
+- **Posit Cloud portal** (complementary, same URL prefix): a Quarto website
+  at `docs/posit/` (`site/` sources) integrating the **experiment log**, the
+  **agent kanban board**, and the **discussion board** under one themed URL
+  with a custom light/dark gradient theme, navbar, and search — deployable
+  from Posit Cloud (`quarto render site` + publish) or served by GH Pages
+  with zero Actions (see `site/README.md` and `docs/README.md`).
 - **Every run is cost-scored**: OpenRouter usage payloads carry no cost, so
   the site computes deterministic token × price estimates per run (and shows
   billed OpenRouter totals when the activity CSV is ingested).

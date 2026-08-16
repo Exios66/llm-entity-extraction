@@ -53,5 +53,47 @@ reports/*.csv
 data/datasets/*
 !data/datasets/README.md
 
+# ────────────────────────────────────────────────────────────────────────────
+# Quarto / Posit Cloud — generated artifacts NOT tracked by git.
+#
+# The Posit Cloud portal sources live in `site/` and render into `docs/posit/`.
+# Everything below is regenerated on every `quarto render site` (the
+# `_pre-render.py` hook recreates the includes + variables first), so tracking
+# it would only add churn — the rendered PAGES (`docs/posit/*.html`), the
+# search index and `docs/posit/site_libs/` ARE committed on purpose: GitHub
+# Pages serves /docs directly with no build step (no Actions), so the served
+# pages must carry their own assets.
+# ────────────────────────────────────────────────────────────────────────────
+
+# Quarto project state (rendering cache / metadata) — any project level
+.quarto/
+**/.quarto/
+# Quarto alternate-site / freeze conventions (defensive; not used here)
+_site/
+_freeze/
+/checkpoint/
+
+# Pre-render build intermediates for the Posit portal — regenerated from
+# reports/experiment_log.jsonl, MESSAGE_BOARD.md and MESSAGE_BOARD_DISCUSSION.qmd
+# by site/_pre-render.py before EVERY render (they carry generation stamps, so
+# tracking them would dirty `git status` after every rebuild).
+site/_includes/
+site/_variables.yml
+
+# Standalone renders of the board sources (quarto render MESSAGE_BOARD_DISCUSSION.qmd)
+MESSAGE_BOARD_DISCUSSION.html
+MESSAGE_BOARD_DISCUSSION.md
+
+# Posit Cloud / Posit Connect / RStudio local-only artifacts
+rsconnect/
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.Rcheck/
+renv/library/
+renv/local/
+renv/staging/
+
 /.quarto/
 **/*.quarto_ipynb
