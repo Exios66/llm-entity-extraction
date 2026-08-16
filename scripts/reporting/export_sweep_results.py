@@ -72,6 +72,10 @@ _NOTE_BY_RUN = {
     "gpt-4.1-nano_sorter_v13_subtype_langfuse@2026-08-16T06:27:47": (
         "Full-509 benchmark (KANBAN-036) — gpt-4.1-nano cost-floor arm "
         "($0.10/$0.40); 0.8782 — complete, not pending"),
+    "gpt-4.1-nano_sorter_v13_subtype_langfuse@2026-08-16T11:59:03": (
+        "Full-509 benchmark (KANBAN-036) — resumed from its partial manifest "
+        "(332/509 cached) to completion; gpt-4.1-nano cost-floor arm "
+        "($0.10/M prompt + $0.40/M completion; ≈$0.66 est. extrapolated)"),
     "llama-4-scout_sorter_v13_subtype_langfuse@2026-08-16T06:36:30": (
         "Full-509 benchmark (KANBAN-036) — llama-4-scout arm ($0.10/$0.30, "
         "1.31M ctx); 0.8880"),

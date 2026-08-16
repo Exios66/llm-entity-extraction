@@ -9598,7 +9598,7 @@
   "data_source_n_samples": 509
  },
  {
-  "id": 179,
+  "id": 189,
   "experiment_name": "llama-4-scout_sorter_v13_smoke1",
   "task": "subtype_classification",
   "model": "meta-llama/llama-4-scout",
@@ -9645,7 +9645,7 @@
   "data_source_n_samples": 1
  },
  {
-  "id": 180,
+  "id": 190,
   "experiment_name": "gpt-4o-mini_sorter_v13_smoke1",
   "task": "subtype_classification",
   "model": "openai/gpt-4o-mini",
@@ -9692,7 +9692,7 @@
   "data_source_n_samples": 1
  },
  {
-  "id": 181,
+  "id": 191,
   "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
   "task": "subtype_classification",
   "model": "meta-llama/llama-4-scout",
@@ -9747,7 +9747,7 @@
   "data_source_n_samples": 509
  },
  {
-  "id": 182,
+  "id": 192,
   "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
   "task": "subtype_classification",
   "model": "meta-llama/llama-4-scout",
@@ -9802,7 +9802,7 @@
   "data_source_n_samples": 509
  },
  {
-  "id": 183,
+  "id": 193,
   "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
   "task": "subtype_classification",
   "model": "meta-llama/llama-4-scout",
@@ -9857,7 +9857,7 @@
   "data_source_n_samples": 509
  },
  {
-  "id": 184,
+  "id": 194,
   "experiment_name": "gpt-4o-mini_sorter_v13_subtype_langfuse",
   "task": "subtype_classification",
   "model": "openai/gpt-4o-mini",
@@ -9912,7 +9912,7 @@
   "data_source_n_samples": 509
  },
  {
-  "id": 185,
+  "id": 195,
   "experiment_name": "gpt-4.1-nano_sorter_v13_subtype_langfuse",
   "task": "subtype_classification",
   "model": "openai/gpt-4.1-nano",

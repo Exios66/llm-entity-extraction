@@ -1797,7 +1797,7 @@
     }
    },
    {
-    "id": 179,
+    "id": 189,
     "experiment_name": "llama-4-scout_sorter_v13_smoke1",
     "timestamp": "2026-08-16T11:29:43.488370+00:00",
     "model": "meta-llama/llama-4-scout",
@@ -1812,7 +1812,7 @@
     "mode_counts": {}
    },
    {
-    "id": 180,
+    "id": 190,
     "experiment_name": "gpt-4o-mini_sorter_v13_smoke1",
     "timestamp": "2026-08-16T11:37:04.773084+00:00",
     "model": "openai/gpt-4o-mini",
@@ -1827,7 +1827,7 @@
     "mode_counts": {}
    },
    {
-    "id": 181,
+    "id": 191,
     "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
     "timestamp": "2026-08-16T11:40:49.128119+00:00",
     "model": "meta-llama/llama-4-scout",
@@ -1847,7 +1847,7 @@
     }
    },
    {
-    "id": 182,
+    "id": 192,
     "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
     "timestamp": "2026-08-16T11:41:28.259715+00:00",
     "model": "meta-llama/llama-4-scout",
@@ -1867,7 +1867,7 @@
     }
    },
    {
-    "id": 183,
+    "id": 193,
     "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
     "timestamp": "2026-08-16T11:43:22.341020+00:00",
     "model": "meta-llama/llama-4-scout",
@@ -1887,7 +1887,7 @@
     }
    },
    {
-    "id": 184,
+    "id": 194,
     "experiment_name": "gpt-4o-mini_sorter_v13_subtype_langfuse",
     "timestamp": "2026-08-16T11:50:09.706423+00:00",
     "model": "openai/gpt-4o-mini",
@@ -1907,7 +1907,7 @@
     }
    },
    {
-    "id": 185,
+    "id": 195,
     "experiment_name": "gpt-4.1-nano_sorter_v13_subtype_langfuse",
     "timestamp": "2026-08-16T11:59:03.249777+00:00",
     "model": "openai/gpt-4.1-nano",
