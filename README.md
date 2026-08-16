@@ -3,11 +3,12 @@
 A prompt experiment loop environment for legal document entity extraction: the
 building block for the llm-mailroom agents. Each evaluation tests **one prompt
 version at a time**, runs the agents on **LangChain**, and sinks runs to
-**Langfuse** (per-document traces + scores) + **LangSmith** (LLM spans) + a
+**Arize Phoenix** (local OpenTelemetry-native tracing, Apache/Elastic-licensed) + a
 fully expanded, append-only experiment log in the repo
 (`reports/experiment_log.{jsonl,md}`). Braintrust hosts the eval datasets
 (read-only) — its experiment/span logging is disabled by default
-(`BRAINTRUST_LOGGING=disabled`) so runs never consume its plan quota.
+(`BRAINTRUST_LOGGING=disabled`) so runs never consume its plan quota. LangSmith
+and Langfuse mirrors remain available for backward compatibility.
 
 Modeled on the [RVL-CDIP-Classifier](https://github.com/Exios66/RVL-CDIP-Classifier)
 repo's Braintrust evaluation pattern (vision classification of document page

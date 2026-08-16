@@ -12,13 +12,9 @@ tasks) are synced into Braintrust; eval runners send real documents through
 the LangChain agents (sorter, specialists, judge) via OpenRouter; every run
 produces ONE append-only record in
 `reports/experiment_log.jsonl` and a fully expanded markdown section in
-`reports/experiment_log.md`. **Run sink: Langfuse + LangSmith + the local
-experiment log.** Braintrust experiment/span logging is DISABLED by default
+`reports/experiment_log.md`. **Run sink: Arize Phoenix (local OpenTelemetry-native tracing) + the local experiment log.** Braintrust experiment/span logging is DISABLED by default
 (`BRAINTRUST_LOGGING=disabled` — Braintrust stays read-only for dataset
-hosting, so runs never consume its plan's scored-run/log-byte quota). Traces
-per run land in Langfuse (`run_langfuse_*_eval.py` mirror runners, one trace
-per document with scores) and every LangChain LLM call auto-traces to
-LangSmith (`LANGSMITH_TRACING=true`). Scoring is deterministic and
+hosting, so runs never consume its plan's scored-run/log-byte quota). Traces per run land in Arize Phoenix (`PHOENIX_TRACING=enabled` by default, local SQLite/in-memory, no subscription) and every LangChain LLM call can optionally auto-trace to LangSmith (`LANGSMITH_TRACING=true`). Langfuse mirrors remain available for backward compatibility but are no longer the default primary sink. Scoring is deterministic and
 field-type-aware — never exact-match-on-extraction. The agents are
 pip-installable (`pip install -e .`) so llm-mailroom's LangGraph architecture
 imports and calls them directly; prompt versions are the experiment identity.
@@ -236,6 +232,14 @@ single-session, low-risk) do NOT need issues.
   `src/braintrust_config.py`) and `.env` (OpenRouter key + provider overrides).
   Copy from the `.example` files. `src/env_utils.py` loads both; real shell
   env vars always win.
+- **Arize Phoenix tracing** (default, local): `PHOENIX_TRACING=enabled` (default)
+  + `PHOENIX_ENDPOINT` (default http://localhost:6006/v1/traces) + `PHOENIX_SERVICE_NAME`
+  in `.env`. Phoenix is Apache/Elastic-licensed, runs as a single local process
+  with SQLite/in-memory storage, OpenTelemetry-native, no Docker/multi-service
+  stack, and requires no cloud subscription. Spans are poured in, inspected
+  locally, and discarded by deleting the DB file. Enable LangChain OpenTelemetry
+  instrumentation via `LANGCHAIN_TRACING_V2=true` + `OTEL_EXPORTER_OTLP_ENDPOINT`
+  pointing at Phoenix for full LLM call traces.
 - **LangSmith tracing** (optional, off by default): set `LANGSMITH_TRACING=true`
   + `LANGSMITH_API_KEY` + `LANGSMITH_PROJECT` in `.env` (see `.env.example`) and
   every LangChain LLM call (sorter/specialists via OpenRouter) auto-traces to

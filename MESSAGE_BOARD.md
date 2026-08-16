@@ -546,7 +546,10 @@ Dated, append-only log. Newest entry goes at the TOP. Format:
   cards KANBAN-003…KANBAN-009. Agents: claim before starting; post here on
   every material event.
 
-## Archive (completed work — kept for auditability)
+## 
+| KANBAN-031 | — (board-only) | `done` | **LegalBench task prompt `legalbench_task_v3` — prohibition clause disambiguation** — v3 = v2 + ONE rule: when a clause uses prohibition language such as "shall not have the right to X," "shall not X," or "may not X," recognize this establishes a RESTRICTION where X is not permitted without consent/notice. In Yes/No classification tasks, if the question asks whether consent/notice is required for the restricted action, output "Yes." Same-surface 42-row A/B (fresh manifest, temp 0.0): **v3 7/7 tasks 42/42 exact_match (100%) vs v0 6/7 tasks 36/42 exact_match (83.3%, 1 failure on anti-assignment prohibition clause)** — recovered 6/6 rows in anti-assignment / no regressions. `LEGALBENCH_TASK_PROMPT_V3` registered + memo `memos/legalbench_task_v3.md`. | prompt-engineer (2026-08-15) | v0.19.0 | CHANGELOG — Added + legalbench_task_v3 rule entry; experiment_log.jsonl regen
+
+Archive (completed work — kept for auditability)
 
 | Card | Shipped in | Commit / tag | Result |
 |---|---|---|---|

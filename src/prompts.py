@@ -1914,6 +1914,14 @@ PROMPT_VERSIONS = {
     "legalbench_task_v2": LEGALBENCH_TASK_PROMPT_V2,
     "legalbench_task_v3": LEGALBENCH_TASK_PROMPT_V3,
 
+    "legalbench_task_v3_anti_assignment": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v3_audit_rights": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v3_cap_on_liability": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v3_change_of_control": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v3_competitive_restriction_exception": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v3_covenant_not_to_sue": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v3_effective_date": LEGALBENCH_TASK_PROMPT_V3,
+
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,
     "contracts_specialist_v1": CONTRACTS_SPECIALIST_PROMPT_V1,
