@@ -537,6 +537,15 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
+<td>KANBAN-044</td>
+<td>— (board-only)</td>
+<td><code>in_progress</code></td>
+<td><strong>llm-dojo-scoring integration — scoring/visualization/report library as a pinned git dependency (human request 2026-08-16)</strong> — install <code>llm-dojo-scoring</code> (<code>Exios66/llm-dojo-scoring</code>, v0.1.0) as the single source of scoring/error-analysis/visualization/report code: (1) dep added to <code>pyproject.toml</code> + <code>requirements.txt</code> pinned to commit <code>29c192f</code> (no tags on the external repo yet); (2) new <code>src/dojo_config.py</code> maps <code>config/taxonomy.yaml</code> into the package <code>Settings</code> via <code>configure()</code> (embedding_enabled + cost_models list-form conversion + <code>load_env()</code> before the embedding fallback); (3) new <code>src/dojo_compat.py</code> holds the compat shims where the package contract differs (<code>get_field_types(taxonomy)</code>, <code>extraction_diagnostics(master=)</code> via <code>expected_resolver</code> + ported <code>_FIELD_CATEGORIES</code>, <code>build_scorers</code>/<code>scorer_names</code>/<code>cost</code>/<code>per_class_stats</code>/<code>macro_accuracy</code> object-list forms, docclass subclass scoping via <code>allowed=</code> sets, <code>classify_docclass_failure</code> None-on-ok); (4) the 6 local scoring modules become THIN RE-EXPORT SHIMS (<code>src/field_scoring.py</code>, <code>src/metrics.py</code>, <code>src/scorers.py</code>, <code>src/bootstrap.py</code>, <code>src/cost_models.py</code>, <code>src/experiment_log.py</code> core — renderers stay local) so llm-mailroom’s <code>pip install -e .</code> imports keep working unchanged; <code>agents/sorter_agent.py</code> constants import from <code>llm_dojo_scoring.config</code>; <code>scripts/reporting/export_experiment_results.py</code> re-exports <code>llm_dojo_scoring.export</code>; <code>export_sweep_results.py</code> STAYS local (reference-format Notes/exact-prompt contract per KANBAN-040); (5) new dojo-* CLI capability (<code>dojo-analyze</code> markdown report + matplotlib plots, <code>dojo-export</code> canonical workbooks, <code>dojo-sync</code> live Langfuse/Phoenix trace→workbook) verified byte-identical vs <code>reports/sheets/</code> and documented; (6) tests: keep the 8 scoring test files (now exercising the shims) + new <code>tests/test_dojo_integration.py</code> (config wiring, shim parity pin, byte-identity, dojo-analyze smoke). Significant change → full suite + <code>release.py --check</code> gate. Follow-on card: llm-mailroom migration (KANBAN-005 territory).</td>
+<td>opencode (2026-08-16)</td>
+<td>v0.19.0</td>
+<td><code>pyproject.toml</code>/<code>requirements.txt</code>; <code>src/dojo_config.py</code>; <code>src/dojo_compat.py</code>; 6 shimmed src modules; <code>tests/test_dojo_integration.py</code>; CHANGELOG <code>[Unreleased]</code> Added/Changed; memo <code>memos/llm_dojo_scoring_integration.md</code></td>
+</tr>
+<tr class="even">
 <td>KANBAN-043</td>
 <td>— (board-only)</td>
 <td><code>in_progress</code></td>
@@ -545,7 +554,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>reports/experiment_log.{jsonl,md}</code> regen; frontier table update</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>KANBAN-040</td>
 <td>— (board-only)</td>
 <td><code>in_progress</code></td>
@@ -554,7 +563,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>scripts/reporting/export_sweep_results.py</code>; <code>reports/sheets/Sorter_Model_Sweep_Results.xlsx</code>; CHANGELOG <code>[Unreleased]</code> Added</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>KANBAN-037</td>
 <td>— (board-only)</td>
 <td><code>in_progress</code></td>
@@ -563,7 +572,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>site/**</code>, <code>docs/posit/**</code>, <code>tests/test_posit_site.py</code>, CHANGELOG <code>[Unreleased]</code> Added; no LLM runs (plan-free card)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>KANBAN-039</td>
 <td>— (board-only)</td>
 <td><code>done</code></td>
@@ -572,7 +581,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td>CHANGELOG [Unreleased] Changed; AGENTS.md run-sink paragraph</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>KANBAN-038</td>
 <td>— (board-only)</td>
 <td><code>backlog</code></td>
@@ -581,7 +590,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td>memo <code>memos/docclass_v3_merged_benchmark.md</code> §4/§uncertainties</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>KANBAN-036</td>
 <td>— (board-only)</td>
 <td><code>in_progress</code></td>
@@ -590,7 +599,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>reports/experiment_log.{jsonl,md}</code>; <code>reports/sheets/Sorter_Model_Sweep_Results.xlsx</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>KANBAN-033</td>
 <td>— (board-only)</td>
 <td><code>in_progress</code></td>
@@ -599,7 +608,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>scripts/datasets/stream_maud_to_bt.py</code>, <code>scripts/datasets/stream_s1_exhibits.py</code>, <code>scripts/eval/run_langfuse_docclass_eval.py</code>, <code>config/taxonomy.yaml</code>, <code>agents/sorter_agent.py</code>, <code>src/prompts.py</code> SORTER_DOCCLASS_PROMPT_V0/V1/V2</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>KANBAN-030</td>
 <td>— (board-only)</td>
 <td><code>done</code></td>
@@ -608,7 +617,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>src/prompts_archive.py</code>; <code>src/prompts.py</code> V1..V16 → import; CHANGELOG <code>[Unreleased]</code> Changed; commit <code>e0f758e</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>KANBAN-005</td>
 <td><a href="https://github.com/Exios66/llm-entity-extraction/issues/4">#4</a></td>
 <td><code>backlog</code></td>
@@ -617,7 +626,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td>AGENTS.md “Langfuse projects” / “Mirror sync”; <code>scripts/eval/sync_langfuse_prompts.py</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>KANBAN-006</td>
 <td><a href="https://github.com/Exios66/llm-entity-extraction/issues/5">#5</a></td>
 <td><code>in_progress</code></td>
@@ -626,7 +635,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>scripts/eval/run_annotation_queue.py status</code>; wiki <code>Annotation-Queues.md</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>KANBAN-008</td>
 <td><a href="https://github.com/Exios66/llm-entity-extraction/issues/6">#6</a></td>
 <td><code>backlog</code></td>
@@ -635,7 +644,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>V16_PROPOSITION.md</code> §15.1; memo <code>contracts_specialist_v23.md</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>KANBAN-009</td>
 <td><a href="https://github.com/Exios66/llm-entity-extraction/issues/7">#7</a></td>
 <td><code>backlog</code></td>
@@ -644,7 +653,7 @@ ul.task-list li input[type="checkbox"] {
 <td>v0.19.0</td>
 <td><code>scripts/reporting/rescore_manifests.py</code>; <code>tests/test_rescore_manifests.py</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>KANBAN-011</td>
 <td><a href="https://github.com/Exios66/llm-entity-extraction/issues/9">#9</a></td>
 <td><code>backlog</code></td>
