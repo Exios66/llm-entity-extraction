@@ -116,25 +116,10 @@ def stratified_sample(dataset: list[dict], n: int, seed: int) -> list[dict]:
     return selected
 
 
-def classify_failure(sorter: dict) -> str:
-    """Classify a failed sorter row into an insight-relevant failure mode.
-
-    - ``function_over_form``: the sorter judged the document a non-contract
-      (doc_type miss) — usually a document whose function (e.g. an SEC joint
-      filing agreement) overrode its contract form.
-    - ``other_fallback``: the sorter answered "other" for a contract that the
-      corpus files under a family.
-    - ``equivalent_family``: the predicted family is a defensible equivalent
-      of the expected one (recovered by ``subtype_ok_equiv``).
-    - ``family_confusion``: a genuine wrong-family pick.
-    """
-    if not sorter.get("doc_type_ok"):
-        return "function_over_form"
-    if sorter.get("contract_subtype") == SUBTYPE_UNKNOWN:
-        return "other_fallback"
-    if sorter.get("subtype_ok_equiv"):
-        return "equivalent_family"
-    return "family_confusion"
+# classify_failure comes from the llm-dojo-scoring package (failure-mode
+# taxonomy is package-owned now; the local contract — a failed-row sorter dict
+# → insight-relevant mode — is preserved; callers guard ``subtype_ok`` first).
+from llm_dojo_scoring.failure_modes import classify_failure  # noqa: E402
 
 
 def _reasoning_span(result: dict, *, failed: bool) -> str:

@@ -174,70 +174,21 @@ CONTRACT_SUBTYPES = [
 
 CONTRACT_SUBTYPE_KEYS = [s["key"] for s in CONTRACT_SUBTYPES]
 
-# Folder-name aliases from the CUAD tree -> canonical subtype key.
-_SUBTYPE_ALIASES = {
-    "affiliate_agreements": "affiliate",
-    "affiliate_agreement": "affiliate",
-    "agency_agreements": "agency",
-    "co_branding": "co_branding",
-    "collaboration": "collaboration",
-    "consulting_agreements": "consulting",
-    "development": "development",
-    "distributor": "distributor",
-    "endorsement": "endorsement",
-    "endorsement_agreement": "endorsement",
-    "franchise": "franchise",
-    "hosting": "hosting",
-    "ip": "ip",
-    "joint_venture": "joint_venture",
-    "joint_venture_filing": "joint_venture",
-    "license_agreements": "license",
-    "maintenance": "maintenance",
-    "manufacturing": "manufacturing",
-    "marketing": "marketing",
-    "non_compete_non_solicit": "non_compete_no_solicit",
-    "outsourcing": "outsourcing",
-    "promotion": "promotion",
-    "reseller": "reseller",
-    "service": "service",
-    "sponsorship": "sponsorship",
-    "strategic_alliance": "strategic_alliance",
-    "supply": "supply",
-    "transportation": "transportation",
-}
+# Scoring constants + helpers come from the llm-dojo-scoring package (the
+# single source shared with llm-mailroom; values verified identical to the
+# definitions they replace, llm-dojo-scoring v0.1.0). CONTRACT_SUBTYPES stays
+# local: its per-family descriptions differ from the package's and the schema
+# enum (SORTER_SCHEMA) must stay byte-identical.
+from llm_dojo_scoring.config import (  # noqa: E402
+    DOC_SUBCLASS_EQUIVALENCES,
+    SUBTYPE_ALIASES,
+    SUBTYPE_EQUIVALENCES,
+    SUBTYPE_UNKNOWN,
+)
+from llm_dojo_scoring.equivalences import equivalent_subtypes, normalize_subtype  # noqa: E402
 
-SUBTYPE_UNKNOWN = "other"
-
-# Semantically interchangeable contract families: a classification into ANY
-# member of the same equivalence class is a correct routing decision, not a
-# miss. Derived from the observed subtype-eval failures on the 50-contract
-# sample, where the sorter's family-level answer was defensible but the exact
-# CUAD-folder key differed:
-#   - reseller <-> distributor  ("Reseller Agreement" defining itself as a
-#     "Distribution Agreement" — pure resale-channel synonymy)
-#   - maintenance <-> license   (software "License and Maintenance" hybrids —
-#     both CUAD samples of this pair sit in the Maintenance folder, and the
-#     license grant is the operative core either way)
-#   - development <-> license   (development agreements whose operative
-#     mechanism is an IP/brand license — e.g. "Training Program Development
-#     Agreement" built on a licensed IP + royalty structure)
-#   - affiliate <-> joint_venture (an "Affiliate Agreement" whose operative
-#     clause declares the parties joint venturers)
-SUBTYPE_EQUIVALENCES: list[frozenset[str]] = [
-    frozenset({"reseller", "distributor"}),
-    frozenset({"maintenance", "license"}),
-    frozenset({"development", "license"}),
-    frozenset({"affiliate", "joint_venture"}),
-]
-
-
-def equivalent_subtypes(a: str, b: str) -> bool:
-    """Return True when two subtype keys are the same family or members of
-    the same interchangeable family class (see ``SUBTYPE_EQUIVALENCES``)."""
-    a, b = str(a), str(b)
-    if a == b:
-        return True
-    return any(a in cls and b in cls for cls in SUBTYPE_EQUIVALENCES)
+# Private-name alias kept for test_subtype_handoff (folder -> key mapping).
+_SUBTYPE_ALIASES = SUBTYPE_ALIASES
 
 
 # ---------------------------------------------------------------------------
@@ -251,9 +202,7 @@ def equivalent_subtypes(a: str, b: str) -> bool:
 # Record types (bylaws, articles_of_incorporation, ...) have no cross-type
 # families — a bylaws read is never equivalent to a charter read.
 # ---------------------------------------------------------------------------
-DOC_SUBCLASS_EQUIVALENCES: list[frozenset[str]] = [
-    frozenset({"mixed_cash_stock", "mixed_cash_stock_election"}),
-]
+# DOC_SUBCLASS_EQUIVALENCES comes from llm_dojo_scoring.config (above).
 
 
 def equivalent_doc_subclasses(a: str | None, b: str | None,
@@ -272,25 +221,9 @@ def equivalent_doc_subclasses(a: str | None, b: str | None,
             return False
     return any(str(a) in cls and str(b) in cls for cls in DOC_SUBCLASS_EQUIVALENCES)
 
-
-def normalize_subtype(value) -> str:
-    """Coerce a raw sorter subtype output (or a CUAD folder name) to a
-    canonical subtype key; unknown/non-contract values become ``other``."""
-    if value is None:
-        return SUBTYPE_UNKNOWN
-    key = re.sub(r"[^a-z0-9]", "", str(value).strip().lower())
-    if not key:
-        return SUBTYPE_UNKNOWN
-    if key in CONTRACT_SUBTYPE_KEYS:
-        return key
-    if key in _SUBTYPE_ALIASES:
-        return _SUBTYPE_ALIASES[key]
-    # "License Agreement" -> "license"; "Non-Compete" -> non_compete_no_solicit.
-    for subtype in CONTRACT_SUBTYPES:
-        norm_label = re.sub(r"[^a-z0-9]", "", subtype["label"].lower())
-        if key == norm_label or key.startswith(norm_label[:8]):
-            return subtype["key"]
-    return SUBTYPE_UNKNOWN
+# normalize_subtype / equivalent_subtypes come from llm_dojo_scoring
+# (identical algorithms; the package settings are wired from the repo
+# taxonomy by src/dojo_config.py).
 
 SORTER_SCHEMA = build_structured_schema(
     {

@@ -237,14 +237,10 @@ def attach_pages_by_filename(dataset: list[dict], pdf_dir: Path) -> tuple[list[d
     return dataset, matched
 
 
-def classify_failure(doc_type_ok: bool, subclass_ok: bool,
-                     predicted_subclass: str | None) -> str | None:
-    """Failure mode for the docclass task (None when the row is correct)."""
-    if doc_type_ok and subclass_ok:
-        return None
-    if not doc_type_ok:
-        return "doc_type_miss"
-    return "subclass_miss"
+# Docclass failure-mode classifier — src/dojo_compat keeps the runner's
+# contract (positional booleans, None on correct rows); the package's
+# classify_docclass_failure(row) takes a row dict and never returns None.
+from src.dojo_compat import classify_failure  # noqa: E402
 
 
 def main() -> int:

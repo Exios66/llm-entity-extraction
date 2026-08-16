@@ -1,4 +1,19 @@
-"""Shared scorers for Braintrust evaluation loops.
+"""Shared scorers for Braintrust evaluation loops — re-export shim.
+
+The classification scorers live in the **llm-dojo-scoring** package
+(``llm_dojo_scoring.classification``); this module re-exports them so every
+local call site (and llm-mailroom's ``pip install -e .`` imports) keeps
+working unchanged, plus the repo-specific pieces the package deliberately
+dropped:
+
+- ``cost`` / ``scorer_names`` / ``build_scorers`` — the package removed the
+  ``cost(input)`` scorer and its registry (per its MIGRATION doc, "inline
+  it"); the repo's eval loop still registers scorers by name, so the local
+  registry stays here.
+- ``per_class_stats(results)`` / ``macro_accuracy(results)`` keep their
+  EvalResult-object-list form (``run_multiclass_eval.py`` registers
+  ``macro_accuracy`` as a Braintrust scorer). The package's versions take
+  two parallel lists — the new-style API for new consumers (dojo-analyze).
 
 Scorers are plain functions ``(output, expected) -> float`` (or
 ``(input) -> float`` for cost) registered with ``braintrust.Eval``. They are
@@ -9,50 +24,22 @@ Braintrust scores and local manifests never disagree.
 
 from __future__ import annotations
 
-import json
-import re
+from llm_dojo_scoring.classification import (  # noqa: F401  (re-export shim)
+    ERROR_PREFIX,
+    accuracy,
+    binary_metrics,
+    class_distribution,
+    confusion_accuracy,
+    confusion_matrix,
+    exact_match,
+    failure,
+    normalize_label,
+    top_confusions,
+)
 
-ERROR_PREFIX = "ERROR: "  # task output sentinel for failed rows
+from src.dojo_config import apply_taxonomy_settings
 
-_VALID_CLASSES_RE = {
-    "contract": re.compile(r"\bcontract\b"),
-    "corporate_record": re.compile(r"\bcorporate[_ ]?record\b"),
-    "due_diligence": re.compile(r"\bdue[_ ]?diligence\b"),
-    "correspondence": re.compile(r"\bcorrespondence\b"),
-    "compliance_filing": re.compile(r"\bcompliance[_ ]?filing\b"),
-    "court_opinion": re.compile(r"\bcourt[_ ]?opinion\b"),
-}
-
-
-def normalize_label(value) -> str:
-    """Coerce an LLM output into a doc class key (best effort)."""
-    if value is None:
-        return ""
-    text = str(value).strip().lower()
-    # Prefer a JSON object's doc_type field.
-    if text.startswith("{") and text.endswith("}"):
-        try:
-            obj = json.loads(text)
-            text = str(obj.get("doc_type") or text).lower()
-        except json.JSONDecodeError:
-            pass
-    # Exact match.
-    if text in _VALID_CLASSES_RE:
-        return text
-    for cls, pattern in _VALID_CLASSES_RE.items():
-        if pattern.search(text):
-            return cls
-    return text.strip('"`*_ ')
-
-
-def exact_match(output, expected) -> float:
-    """Score 1.0 if the prediction matches the expected class, else 0.0."""
-    return 1.0 if normalize_label(output) == normalize_label(expected) else 0.0
-
-
-def failure(output, expected) -> float:
-    """Score 1.0 for rows the model failed to classify (error sentinel)."""
-    return 1.0 if str(output).startswith(ERROR_PREFIX) else 0.0
+apply_taxonomy_settings()
 
 
 def cost(input) -> float:

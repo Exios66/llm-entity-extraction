@@ -57,7 +57,29 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
-::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-036"}
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-044"}
+
+**2026-08-16 — opencode — KANBAN-044 claimed: llm-dojo-scoring integration (scoring/visualization/report library, human request)**
+
+Claimed `in_progress`. Plan: (1) add `llm-dojo-scoring @ git+…@29c192f` to
+`pyproject.toml` + `requirements.txt` (pinned commit — the external repo has no
+tags yet); (2) `src/dojo_config.py` maps `config/taxonomy.yaml` into the package
+`Settings` (embedding_enabled + cost_models list-form + `load_env()` first);
+(3) `src/dojo_compat.py` compat shims for the 12 verified contract differences
+(`get_field_types` taxonomy arg, `extraction_diagnostics` master= → resolver,
+`build_scorers`/`cost`/object-list `per_class_stats`/`macro_accuracy`, docclass
+subclass `allowed=` scoping, `classify_docclass_failure` None-on-ok);
+(4) the 6 local scoring modules become thin re-export shims (llm-mailroom keeps
+working — per human decision); (5) `export_experiment_results.py` re-exports
+`llm_dojo_scoring.export`, `export_sweep_results.py` stays local (KANBAN-040
+reference format, per human decision); (6) new dojo-* CLIs verified
+byte-identical vs `reports/sheets/` + documented; (7) full suite + release gate.
+API audit done against the external package (134 tests green upstream; 114/141
+export columns byte-identical; scoring code line-for-line identical). Will not
+touch files owned by KANBAN-040/037/043 (dirty tree: `docs/posit/`,
+`reports/sheets/`, `site/_includes/`).
+:::
+
 
 **2026-08-16 — opencode — KANBAN-036 reconciliation: the complete, verified v13 (sorter_v13) model-sweep results table**
 

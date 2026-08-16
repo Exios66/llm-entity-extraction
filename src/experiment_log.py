@@ -25,10 +25,19 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+# Scoring-layer helpers (append/git snapshot/mean/tokens) live in the
+# llm-dojo-scoring package (src/experiment_log.py keeps the markdown
+# renderers — the report layer — local). Re-exported so every import site in
+# this repo (and llm-mailroom's `pip install -e .` imports) keeps working.
+from llm_dojo_scoring.cost import tokens_summary  # noqa: F401
+from llm_dojo_scoring.experiment import (  # noqa: F401
+    append_experiment,
+    git_snapshot,
+    mean,
+)
 
 # Post-hoc judge judgments live per experiment in data/judgments/<name>.jsonl;
 # the renderer includes a Judge agent review section for records that have one.
@@ -48,85 +57,6 @@ def default_jsonl_path() -> Path:
 def default_md_path() -> Path:
     """Resolve the markdown log path from env (or the repo default)."""
     return Path(os.environ.get(MD_ENV, DEFAULT_MD))
-
-
-def git_snapshot() -> dict:
-    """Best-effort repo state at run time (commit hash + dirty flag)."""
-    try:
-        commit = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=10,
-        ).stdout.strip()
-        dirty = bool(
-            subprocess.run(
-                ["git", "status", "--porcelain"],
-                capture_output=True, text=True, timeout=10,
-            ).stdout.strip()
-        )
-        return {"commit": commit or None, "dirty": dirty}
-    except (OSError, subprocess.SubprocessError):  # pragma: no cover
-        return {"commit": None, "dirty": None}
-
-
-def mean(values: list[float]) -> float:
-    """Arithmetic mean over a list of numbers (0.0 for an empty list)."""
-    return sum(values) / len(values) if values else 0.0
-
-
-def tokens_summary(usage_records: list[dict], model: str | None = None) -> dict:
-    """Aggregate per-row usage dicts into one tokens/cost summary.
-
-    Each usage record comes from the agent's ``_last_usage``:
-    ``{prompt_tokens, completion_tokens, total_tokens, cost}``. Rows replayed
-    from a manifest carry no usage (they were paid for in the original run).
-
-    ``model`` enables deterministic cost scoring (issue #1): OpenRouter usage
-    payloads carry no cost, so ``cost_estimated_usd`` is computed from the
-    token counts x the model's verified per-token prices (see
-    ``src/cost_models.py``) — None when the model's price is unknown.
-    """
-    prompt = completion = total = 0
-    cost_values: list[float] = []
-    rows = 0
-    for usage in usage_records or []:
-        if not isinstance(usage, dict) or not usage:
-            continue
-        prompt += int(usage.get("prompt_tokens") or 0)
-        completion += int(usage.get("completion_tokens") or 0)
-        total += int(usage.get("total_tokens") or 0)
-        cost = usage.get("cost")
-        if isinstance(cost, (int, float)):
-            cost_values.append(float(cost))
-        rows += 1
-    cost_estimated = None
-    if model:
-        from .cost_models import estimate_cost
-
-        cost_estimated = estimate_cost(prompt, completion, model)
-    return {
-        "prompt_tokens": prompt,
-        "completion_tokens": completion,
-        "total_tokens": total,
-        "cost_usd": round(mean(cost_values), 6),
-        "cost_total_usd": round(sum(cost_values), 6),
-        "cost_estimated_usd": cost_estimated,
-        "rows_with_usage": rows,
-    }
-
-
-def append_experiment(record: dict, path: Path | None = None) -> Path:
-    """Append one JSON record to the experiment log (one line per run).
-
-    The record is stamped with an ISO timestamp if absent. Returns the path
-    actually written.
-    """
-    path = Path(path or default_jsonl_path())
-    path.parent.mkdir(parents=True, exist_ok=True)
-    record = dict(record)
-    record.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
-    with path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(record, default=str) + "\n")
-    return path
 
 
 def _fmt(value: Any, max_len: int | None = None) -> str:
