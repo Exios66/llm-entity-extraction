@@ -56,6 +56,108 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-045"}
+**2026-08-16 — opencode — KANBAN-045 done: full EDA suites on the new pipeline sources (MAUD, S-1, merged doc-class, LegalBench)**
+
+Per the human request ("generate full EDA suites on all of the newly added
+data into the pipeline, from all the new sources integrated"). New
+`scripts/eda/explore_pipeline_sources.py` (reproducible, `--source
+all|maud|s1|docclass|legalbench`, `--no-figures`) writes per-source
+`data/eda/<source>/{report.md, findings.md, figures/}`. Headlines: **MAUD** —
+152 merger agreements, 54.1M chars, median 338k chars (ALL 152 over the 90k
+chunk window — the docclass vision/truncation arm must chunk these), 0
+redaction markers; consideration-GT all_cash 57 / other 57 / all_stock 24 /
+mixed_cash_stock 13 / election 1 (the `other` gap drives the subclass metric);
+25,827 per-question rows, 22 families / 7 categories, MAE 8,548 largest. **S-1**
+— 15 exhibits, EX-3.1x4 / EX-3.2x3 / EX-4.x; subclasses articles_of_incorporation
+8 / rights_instrument 6 / bylaws 1; small text (median 34k chars). **Merged
+doc-class** — 676 = CUAD 509 + MAUD 152 + S-1 15; contract 75.3% /
+merger_agreement 22.5% / corporate_record 2.2%; GT-`other` gap cluster 57,
+subclass-None 509. **LegalBench** — hearsay train 5 / test 94 + 10 CUAD
+subtask 6-row surfaces. Reports regenerate byte-identically (reproducibility
+pinned by `tests/test_pipeline_sources_eda.py`, 3 tests). Card archived;
+CHANGELOG `[Unreleased]` Added; uncommitted until the close-out commit.
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-044"}
+**2026-08-16 — opencode — KANBAN-044 done: llm-dojo-scoring integration completed (tests green, CLI fixed upstream, dep re-pinned v0.1.2)**
+
+The integration work landed in the human's commit `1f9881b` ("Scoring
+Updates") but its own suite was red (7/11). Completed and verified: (1)
+`src/dojo_config.py` now coerces YAML values to the package's canonical types
+(`ambiguous_band`→tuple, `partial_gt_fields`/`containment_fields`→set — the
+package's `configure()` sets verbatim and only its YAML-file loader coerces);
+(2) `src/metrics.py::extraction_diagnostics` now binds `master` into the
+resolver closure (the package calls the resolver with its own master slot, so
+the master-label preference was silently lost); (3) upstream CLI fix — the
+external `llm_dojo_scoring` package had NO `python -m` entry dispatch (module
+import no-op'd), fixed + pushed + tagged `v0.1.1`→`v0.1.2`, dep re-pinned to
+`@v0.1.2` in `pyproject.toml`/`requirements.txt`; (4) 3 test expectations in
+`tests/test_dojo_integration.py` corrected to the real contract (compound
+`entity_list:free_text` values, re-export identity + header equality instead of
+lambda-object equality, the sweep workbook's trailing reference-format `Notes`
+column, and the master-CSV `-Answer`/normalized-filename key format). All 11
+dojo tests green; memo `memos/llm_dojo_scoring_integration.md`. Card archived;
+the vendored editable clone `src/llm-dojo-scoring/` is now gitignored (dev
+checkout — the pin is authoritative). CHANGELOG `[Unreleased]` Added/Changed.
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-043"}
+**2026-08-16 — opencode — KANBAN-043 done: llama-4-scout + gpt-4o-mini champion-sweep arms closed out**
+
+Both full-509 subtype runs landed in the log (sorter_v13, reasoning medium,
+temp 0.1, seed 42, research-funding key, Langfuse-primary): **llama-4-scout
+0.8880** (equiv 0.9077, 57 fails) and **gpt-4o-mini 0.9312** (equiv 0.9352,
+exact 0.9961, 35 fails). Sweep table (KANBAN-036) + workbook absorb them;
+experiment-log md regenerated (195 records); CHANGELOG `[Unreleased]` entry.
+Card archived.
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-036"}
+**2026-08-16 — opencode — KANBAN-036 archived: sorter subtype model sweep — 8 models, verified table**
+
+The reconciliation post above stands as the verified record; the sweep is
+complete: deepseek-v4-pro 0.9528 · qwen3.7-flash 0.9430 (champion) ·
+gpt-4o-mini 0.9312 · deepseek-v4-flash 0.9332 · gpt-5-nano 0.8978 ·
+llama-3.3-70b-instruct 0.8900 · llama-4-scout 0.8880 · gpt-4.1-nano 0.8782
+(full-509 each). Workbook regenerated covering all models (22 rows incl.
+smokes + degraded); duplicate-run caveats documented in the table. Card
+archived. The reconciliation entry's opening `:::` fence (deleted by the
+human's `1f9881b` edit) was restored — append-only preserved, body
+byte-identical.
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-033"}
+**2026-08-16 — opencode — KANBAN-033 archived: MAUD + EDGAR S-1 wiring + hierarchical doc-class eval task COMPLETE**
+
+Prompt iteration closed at **sorter_docclass_v6** (docclass text champion,
+full-676 A/B 0.8935 with noise control, subclass +1.19pp, 0 regressions — the
+prompt-engineer round-2 post above is the record); merged 676-doc dataset,
+scoring depth (CIs/per-subclass/equiv/input-modes), Langfuse-primary tracing,
+and the S-1/MAUD streamers all landed with changelog entries. Follow-on
+**KANBAN-038** (full-pages vision benchmark + MAUD/S-1 PDF retention) stays
+backlog. Card archived.
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-006"}
+**2026-08-16 — opencode — KANBAN-006 deferred to backlog (stale in_progress, issue #5 stays open)**
+
+Card sat `in_progress` (owner opencode) since 2026-08-14 with no active work;
+the llm-dojo annotation queue still holds **217 PENDING items** (extraction
+< 0.85 + sorter failures) per `run_annotation_queue.py status`. Moving back to
+`backlog` with owner released and this dated note — it needs a dedicated
+processing session (Langfuse adjudication + corrections fed into the next
+prompt iteration). Issue #5 remains open and mirrors the card.
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-037"}
+**2026-08-16 — opencode — Board sweep: stale duplicate open-table rows removed (KANBAN-030/037/039/040)**
+
+A board-audit pass found KANBAN-030/037/039/040 sitting in the open Kanban
+table while already archived (merge residue from `1c4fc13`); all four removed
+from the open table — closed cards live only in the Archive. Open table now:
+KANBAN-005, 006 (backlog), 008, 009, 011, 038.
+:::
 
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-044"}
 
@@ -80,7 +182,7 @@ touch files owned by KANBAN-040/037/043 (dirty tree: `docs/posit/`,
 `reports/sheets/`, `site/_includes/`).
 :::
 
-
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-036"}
 **2026-08-16 — opencode — KANBAN-036 reconciliation: the complete, verified v13 (sorter_v13) model-sweep results table**
 
 Reconciled the sweep against `reports/experiment_log.jsonl` (the source of

@@ -36,6 +36,7 @@ from src.field_scoring import (
     get_containment_fields,
     get_field_types,
     get_partial_gt_fields,
+    is_entity_list,
     score_extraction,
 )
 from src.metrics import extraction_diagnostics
@@ -87,7 +88,11 @@ def test_config_accessors_match_package_settings():
 
 def test_get_field_types_one_arg_resolves_repo_taxonomy():
     field_types = get_field_types("contract")
-    assert field_types["key_obligations"] == "entity_list"
+    # The taxonomy writes compound entity-list types ("entity_list:free_text");
+    # the contract is that the value resolves to entity-list scoring (the base
+    # type of the compound), exactly as the old local field_types() behaved.
+    assert is_entity_list(field_types["key_obligations"])
+    assert field_types["key_obligations"] == "entity_list:free_text"
     assert field_types["effective_date"] == "date"
     assert get_field_types("no_such_class") == {}
 
@@ -134,9 +139,9 @@ def test_diagnostics_keeps_master_keyword():
         "entity_list_scores": {},
     }]
     master = {
-        "contract_1": {
-            "Agreement Date": "2024-03-01",  # normalized answer preferred
-            "Effective Date": "2024-03-01",
+        "contract1": {  # master_labels._norm_filename("contract_1")
+            "Agreement Date-Answer": "2024-03-01",  # normalized answer preferred
+            "Effective Date-Answer": "2024-03-01",
         },
     }
     diag = extraction_diagnostics(rows, field_types, master=master)
@@ -206,18 +211,22 @@ def test_shim_parity_imports_resolve():
 
 
 def test_export_columns_byte_identical_to_package():
-    from scripts.reporting.export_experiment_results import (
-        extraction_columns,
-        sorter_columns,
-    )
+    # The reporting script must re-export the package's column specs — same
+    # function object (identity), so every workbook header stays byte-identical
+    # to the package's canonical spec. (Column dicts embed per-call lambdas, so
+    # deep equality is meaningless — identity + headers are the contract.)
+    import scripts.reporting.export_experiment_results as exp
 
-    assert sorter_columns() == _package_sorter_columns()
-    assert extraction_columns() == _package_extraction_columns()
+    assert exp.sorter_columns is _package_sorter_columns
+    assert exp.extraction_columns is _package_extraction_columns
+    assert [c["header"] for c in exp.sorter_columns()] == [c["header"] for c in _package_sorter_columns()]
+    assert [c["header"] for c in exp.extraction_columns()] == [c["header"] for c in _package_extraction_columns()]
 
 
 def test_export_workbook_headers_match_committed_artifacts(tmp_path):
     # The committed KANBAN-040 sweep workbook shares the 114-column sorter
-    # spec; its header row must equal the package spec byte-for-byte.
+    # spec plus a trailing reference-format Notes column; its header row must
+    # equal the package spec byte-for-byte for the shared 114.
     from scripts.reporting.export_experiment_results import main_with_args, sorter_columns
 
     workbook_path = REPO_ROOT / "reports" / "sheets" / "Sorter_Model_Sweep_Results.xlsx"
@@ -228,7 +237,8 @@ def test_export_workbook_headers_match_committed_artifacts(tmp_path):
     wb = openpyxl.load_workbook(workbook_path, read_only=True)
     ws = wb["Eval Results"]
     headers = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
-    assert headers == [c["header"] for c in sorter_columns()]
+    assert headers[:114] == [c["header"] for c in sorter_columns()]
+    assert headers[114] == "Notes"
 
     log = tmp_path / "log.jsonl"
     with log.open("w") as fh:

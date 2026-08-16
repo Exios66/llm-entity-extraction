@@ -23349,7 +23349,7 @@
   {
    "source": "openrouter",
    "model_permaslug": "deepseek/deepseek-v4-pro-20260423",
-   "display_name": "DeepSeek: DeepSeek V4 Pro",
+   "display_name": "DeepSeek: DeepSeek V4 Pro 0423",
    "benchmark_type": "gpqa_diamond",
    "accuracy": 0.8659294454976303,
    "accuracy_stddev": 0.01277030815994664,
@@ -24592,7 +24592,7 @@
   {
    "source": "openrouter",
    "model_permaslug": "deepseek/deepseek-v4-pro-20260423",
-   "display_name": "DeepSeek: DeepSeek V4 Pro",
+   "display_name": "DeepSeek: DeepSeek V4 Pro 0423",
    "benchmark_type": "tau_bench_verified_airline",
    "accuracy": 0.760548506329114,
    "accuracy_stddev": 0.02951856946730518,

@@ -98,5 +98,11 @@ def extraction_diagnostics(rows: list[dict], field_types: dict[str, str],
     Returns a flat dict of run-level metrics (all means are macro over
     documents unless named ``micro`` or ``per_field``).
     """
+    # Bind ``master`` into the resolver — the package calls the resolver as
+    # ``resolver(master, filename, field, fallback)`` with its own master
+    # slot, so without the closure the master-label preference is lost and
+    # the raw clause-text fallback wins.
+    resolver = lambda _master, filename, field, fallback: _expected_for_field(  # noqa: E731
+        master, filename, field, fallback)
     return _package_extraction_diagnostics(
-        rows, field_types, expected_resolver=_expected_for_field)
+        rows, field_types, expected_resolver=resolver)

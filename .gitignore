@@ -97,6 +97,12 @@ site/search.json
 site/_includes/
 site/_variables.yml
 
+# Vendored editable checkout of the llm-dojo-scoring dependency (KANBAN-044) —
+# a local dev clone used for the API audit and `pip install -e .`; the
+# authoritative source is the pinned git dependency in pyproject.toml /
+# requirements.txt (`llm-dojo-scoring @ git+…@v0.1.2`).
+src/llm-dojo-scoring/
+
 # Standalone renders of the board sources (quarto render MESSAGE_BOARD_DISCUSSION.qmd)
 MESSAGE_BOARD_DISCUSSION.html
 MESSAGE_BOARD_DISCUSSION.md

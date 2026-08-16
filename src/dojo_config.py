@@ -42,6 +42,27 @@ _FIELD_SCORING_DOTTED = {
 }
 
 
+def _coerce_field_scoring(fs: dict) -> dict:
+    """Coerce YAML field-scoring values to the package's canonical types.
+
+    The package's ``configure()`` sets values verbatim (no type coercion — that
+    only happens in its YAML-file loader ``_apply_dict``). YAML round-trips
+    lists as lists, so the repo must convert the ones the package stores as
+    tuple/set: ``ambiguous_band`` -> ``(float, float)``, ``partial_gt_fields``
+    and ``containment_fields`` -> ``set[str]``. Everything else arrives in the
+    right type already (bool/float/str from the YAML scalar).
+    """
+    coerced = dict(fs)
+    band = coerced.get("ambiguous_band")
+    if isinstance(band, (list, tuple)) and len(band) == 2:
+        coerced["ambiguous_band"] = (float(band[0]), float(band[1]))
+    for key in ("partial_gt_fields", "containment_fields"):
+        value = coerced.get(key)
+        if value is not None:
+            coerced[key] = {str(item) for item in value}
+    return coerced
+
+
 def _cost_models_from_yaml(fs_costs: dict) -> dict[str, tuple[float, float]]:
     """Convert the taxonomy's ``{model: {input_per_million, output_per_million}}``
     dict form into the package's ``{model: (input, output)}`` list form.
@@ -84,7 +105,7 @@ def apply_taxonomy_settings() -> None:
     taxonomy = load_taxonomy()
 
     overrides: dict = {}
-    fs = taxonomy.get("field_scoring") or {}
+    fs = _coerce_field_scoring(taxonomy.get("field_scoring") or {})
     for yaml_key, dotted_attr in _FIELD_SCORING_DOTTED.items():
         if yaml_key in fs:
             overrides[f"field_scoring__{dotted_attr}"] = fs[yaml_key]

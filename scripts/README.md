@@ -25,6 +25,8 @@ Every script is `#!/usr/bin/env python3`, runs from the repo root, exposes
 
 `explore_cuad.py` — full-corpus CUAD EDA -> `data/eda/{report.md, findings.md, figures/01–10}` (reproducible from the repo root).
 
+`explore_pipeline_sources.py` — full EDA suites on the post-CUAD pipeline sources (KANBAN-045): per-source `data/eda/<source>/{report.md, findings.md, figures/}` for **MAUD** (`--source maud`: 152 merger agreements + the 25,827-row per-question suite), **S-1 corporate records** (`--source s1`: 15 EDGAR exhibits), the **merged doc-class surface** (`--source docclass`: 676 rows) and **LegalBench** (`--source legalbench`: hearsay + 10 CUAD subtasks). `--source all` (default), `--no-figures`, `--out <dir>`. Regeneration is byte-identical (pinned by `tests/test_pipeline_sources_eda.py`).
+
 ## `scripts/eval/` — the runners (see wiki: Eval-Runners)
 
 Every runner: `main_with_args(argv)`, `--dry-run`, resumable `--manifest`,
