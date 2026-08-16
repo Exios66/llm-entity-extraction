@@ -1,14 +1,14 @@
-runs: 169
+runs: 176
 models: 5
-prompt_versions: 68
+prompt_versions: 71
 tasks: 6
 task_list: chained_sorter_extractor, contract_entity_extraction, docclass_classification,
   sorter_classification, subtype_classification, task_classification
-total_tokens: 222.8M
+total_tokens: 252.1M
 last_run: '2026-08-16'
 open_cards: 9
 in_progress_cards: 4
 backlog_cards: 5
-archived_cards: 28
-discussion_entries: 79
-generated: 2026-08-16 08:31 UTC
+archived_cards: 30
+discussion_entries: 81
+generated: 2026-08-16 09:20 UTC

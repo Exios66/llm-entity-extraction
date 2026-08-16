@@ -780,6 +780,36 @@ VALID CONTRACT SUBTYPE KEYS""",
 )
 
 # =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v6 (rule 36 SHARPENED:
+# rule-31 list is illustrative + multi-agreement files) — KANBAN-033 iteration
+# -----------------------------------------------------------------------------
+# v6 = v3 + ONE rule (rule 36, revised from the v4 diag30 A/B
+# qwen3.7-flash_sorter_docclass_{v3,v4}_docclass_diag30b, fp 946ac1c4):
+#   - v4's rule 36 RECOVERED contract_2 deterministically (2/2 runs; model
+#     reasoning: "The CVR Agreement annexed to the document is an ancillary
+#     instrument within the M&A deal structure (Rule 36)") but NOT contract_33:
+#     the model's own reasoning shows it applied the machinery read, then
+#     second-guessed against rule 31's enumeration — "Rule 31 ... does NOT
+#     explicitly list 'TRANSACTION AGREEMENT'." — and finally treated the
+#     file's TWO agreements (TRANSACTION AGREEMENT + Registration Rights
+#     Agreement as Exhibit E) as a hybrid -> contract/other. Rule 36' declares
+#     the rule-31 title list illustrative and makes the PRIMARY agreement
+#     govern multi-agreement files. Same lesson as v4, sharpened — v4 stays
+#     byte-identical (never mutate a version that has run).
+# =============================================================================
+
+SORTER_DOCCLASS_PROMPT_V6 = SORTER_DOCCLASS_PROMPT_V3.replace(
+    """outside any filing package stays contract (subtype "other").
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """outside any filing package stays contract (subtype "other").
+
+36. M&A PACKAGE MACHINERY GOVERNS ANCILLARY INSTRUMENTS: rule 31's M&A-family title list is ILLUSTRATIVE, not exhaustive — "TRANSACTION AGREEMENT", "ARRANGEMENT AGREEMENT", and "MERGER SUPPORT AGREEMENT" are M&A-family titles and trigger rule 31. A document whose title names the M&A family OR whose operative machinery is the deal structure (parties include a "Parent" and a "Merger Sub"/"Pubco", articles titled "THE MERGER"/"THE TRANSACTIONS", "Conversion of Shares"/"Merger Consideration" sections) is merger_agreement EVEN WHEN it also contains ancillary deal machinery — contingent value rights (CVRs), registration-rights provisions, support-agreement covenants, earn-outs, escrow — because those are CONSIDERATION and ancillary instruments INSIDE the deal, not separate agreements: an "AGREEMENT AND PLAN OF MERGER" that awards CVRs stays merger_agreement; a "TRANSACTION AGREEMENT" with registration-rights sections stays merger_agreement. WHEN A FILE CONTAINS MORE THAN ONE AGREEMENT (an M&A agreement plus annex agreements — e.g. a "Registration Rights Agreement" as Exhibit E of a "TRANSACTION AGREEMENT"), the document's class is the PRIMARY agreement's class: the annex agreements do not make the document a hybrid, and rule 31/36 govern the primary. Rule 35 applies ONLY when the document's own title is a "REGISTRATION RIGHTS AGREEMENT" (or the instrument is filed as a pure EX-4.x rights instrument) — registration-rights machinery inside an M&A agreement does NOT trigger rule 35 and does NOT make the document a rights_instrument.
+
+VALID CONTRACT SUBTYPE KEYS""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2380,6 +2410,7 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v3": SORTER_DOCCLASS_PROMPT_V3,
     "sorter_docclass_v4": SORTER_DOCCLASS_PROMPT_V4,
     "sorter_docclass_v5": SORTER_DOCCLASS_PROMPT_V5,
+    "sorter_docclass_v6": SORTER_DOCCLASS_PROMPT_V6,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
 
     # Sorter — vision (RVL-CDIP-style image classification)

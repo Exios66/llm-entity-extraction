@@ -12,7 +12,7 @@ tasks) are synced into Braintrust; eval runners send real documents through
 the LangChain agents (sorter, specialists, judge) via OpenRouter; every run
 produces ONE append-only record in
 `reports/experiment_log.jsonl` and a fully expanded markdown section in
-`reports/experiment_log.md`. **Run sink: Arize Phoenix (local OpenTelemetry-native tracing) + the local experiment log.** Braintrust experiment/span logging is DISABLED by default
+`reports/experiment_log.md`. **Run sink: Langfuse PRIMARY (llm-dojo project, keys in `langfuse.env`) with the local Arize Phoenix server as fallback** — the human directive (2026-08-16): every `run_langfuse_*_eval.py` runner traces to Langfuse when its keys are configured and falls back to the local Phoenix OpenTelemetry endpoint when they are not (`src/tracing.py::resolve_tracer()`); the record's `tracing_backend` reports which one fired. Braintrust experiment/span logging is DISABLED by default
 (`BRAINTRUST_LOGGING=disabled` — Braintrust stays read-only for dataset
 hosting, so runs never consume its plan's scored-run/log-byte quota). Traces per run land in Arize Phoenix (`PHOENIX_TRACING=enabled` by default, local SQLite/in-memory, no subscription) and every LangChain LLM call can optionally auto-trace to LangSmith (`LANGSMITH_TRACING=true`). Langfuse mirrors remain available for backward compatibility but are no longer the default primary sink. Scoring is deterministic and
 field-type-aware — never exact-match-on-extraction. The agents are

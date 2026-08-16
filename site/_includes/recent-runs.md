@@ -1,10 +1,10 @@
 | # | Experiment | Model | Prompt(s) | Headline score | Rows | Tokens |
 |---|---|---|---|---|---|---|
-| 162 | [qwen3.7-flash_sorter_docclass_v3_docclass_diag30](../index.html#/run/162) | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.5667 | — | 656691 |
-| 163 | [qwen3.7-flash_sorter_docclass_vision_v0_docclass_vpilot](../index.html#/run/163) | qwen/qwen3.7-flash | sorter_docclass_vision_v0 | exact_match 0.8750 | — | 100808 |
-| 164 | [qwen3.7-flash_sorter_docclass_v3_docclass_full676](../index.html#/run/164) | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.8905 | — | 12913188 |
-| 165 | [qwen3.7-flash_sorter_docclass_v3_docclass_ab30](../index.html#/run/165) | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.8000 | — | 631147 |
-| 166 | [qwen3.7-flash_sorter_docclass_v2_docclass_ab30](../index.html#/run/166) | qwen/qwen3.7-flash | sorter_docclass_v2 | exact_match 0.8000 | — | 627189 |
-| 167 | [qwen3.7-flash_sorter_docclass_v1_docclass_ab30](../index.html#/run/167) | qwen/qwen3.7-flash | sorter_docclass_v1 | exact_match 0.6667 | — | 627276 |
-| 168 | [deepseek-v4-flash_sorter_v13_subtype_langfuse](../index.html#/run/168) | deepseek/deepseek-v4-flash | sorter_v13 | — | 509 | 6899621 |
-| 169 | qwen3.7-flash_sorter_docclass_v0_docclass_ab30 | qwen/qwen3.7-flash | sorter_docclass_v0 | exact_match 0.6667 | — | 625452 |
+| 169 | [qwen3.7-flash_sorter_docclass_v6_docclass_full676](../index.html#/run/169) | qwen/qwen3.7-flash | sorter_docclass_v6 | exact_match 0.8935 | — | 13138406 |
+| 170 | [qwen3.7-flash_sorter_docclass_v3_docclass_full676c](../index.html#/run/170) | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.8905 | — | 12917918 |
+| 171 | [qwen3.7-flash_sorter_docclass_v5_docclass_diag30b](../index.html#/run/171) | qwen/qwen3.7-flash | sorter_docclass_v5 | exact_match 0.5667 | — | 660857 |
+| 172 | [qwen3.7-flash_sorter_docclass_v4_docclass_diag30b](../index.html#/run/172) | qwen/qwen3.7-flash | sorter_docclass_v4 | exact_match 0.6000 | — | 664778 |
+| 173 | [qwen3.7-flash_sorter_docclass_v3_docclass_diag30b](../index.html#/run/173) | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.5667 | — | 653047 |
+| 174 | [qwen3.7-flash_sorter_docclass_v5_docclass_diag30](../index.html#/run/174) | qwen/qwen3.7-flash | sorter_docclass_v5 | exact_match 0.6333 | — | 660650 |
+| 175 | [qwen3.7-flash_sorter_docclass_v4_docclass_diag30](../index.html#/run/175) | qwen/qwen3.7-flash | sorter_docclass_v4 | exact_match 0.6000 | — | 663048 |
+| 176 | [qwen3.7-flash_sorter_docclass_v3_docclass_diag30](../index.html#/run/176) | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.5667 | — | 656691 |

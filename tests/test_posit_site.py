@@ -148,11 +148,13 @@ def test_rendered_pages_committed():
     discussion = (POSIT_DIR / "discussion.html").read_text(encoding="utf-8")
     assert 'class="entry' in discussion
     exp_log = (POSIT_DIR / "experiment-log.html").read_text(encoding="utf-8")
-    records = [json.loads(l) for l in LOG_JSONL.read_text().splitlines() if l.strip()]
-    assert records[-1]["experiment_name"] in exp_log
-    # deep links for every SPA run record present
+    # every SPA run record (docs/data/runs/{n:03d}.json) is deep-linked from
+    # the portal's experiment-log page; self-consistent and immune to the
+    # concurrent-eval race (the jsonl can grow after the last render).
     n_runs = len(list((DOCS_DIR / "data" / "runs").glob("*.json")))
-    assert exp_log.count("../index.html#/run/") >= n_runs - 2
+    assert exp_log.count("../index.html#/run/") == n_runs, (
+        f"expected {n_runs} explorer deep links, got "
+        f"{exp_log.count('../index.html#/run/')}")
 
 
 def test_source_board_divs_stay_balanced():

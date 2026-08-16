@@ -392,6 +392,30 @@ def test_sorter_docclass_vision_v0_registered_and_pins_vision_contract():
     assert "<label>" not in get_prompt("sorter_docclass_v3")
 
 
+def test_sorter_docclass_v6_registered_and_pins_rule_36_sharpened():
+    """sorter_docclass_v6 (KANBAN-033 iteration arm) = v3 + ONE rule: rule 36
+    SHARPENED from the v4 diag30 A/B — the rule-31 title list is declared
+    illustrative and multi-agreement files are governed by the primary
+    agreement (contract_33's model reasoning showed it second-guessing rule
+    31's enumeration on a TRANSACTION AGREEMENT + RRA-exhibit-E file)."""
+    from src.prompts import SORTER_DOCCLASS_PROMPT_V3, SORTER_DOCCLASS_PROMPT_V6
+
+    assert "sorter_docclass_v6" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_v6")
+    assert "36. M&A PACKAGE MACHINERY GOVERNS ANCILLARY INSTRUMENTS" in p
+    assert "rule 31's M&A-family title list is ILLUSTRATIVE" in p
+    assert '"TRANSACTION AGREEMENT"' in p
+    assert "WHEN A FILE CONTAINS MORE THAN ONE AGREEMENT" in p
+    assert "Rule 35 applies ONLY when the document's own title is" in p
+    # Single-change discipline: v6 carries rule 36 (sharpened) but NOT rule 37.
+    assert "37. AGREEMENT PACKAGES" not in p
+    assert "36. M&A PACKAGE MACHINERY" not in SORTER_DOCCLASS_PROMPT_V3
+    assert SORTER_DOCCLASS_PROMPT_V6.startswith(SORTER_DOCCLASS_PROMPT_V3[:300])
+    # v4's rule-36 text is untouched (never mutate a version that has run).
+    from src.prompts import SORTER_DOCCLASS_PROMPT_V4
+    assert "ILLUSTRATIVE, not exhaustive" not in SORTER_DOCCLASS_PROMPT_V4
+
+
 def test_sorter_docclass_prompt_option_list_matches_schema():
     """The doc_subclass options visible in the docclass prompts must match the
     DOCCLASS_SCHEMA enum exactly — a subclass the model can output must be in
@@ -413,7 +437,9 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
     assert enum == set(DOC_SUBCLASS_KEYS)
 
     for version in ("sorter_docclass_v0", "sorter_docclass_v1",
-                    "sorter_docclass_v2", "sorter_docclass_v3"):
+                    "sorter_docclass_v2", "sorter_docclass_v3",
+                    "sorter_docclass_v4", "sorter_docclass_v5",
+                    "sorter_docclass_v6"):
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()

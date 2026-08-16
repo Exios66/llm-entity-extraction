@@ -135,9 +135,35 @@ def test_docclass_eval_smoke(dump_path, tmp_path, monkeypatch, fake_langfuse):
     assert rec["scores"]["sorter"]["failure_insights"]["n_failed"] == 0
     assert len(rec["per_row"]) == 4
 
+    # Docclass scoring depth (the subtype-surface mirror): bootstrap CIs on
+    # every headline, a per-subclass accuracy table with support counts, the
+    # equivalence-aware subclass headline, and the input-mode split. The
+    # subclass CI covers only rows with subclass GT (2 of the 4 rows).
+    ci = rec["scores"]["doc_type_accuracy_ci"]
+    assert ci is not None and ci["n"] == 4 and 0.0 <= ci["lo"] <= ci["hi"] <= 1.0
+    ci = rec["scores"]["subclass_accuracy_ci"]
+    assert ci is not None and ci["n"] == 2 and 0.0 <= ci["lo"] <= ci["hi"] <= 1.0
+    ci = rec["scores"]["exact_match_ci"]
+    assert ci is not None and ci["n"] == 4 and 0.0 <= ci["lo"] <= ci["hi"] <= 1.0
+    per_sub = rec["scores"]["per_subclass_accuracy"]
+    assert per_sub["all_cash"] == 1.0
+    assert rec["scores"]["per_subclass_support"]["all_cash"] == 1
+    assert rec["scores"]["subclass_accuracy_equiv"] == 1.0
+    assert rec["scores"]["equiv_recovered"] == []
+    assert rec["scores"]["input_mode_counts"] == {"text": 4}
+    # Every scored row carries the equivalence flag.
+    assert all(r["sorter"]["subclass_ok_equiv"] is not None
+               for r in rec["per_row"] if r["sorter"]["expected_subclass"])
+
     # The markdown log gained a section.
     md = (tmp_path / "log.md").read_text()
     assert "docclass_smoke_test" in md
+    # The per-document table renders the second-level dimension.
+    assert "expected subclass" in md
+    assert "subclass ok equiv" in md
+    # The per-subclass accuracy table renders.
+    assert "Per-subclass accuracy (second-level dimension)" in md
+    assert "all_cash" in md
 
 
 def test_docclass_eval_vision_primary_falls_back_to_text(dump_path, tmp_path, monkeypatch, fake_langfuse):

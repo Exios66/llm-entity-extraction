@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-16T08:10:58.005055+00:00",
+ "built_at": "2026-08-16T09:30:17.297387+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
   "05b3b17b9ce344b98dd246693ff4b9683db239b4f6b0c8f5ffb0be78b4b2b7c9:42:6",
@@ -19,6 +19,7 @@
   "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
   "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
+  "946ac1c42b92795a43b5b8c030557de6defd9dbfdb50bd620d331bd517f993f8:42:30",
   "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
   "9afcf61251405fbcc15221b96a7e316a46fd5fdfdfe920b75479e4107226385a:42:10",
   "a338c80e03aae1f63c76bb39b441ec0ac2ab870cac4636d672df5194b51a7e80:42:6",
@@ -41,17 +42,17 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 168,
+ "run_count": 176,
  "tasks": {
   "contract_entity_extraction": 51,
   "chained_sorter_extractor": 16,
   "subtype_classification": 35,
   "sorter_classification": 3,
   "task_classification": 56,
-  "docclass_classification": 7
+  "docclass_classification": 15
  },
  "models": {
-  "qwen/qwen3.7-flash": 162,
+  "qwen/qwen3.7-flash": 170,
   "deepseek/deepseek-v4-flash": 3,
   "deepseek/deepseek-v4-pro": 1,
   "openai/gpt-5-nano": 1,
@@ -124,13 +125,16 @@
   "sorter_docclass_v0": 2,
   "sorter_docclass_v1": 1,
   "sorter_docclass_v2": 1,
-  "sorter_docclass_v3": 2,
-  "sorter_docclass_vision_v0": 1
+  "sorter_docclass_v3": 5,
+  "sorter_docclass_vision_v0": 1,
+  "sorter_docclass_v4": 2,
+  "sorter_docclass_v5": 2,
+  "sorter_docclass_v6": 1
  },
  "n_rows": 15358,
  "n_ok": 14443,
  "n_error": 873,
- "total_tokens": 222133782,
+ "total_tokens": 252149177,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,

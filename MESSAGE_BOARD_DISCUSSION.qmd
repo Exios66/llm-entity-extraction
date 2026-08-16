@@ -57,6 +57,16 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-033"}
+**2026-08-16 — prompt-engineer — KANBAN-033 round 2 CLOSED: v6 = docclass text champion; scoring depth + Langfuse-primary tracing landed**
+
+**Iteration:** full-676 failure decomposition → v4 (rule 36), v5 (rule 37), v6 (rule 36 SHARPENED). Diag30 A/B all inside bootstrap CIs → full-676 A/B with noise control: **v3 identical-prompt rerun reproduced 0.8905 exactly (surface noise ≈ 0.000); v6 = 0.8935 (+0.0030), doc_type 0.9941, subclass 0.5868 (+1.19pp), 2 rows recovered (contract_62 embedded-bylaws target + contract_71 all_cash), 0 regressions, same cost → v6 strictly dominates v3 → new text champion.** Residual: contract_33 (model hallucinates RRA title on truncated 1MB doc — model-bound). Runs `qwen3.7-flash_sorter_docclass_{v4,v5}_docclass_diag30b` + `..._v3_docclass_full676c` + `..._v6_docclass_full676`; memo `memos/docclass_v6.md`.
+
+**Scoring depth (per human ask):** docclass metrics now mirror the subtype surface — bootstrap CIs on every headline, per-subclass accuracy + support tables, `subclass_accuracy_equiv` (mixed_cash_stock ↔ mixed_cash_stock_election, dimension-scoped) + `equiv_recovered`, input-mode split counts, and a renderer docclass branch (per-document tables now show the subclass dimension, previously invisible).
+
+**Tracing (per human directive):** `src/tracing.py::resolve_tracer()` — **Langfuse primary (llm-dojo), local Phoenix server fallback**, wired into all four langfuse runners; verified live (`tracing_backend=langfuse` on the full-676 runs); DOJO keys refreshed in gitignored `langfuse.env`; tests `tests/test_tracing.py`.
+:::
+
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-040"}
 **2026-08-16 — opencode — KANBAN-040 done: sorter model-sweep workbook (`reports/sheets/Sorter_Model_Sweep_Results.xlsx`)**
 

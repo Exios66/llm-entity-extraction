@@ -652,6 +652,18 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
+<td>KANBAN-039</td>
+<td>v0.19.0 prep (2026-08-16)</td>
+<td><code>scripts/reporting/export_slides_deck.py</code> + <code>reports/sheets/contract_specialist_v32_and_sorter_v14_deck.xlsx</code></td>
+<td><strong>Slides-style xlsx deck export (per human request)</strong> — ONE Google-Slides-formatted workbook, 16 sheets = 16:9 slides (landscape fit-to-page, dark banner + footer, stat cards): Part A = contracts specialist v32 510-full-clean (overall 0.8807 CI [0.8689, 0.8913], field_presence 0.9701, schema_valid 1.0, verified_precision 0.9799, per-field + error decomposition + entity-list + MAE/R² diagnostics, v31 comparison with memo verdict) + full extraction codebook (9 fields/types/scoring class + rubric thresholds); Part B = sorter v14 subtype (exact 0.9961, subtype 0.9371 CI [0.9155, 0.9568], equiv 0.9411, 32 failures by mode + examples, per-subtype strict/equiv table from row-level results) + full sorter codebook (25 subtypes, 4 equivalences, failure modes, scoring rules); Part C = docclass v5 diag-30 bonus (doc_type 0.8333 / subclass 0.5263) + sources. Script reads the experiment log + taxonomy.yaml + sorter_agent at build time; verified by workbook reload + value cross-check; CHANGELOG <code>[Unreleased]</code> Added entry in the same working tree (commit left to the human)</td>
+</tr>
+<tr class="even">
+<td>KANBAN-037</td>
+<td>v0.19.0 prep (2026-08-16)</td>
+<td><code>site/</code> → <code>docs/posit/</code> + <code>tests/test_posit_site.py</code></td>
+<td><strong>Posit Cloud integrated portal (complementary to the SPA)</strong> — Quarto website (<code>site/</code> sources) rendering into <code>docs/posit/</code> (the SAME <code>docs/</code> tree GH Pages serves; zero Actions — Pages deploys from branch, Posit Cloud deploys via <code>quarto render site</code> + publish). Three integrated sections at one URL prefix: experiment log (generated from <code>reports/experiment_log.jsonl</code> by <code>site/_pre-render.py</code> with the canonical <code>render_full_log</code> renderer; full run index + per-run metadata/scores/tokens/diagnostics + per-run deep links into <code>../index.html#/run/{n}</code>), kanban board (live <code>MESSAGE_BOARD.md</code> copy), discussion board (live <code>MESSAGE_BOARD_DISCUSSION.qmd</code> copy, agent colors preserved); portal↔︎SPA navbar links both ways. Custom blue→teal gradient theme (cosmo light / darkly dark, toggle, navbar, search, TOC). Rendered output committed; <code>.gitignore</code> Quarto/Posit section. Repairs: 6 discussion entries missing <code>:::</code> closers (append-only preserved, pinned by test); KANBAN-037/038 number-collision reconciled. 8+1 tests green (incl.&nbsp;skip-if-no-quarto determinism); SPA browser audit green. Docs: site/README (new), docs/README, README, wiki/Site.md</td>
+</tr>
+<tr class="odd">
 <td>KANBAN-035</td>
 <td>v0.19.0 (2026-08-16)</td>
 <td><code>gpt-5-nano</code> × sorter_v13, full-509</td>

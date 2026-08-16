@@ -70,6 +70,7 @@ from agents.sorter_agent import (  # noqa: E402
     DOCCLASS_CLASSES,
     DOCCLASS_SCHEMA,
     SorterAgent,
+    equivalent_doc_subclasses,
     normalize_doc_subclass,
     normalize_subtype,
 )
@@ -85,9 +86,7 @@ from src.evaluation import (  # noqa: E402
     validate_dataset,
 )
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
-from src.langfuse_config import load_langfuse_config  # noqa: E402
-from src.langfuse_tracing import LangfuseTracer  # noqa: E402
-from src.phoenix_tracing import PhoenixTracer, phoenix_enabled  # noqa: E402
+from src.tracing import resolve_tracer  # noqa: E402
 from src.prompts import list_prompts  # noqa: E402
 
 _CONFIG = load_braintrust_config()
@@ -382,9 +381,39 @@ def main_with_args(argv: list[str]) -> int:
         print(f"  sorter={args.prompt_version} model={args.model} "
               f"classes={DOCCLASS_CLASS_KEYS}")
         print(f"  input_mode={args.input_mode} vision_pages={args.vision_pages} "
-              f"tracing={'phoenix' if phoenix_enabled() else 'langfuse'} "
+              f"tracing=langfuse-primary (phoenix fallback) "
               f"session={experiment_name} trace_name={args.lf_trace_name}")
         return 0
+
+    # ------------------------------------------------------------------
+    # Tracer — Langfuse PRIMARY, local Arize Phoenix server as fallback
+    # (human directive 2026-08-16; resolver in src/tracing.py). Resolved
+    # BEFORE the manifest so the checkpoint header records the real backend.
+    # ------------------------------------------------------------------
+    tracer, tracing_backend, tracing_meta = resolve_tracer(
+        session_id=experiment_name,
+        trace_name=args.lf_trace_name,
+        tags=[f"prompt:{args.prompt_version}", args.model.split("/")[-1]],
+        lf_project=args.lf_project,
+        lf_environment=args.lf_environment,
+    )
+    if tracing_backend == "langfuse":
+        if tracer.disabled:
+            print("WARNING: Langfuse tracing is DISABLED (missing LANGFUSE keys "
+                  "in langfuse.env) — the run proceeds untraced; results still "
+                  "land in the repo experiment log.", file=sys.stderr)
+        else:
+            print(f"Tracing to Langfuse project '{tracing_meta['project']}' "
+                  f"(environment '{tracing_meta['environment']}') at {tracing_meta['base_url']}")
+    else:
+        if tracer.disabled:
+            print("WARNING: Phoenix tracing is DISABLED — the run proceeds "
+                  "untraced; results still land in the repo experiment log.",
+                  file=sys.stderr)
+        else:
+            print(f"Tracing to Arize Phoenix (local OpenTelemetry, "
+                  f"endpoint={tracing_meta['endpoint']}) "
+                  f"— Langfuse fallback (keys unavailable)")
 
     manifest = None
     if args.manifest:
@@ -396,46 +425,9 @@ def main_with_args(argv: list[str]) -> int:
             "model": args.model,
             "prompt_version": args.prompt_version,
             "input_mode": args.input_mode,
-            "tracing_backend": "phoenix" if phoenix_enabled() else "langfuse",
+            "tracing_backend": tracing_backend,
         })
         manifest.initialize()
-
-    # ------------------------------------------------------------------
-    # Tracer — Arize Phoenix (default, local OpenTelemetry) with Langfuse
-    # fallback (mirrors run_langfuse_subtype_eval.py).
-    # ------------------------------------------------------------------
-    if phoenix_enabled():
-        tracer = PhoenixTracer(
-            session_id=experiment_name,
-            tags=[f"prompt:{args.prompt_version}", args.model.split("/")[-1]],
-            trace_name=args.lf_trace_name,
-        )
-        if tracer.disabled:
-            print("WARNING: Phoenix tracing is DISABLED — the run proceeds "
-                  "untraced; results still land in the repo experiment log.",
-                  file=sys.stderr)
-        else:
-            print(f"Tracing to Arize Phoenix (local OpenTelemetry, "
-                  f"endpoint={__import__('os').environ.get('PHOENIX_ENDPOINT', 'http://localhost:6006/v1/traces')})")
-    else:
-        lf_config = load_langfuse_config()
-        if args.lf_project:
-            lf_config = replace(lf_config, project=args.lf_project)
-        if args.lf_environment:
-            lf_config = replace(lf_config, environment=args.lf_environment)
-        tracer = LangfuseTracer(
-            config=lf_config,
-            session_id=experiment_name,
-            tags=[f"prompt:{args.prompt_version}", args.model.split("/")[-1]],
-            trace_name=args.lf_trace_name,
-        )
-        if tracer.disabled:
-            print("WARNING: Langfuse tracing is DISABLED (missing LANGFUSE keys "
-                  "in langfuse.env) — the run proceeds untraced; results still "
-                  "land in the repo experiment log.", file=sys.stderr)
-        else:
-            print(f"Tracing to Langfuse project '{lf_config.project}' "
-                  f"(environment '{lf_config.environment}') at {lf_config.base_url}")
 
     usage_by_index: dict[int, dict] = {}
 
@@ -542,6 +534,13 @@ def main_with_args(argv: list[str]) -> int:
             # class has no second level) — those rows neither count for nor
             # against subclass_accuracy.
             subclass_ok = (predicted_subclass == expected_subclass) if expected_subclass else None
+            # Equivalence-aware subclass: a defensible family read counts as a
+            # hit (e.g. mixed_cash_stock <-> mixed_cash_stock_election), the
+            # docclass mirror of subtype_accuracy_equiv.
+            subclass_ok_equiv = (
+                doc_type_ok and equivalent_doc_subclasses(
+                    predicted_subclass, expected_subclass, doc_type)
+            ) if expected_subclass else None
             exact = doc_type_ok and (subclass_ok if expected_subclass else True)
             try:
                 confidence = float(result.get("confidence", 0.0))
@@ -560,6 +559,7 @@ def main_with_args(argv: list[str]) -> int:
                     "reasoning": _reasoning_span(result, failed=not exact),
                     "doc_type_ok": doc_type_ok,
                     "subclass_ok": subclass_ok,
+                    "subclass_ok_equiv": subclass_ok_equiv,
                     "exact_match": exact,
                     "failure_mode": classify_failure(doc_type_ok, subclass_ok, predicted_subclass),
                     "truncated": sorter._last_truncated,
@@ -574,6 +574,8 @@ def main_with_args(argv: list[str]) -> int:
             if expected_subclass:
                 handle.score("subclass_accuracy", 1.0 if subclass_ok else 0.0,
                              comment="predicted doc_subclass == GT (rows without subclass GT are unscored)")
+                handle.score("subclass_accuracy_equiv", 1.0 if subclass_ok_equiv else 0.0,
+                             comment="subclass exact OR defensible equivalent family")
             handle.score("exact_match", 1.0 if exact else 0.0,
                          comment="doc_type AND subclass exact")
             handle.score("confidence", confidence, comment="model-reported confidence")
@@ -618,28 +620,8 @@ def main_with_args(argv: list[str]) -> int:
     tracer.flush()
     tracer.shutdown()
 
-    if phoenix_enabled():
-        tracing_backend = "phoenix"
-        tracing_meta = {
-            "endpoint": __import__("os").environ.get(
-                "PHOENIX_ENDPOINT", "http://localhost:6006/v1/traces"),
-            "service_name": __import__("os").environ.get(
-                "PHOENIX_SERVICE_NAME", "llm-entity-extraction"),
-            "session_id": experiment_name,
-            "trace_name": args.lf_trace_name,
-            "disabled": tracer.disabled,
-        }
-    else:
-        tracing_backend = "langfuse"
-        tracing_meta = {
-            "project": lf_config.project,
-            "environment": lf_config.environment,
-            "base_url": lf_config.base_url,
-            "session_id": experiment_name,
-            "trace_name": args.lf_trace_name,
-            "disabled": tracer.disabled,
-        }
-
+    # tracing_backend + tracing_meta come from the resolver (Langfuse
+    # primary, local Phoenix fallback) — reuse the resolved values.
     log_experiment_to_repo(
         EvalRunShim(results), dataset, args, experiment_name,
         usage_by_index, log_path, md_log_path,
@@ -669,16 +651,30 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
                   for o in ok if (o.get("sorter") or {}).get(key) is not None]
         return round(mean(values), 4) if values else None
 
+    def _ci(key: str) -> dict | None:
+        """Percentile-bootstrap 95% CI over the per-document binary scores —
+        the docclass mirror of the subtype surface's exact_match_ci."""
+        from src.bootstrap import bootstrap_ci
+
+        values = [float((o.get("sorter") or {}).get(key))
+                  for o in ok if (o.get("sorter") or {}).get(key) is not None]
+        return bootstrap_ci(values)
+
     doc_type_acc = _mean("doc_type_ok")
     subclass_acc = _mean("subclass_ok")
+    subclass_acc_equiv = _mean("subclass_ok_equiv")
     exact_match = _mean("exact_match")
     confidence = _mean("confidence")
 
-    # Per-class accuracy (doc_type level) + subclass confusion.
+    # Per-class accuracy (doc_type level) + per-subclass accuracy (the
+    # second-level dimension, with support counts) + subclass confusion.
     per_class: dict[str, dict] = defaultdict(lambda: {"correct": 0, "total": 0})
+    per_subclass: dict[str, dict] = defaultdict(lambda: {"correct": 0, "total": 0})
     subclass_confusion: dict[str, Counter] = defaultdict(Counter)
     failure_insights = []
     mode_counts: Counter = Counter()
+    equiv_recovered: list[str] = []
+    input_mode_counts: Counter = Counter()
     per_row = []
     for r in result.results:
         output = r.output if isinstance(r.output, dict) else {}
@@ -695,12 +691,20 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             "sorter_tokens": usage.get(index) or {},
         })
         if r.error is None:
+            input_mode_counts[sorter.get("input_mode") or "text"] += 1
             per_class[expected_doc_type]["total"] += 1
             if sorter.get("doc_type_ok"):
                 per_class[expected_doc_type]["correct"] += 1
             if expected_subclass:
                 predicted = sorter.get("doc_subclass") or DOC_SUBCLASS_UNKNOWN
                 subclass_confusion[expected_subclass][predicted] += 1
+                per_subclass[expected_subclass]["total"] += 1
+                if sorter.get("subclass_ok"):
+                    per_subclass[expected_subclass]["correct"] += 1
+                # Equivalence recovery: subclass wrong strictly but a
+                # defensible family read (mixed <-> election) — named rows.
+                if not sorter.get("subclass_ok") and sorter.get("subclass_ok_equiv"):
+                    equiv_recovered.append(filename)
             if not sorter.get("exact_match"):
                 mode = sorter.get("failure_mode") or "unknown"
                 mode_counts[mode] += 1
@@ -716,14 +720,23 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
 
     scores = {
         "doc_type_accuracy": doc_type_acc,
+        "doc_type_accuracy_ci": _ci("doc_type_ok"),
         "subclass_accuracy": subclass_acc,
+        "subclass_accuracy_ci": _ci("subclass_ok"),
+        "subclass_accuracy_equiv": subclass_acc_equiv,
         "exact_match": exact_match,
+        "exact_match_ci": _ci("exact_match"),
         "confidence": confidence,
         "n_rows": len(rows),
         "n_errors": len(result.results) - len(rows),
         "per_class_accuracy": {k: round(v["correct"] / v["total"], 4) if v["total"] else None
                                for k, v in sorted(per_class.items())},
+        "per_subclass_accuracy": {k: round(v["correct"] / v["total"], 4) if v["total"] else None
+                                  for k, v in sorted(per_subclass.items())},
+        "per_subclass_support": {k: v["total"] for k, v in sorted(per_subclass.items())},
         "subclass_confusion": {k: dict(v) for k, v in sorted(subclass_confusion.items())},
+        "equiv_recovered": equiv_recovered,
+        "input_mode_counts": dict(input_mode_counts),
         "sorter": {
             "failure_insights": {
                 "mode_counts": dict(mode_counts),
@@ -769,6 +782,9 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
         },
         "scores": scores,
         "per_row": per_row,
+        # The renderer's per-document tables read `results` (the shared
+        # experiment_markdown contract) — mirror per_row under both keys.
+        "results": per_row,
         "tokens": {"sorter": tokens_summary(list(usage.values()), model=args.model),
                    "total": tokens_summary(list(usage.values()), model=args.model)},
         "git": git_snapshot(),

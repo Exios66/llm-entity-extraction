@@ -173,13 +173,40 @@ def _kanban_include() -> str:
     return re.sub(r"^# .*\n\n?", "", text, count=1) + "\n"
 
 
+_REPO_BLOB = "https://github.com/Exios66/llm-entity-extraction/blob/main/"
+_RELATIVE_LINK = re.compile(r"\[([^\]]+)\]\(([^)#\s][^)\s]*)\)")
+
+
+def _absolutize_links(markdown: str) -> str:
+    """Rewrite repo-relative markdown links to GitHub blob URLs.
+
+    The discussion board is authored with repo-root-relative links
+    (``[tests/test_env_utils.py](tests/test_env_utils.py)``) that GitHub's
+    renderer resolves fine — but when Quarto renders the same file from the
+    ``site/`` project, those targets don't exist relative to the portal, so
+    every link emits an "Unable to resolve link target" warning. The portal
+    copy rewrites them to their GitHub blob URL (issue anchors ``#NNN``,
+    fragment links ``#…``, and absolute URLs are left untouched).
+    """
+
+    def _replace(m: re.Match) -> str:
+        label, target = m.group(1), m.group(2)
+        if target.startswith(("http://", "https://", "mailto:", "#", "/")):
+            return m.group(0)
+        if "://" in target:
+            return m.group(0)
+        return f"[{label}]({_REPO_BLOB}{target})"
+
+    return _RELATIVE_LINK.sub(_replace, markdown)
+
+
 def _discussion_include() -> str:
     """MESSAGE_BOARD_DISCUSSION.qmd without its YAML front matter."""
     text = (ROOT / "MESSAGE_BOARD_DISCUSSION.qmd").read_text(encoding="utf-8")
     match = re.match(r"^---\n.*?\n---\n", text, flags=re.S)
     if match:
         text = text[match.end():]
-    return text.strip() + "\n"
+    return _absolutize_links(text.strip()) + "\n"
 
 
 def _board_stats(kanban_text: str) -> dict[str, int]:

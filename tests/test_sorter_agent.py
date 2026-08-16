@@ -118,6 +118,32 @@ def test_docclass_schema_extends_shared_surface():
     assert set(subclass["enum"]) == set(DOC_SUBCLASS_KEYS)
 
 
+def test_equivalent_doc_subclasses_family_reads():
+    """The docclass mirror of subtype equivalence: an election structure IS a
+    mixed cash+stock family read; the equivalence is scoped to the doc_type's
+    own dimension and never crosses consideration <-> record types."""
+    from agents.sorter_agent import equivalent_doc_subclasses
+
+    # Same key trivially equivalent (any dimension).
+    assert equivalent_doc_subclasses("all_cash", "all_cash", "merger_agreement") is True
+    # Defensible family: mixed <-> election (both consideration dimension).
+    assert equivalent_doc_subclasses("mixed_cash_stock", "mixed_cash_stock_election",
+                                     "merger_agreement") is True
+    assert equivalent_doc_subclasses("mixed_cash_stock_election", "mixed_cash_stock",
+                                     "merger_agreement") is True
+    # No cross-family reads within a dimension.
+    assert equivalent_doc_subclasses("all_cash", "all_stock", "merger_agreement") is False
+    assert equivalent_doc_subclasses("bylaws", "articles_of_incorporation",
+                                     "corporate_record") is False
+    # Dimension guard: a consideration key is never equivalent to a record key.
+    assert equivalent_doc_subclasses("mixed_cash_stock", "rights_instrument",
+                                     "merger_agreement") is False
+    assert equivalent_doc_subclasses("bylaws", "mixed_cash_stock_election") is False
+    # None handling.
+    assert equivalent_doc_subclasses(None, "all_cash", "merger_agreement") is False
+    assert equivalent_doc_subclasses("all_cash", None, "merger_agreement") is False
+
+
 def test_normalize_doc_subclass_dimension():
     from agents.sorter_agent import (
         DOC_SUBCLASS_UNKNOWN,
