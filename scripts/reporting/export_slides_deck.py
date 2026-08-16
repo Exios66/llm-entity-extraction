@@ -856,12 +856,29 @@ def slide_qwen_lineage_runs(wb: openpyxl.Workbook, records_list: list[dict]) -> 
     note(ws, row, 2, "Surfaces: n=509 (full corpus, seed 42) · n=243 (stratified) · n=195 (stratified) · n=50 · pilots (n=5/10/1). Only same-surface runs are comparable.")
 
 
-def slide_llama(wb: openpyxl.Workbook, llama: dict | None) -> None:
+def slide_llama(wb: openpyxl.Workbook, llama: dict | None, llama_sorter: dict | None) -> None:
     ws, row = new_slide(
         wb, "PART B · SORTER", "Llama runs (Langfuse)", 16,
-        kicker="the ONLY llama run recorded anywhere: llama-4-scout × contracts_specialist_v31 EXTRACTION in Langfuse llm-dojo — there are NO llama sorter-task runs",
+        kicker="llama sorter run landed 2026-08-16 (KANBAN-042): meta-llama/llama-3.3-70b-instruct × sorter_v13, full-509; plus the earlier llama-4-scout EXTRACTION run from Langfuse",
     )
-    row = section_row(ws, row, "Run identity (fetched from Langfuse llm-dojo, 2026-08-16)")
+    if llama_sorter is not None:
+        sc = llama_sorter["scores"]["sorter"]
+        ci = sc.get("subtype_accuracy_ci", {})
+        row = section_row(ws, row, "Llama sorter run — meta-llama/llama-3.3-70b-instruct × sorter_v13 (full-509, KANBAN-042)")
+        row = table(ws, row, 2,
+                    ["Metric", "Llama-3.3-70B (n=509)", "Qwen champion (n=509)", "DeepSeek V4 Pro (n=509)"],
+                    [
+                        ["Subtype accuracy", _num(sc.get("subtype_accuracy")), _num(0.9430), _num(0.9528)],
+                        ["Exact match (doc_type + subtype)", _num(sc.get("exact_match")), _num(0.9961), _num(0.9961)],
+                        ["Subtype equiv", _num(sc.get("subtype_accuracy_equiv")), _num(0.9470), _num(0.9548)],
+                        ["Mean confidence", _num(sc.get("confidence")), _num(0.9583), _num(0.9555)],
+                        ["Failed rows", sc.get("failure_insights", {}).get("n_failed"), 29, 24],
+                    ],
+                    widths=[2, 26, 20, 26, 26, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 2],
+                    highlight_cols={2, 3, 4})
+        row = note(ws, row, 2, f"95% CI [{_num(ci.get('lo'))}, {_num(ci.get('hi'))}] — 62 fails: 47 family_confusion / 11 equivalent_family / 3 function_over_form / 1 other_fallback. 6.66M tokens, est. cost None (OpenRouter-billed, no local price).")
+        row += 1
+    row = section_row(ws, row, "Earlier llama run — llama-4-scout × contracts_specialist_v31 EXTRACTION (Langfuse llm-dojo)")
     row = kv_table(ws, row, 2, [
         ("Session", llama.get("session_id") if llama else "llama-4-scout_contracts_specialist_v31_extraction_langfuse"),
         ("Task / prompt", f"{llama.get('task') if llama else 'contract_entity_extraction'} · {llama.get('prompt') if llama else 'contracts_specialist_v31'}"),
@@ -870,27 +887,27 @@ def slide_llama(wb: openpyxl.Workbook, llama: dict | None) -> None:
         ("Window", llama.get("window") if llama else "2026-08-16 06:55–07:22 UTC"),
         ("Provenance", "Langfuse llm-dojo traces + scores (sourced via langfuse-cli; NOT in reports/experiment_log.jsonl)"),
     ])
-    row = section_row(ws, row, "Headline scores (n=20 scored docs)")
+    row = section_row(ws, row, "llama-4-scout extraction headline scores (n=20 scored docs)")
     d = llama or {}
-    sc = d.get("scores", {})
+    sc4 = d.get("scores", {})
     row = table(ws, row, 2,
                 ["Metric", "Llama-4-scout (n=20)", "Qwen 3.7-Flash v31 (n=509)", "Qwen 3.7-Flash v32 (n=509)"],
                 [
-                    ["Overall extraction score", _num(sc.get("overall_extraction_score", 0.6627)), _num(0.8737), _num(0.8807)],
-                    ["Field presence", _num(sc.get("field_presence", 0.8935)), _num(0.9655), _num(0.9701)],
-                    ["Schema valid", _num(sc.get("schema_valid", 1.0)), _num(1.0), _num(1.0)],
-                    ["Verified precision", _num(sc.get("overall_verified_precision", 0.9589)), _num(0.9799), _num(0.9799)],
-                    ["Category presence", _num(sc.get("category_presence", 0.4782)), _num(0.8474), _num(0.8555)],
+                    ["Overall extraction score", _num(sc4.get("overall_extraction_score", 0.6627)), _num(0.8737), _num(0.8807)],
+                    ["Field presence", _num(sc4.get("field_presence", 0.8935)), _num(0.9655), _num(0.9701)],
+                    ["Schema valid", _num(sc4.get("schema_valid", 1.0)), _num(1.0), _num(1.0)],
+                    ["Verified precision", _num(sc4.get("overall_verified_precision", 0.9589)), _num(0.9799), _num(0.9799)],
+                    ["Category presence", _num(sc4.get("category_presence", 0.4782)), _num(0.8474), _num(0.8555)],
                 ],
                 widths=[2, 26, 20, 26, 26, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 2],
                 highlight_cols={2, 3, 4})
-    row = section_row(ws, row, "Usage")
+    row = section_row(ws, row, "Usage (llama-4-scout run)")
     row = kv_table(ws, row, 2, [
         ("Tokens (619 generations incl. chunk windows)", f"{d.get('tokens', 10337518):,} total"),
         ("Cost recorded", "0 (no Langfuse price for the model — OpenRouter-billed)"),
     ])
-    note(ws, row, 2, "⚠ NOT comparable to the qwen rows: n=20 vs 509, run truncated mid-scoring. Directionally 0.6627 < 0.8737 (qwen v31 same prompt) — but the 20 scored docs are a self-selected early slice; treat as signal only.")
-    note(ws, row, 2, "Searched before building: reports/experiment_log.jsonl (0 hits), Langfuse llm-dojo (model/session 'llama' filters → this session only), Braintrust (experiment reads 403 Forbidden), LangSmith (LANGSMITH_PROJECT=HEARSAY only). If llama SORTER runs exist, they live outside this repo's reach — point me at them and I'll fold them in.")
+    note(ws, row, 2, "⚠ llama-4-scout extraction numbers NOT comparable to the qwen rows: n=20 vs 509, run truncated mid-scoring. Treat as signal only.")
+    note(ws, row, 2, "Sweep status (sorter_v13, full-509): qwen3.7-flash 0.9430 · deepseek-v4-pro 0.9528 · deepseek-v4-flash 0.9253 · gpt-5-nano 0.8978 · llama-3.3-70b 0.8782 · gpt-4.1-nano pending. The llama-3.3-70b sorter run traces to Langfuse llm-dojo (KANBAN-042, research-funding key).")
 
 
 def slide_codebook_subtypes(wb: openpyxl.Workbook) -> None:
@@ -1024,6 +1041,7 @@ def build_deck(log_path: str, taxonomy_path: str, out_path: str,
     fields = load_contract_fields(taxonomy_path)
     fs = load_field_scoring(taxonomy_path)
     llama = load_llama_run(llama_json)
+    llama_sorter = records.get("meta-llama-llama-3.3-70b-instruct_sorter_v13_subtype_langfuse")
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
@@ -1043,7 +1061,7 @@ def build_deck(log_path: str, taxonomy_path: str, out_path: str,
     slide_sorter_per_subtype(wb, sorter)
     slide_qwen_lineage_summary(wb, records_list)
     slide_qwen_lineage_runs(wb, records_list)
-    slide_llama(wb, llama)
+    slide_llama(wb, llama, llama_sorter)
     slide_codebook_subtypes(wb)
     slide_codebook_sorter_rules(wb, fs)
     slide_docclass_and_sources(wb, docclass, records)

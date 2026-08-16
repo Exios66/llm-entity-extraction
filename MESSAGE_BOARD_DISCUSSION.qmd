@@ -57,6 +57,18 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-042"}
+**2026-08-16 — opencode — KANBAN-042 done: model-sweep expansion — deepseek-v4-pro 0.9528 + llama-3.3-70b-instruct 0.8782 on champion sorter_v13, full-509 (research-funding key)**
+
+Both funded runs landed on `mailroom-cuad-contracts-full` (509 rows, sorter_v13, reasoning medium, temp 0.1, seed 42, `--research-funding-key`, Langfuse-primary tracing; manifests `data/manifests/{dsv4pro,llama3370b}_sorter_v13_509.jsonl`). **`deepseek-v4-pro_sorter_v13_subtype_langfuse`: subtype 0.9528 (CI [0.9332, 0.9705]), exact 0.9961, equiv 0.9548, conf 0.9555, 24 fails (18 family_confusion / 3 other_fallback / 2 function_over_form / 1 equivalent_family), 6.97M tokens ≈ $3.15 est. — the HIGHEST subtype accuracy in the sweep to date**, edging the qwen champion 0.9430. Caveat recorded: cross-model significance is NOT claimed (the ±0.006 noise band was measured on identical-prompt qwen reruns; a cross-model delta needs its own noise-floor control). **`meta-llama-llama-3.3-70b-instruct_sorter_v13_subtype_langfuse`: subtype 0.8782 (CI [0.8487, 0.9057]), exact 0.9941, equiv 0.8998, conf 0.9424, 62 fails (47 family_confusion / 11 equivalent_family / 3 function_over_form / 1 other_fallback), 6.66M tokens, est. cost None (OpenRouter-billed, no local price)** — the first llama run on the sorter task (supersedes the slide-16 "no llama sorter runs" note). Both `n_ok=509`, full failure reasoning + per_subtype recorded; LangSmith 429 tenant-limit noise non-fatal (known). **Artifacts**: `Sorter_Model_Sweep_Results.xlsx` regenerated (8 rows — degraded qwen, qwen champion, gpt-5-nano, 2 smokes, deepseek-v4-flash, deepseek-v4-pro, llama-3.3-70b; Notes added for the two new runs) → copied to `~/Downloads`; deck slide 16 rewritten (llama sorter-run table vs qwen champion + deepseek-v4-pro, then the llama-4-scout extraction run) → recopied to `~/Downloads`; experiment-log md regenerated (178 records). CHANGELOG entry written; card archived; uncommitted — commit left to the human. Sweep now: deepseek-v4-pro 0.9528 · qwen 0.9430 · deepseek-v4-flash 0.9253 · gpt-5-nano 0.8978 · llama-3.3-70b 0.8782 · gpt-4.1-nano (pending).
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-042"}
+**2026-08-16 — opencode — KANBAN-042 claimed: model-sweep expansion — deepseek-v4-pro + llama-3.3-70b-instruct on champion sorter_v13, full-509, research-funding key**
+
+Claiming KANBAN-042 per the human request: two more full-corpus (509-row) subtype evals on the champion sorter_v13 prompt to extend the model sweep (currently qwen3.7-flash 0.9430 / gpt-5-nano 0.8978 / deepseek-v4-flash 0.9253). **Run names RESERVED now (§4, before launch)**: `deepseek-v4-pro_sorter_v13_subtype_langfuse` and `meta-llama-llama-3.3-70b-instruct_sorter_v13_subtype_langfuse` — later timestamp wins on any collision; nobody else should use these names. Runner `run_langfuse_subtype_eval.py`, reasoning medium, temp 0.1, seed 42, full dataset (509 rows — the funding gate's ≥100-row requirement is satisfied), `--research-funding-key` (external funding, no dry-runs/pilots on this key). Sequence: dry-run on the default key to confirm the plan → launch deepseek-v4-pro → launch llama-3.3-70b-instruct → verify both records → regenerate `Sorter_Model_Sweep_Results.xlsx` (+ copy to ~/Downloads) → board/CHANGELOG close-out.
+:::
+
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-041"}
 **2026-08-16 — opencode — KANBAN-041 done: slides deck regenerated with the qwen v3→v13 sorter lineage + llama runs (19 slides)**
 

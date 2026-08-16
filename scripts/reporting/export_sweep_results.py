@@ -65,6 +65,13 @@ _NOTE_BY_RUN = {
     "deepseek-v4-flash_sorter_v13_subtype_langfuse@2026-08-16T05:44:26": (
         "Full-509 benchmark (KANBAN-036) — cheapest deepseek v4 flash arm "
         "($0.0629/M prompt + $0.1257/M completion)"),
+    "deepseek-v4-pro_sorter_v13_subtype_langfuse@2026-08-16T10:46:28": (
+        "Full-509 benchmark (KANBAN-042) — deepseek v4 PRO arm "
+        "($0.435/M prompt + $0.87/M completion; ~$3.15 est.) — highest "
+        "subtype accuracy in the sweep to date"),
+    "meta-llama-llama-3.3-70b-instruct_sorter_v13_subtype_langfuse@2026-08-16T10:51:33": (
+        "Full-509 benchmark (KANBAN-042) — llama 3.3 70B instruct arm "
+        "(OpenRouter-billed, no local price)"),
 }
 
 
