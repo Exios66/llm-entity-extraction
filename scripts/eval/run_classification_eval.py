@@ -51,7 +51,12 @@ from agents.sorter_agent import DOC_CLASS_KEYS, SorterAgent
 from src.braintrust_config import load_braintrust_config
 from src.braintrust_logging import braintrust_logging_enabled, langsmith_enabled
 from src.braintrust_utils import load_braintrust_dataset, load_braintrust_image_dataset
-from src.env_utils import require_env
+from src.env_utils import (
+    add_research_funding_flag,
+    assert_production_run,
+    require_env,
+    resolve_openrouter_key,
+)
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
 from src.eval_shims import run_local_eval
 from src.experiment_log import (
@@ -398,12 +403,13 @@ def main_with_args(argv: list[str]) -> int:
                              "to $EXPERIMENT_LOG_MD_PATH or reports/experiment_log.md")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, and print the plan without running")
+    add_research_funding_flag(parser)
     args = parser.parse_args(argv)
 
     log_path = args.experiment_log or default_jsonl_path()
     md_log_path = default_md_path()
 
-    (openrouter_key,) = require_env("OPENROUTER_API_KEY")
+    openrouter_key = resolve_openrouter_key(args.research_funding_key)
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
     bt_enabled = braintrust_logging_enabled()
 
@@ -471,6 +477,7 @@ def main_with_args(argv: list[str]) -> int:
             args.prompt_version = "sorter_vision_v0"
         if args.input_mode == "text" and not any("doc_text" in d for d in dataset):
             parser.error(f"Dataset {args.dataset!r} has no doc_text or image attachments.")
+    total_rows = len(dataset)
     if args.samples_per_class:
         dataset = sample_balanced(dataset, args.samples_per_class, args.sample_seed)
         per_class = Counter(d["expected"] for d in dataset)
@@ -480,6 +487,8 @@ def main_with_args(argv: list[str]) -> int:
     if not dataset:
         parser.error("No documents found to evaluate.")
     validate_dataset(dataset, valid=set(valid_classes) if valid_classes else None)
+    assert_production_run(args.research_funding_key, dry_run=args.dry_run,
+                          selected_rows=len(dataset), total_rows=total_rows)
 
     manifest = None
     manifest_meta = {

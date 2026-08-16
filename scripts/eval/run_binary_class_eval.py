@@ -34,7 +34,7 @@ import braintrust
 from agents.sorter_agent import DOC_CLASS_KEYS, SorterAgent
 from src.braintrust_config import load_braintrust_config
 from src.braintrust_utils import load_braintrust_dataset
-from src.env_utils import require_env
+from src.env_utils import add_research_funding_flag, assert_production_run, require_env, resolve_openrouter_key
 from src.evaluation import validate_dataset
 from src.prompts import DEFAULT_PROMPT_VERSION, list_prompts
 from src.scorers import ERROR_PREFIX, normalize_label
@@ -78,9 +78,10 @@ def main() -> int:
     parser.add_argument("--max-concurrency", type=int, default=8)
     parser.add_argument("--experiment-name", default=None)
     parser.add_argument("--dry-run", action="store_true")
+    add_research_funding_flag(parser)
     args = parser.parse_args()
 
-    (openrouter_key,) = require_env("OPENROUTER_API_KEY")
+    openrouter_key = resolve_openrouter_key(args.research_funding_key)
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
 
     available = list_prompts()
@@ -92,6 +93,7 @@ def main() -> int:
     )
 
     dataset = load_braintrust_dataset(args.dataset_project, args.dataset)
+    total_rows = len(dataset)
     if args.sample:
         dataset = random.Random(args.seed).sample(dataset, min(args.sample, len(dataset)))
     if args.limit:
@@ -100,6 +102,8 @@ def main() -> int:
     validate_dataset(dataset, valid={POSITIVE, NEGATIVE})
     counts = Counter(d["expected"] for d in dataset)
     print(f"Binary dataset: {counts[POSITIVE]} positive / {counts[NEGATIVE]} negative")
+    assert_production_run(args.research_funding_key, dry_run=args.dry_run,
+                          selected_rows=len(dataset), total_rows=total_rows)
 
     if args.dry_run:
         print(f"Dry run: experiment '{experiment_name}' on {len(dataset)} rows")

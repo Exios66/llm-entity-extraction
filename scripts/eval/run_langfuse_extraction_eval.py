@@ -40,7 +40,12 @@ from scripts.eval.run_extraction_eval import (  # noqa: E402
 )
 from src.braintrust_config import load_braintrust_config  # noqa: E402
 from src.braintrust_utils import load_braintrust_dataset  # noqa: E402
-from src.env_utils import require_env  # noqa: E402
+from src.env_utils import (  # noqa: E402
+    add_research_funding_flag,
+    assert_production_run,
+    require_env,
+    resolve_openrouter_key,
+)
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset  # noqa: E402
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
 from src.field_scoring import get_field_types, score_category_presence, score_extraction  # noqa: E402
@@ -120,9 +125,10 @@ def main_with_args(argv: list[str]) -> int:
                              "diagnostics (dates, durations) in the experiment log.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, print the plan without running")
+    add_research_funding_flag(parser)
     args = parser.parse_args(argv)
 
-    (openrouter_key,) = require_env("OPENROUTER_API_KEY")
+    openrouter_key = resolve_openrouter_key(args.research_funding_key)
     require_env("BRAINTRUST_API_KEY")  # still needed to load the Braintrust dataset
 
     available = list_prompts()
@@ -136,6 +142,7 @@ def main_with_args(argv: list[str]) -> int:
     dataset = load_braintrust_dataset(args.dataset_project, args.dataset,
                                       project_id=_CONFIG.project_id)
     dataset = load_expected_fields(dataset)
+    total_rows = len(dataset)
     if args.sample:
         dataset = random.Random(args.seed).sample(dataset, min(args.sample, len(dataset)))
     if args.limit:
@@ -146,6 +153,8 @@ def main_with_args(argv: list[str]) -> int:
     if not with_truth:
         parser.error(f"Dataset {args.dataset!r} has no CUAD clause-label ground truth.")
     print(f"{len(with_truth)}/{len(dataset)} rows carry CUAD ground truth")
+    assert_production_run(args.research_funding_key, dry_run=args.dry_run,
+                          selected_rows=len(with_truth), total_rows=total_rows)
 
     field_types = get_field_types("contract")
     scored_fields = sorted({f for d in with_truth for f in d["expected_fields"]})

@@ -56,7 +56,12 @@ from scripts.eval.run_classification_eval import (  # noqa: E402
 )
 from src.braintrust_config import load_braintrust_config  # noqa: E402
 from src.braintrust_utils import load_braintrust_dataset  # noqa: E402
-from src.env_utils import require_env  # noqa: E402
+from src.env_utils import (  # noqa: E402
+    add_research_funding_flag,
+    assert_production_run,
+    require_env,
+    resolve_openrouter_key,
+)
 from src.evaluation import ManifestStore, dataset_fingerprint  # noqa: E402
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
 from src.langfuse_config import load_langfuse_config  # noqa: E402
@@ -141,9 +146,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, print the plan without running")
+    add_research_funding_flag(parser)
     args = parser.parse_args(argv)
 
-    (openrouter_key,) = require_env("OPENROUTER_API_KEY")
+    openrouter_key = resolve_openrouter_key(args.research_funding_key)
     if args.pdf_dir is None:
         require_env("BRAINTRUST_API_KEY")  # needed only to load a Braintrust dataset
 
@@ -180,12 +186,15 @@ def main_with_args(argv: list[str]) -> int:
         dataset = load_braintrust_dataset(args.dataset_project, args.dataset,
                                           project_id=_CONFIG.project_id,
                                           valid=valid_classes or set(DOC_CLASS_KEYS))
+    total_rows = len(dataset)
     if args.sample:
         dataset = random.Random(args.seed).sample(dataset, min(args.sample, len(dataset)))
     if args.limit:
         dataset = dataset[: args.limit]
     if not dataset:
         parser.error("No documents found in the dataset.")
+    assert_production_run(args.research_funding_key, dry_run=args.dry_run,
+                          selected_rows=len(dataset), total_rows=total_rows)
 
     log_path = args.experiment_log or default_jsonl_path()
     md_log_path = default_md_path()

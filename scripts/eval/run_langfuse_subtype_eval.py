@@ -48,7 +48,12 @@ from scripts.eval.run_subtype_eval import (  # noqa: E402
 )
 from src.braintrust_config import load_braintrust_config  # noqa: E402
 from src.braintrust_utils import load_braintrust_dataset  # noqa: E402
-from src.env_utils import require_env  # noqa: E402
+from src.env_utils import (  # noqa: E402
+    add_research_funding_flag,
+    assert_production_run,
+    require_env,
+    resolve_openrouter_key,
+)
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset  # noqa: E402
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
 from src.langfuse_config import load_langfuse_config  # noqa: E402
@@ -118,9 +123,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="JSONL experiment log path (default: $EXPERIMENT_LOG_PATH)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Resolve config, load dataset, print the plan without running")
+    add_research_funding_flag(parser)
     args = parser.parse_args(argv)
 
-    (openrouter_key,) = require_env("OPENROUTER_API_KEY")
+    openrouter_key = resolve_openrouter_key(args.research_funding_key)
     require_env("BRAINTRUST_API_KEY")  # still needed to load the Braintrust dataset
 
     available = list_prompts()
@@ -133,6 +139,7 @@ def main_with_args(argv: list[str]) -> int:
 
     dataset = load_braintrust_dataset(args.dataset_project, args.dataset,
                                       project_id=_CONFIG.project_id)
+    total_rows = len(dataset)
     for d in dataset:
         d["expected_subtype"] = normalize_subtype((d.get("metadata") or {}).get("category"))
     if args.stratified:
@@ -145,6 +152,8 @@ def main_with_args(argv: list[str]) -> int:
         dataset = dataset[: args.limit]
     if not dataset:
         parser.error("No contracts found in the dataset.")
+    assert_production_run(args.research_funding_key, dry_run=args.dry_run,
+                          selected_rows=len(dataset), total_rows=total_rows)
 
     for d in dataset:
         d["expected_subtype"] = normalize_subtype((d.get("metadata") or {}).get("category"))

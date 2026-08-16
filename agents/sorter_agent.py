@@ -26,6 +26,106 @@ DOC_CLASSES = [
 
 DOC_CLASS_KEYS = [d["key"] for d in DOC_CLASSES]
 
+# ---------------------------------------------------------------------------
+# Extended primary classification for the hierarchical doc-class task
+# (KANBAN-033): the shared 6-class surface above stays the sorter's default;
+# the doc-class eval task opts into the EXTENDED primary list via
+# ``SorterAgent(doc_classes=DOCCLASS_CLASSES, schema=DOCCLASS_SCHEMA)`` so the
+# existing subtype/classification surfaces (and their prompt-option == schema
+# enum tests) are untouched. merger_agreement is the MAUD corpus class.
+# ---------------------------------------------------------------------------
+MERGER_AGREEMENT_CLASS = {
+    "key": "merger_agreement",
+    "label": "Merger / Acquisition Agreement",
+    "description": "Merger and acquisition agreements: agreements and plans of "
+                   "merger, share/asset purchase agreements (MAUD corpus)",
+}
+DOCCLASS_CLASSES = DOC_CLASSES + [MERGER_AGREEMENT_CLASS]
+DOCCLASS_CLASS_KEYS = [d["key"] for d in DOCCLASS_CLASSES]
+
+# Second-level dimension for non-contract doc classes (data-necessitated
+# granularity): consideration type for merger agreements (MAUD expert GT),
+# record type for corporate records (content-detected from the document).
+# The tertiary level is deliberately absent — MAUD category distributions and
+# EDGAR exhibit codes are dataset metadata, not classification dimensions.
+MERGER_SUBCLASSES = [
+    {"key": "all_cash", "label": "All Cash Consideration",
+     "description": "Consideration payable entirely in cash"},
+    {"key": "all_stock", "label": "All Stock Consideration",
+     "description": "Consideration payable entirely in stock/equity"},
+    {"key": "mixed_cash_stock", "label": "Mixed Cash/Stock Consideration",
+     "description": "Consideration payable in a mix of cash and stock"},
+    {"key": "mixed_cash_stock_election", "label": "Mixed Cash/Stock Consideration with Election",
+     "description": "Mixed consideration with a per-shareholder election"},
+]
+CORPORATE_RECORD_SUBCLASSES = [
+    {"key": "bylaws", "label": "Bylaws",
+     "description": "Corporate bylaws (EX-3.2/3.3 conventions)"},
+    {"key": "articles_of_incorporation", "label": "Articles / Certificate of Incorporation",
+     "description": "Charter, incl. amended and restated certificates (EX-3.1/3.2)"},
+    {"key": "certificate_of_formation", "label": "Certificate of Formation",
+     "description": "LLC formation certificate (EX-3.1)"},
+    {"key": "charter_amendment", "label": "Charter Amendment",
+     "description": "Certificate of amendment to the charter"},
+    {"key": "powers_of_attorney", "label": "Power(s) of Attorney",
+     "description": "Board/officer powers of attorney (EX-24.x)"},
+    {"key": "subsidiary_list", "label": "Subsidiary List",
+     "description": "List of subsidiaries of the registrant (EX-21.x)"},
+    {"key": "rights_instrument", "label": "Rights Instrument",
+     "description": "Instruments defining rights of securityholders (EX-4.x)"},
+    {"key": "indenture", "label": "Indenture",
+     "description": "Debt indentures and supplemental indentures (EX-25.x)"},
+    {"key": "board_resolution", "label": "Board Resolution / Written Consent",
+     "description": "Board resolutions, written consents, unanimous consents"},
+    {"key": "officer_certificate", "label": "Officer Certificate",
+     "description": "Officer's certificates (e.g. of incumbency)"},
+]
+DOC_SUBCLASS_UNKNOWN = "other"
+DOC_SUBCLASSES = MERGER_SUBCLASSES + CORPORATE_RECORD_SUBCLASSES + [
+    {"key": DOC_SUBCLASS_UNKNOWN, "label": "Other", "description": "No matching subclass"}
+]
+DOC_SUBCLASS_KEYS = [s["key"] for s in DOC_SUBCLASSES]
+
+# Subclass dimension per doc class: which subclass enum applies to which
+# primary class (contract keeps its own contract_subtype dimension).
+SUBCLASS_DIMENSIONS: dict[str, list[dict]] = {
+    "merger_agreement": MERGER_SUBCLASSES,
+    "corporate_record": CORPORATE_RECORD_SUBCLASSES,
+}
+
+
+def normalize_doc_subclass(value, doc_type: str | None = None) -> str:
+    """Coerce a raw sorter subclass output to a canonical doc_subclass key.
+
+    ``doc_type`` scopes the allowed enum (merger_agreement -> consideration
+    types; corporate_record -> record types); unknown values and subclasses
+    from the wrong dimension become ``other``.
+    """
+    if value is None:
+        return DOC_SUBCLASS_UNKNOWN
+    raw = str(value).strip()
+    key = re.sub(r"[^a-z0-9]", "", raw.lower())
+    if not key:
+        return DOC_SUBCLASS_UNKNOWN
+    if doc_type in SUBCLASS_DIMENSIONS:
+        allowed = [s["key"] for s in SUBCLASS_DIMENSIONS[doc_type]]
+        if raw in allowed:
+            return raw
+        for candidate in allowed:
+            if key == re.sub(r"[^a-z0-9]", "", candidate.lower()):
+                return candidate
+        return DOC_SUBCLASS_UNKNOWN
+    if raw in DOC_SUBCLASS_KEYS:
+        return raw
+    for candidate in DOC_SUBCLASS_KEYS:
+        if key == re.sub(r"[^a-z0-9]", "", candidate.lower()):
+            return candidate
+    for subclass in DOC_SUBCLASSES:
+        norm_label = re.sub(r"[^a-z0-9]", "", subclass["label"].lower())
+        if key == norm_label or key.startswith(norm_label[:8]):
+            return subclass["key"]
+    return DOC_SUBCLASS_UNKNOWN
+
 # The CONTRACT SUBGROUP dimension (CUAD corpus, 25 contract types): the
 # finer-grained family of agreement a contract belongs to. The sorter outputs
 # ``contract_subtype`` alongside ``doc_type`` so the mailroom knows which
@@ -163,6 +263,33 @@ SORTER_SCHEMA = build_structured_schema(
     title="ClassificationOutput",
 )
 
+# Extended schema for the hierarchical doc-class task (KANBAN-033): the same
+# contract plus the 7-class primary enum and a second-level ``doc_subclass``
+# dimension (consideration type / record type). ``contract_subtype`` stays the
+# contract-only dimension; ``doc_subclass`` covers the non-contract classes.
+# The tertiary level is absent by design (see DOCCLASS_CLASSES banner).
+DOCCLASS_SCHEMA = build_structured_schema(
+    {
+        "doc_type": {"type": "string", "enum": DOCCLASS_CLASS_KEYS},
+        "contract_subtype": {
+            "type": ["string", "null"],
+            "enum": CONTRACT_SUBTYPE_KEYS + [SUBTYPE_UNKNOWN],
+            "description": "The contract family/subgroup — REQUIRED when doc_type is "
+                           "contract, null otherwise. See the subtype list in the prompt.",
+        },
+        "doc_subclass": {
+            "type": ["string", "null"],
+            "enum": DOC_SUBCLASS_KEYS,
+            "description": "The second-level class: consideration type when doc_type is "
+                           "merger_agreement, record type when doc_type is corporate_record, "
+                           "null otherwise. See the subclass list in the prompt.",
+        },
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "reasoning": {"type": "string"},
+    },
+    title="DocClassClassificationOutput",
+)
+
 
 class SorterAgent(BaseAgent):
     """Classifies legal documents into mailroom document types.
@@ -184,9 +311,17 @@ class SorterAgent(BaseAgent):
         api_key: str | None = None,
         prompt_version: str = "sorter",
         callbacks: list | None = None,
+        doc_classes: list[dict] | None = None,
+        schema: dict | None = None,
     ):
         super().__init__(model=model, api_key=api_key, callbacks=callbacks)
         self.prompt_version = prompt_version
+        # Hierarchical doc-class task opt-in (KANBAN-033): pass the extended
+        # 7-class list + DOCCLASS_SCHEMA to classify into the expanded primary
+        # dimension with the doc_subclass second level. Defaults preserve the
+        # shared 6-class surface byte-for-byte.
+        self.doc_classes = doc_classes if doc_classes is not None else DOC_CLASSES
+        self.schema = schema if schema is not None else SORTER_SCHEMA
         # The sorter classifies 25 near-synonymous contract families where
         # title-vs-operatives conflicts are common (reseller/distributor,
         # license/maintenance, development/license, ...). Medium reasoning
@@ -200,7 +335,7 @@ class SorterAgent(BaseAgent):
             return base_prompt
         doc_type_descriptions = "\n".join(
             f"- {d['key']}: {d['label']} — {d['description']}"
-            for d in DOC_CLASSES
+            for d in self.doc_classes
         )
         base_prompt = base_prompt.replace("{{doc_type_descriptions}}", doc_type_descriptions)
         if "{{contract_subtypes}}" not in base_prompt:
@@ -270,18 +405,25 @@ class SorterAgent(BaseAgent):
             user_message = f"Classify this legal document:\n\n{truncated}"
         result = self._call_structured(
             user_message,
-            json_schema=SORTER_SCHEMA,
+            json_schema=self.schema,
             temperature=0.1,
         )
         if result.get("_parse_error"):
             return {"doc_type": "correspondence", "contract_subtype": None,
                     "confidence": 0.3, "reasoning": "parse error"}
+        valid_keys = [d["key"] for d in self.doc_classes]
         doc_type = result.get("doc_type", "correspondence")
-        if doc_type not in DOC_CLASS_KEYS:
+        if doc_type not in valid_keys:
             doc_type = "correspondence"
+        result["doc_type"] = doc_type
         result["contract_subtype"] = normalize_subtype(
             result.get("contract_subtype") if doc_type == "contract" else None
         )
+        if "doc_subclass" in (self.schema.get("properties") or {}):
+            result["doc_subclass"] = normalize_doc_subclass(
+                result.get("doc_subclass") if doc_type in SUBCLASS_DIMENSIONS else None,
+                doc_type,
+            )
         return result
 
     # ------------------------------------------------------------------

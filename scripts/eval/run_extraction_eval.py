@@ -54,7 +54,12 @@ from src.braintrust_config import load_braintrust_config
 from src.braintrust_logging import braintrust_logging_enabled, langsmith_enabled
 from src.braintrust_utils import load_braintrust_dataset
 from src.cuad_ground_truth import build_expected_fields, build_presence_expectations
-from src.env_utils import require_env
+from src.env_utils import (  # noqa: E402
+    add_research_funding_flag,
+    assert_production_run,
+    require_env,
+    resolve_openrouter_key,
+)
 from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
 from src.eval_shims import run_local_eval
 from src.experiment_log import (
@@ -168,12 +173,13 @@ def main_with_args(argv: list[str]) -> int:
                              "or data/cuad/master_clauses.csv, the repo-local curated table). "
                              "The curated normalized per-category answers feed the MAE "
                              "diagnostics (dates, durations) in the experiment log.")
+    add_research_funding_flag(parser)
     args = parser.parse_args(argv)
 
     log_path = args.experiment_log or default_jsonl_path()
     md_log_path = default_md_path()
 
-    (openrouter_key,) = require_env("OPENROUTER_API_KEY")
+    openrouter_key = resolve_openrouter_key(args.research_funding_key)
     (braintrust_key,) = require_env("BRAINTRUST_API_KEY")
     bt_enabled = braintrust_logging_enabled()
 
@@ -187,6 +193,7 @@ def main_with_args(argv: list[str]) -> int:
 
     dataset = load_braintrust_dataset(args.dataset_project, args.dataset, project_id=_CONFIG.project_id)
     dataset = load_expected_fields(dataset)
+    total_rows = len(dataset)
     if args.sample:
         dataset = random.Random(args.seed).sample(dataset, min(args.sample, len(dataset)))
     if args.limit:
@@ -199,6 +206,8 @@ def main_with_args(argv: list[str]) -> int:
         parser.error(f"Dataset {args.dataset!r} has no CUAD clause-label ground truth "
                      "(re-sync with stream_cuad_to_bt.py).")
     print(f"{len(with_truth)}/{len(dataset)} rows carry CUAD ground truth")
+    assert_production_run(args.research_funding_key, dry_run=args.dry_run,
+                          selected_rows=len(with_truth), total_rows=total_rows)
 
     field_types = get_field_types("contract")
     # The union of expected fields across the sample determines which

@@ -563,7 +563,49 @@ SORTER_PROMPT_V14 = SORTER_PROMPT_V13.replace(
 
 29. MAINTENANCE TITLE WINS: an agreement whose TITLE names maintenance — "Maintenance Agreement", "Yield Maintenance Agreement", "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT", "UNCONDITIONAL CAPITAL MAINTENANCE AGREEMENT", "NET INVESTMENT INCOME MAINTENANCE AGREEMENT", "Network Build and Maintenance Agreement", "CONSTRUCTION AND MAINTENANCE AGREEMENT" — is maintenance even when its operative machinery reads as financial (capital contributions or loans to maintain financial ratios, yield-maintenance confirmations under an ISDA master agreement, completion and liquidity covenants supporting a credit facility) or as build/construction-plus-maintenance services: rule 13's financial-sense clause means financial-sense "maintenance" agreements (capital maintenance, net investment income maintenance, completion and liquidity maintenance) ARE maintenance — never "other" and never "service" for a document whose title names maintenance. Rule 13 does NOT route financial-sense maintenance to "other"; a maintenance-titled agreement stays maintenance whatever its machinery ("MAINTENANCE AGREEMENT" with an Investor's Required Capital Contributions -> maintenance, not other; "Yield Maintenance Agreement" confirming an interest rate cap transaction -> maintenance, not other; "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT" requiring $25,000,000 liquidity as a credit-agreement covenant -> maintenance, not other; "Network Build and Maintenance Agreement" with build/install/maintain obligations under an MSA -> maintenance, not service; "CONSTRUCTION AND MAINTENANCE AGREEMENT" for infrastructure upkeep -> maintenance, not service).
 
-30. MARKETING TITLE WINS — STRENGTHENED: rule 26's marketing-title guard is NOT defeated by machinery re-reads, by rule 9's hybrid machinery read, or by the ORDER of families in the title. When the TITLE names marketing — even alongside manufacturing, distributor, co-branding, licensing, or servicing, and even when another family is named FIRST ("MANUFACTURING, DESIGN AND MARKETING AGREEMENT", "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT", "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT") — the agreement is MARKETING when it contains marketing/promotion obligations, whatever the operative machinery says ("MANUFACTURING, DESIGN AND MARKETING AGREEMENT" with purchase orders, tooling, delivery and warranty clauses -> marketing, not manufacturing — a manufacturing-supply section does NOT make the agreement manufacturing; "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT" appointing an exclusive distributor with resale terms -> marketing, not distributor and not license — rule 9's hybrid machinery weighing does NOT apply to a marketing-named title; "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT" with joint branding and joint press releases -> marketing, not co_branding — a co-branding section does NOT outrank the marketing title). Carve-outs preserved: (a) a title whose PRIMARY family is another specific family — license ("Content License Agreement" with a marketing annex) or an operational service family, transportation or hosting — keeps that family per annex inheritance (rule 17); (b) rule 16's pure "Marketing Agreement" shape stays covered by rule 26.""",
+    30. MARKETING TITLE WINS — STRENGTHENED: rule 26's marketing-title guard is NOT defeated by machinery re-reads, by rule 9's hybrid machinery read, or by the ORDER of families in the title. When the TITLE names marketing — even alongside manufacturing, distributor, co-branding, licensing, or servicing, and even when another family is named FIRST ("MANUFACTURING, DESIGN AND MARKETING AGREEMENT", "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT", "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT") — the agreement is MARKETING when it contains marketing/promotion obligations, whatever the operative machinery says ("MANUFACTURING, DESIGN AND MARKETING AGREEMENT" with purchase orders, tooling, delivery and warranty clauses -> marketing, not manufacturing — a manufacturing-supply section does NOT make the agreement manufacturing; "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT" appointing an exclusive distributor with resale terms -> marketing, not distributor and not license — rule 9's hybrid machinery weighing does NOT apply to a marketing-named title; "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT" with joint branding and joint press releases -> marketing, not co_branding — a co-branding section does NOT outrank the marketing title). Carve-outs preserved: (a) a title whose PRIMARY family is another specific family — license ("Content License Agreement" with a marketing annex) or an operational service family, transportation or hosting — keeps that family per annex inheritance (rule 17); (b) rule 16's pure "Marketing Agreement" shape stays covered by rule 26.""",
+)
+
+# =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v0 (MAUD + S-1 records)
+# -----------------------------------------------------------------------------
+# The doc-class eval task (KANBAN-033) runs the sorter over an EXTENDED
+# primary classification: the shared 6 classes PLUS merger_agreement (the MAUD
+# corpus class), with a SECOND-LEVEL doc_subclass dimension (consideration
+# type for merger agreements — MAUD expert GT; record type for corporate
+# records — content-detected from the document). The tertiary level is
+# deliberately absent: MAUD category distributions and EDGAR exhibit codes are
+# dataset metadata, not classification dimensions (human directive: tertiary
+# granularity only where the data necessitates it).
+#
+# The runner passes the extended class list + DOCCLASS_SCHEMA to SorterAgent
+# (doc_classes=/schema= kwargs) — the shared sorter_v0..v14 surface and its
+# schema-enum tests are untouched.
+# =============================================================================
+
+SORTER_DOCCLASS_PROMPT_V0 = SORTER_PROMPT_V14.replace(
+    """(b) rule 16's pure "Marketing Agreement" shape stays covered by rule 26.
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """(b) rule 16's pure "Marketing Agreement" shape stays covered by rule 26.
+
+31. MERGER AGREEMENT CLASS: a document whose TITLE names the M&A family — "AGREEMENT AND PLAN OF MERGER", "PLAN AND AGREEMENT OF MERGER", "MERGER AGREEMENT", "SHARE PURCHASE AGREEMENT", "ASSET PURCHASE AGREEMENT", "SECURITIES PURCHASE AGREEMENT", "TENDER OFFER SUPPORT AGREEMENT" — or whose operative machinery is a public-company acquisition structure (a "Parent" and a "Merger Sub"/"Acquisition Sub" counterparty, "Effective Time"/"Closing" mechanics sections, "Representations and Warranties of the Company/Sellers", a Material Adverse Effect definition, "no-shop"/"no-solicitation"/"fiduciary out" covenants, disclosure schedules, "Exchange Ratio"/"Merger Consideration") is merger_agreement, NOT contract: the M&A agreement is its own PRIMARY class (the MAUD corpus) and routes to the M&A workflow. An "AGREEMENT AND PLAN OF MERGER" stays merger_agreement whatever operating-company machinery it contains; do not fall back to contract or to a contract subtype for it.
+
+32. CORPORATE RECORDS FILED AS SEC EXHIBITS STAY CORPORATE_RECORD: a certificate of incorporation, certificate of formation, bylaws, power of attorney, or subsidiary list attached to a registration statement as an exhibit ("EXHIBIT 3.1/3.2/3.3", "EXHIBIT 24.1", "EXHIBIT 21.1") is corporate_record, not compliance_filing: the exhibit wrapper is filing context (rule 3), and the substantive form is an internal governance record (rule 2).
+
+33. DOC SUBCLASS (second-level class): when doc_type is merger_agreement, doc_subclass is the CONSIDERATION TYPE read from the consideration sections — all_cash ("$X in cash", "cash consideration"), all_stock ("shares of Common Stock", "stock consideration"), mixed_cash_stock (cash + stock combination), mixed_cash_stock_election (mixed with a per-shareholder election), or other. When doc_type is corporate_record, doc_subclass is the RECORD TYPE detected from the document's OWN title/head — bylaws ("BYLAWS OF ..."), articles_of_incorporation ("CERTIFICATE OF INCORPORATION", "ARTICLES OF INCORPORATION", incl. "AMENDED AND RESTATED CERTIFICATE OF INCORPORATION"), certificate_of_formation ("CERTIFICATE OF FORMATION" under an LLC act), charter_amendment ("CERTIFICATE OF AMENDMENT"), powers_of_attorney ("POWER OF ATTORNEY"), subsidiary_list ("SUBSIDIARIES OF ...", "LIST OF SUBSIDIARIES"), rights_instrument (instruments defining rights of securityholders), indenture ("INDENTURE"), board_resolution ("RESOLUTION", "WRITTEN CONSENT"), officer_certificate ("OFFICER'S CERTIFICATE"), or other. The EDGAR exhibit code is NOT the record type (EX-3.2 can hold bylaws or a certificate of incorporation depending on the filer) — classify from the document's own title. For every other doc_type, doc_subclass must be null.
+
+VALID CONTRACT SUBTYPE KEYS""",
+).replace(
+    """- doc_type: one of the available class keys listed above
+- contract_subtype: EXACTLY ONE of the valid subtype keys above (including "other") when doc_type is contract; null otherwise
+- confidence: float between 0.0 and 1.0
+- reasoning: short explanation of your classification decision, citing the evidence""",
+    """- doc_type: one of the available class keys listed above (including merger_agreement)
+- contract_subtype: EXACTLY ONE of the valid subtype keys above (including "other") when doc_type is contract; null otherwise
+- doc_subclass: EXACTLY ONE of the rule-33 subclass keys when doc_type is merger_agreement or corporate_record; null otherwise
+- confidence: float between 0.0 and 1.0
+- reasoning: short explanation of your classification decision, citing the evidence""",
 )
 
 # =============================================================================
@@ -2046,6 +2088,7 @@ PROMPT_VERSIONS = {
     "sorter_v12": SORTER_PROMPT_V12,
     "sorter_v13": SORTER_PROMPT_V13,
     "sorter_v14": SORTER_PROMPT_V14,
+    "sorter_docclass_v0": SORTER_DOCCLASS_PROMPT_V0,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

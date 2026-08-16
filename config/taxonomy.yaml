@@ -72,6 +72,36 @@ doc_classes:
       key_obligations: entity_list:free_text
       contract_value: money
       renewal_terms: free_text
+    # Subclass dimension: the 25 CUAD contract families (authoritative list in
+    # agents/sorter_agent.py CONTRACT_SUBTYPES — the eval tests pin the prompt
+    # option list to that enum).
+
+  - key: merger_agreement
+    label: "Merger / Acquisition Agreement"
+    schema: ContractExtraction
+    specialist: contracts_specialist
+    description: "Merger and acquisition agreements: agreements and plans of merger, share/asset purchase agreements (MAUD corpus)"
+    field_types:
+      document_name: name
+      parties: entity_list:name
+      effective_date: date
+      term_length: free_text
+      termination_clauses: entity_list:free_text
+      governing_law: name
+      key_obligations: entity_list:free_text
+      contract_value: money
+      renewal_terms: free_text
+    # Subclass dimension (data-necessitated, from MAUD expert GT "Type of
+    # Consideration"): the agreement's consideration structure. MAUD category
+    # distributions (MAE / deal protection / ...) are dataset METADATA, not a
+    # classification level — tertiary granularity only where the data demands
+    # it (human directive, 2026-08-15).
+    subclasses:
+      - {key: all_cash, label: "All Cash Consideration"}
+      - {key: all_stock, label: "All Stock Consideration"}
+      - {key: mixed_cash_stock, label: "Mixed Cash/Stock Consideration"}
+      - {key: mixed_cash_stock_election, label: "Mixed Cash/Stock Consideration with Election"}
+      - {key: other, label: "Other / Unstated Consideration"}
 
   - key: corporate_record
     label: "Corporate Record"
@@ -86,6 +116,22 @@ doc_classes:
       signatories: entity_list:name
       jurisdiction: name
       filing_number: id
+    # Subclass dimension: the record type, content-detected from the document
+    # (S-1 exhibit codes are NOT 1:1 with record types — EX-3.2 can hold
+    # bylaws OR a certificate of incorporation). EDGAR exhibit codes stay as
+    # dataset metadata (provenance), not a classification level.
+    subclasses:
+      - {key: bylaws, label: "Bylaws"}
+      - {key: articles_of_incorporation, label: "Articles / Certificate of Incorporation"}
+      - {key: certificate_of_formation, label: "Certificate of Formation"}
+      - {key: charter_amendment, label: "Charter Amendment"}
+      - {key: powers_of_attorney, label: "Power(s) of Attorney"}
+      - {key: subsidiary_list, label: "Subsidiary List"}
+      - {key: rights_instrument, label: "Rights Instrument"}
+      - {key: indenture, label: "Indenture"}
+      - {key: board_resolution, label: "Board Resolution / Written Consent"}
+      - {key: officer_certificate, label: "Officer Certificate"}
+      - {key: other, label: "Other Corporate Record"}
 
   - key: due_diligence
     label: "Due Diligence"
