@@ -1561,6 +1561,111 @@
     "mode_counts": {
      "family_confusion": 1
     }
+   },
+   {
+    "id": 162,
+    "experiment_name": "deepseek-v4-flash_sorter_v13_smoke2",
+    "timestamp": "2026-08-16T06:24:54.614625+00:00",
+    "model": "deepseek/deepseek-v4-flash",
+    "prompts": "sorter_v13",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.00141,
+    "n_rows": 1,
+    "seed": 42,
+    "sample_key": "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
+    "mode_counts": {}
+   },
+   {
+    "id": 163,
+    "experiment_name": "gpt-4.1-nano_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T06:27:47.123936+00:00",
+    "model": "openai/gpt-4.1-nano",
+    "prompts": "sorter_v13",
+    "headline_value": 0.8782,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 9,
+     "family_confusion": 35,
+     "function_over_form": 11,
+     "other_fallback": 7
+    }
+   },
+   {
+    "id": 164,
+    "experiment_name": "llama-4-scout_sorter_v13_smoke1",
+    "timestamp": "2026-08-16T06:28:09.852768+00:00",
+    "model": "meta-llama/llama-4-scout",
+    "prompts": "sorter_v13",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 1,
+    "seed": 42,
+    "sample_key": "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
+    "mode_counts": {}
+   },
+   {
+    "id": 165,
+    "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T06:36:30.832397+00:00",
+    "model": "meta-llama/llama-4-scout",
+    "prompts": "sorter_v13",
+    "headline_value": 0.888,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 10,
+     "family_confusion": 34,
+     "function_over_form": 2,
+     "other_fallback": 11
+    }
+   },
+   {
+    "id": 166,
+    "experiment_name": "deepseek-v4-flash_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T06:38:50.226783+00:00",
+    "model": "deepseek/deepseek-v4-flash",
+    "prompts": "sorter_v13",
+    "headline_value": 0.9332,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.393927,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 1,
+     "family_confusion": 27,
+     "function_over_form": 1,
+     "other_fallback": 5
+    }
+   },
+   {
+    "id": 167,
+    "experiment_name": "llama-3.3-70b-instruct_sorter_v13_smoke1",
+    "timestamp": "2026-08-16T06:43:13.758695+00:00",
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "prompts": "sorter_v13",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 1,
+    "seed": 42,
+    "sample_key": "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
+    "mode_counts": {}
    }
   ],
   "sorter_classification": [
