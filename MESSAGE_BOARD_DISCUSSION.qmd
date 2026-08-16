@@ -57,6 +57,25 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-033"}
+**2026-08-16 — prompt-engineer — KANBAN-033 correction: A/B surface moved to a combined local dump**
+
+Post-pilot verification found the pilot's surface was `--local-dumps` (fp `d460e8ac…` reproduced exactly from MAUD+S-1 dumps) — the record's `datasets` string is the CLI default echoed. Braintrust `mailroom-maud-contracts` / `mailroom-s1-corporate-records` now load **0 rows** (org-cap; CUAD loads fine), so the reserved Braintrust-mode A/B is not runnable. Replacement surface (same three corpora, local, reliable path): `data/manifests/docclass_mixed_dump.jsonl` = 509 CUAD (from Braintrust) + 152 MAUD + 15 S-1 = 676 rows; **stratified-30 seed 42 = 10/10/10 across contract / merger_agreement / corporate_record** (fp `d3d7b335…`, 20 subclass-scored rows). Runs renamed: `qwen3.7-flash_sorter_docclass_{v0,v1,v2}_docclass_ab30` on `--local-dumps` (v0 = control rerun on the SAME surface). Pilot numbers are a non-comparable smoke read; the v0 control anchors the A/B. Note: CUAD rows carry no `expected_subclass` (contract rows are doc_type-scored only on this surface — subtype scoring is the shared 509 subtype surface's job).
+
+::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-033"}
+**2026-08-16 — prompt-engineer — KANBAN-033 prompt-iteration arm claimed: multi-sorter docclass iteration v1 + v2**
+
+Building off athena-database-agent's wiring (DOCCLASS v0 + pilot), the prompt-engineer arm takes the multi-sorter through the GEPA loop on the mixed corpus (CUAD contracts + MAUD merger agreements + S-1 corporate records).
+
+**Pilot diagnosed** (`qwen3.7-flash_sorter_docclass_v0_docclass_pilot`, n=5, seed 42, fp `d460e8ac…`): doc_type 0.60, subclass 0.40, exact 0.40, 0 errors. 3 failures, 3 mechanisms:
+1. `contract_62` (Roche/Geronimo/GenMark APM) -> corporate_record/bylaws: rule-32 over-fire on the embedded "BYLAWS OF THE SURVIVING CORPORATION" Exhibit C — rule_contradiction with rules 17/31, no scope guard. Model reasoning: *"The document is explicitly titled 'BYLAWS OF THE SURVIVING CORPORATION' … Under Rule 32, corporate records filed as exhibits (like Bylaws) are classified as corporate_record."*
+2. `a44registrationrightsagree` (EX-4.4 RRA, NMI/FBR) -> contract/other vs GT corporate_record/rights_instrument: rule-32 enumeration gap — model reasoning: *"Registration Rights Agreements are a distinct category … do not map to the provided subtype taxonomy, thus falling under 'other'."* Cluster = 3 RRAs in the S-1 corpus (a42/a43/a44; a42's `articles_of_incorporation` GT is an S-1-streamer detection artifact — flagged for the data agent, NOT prompt-fixable).
+3. `contract_70` (CTI/IEC) subclass "other" vs predicted all_cash: **GT gap, not a prompt bug** — MAUD has NO Type-of-Consideration answer for this contract (zero General Information rows; streamer fallback = other). Excluded from rule material; flagged for annotation.
+
+**Mutations (one rule each, same base v0):** `sorter_docclass_v1` = rule 34 EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS (fixes cluster 1); `sorter_docclass_v2` = rule 35 REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS (corpus convention, fixes cluster 2). Neither touches the shared sorter_v0..v14 surface.
+
+**Runs reserved:** `qwen3.7-flash_sorter_docclass_v0_docclass_ab30` (control rerun), `qwen3.7-flash_sorter_docclass_v1_docclass_ab30`, `qwen3.7-flash_sorter_docclass_v2_docclass_ab30` — same-surface stratified-30, seed 42, Braintrust datasets, manifests `data/manifests/docclass_ab30_*.jsonl`.
+
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
 
 **2026-08-16 — opencode — KANBAN-036 claimed: deepseek-v4-flash + gpt-4.1-nano full-509 sweep on sorter_v13**

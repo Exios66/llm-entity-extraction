@@ -609,6 +609,68 @@ VALID CONTRACT SUBTYPE KEYS""",
 )
 
 # =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v1 (embedded-records
+# scope guard) — KANBAN-033 prompt-iteration arm
+# -----------------------------------------------------------------------------
+# v1 = v0 + ONE rule (rule 34), from the docclass pilot
+# (qwen3.7-flash_sorter_docclass_v0_docclass_pilot, n=5 seed 42, fp d460e8ac…:
+# doc_type 0.60 / subclass 0.40, 3 failures):
+#   - contract_62 (Roche/Geronimo/GenMark AGREEMENT AND PLAN OF MERGER, GT
+#     merger_agreement/all_cash) -> corporate_record/bylaws: rule 32 over-fired
+#     on the "BYLAWS OF THE SURVIVING CORPORATION" text EMBEDDED as Exhibit C
+#     of the merger agreement. Model reasoning: "The document is explicitly
+#     titled 'BYLAWS OF THE SURVIVING CORPORATION' (referenced in Exhibit C of
+#     the Merger Agreement ...) Under Rule 32, corporate records filed as
+#     exhibits (like Bylaws) are classified as corporate_record." — a
+#     rule_contradiction with rule 17 (annex inheritance) and rule 31 (APM ->
+#     merger_agreement): rule 32 had no scope guard distinguishing "document
+#     AS A WHOLE is the record" from "record text inside a parent agreement".
+#     Rule 34 makes the parent's class govern for embedded records. The MAUD
+#     corpus (152 docs) is annex-heavy, so the rule generalizes to the family.
+# =============================================================================
+
+SORTER_DOCCLASS_PROMPT_V1 = SORTER_DOCCLASS_PROMPT_V0.replace(
+    """For every other doc_type, doc_subclass must be null.
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """For every other doc_type, doc_subclass must be null.
+
+34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS: rule 32 applies ONLY when the document AS A WHOLE is a corporate record. When a record (bylaws, certificate of incorporation, certificate of formation, powers of attorney, subsidiary list) appears as an exhibit, annex, or schedule INSIDE a parent agreement — e.g. "BYLAWS OF THE SURVIVING CORPORATION" as Exhibit C of an "AGREEMENT AND PLAN OF MERGER" — the PARENT's class governs (rules 17 and 31): the whole document is merger_agreement (or contract), and the embedded record is annex content, not the document's substantive form. Never classify the whole document from an embedded annex's title.
+
+VALID CONTRACT SUBTYPE KEYS""",
+)
+
+# =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v2 (RRA exhibit
+# convention) — KANBAN-033 prompt-iteration arm
+# -----------------------------------------------------------------------------
+# v2 = v0 + ONE rule (rule 35), from the docclass pilot (same run as v1):
+#   - a44registrationrightsagree.htm (NMI Holdings/FBR "REGISTRATION RIGHTS
+#     AGREEMENT", EX-4.4, GT corporate_record/rights_instrument) -> contract/
+#     other. Model reasoning: "Registration Rights Agreements are a distinct
+#     category of corporate/finance contracts that do not map to the provided
+#     subtype taxonomy, thus falling under 'other'." — rule 32 enumerates
+#     incorporation docs/bylaws/POA/subsidiary lists but not registration
+#     rights agreements; the S-1 exhibit catalog files EX-4.x instruments as
+#     record types (3 RRAs in the corpus: a42/a43/a44 — a42's
+#     articles_of_incorporation label is an S-1-streamer detection artifact,
+#     flagged separately). Rule 35 is the corpus-convention fix, scoped to the
+#     SEC exhibit context (a standalone RRA outside a filing package stays
+#     contract / subtype other).
+# =============================================================================
+
+SORTER_DOCCLASS_PROMPT_V2 = SORTER_DOCCLASS_PROMPT_V0.replace(
+    """For every other doc_type, doc_subclass must be null.
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """For every other doc_type, doc_subclass must be null.
+
+35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS (corpus convention): a "REGISTRATION RIGHTS AGREEMENT" filed as an exhibit to a registration statement (EX-4.x) — an instrument granting securityholders the right to have their shares registered — is corporate_record with doc_subclass rights_instrument, NOT contract: the S-1 exhibit catalog files EX-4.x instruments under the record types and the corporate-record workflow handles them ("Registration Rights Agreement" with registration, piggyback, and shelf obligations -> corporate_record / rights_instrument, not contract and not a contract subtype). The rule applies in the SEC exhibit context only; a standalone registration rights agreement outside any filing package stays contract (subtype "other").
+
+VALID CONTRACT SUBTYPE KEYS""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2089,6 +2151,8 @@ PROMPT_VERSIONS = {
     "sorter_v13": SORTER_PROMPT_V13,
     "sorter_v14": SORTER_PROMPT_V14,
     "sorter_docclass_v0": SORTER_DOCCLASS_PROMPT_V0,
+    "sorter_docclass_v1": SORTER_DOCCLASS_PROMPT_V1,
+    "sorter_docclass_v2": SORTER_DOCCLASS_PROMPT_V2,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,
