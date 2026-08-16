@@ -9,6 +9,7 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Changed
+- **Contract-specialist v1..v16 archived to `src/prompts_archive.py` (prompt-file bloat cut)** — the pre-documentation lineage (full-text v1..v7 + the early replace chain, ~1,000 lines / ~72 KB) moved out of `src/prompts.py` into a FROZEN archive module and imported back, so `src/prompts.py` drops 227 KB → 155 KB (−32%) for later editing agents while EVERY version key stays resolvable (`get_prompt`, `PROMPT_VERSIONS`, manifests, Langfuse prompt syncs) and the 32 prompt strings are byte-identical (verified against git HEAD). The documented frontier lineage (v17..v32) with its data-backed banners stays in `prompts.py`. Archive rule pinned by tests: never edit an archived constant — a change = a new version key. 384 tests green (`test_contracts_archive_preserves_identity_and_version_keys`, `test_contracts_archive_chain_heads_resolve`).
 - **LegalBench task prompt `legalbench_task_v1` — hearsay doctrine in the
   system prompt (KANBAN-026)** — v1 = v0 + ONE hearsay-doctrine rule (the
   truth-of-matter purpose test + statement scope incl. writings/assertive

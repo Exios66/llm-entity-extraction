@@ -8,6 +8,7 @@ Everything the eval loop builds on. The package is importable from anywhere
 | `bootstrap.py` | percentile-bootstrap 95% CIs over per-document scores (`bootstrap_ci`) + two-sample delta significance (`delta_significance`) |
 | `cost_models.py` | verified per-model token prices + deterministic cost estimation (`estimate_cost`, `estimate_for_record`) |
 | `prompts.py` | ALL prompts, versioned in `PROMPT_VERSIONS`; `get_prompt(version)`, `list_prompts()`. The version key IS the experiment identity |
+| `prompts_archive.py` | FROZEN archive of superseded contract-specialist prompt versions (v1..v16, the pre-documentation lineage) — imported back into `prompts.py` so every version key stays resolvable; NEVER edit an archived constant (a change = a new version key) |
 | `experiment_log.py` | append-only JSONL + markdown renderer (`append_experiment`, `experiment_markdown`, `render_full_log`, `tokens_summary(model=)`) |
 | `field_scoring.py` | field-type-aware content scorer + factuality audit + ambiguous band + embedding rescue |
 | `scorers.py` | Braintrust lookups: `exact_match`, `failure`, `cost`, `per_class_stats`, `macro_accuracy` |

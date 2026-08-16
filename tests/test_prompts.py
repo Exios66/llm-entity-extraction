@@ -34,6 +34,39 @@ def test_all_prompt_keys_exist():
     assert "reporter" in PROMPT_VERSIONS
 
 
+def test_contracts_archive_preserves_identity_and_version_keys():
+    """The v1..v16 lineage lives in src/prompts_archive.py (frozen) but every
+    version key must stay resolvable and the constants byte-identical.
+
+    The version key IS the experiment identity — manifests, the experiment
+    log, `get_prompt()`, and Langfuse prompt syncs reference these versions.
+    The archive keeps the editing surface of src/prompts.py lean (the
+    pre-documentation v1..v16 full-text + early replace chain is ~1,000
+    lines) without ever mutating a prompt string.
+    """
+    import src.prompts as prompts_module
+    import src.prompts_archive as archive
+
+    # Every archived constant is a non-empty string, resolvable through the
+    # registry, and byte-identical to the constant re-exported by prompts.py.
+    for i in range(1, 17):
+        name = f"CONTRACTS_SPECIALIST_PROMPT_V{i}"
+        arch = getattr(archive, name)
+        assert isinstance(arch, str) and len(arch) > 1000, name
+        assert arch == getattr(prompts_module, name), name
+        assert PROMPT_VERSIONS[f"contracts_specialist_v{i}"] == arch, name
+
+
+def test_contracts_archive_chain_heads_resolve():
+    """The v17+ replace chain derives from V16 — after the archive move the
+    chain still resolves end-to-end and each head is strictly derived."""
+    from src.prompts import CONTRACTS_SPECIALIST_PROMPT_V16, CONTRACTS_SPECIALIST_PROMPT_V32
+
+    assert CONTRACTS_SPECIALIST_PROMPT_V32 != CONTRACTS_SPECIALIST_PROMPT_V16
+    assert CONTRACTS_SPECIALIST_PROMPT_V32.startswith(CONTRACTS_SPECIALIST_PROMPT_V16[:300])
+    assert PROMPT_VERSIONS["contracts_specialist_v32"] == CONTRACTS_SPECIALIST_PROMPT_V32
+
+
 def test_sorter_v2_hybrid_and_endorsement_rules():
     prompt = get_prompt("sorter_v2")
     assert "HYBRID AGREEMENTS" in prompt
