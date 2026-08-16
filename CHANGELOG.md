@@ -227,6 +227,9 @@ history of the repository's tags. Format follows
   header-variant tolerance; 377 tests green.
 
 ### Fixed
+- **`SorterAgent.classify_document([])` empty-input contract restored** (`agents/sorter_agent.py`) — the docclass-era guard (commit `9ca4f35`) returned `doc_type: None` on an empty page list, breaking the documented vision fallback (empty/unreadable input → `correspondence`); it now returns `doc_type: "correspondence"` (confidence 0.0) while keeping `unreadable: True`/`invalid_label: False` so the docclass vision-primary runner still classifies it as an unreadable fallback. Test: `tests/test_page_voting.py::test_classify_document_empty_input`.
+- **Subtype smoke test isolated from the local `.env` LangSmith flag** (`tests/test_subtype_eval_smoke.py`) — the no-Braintrust loop test deleted `LANGSMITH_TRACING` from the process env, but the runner's dotenv load (`override=False`) re-enabled it from a local `config/environments/.env` (`LANGSMITH_TRACING=true`), failing the "LangSmith off by default" assertion; the test now pins the variable to a non-true value so the `.env` cannot re-enable it.
+- **Posit portal pre-render intermediates untracked** (`site/_includes/`, `site/_variables.yml`) — they carry generation stamps and are gitignored by design (KANBAN-037); `git rm --cached` removes the accidental tracking so a fresh `quarto render site` leaves `git status` clean (the `test_quarto_render_is_deterministic_and_clean` gate).
 - **`run_local_eval` shim now matches the `braintrust.EvalResult` contract**
   (`src/eval_shims.py`, KANBAN-026) — the no-Braintrust loop stored the FULL
   row dict as each result's ``input`` (so ``index`` resolved to -1 and

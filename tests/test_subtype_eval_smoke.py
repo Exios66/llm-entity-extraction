@@ -175,7 +175,11 @@ def test_subtype_loop_no_braintrust_logging(monkeypatch, tmp_path):
     import scripts.eval.run_subtype_eval as runner
 
     monkeypatch.delenv("BRAINTRUST_LOGGING", raising=False)
-    monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
+    # Pin LANGSMITH_TRACING to a non-true value (not just delete it): the
+    # runner loads config/environments/.env with override=False, so a local
+    # LANGSMITH_TRACING=true there would otherwise re-enable LangSmith and
+    # break the "off by default" contract this test verifies.
+    monkeypatch.setenv("LANGSMITH_TRACING", "0")
 
     eval_calls = {"n": 0}
 

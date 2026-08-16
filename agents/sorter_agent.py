@@ -608,7 +608,7 @@ class SorterAgent(BaseAgent):
         from src.openrouter_utils import split_prompt
 
         if not pages_base64:
-            return {"doc_type": None, "contract_subtype": None, "doc_subclass": None,
+            return {"doc_type": "correspondence", "contract_subtype": None, "doc_subclass": None,
                     "confidence": 0.0, "reasoning": "no page images",
                     "unreadable": True, "invalid_label": False}
 
