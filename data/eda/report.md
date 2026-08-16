@@ -10,22 +10,22 @@
 |---|---|---|
 | `maintenance` | 34 | 6.7% |
 | `license` | 33 | 6.5% |
-| `development` | 33 | 6.5% |
 | `distributor` | 32 | 6.3% |
-| `service` | 32 | 6.3% |
 | `strategic_alliance` | 32 | 6.3% |
-| `sponsorship` | 30 | 5.9% |
+| `sponsorship` | 31 | 6.1% |
+| `development` | 28 | 5.5% |
+| `service` | 28 | 5.5% |
 | `collaboration` | 26 | 5.1% |
 | `endorsement` | 24 | 4.7% |
 | `joint_venture` | 23 | 4.5% |
 | `co_branding` | 22 | 4.3% |
-| `hosting` | 19 | 3.7% |
+| `hosting` | 20 | 3.9% |
 | `outsourcing` | 18 | 3.5% |
-| `supply` | 17 | 3.3% |
+| `supply` | 18 | 3.5% |
+| `ip` | 17 | 3.3% |
 | `manufacturing` | 17 | 3.3% |
+| `marketing` | 17 | 3.3% |
 | `franchise` | 15 | 2.9% |
-| `ip` | 15 | 2.9% |
-| `marketing` | 13 | 2.5% |
 | `agency` | 13 | 2.5% |
 | `transportation` | 13 | 2.5% |
 | `promotion` | 12 | 2.4% |
@@ -33,7 +33,6 @@
 | `consulting` | 11 | 2.2% |
 | `affiliate` | 10 | 2.0% |
 | `non_compete_no_solicit` | 3 | 0.6% |
-| `other` | 1 | 0.2% |
 
 ## 2. Filing context
 
@@ -66,29 +65,27 @@
 |---|---|---|---|---|
 | `agency` | 13 | 121,559 | 3,886 | 161,626 |
 | `franchise` | 15 | 116,873 | 2,974 | 300,768 |
-| `promotion` | 12 | 70,383 | 10,553 | 175,580 |
-| `outsourcing` | 18 | 58,860 | 1,952 | 338,211 |
-| `ip` | 15 | 56,509 | 5,046 | 155,463 |
-| `collaboration` | 26 | 54,866 | 2,811 | 335,282 |
-| `transportation` | 13 | 52,008 | 6,088 | 229,670 |
-| `supply` | 17 | 49,915 | 5,713 | 188,674 |
-| `co_branding` | 22 | 47,639 | 857 | 114,759 |
-| `manufacturing` | 17 | 45,846 | 1,742 | 225,094 |
-| `strategic_alliance` | 32 | 45,033 | 5,712 | 122,054 |
-| `reseller` | 12 | 45,002 | 2,935 | 117,478 |
-| `development` | 33 | 43,803 | 6,390 | 291,873 |
-| `hosting` | 19 | 37,351 | 1,660 | 161,066 |
-| `distributor` | 32 | 36,275 | 4,567 | 175,770 |
-| `marketing` | 13 | 34,740 | 17,300 | 221,382 |
-| `maintenance` | 34 | 33,577 | 1,707 | 233,248 |
-| `affiliate` | 10 | 27,015 | 14,083 | 109,014 |
-| `sponsorship` | 30 | 26,753 | 4,066 | 96,662 |
-| `license` | 33 | 25,060 | 1,902 | 159,488 |
-| `endorsement` | 24 | 24,223 | 3,456 | 68,204 |
-| `service` | 32 | 24,151 | 3,860 | 289,615 |
+| `promotion` | 12 | 64,014 | 10,553 | 175,580 |
+| `ip` | 16 | 56,683 | 5,046 | 155,463 |
+| `transportation` | 12 | 50,613 | 6,088 | 229,670 |
+| `collaboration` | 26 | 50,175 | 2,811 | 335,282 |
+| `supply` | 21 | 49,915 | 5,713 | 188,674 |
+| `outsourcing` | 18 | 49,361 | 1,952 | 338,211 |
+| `co_branding` | 23 | 47,639 | 857 | 114,759 |
+| `development` | 30 | 45,029 | 6,390 | 291,873 |
+| `strategic_alliance` | 32 | 42,737 | 5,712 | 122,054 |
+| `manufacturing` | 14 | 41,030 | 1,742 | 225,094 |
+| `marketing` | 18 | 39,906 | 3,558 | 221,382 |
+| `reseller` | 12 | 38,873 | 2,935 | 117,478 |
+| `hosting` | 20 | 36,481 | 1,660 | 161,066 |
+| `distributor` | 31 | 36,275 | 6,320 | 175,770 |
+| `maintenance` | 34 | 32,920 | 1,707 | 233,248 |
+| `affiliate` | 10 | 26,565 | 14,083 | 109,014 |
+| `sponsorship` | 30 | 26,337 | 4,066 | 96,662 |
+| `license` | 31 | 25,060 | 1,902 | 159,488 |
+| `endorsement` | 24 | 22,068 | 3,456 | 68,204 |
+| `service` | 27 | 20,983 | 3,860 | 289,615 |
 | `consulting` | 11 | 20,805 | 12,020 | 33,425 |
-| `non_compete_no_solicit` | 3 | 16,402 | 3,493 | 22,700 |
-| `other` | 1 | 11,770 | 11,770 | 11,770 |
 | `joint_venture` | 23 | 3,971 | 645 | 95,181 |
 
 ## 5. Category presence (annotator YES rates)

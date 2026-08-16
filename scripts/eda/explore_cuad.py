@@ -35,12 +35,83 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from src.cuad_ground_truth import CUAD_CATEGORIES  # noqa: E402
+from src.cuad_ground_truth import (  # noqa: E402
+    CUAD_CATEGORIES,
+    SUBTYPE_CUAD_FOLDERS,
+)
+from agents.sorter_agent import CONTRACT_SUBTYPES  # noqa: E402
 
 OUT = Path("data/eda")
 FIG = OUT / "figures"
-CUAD_JSON = Path("../llm-mailroom/data/cuad/CUAD_v1.json")
-SUBTYPE_JSON = Path("../llm-mailroom/data/cuad/subtype_distribution.json")
+# Repo-local corpus paths (`data/cuad_pdfs/` per its README — gitignored),
+# with the llm-mailroom mirror as fallback when the sibling repo is present.
+CUAD_JSON = Path("data/cuad_pdfs/CUAD_v1.json")
+CUAD_JSON_FALLBACK = Path("../llm-mailroom/data/cuad/CUAD_v1.json")
+
+# Dataset citation footer for every figure (KANBAN-014 follow-on).
+CUAD_CITE = ("Source: CUAD — Contract Understanding Atticus Dataset "
+             "(Hendrycks et al., NeurIPS 2021), The Atticus Project · "
+             "https://huggingface.co/datasets/theatticusproject/cuad")
+
+# Title -> 25-family subtype matcher for the per-subtype length stats. Patterns
+# are built from the taxonomy's CUAD folder names (`SUBTYPE_CUAD_FOLDERS`),
+# each family's `CONTRACT_SUBTYPES` label, and observed CUAD title variants;
+# longest match wins so multi-family titles route to the most specific family.
+_SUBTYPE_PATTERNS: dict[str, list[str]] = {}
+for _s in CONTRACT_SUBTYPES:
+    _key, _label = _s["key"], _s["label"]
+    _pats = [p.replace("_", " ") for p in SUBTYPE_CUAD_FOLDERS.get(_key, [])]
+    _pats += [_label]
+    if _key == "ip":
+        _pats += ["Intellectual Property"]
+    if _key == "joint_venture":
+        _pats += ["Joint Filing"]
+    if _key == "collaboration":
+        _pats += ["Cooperation"]
+    if _key == "non_compete_no_solicit":
+        _pats += ["Non-Compete", "No-Solicit", "Non-Disparagement"]
+    _SUBTYPE_PATTERNS[_key] = sorted({p for p in _pats if len(p) >= 6},
+                                     key=len, reverse=True)
+
+
+def _norm_pat(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", s.lower())
+
+
+def _subtype_from_title(title: str) -> str | None:
+    """Best-effort 25-family subtype for a CUAD title (longest match wins)."""
+    t = _norm_pat(title)
+    best_key, best_len = None, 0
+    for key, pats in _SUBTYPE_PATTERNS.items():
+        for p in pats:
+            np_ = _norm_pat(p)
+            if np_ in t and len(np_) > best_len:
+                best_key, best_len = key, len(np_)
+    return best_key
+
+
+def _add_citation(fig, ax, note: str = "") -> None:
+    """Footer dataset citation on a figure (drawn below the axes)."""
+    txt = CUAD_CITE + (f" · {note}" if note else "")
+    ax.text(0, -0.07, txt, transform=ax.transAxes, fontsize=7.5,
+            color="#444", va="top")
+    fig.tight_layout(rect=[0, 0.03, 1, 1])
+
+# Ground-truth CUAD contract subclass counts (mailroom 25-family taxonomy) for
+# the 509-contract eval corpus (`mailroom-cuad-contracts-full`), derived from
+# the experiment-log per-subtype totals (sums to 509, verified). Used by
+# figure 01 and the report's corpus-composition table — the original
+# taxonomy-derived `subtype_distribution.json` no longer exists in either repo.
+SUBTYPE_FALLBACK = {
+    "maintenance": 34, "license": 33, "distributor": 32,
+    "strategic_alliance": 32, "sponsorship": 31, "development": 28,
+    "service": 28, "collaboration": 26, "endorsement": 24,
+    "joint_venture": 23, "co_branding": 22, "hosting": 20,
+    "outsourcing": 18, "supply": 18, "ip": 17, "manufacturing": 17,
+    "marketing": 17, "franchise": 15, "agency": 13,
+    "transportation": 13, "promotion": 12, "reseller": 12,
+    "consulting": 11, "affiliate": 10, "non_compete_no_solicit": 3,
+}
 
 PALETTE = ["#2563eb", "#7c3aed", "#db2777", "#059669", "#d97706", "#dc2626",
            "#0891b2", "#65a30d", "#9333ea", "#ea580c"]
@@ -68,15 +139,11 @@ BUDGETS = {"25k (small)": 25_000, "90k (chunk window)": 90_000,
 
 
 def _load_cuad() -> list[dict]:
-    if not CUAD_JSON.exists():
-        raise SystemExit(f"CUAD_v1.json not found at {CUAD_JSON}")
-    return json.load(open(CUAD_JSON))["data"]
-
-
-def _load_subtype_dist() -> dict:
-    if not SUBTYPE_JSON.exists():
-        raise SystemExit(f"subtype_distribution.json not found at {SUBTYPE_JSON}")
-    return json.load(open(SUBTYPE_JSON))
+    path = CUAD_JSON if CUAD_JSON.exists() else CUAD_JSON_FALLBACK
+    if not path.exists():
+        raise SystemExit(f"CUAD_v1.json not found at {CUAD_JSON} "
+                         f"(or {CUAD_JSON_FALLBACK})")
+    return json.load(open(path))["data"]
 
 
 def _load_full_texts() -> list[dict]:
@@ -109,7 +176,6 @@ def _category_from_question(q: str) -> str:
 
 def analyze() -> dict:
     docs = _load_cuad()
-    dist = _load_subtype_dist()
     cat_stats: dict[str, dict] = {
         c: {"yes_docs": 0, "answers": 0, "span_len": []} for c in CUAD_CATEGORIES
     }
@@ -206,8 +272,22 @@ def analyze() -> dict:
             denom = min(cat_stats[a]["yes_docs"], cat_stats[b]["yes_docs"])
             coocc_norm[a][b] = coocc[a][b] / denom if denom else 0.0
 
-    # per-subtype length table (median/min/max chars) from the taxonomy file
-    per_subtype = dist.get("per_subtype", {})
+    # per-subtype text-length table (median/min/max chars) from the aligned
+    # texts, grouped by the title-derived 25-family subtype (KANBAN-014
+    # follow-on; replaces the removed taxonomy-JSON dependency).
+    per_subtype_raw: dict[str, list[int]] = {}
+    for i, t in enumerate(texts):
+        sub = _subtype_from_title(titles[i])
+        if sub and t:
+            per_subtype_raw.setdefault(sub, []).append(len(t))
+    per_subtype: dict[str, dict] = {
+        k: {"count": len(v), "median_chars": int(np.median(v)),
+            "min_chars": min(v), "max_chars": max(v)}
+        for k, v in per_subtype_raw.items()
+    }
+    print(f"[info] subtype assigned for "
+          f"{sum(len(v) for v in per_subtype_raw.values())}/{len(docs)} "
+          f"contracts via title matching")
 
     return {
         "n_docs": len(docs), "n_qa": n_qa,
@@ -218,6 +298,7 @@ def analyze() -> dict:
         "redacted_text": redacted_text, "redact_hits": redact_hits,
         "redacted_titles": redacted_titles,
         "coocc": coocc, "coocc_norm": coocc_norm,
+        "subtype_dist": SUBTYPE_FALLBACK,
         "per_subtype": per_subtype,
     }
 
@@ -234,17 +315,22 @@ def make_figures(res: dict) -> None:
                          "axes.titleweight": "bold", "figure.facecolor": "white"})
     n = res["n_docs"]
 
-    # 1. Subtype distribution (from the taxonomy-derived distribution json)
-    dist = _load_subtype_dist()["distribution"]
-    items = sorted(dist.items(), key=lambda kv: -kv[1])
-    names = [k for k, _ in items][:25]
-    vals = [v for _, v in items][:25]
+    # 1. CUAD contract subclass distribution (mailroom 25-family taxonomy)
+    #    Data: ground-truth subtype counts of the 509-contract eval corpus
+    #    (`mailroom-cuad-contracts-full`, experiment-log per-subtype totals).
+    dist = res["subtype_dist"]
+    items = sorted(dist.items(), key=lambda kv: -kv[1])[:25]
+    names = [k for k, _ in items]
+    vals = [v for _, v in items]
     fig, ax = plt.subplots(figsize=(11, 5.5))
     ax.barh(names[::-1], vals[::-1], color=PALETTE[0], edgecolor="white")
-    ax.set_title("Contract subtype distribution (mailroom 25-family taxonomy)")
+    for y, v in enumerate(vals[::-1]):
+        ax.text(v + 0.4, y, str(v), va="center", fontsize=7, color="#333")
+    ax.set_title("CUAD contract subclass distribution "
+                 f"(25-family taxonomy, n={sum(vals)})")
     ax.set_xlabel("contracts")
     ax.grid(axis="x", alpha=0.3)
-    fig.tight_layout()
+    _add_citation(fig, ax, "n=509 contracts in the eval corpus")
     fig.savefig(FIG / "01_subtype_distribution.png", dpi=140)
     plt.close(fig)
 
@@ -257,7 +343,7 @@ def make_figures(res: dict) -> None:
         ax.set_xlabel("chars (thousands)")
         ax.set_ylabel("contracts")
         ax.grid(axis="y", alpha=0.3)
-        fig.tight_layout()
+        _add_citation(fig, ax, "510 contracts · CUAD_v1.json paragraph contexts")
         fig.savefig(FIG / "02_text_length_hist.png", dpi=140)
         plt.close(fig)
 
@@ -272,7 +358,7 @@ def make_figures(res: dict) -> None:
     ax.set_title(f"CUAD category presence rate across {n} contracts (top 24)")
     ax.set_xlabel("share of contracts where the category is labeled YES")
     ax.grid(axis="x", alpha=0.3)
-    fig.tight_layout()
+    _add_citation(fig, ax, "annotator YES labels across the 41 clause categories")
     fig.savefig(FIG / "03_category_yes_rates.png", dpi=140)
     plt.close(fig)
 
@@ -291,7 +377,7 @@ def make_figures(res: dict) -> None:
     ax.set_xlabel("total answer spans")
     ax.set_ylabel("mean span length (chars)")
     ax.grid(alpha=0.3)
-    fig.tight_layout()
+    _add_citation(fig, ax, "20,910 QA pairs · answer-span annotations")
     fig.savefig(FIG / "04_category_spans.png", dpi=140)
     plt.close(fig)
 
@@ -306,7 +392,7 @@ def make_figures(res: dict) -> None:
     ax.set_ylabel("contracts")
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
-    fig.tight_layout()
+    _add_citation(fig, ax, "answer spans per contract · all 41 categories")
     fig.savefig(FIG / "05_spans_per_doc.png", dpi=140)
     plt.close(fig)
 
@@ -321,7 +407,7 @@ def make_figures(res: dict) -> None:
     ax.set_ylabel("contracts")
     ax.tick_params(axis="x", rotation=45)
     ax.grid(axis="y", alpha=0.3)
-    fig.tight_layout()
+    _add_citation(fig, ax, "SEC exhibit tags parsed from the 510 document titles")
     fig.savefig(FIG / "06_filing_types.png", dpi=140)
     plt.close(fig)
 
@@ -344,7 +430,7 @@ def make_figures(res: dict) -> None:
         ax.set_xlabel("chars (thousands)")
         ax.legend(loc="lower right")
         ax.grid(axis="x", alpha=0.3)
-        fig.tight_layout()
+        _add_citation(fig, ax, "title-derived 25-family subtype grouping")
         fig.savefig(FIG / "07_subtype_lengths.png", dpi=140)
         plt.close(fig)
 
@@ -366,7 +452,7 @@ def make_figures(res: dict) -> None:
     ax.set_title("Restriction-family co-occurrence (share of the less-common "
                  "category's docs that also carry the other)")
     fig.colorbar(im, shrink=0.75, label="co-occurrence (normalized)")
-    fig.tight_layout()
+    _add_citation(fig, ax, "10 restriction-family categories · YES-label co-presence")
     fig.savefig(FIG / "08_restriction_cooccurrence.png", dpi=140)
     plt.close(fig)
 
@@ -383,7 +469,7 @@ def make_figures(res: dict) -> None:
         ax.set_xlabel("chars (thousands)")
         ax.set_ylabel("contracts")
         ax.grid(axis="y", alpha=0.3)
-        fig.tight_layout()
+        _add_citation(fig, ax, "pipeline input budgets vs the 510-doc text corpus")
         fig.savefig(FIG / "09_length_budgets.png", dpi=140)
         plt.close(fig)
 
@@ -398,7 +484,7 @@ def make_figures(res: dict) -> None:
         ax.set_xlabel("chars (thousands)")
         ax.set_ylabel("spans per 1k chars")
         ax.grid(alpha=0.3)
-        fig.tight_layout()
+        _add_citation(fig, ax, "span annotations vs text length, per contract")
         fig.savefig(FIG / "10_density_vs_length.png", dpi=140)
         plt.close(fig)
 
@@ -423,7 +509,7 @@ def render_report(res: dict) -> str:
                  f"(~{tk[len(tk)//2]:,} tokens median by chars/4)\n")
 
     L.append("## 1. Corpus composition\n")
-    dist = _load_subtype_dist()["distribution"]
+    dist = res["subtype_dist"]
     L.append("| subtype | contracts | share |\n|---|---|---|")
     for k, v in sorted(dist.items(), key=lambda kv: -kv[1]):
         L.append(f"| `{k}` | {v} | {v/n:.1%} |")
