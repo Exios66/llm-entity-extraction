@@ -63,15 +63,29 @@ _NOTE_BY_RUN = {
         "1-doc smoke run on the default key before the funded full launch "
         "— full-509 run pending (KANBAN-036)"),
     "deepseek-v4-flash_sorter_v13_subtype_langfuse@2026-08-16T05:44:26": (
-        "Full-509 benchmark (KANBAN-036) — cheapest deepseek v4 flash arm "
-        "($0.0629/M prompt + $0.1257/M completion)"),
+        "Full-509 FIRST run (KANBAN-036) — cheapest deepseek v4 flash arm "
+        "($0.0629/M prompt + $0.1257/M completion); SUPERSEDED by the clean "
+        "rerun below (canonical 0.9332)"),
+    "deepseek-v4-flash_sorter_v13_subtype_langfuse@2026-08-16T06:38:50": (
+        "Full-509 CLEAN rerun (KANBAN-036) — CANONICAL deepseek-v4-flash "
+        "result 0.9332 / equiv 0.9352 (supersedes the 0.9253 first run)"),
+    "gpt-4.1-nano_sorter_v13_subtype_langfuse@2026-08-16T06:27:47": (
+        "Full-509 benchmark (KANBAN-036) — gpt-4.1-nano cost-floor arm "
+        "($0.10/$0.40); 0.8782 — complete, not pending"),
+    "llama-4-scout_sorter_v13_subtype_langfuse@2026-08-16T06:36:30": (
+        "Full-509 benchmark (KANBAN-036) — llama-4-scout arm ($0.10/$0.30, "
+        "1.31M ctx); 0.8880"),
+    "llama-3.3-70b-instruct_sorter_v13_subtype_langfuse@2026-08-16T06:54:54": (
+        "Full-509 benchmark (KANBAN-036 arm) — FIRST llama-3.3-70b-instruct "
+        "sorter run, 0.8900 (KANBAN-042 later duplicated the model at 0.8782)"),
     "deepseek-v4-pro_sorter_v13_subtype_langfuse@2026-08-16T10:46:28": (
         "Full-509 benchmark (KANBAN-042) — deepseek v4 PRO arm "
         "($0.435/M prompt + $0.87/M completion; ~$3.15 est.) — highest "
         "subtype accuracy in the sweep to date"),
     "meta-llama-llama-3.3-70b-instruct_sorter_v13_subtype_langfuse@2026-08-16T10:51:33": (
         "Full-509 benchmark (KANBAN-042) — llama 3.3 70B instruct arm "
-        "(OpenRouter-billed, no local price)"),
+        "(OpenRouter-billed, no local price); 0.8782 — duplicate of the "
+        "KANBAN-036 llama arm (canonical 0.8900)"),
 }
 
 

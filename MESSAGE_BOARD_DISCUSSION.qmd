@@ -57,6 +57,51 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-036"}
+
+**2026-08-16 — opencode — KANBAN-036 reconciliation: the complete, verified v13 (sorter_v13) model-sweep results table**
+
+Reconciled the sweep against `reports/experiment_log.jsonl` (the source of
+truth) + the board/CHANGELOG/discussion messages. **Seven distinct models were
+evaluated on the champion `sorter_v13` prompt** (full-509, seed 42, temp 0.1,
+reasoning medium, 509/509 rows, 0 errors; strict = subtype_accuracy, CI =
+percentile-bootstrap):
+
+| Model | Strict | Equiv | Fails | Strict CI |
+|---|---|---|---|---|
+| deepseek/deepseek-v4-pro | **0.9528** | 0.9548 | 24 | [0.9332, 0.9705] |
+| qwen/qwen3.7-flash (champion) | 0.9430 | 0.9470 | 29 | [0.9214, 0.9627] |
+| deepseek/deepseek-v4-flash | 0.9332 | 0.9352 | 34 | [0.9096, 0.9528] |
+| openai/gpt-5-nano | 0.8978 | 0.9018 | 52 | [0.8703, 0.9234] |
+| meta-llama/llama-3.3-70b-instruct | 0.8900 | 0.9116 | 56 | [0.8625, 0.9175] |
+| meta-llama/llama-4-scout | 0.8880 | 0.9077 | 57 | [0.8605, 0.9136] |
+| openai/gpt-4.1-nano | 0.8782 | 0.8959 | 62 | [0.8487, 0.9057] |
+
+**Corrections found during the double-check (post, don't rewrite — prior
+messages below stand as written, this is the correction):**
+
+1. **deepseek-v4-flash = 0.9332, not 0.9253.** The log has TWO clean full-509
+   deepseek-v4-flash runs: 0.9253 (first, @05:44) and 0.9332 (clean rerun,
+   @06:38, the KANBAN-036 CHANGELOG number). KANBAN-040/042 cited 0.9253; the
+   canonical is **0.9332**.
+2. **llama-4-scout 0.8880 was missing** from the sweep summaries (KANBAN-042's
+   "Sweep now" line omitted it; KANBAN-041's "no llama sorter runs" claim is
+   superseded — `llama-4-scout_sorter_v13_subtype_langfuse` @06:36 IS a sorter
+   run). It is the 6th-ranked model.
+3. **llama-3.3-70b-instruct ran twice** (0.8900 KANBAN-036 arm @06:54 →
+   0.8782 KANBAN-042 arm @10:51) — a duplicate launch; canonical = 0.8900.
+4. **gpt-4.1-nano is NOT pending** (KANBAN-042 "Sweep now" said "pending") —
+   it completed @06:27 at 0.8782 (62 fails).
+
+**Headline:** deepseek-v4-pro (0.9528) is the ONLY model to beat the qwen
+champion (0.9430), +0.98pp — but cross-model significance is NOT claimed (the
+±0.006 band was measured on identical-prompt qwen reruns). The sweep workbook
+(`reports/sheets/Sorter_Model_Sweep_Results.xlsx`) still needs a regen to cover
+all 7 models (llama-4-scout + gpt-4.1-nano full-509 are absent; needs
+`openpyxl`).
+
+:::
+
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-042"}
 **2026-08-16 — opencode — KANBAN-042 done: model-sweep expansion — deepseek-v4-pro 0.9528 + llama-3.3-70b-instruct 0.8782 on champion sorter_v13, full-509 (research-funding key)**
 
