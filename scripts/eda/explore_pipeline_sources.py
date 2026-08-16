@@ -535,6 +535,21 @@ def _hist_ax(ax, values, xlabel, title, color="#1f77b4"):
     ax.set_title(title)
 
 
+# Fraction of the figure height reserved for the citation footer band.
+FOOTER_FRAC = 0.11
+
+
+def _add_citation(fig, note: str) -> None:
+    """Footer dataset citation (dedicated band below the axes).
+
+    Reserves a footer band and centers the citation inside it, so the axes
+    (with its x labels / legend) always sits fully above the text.
+    """
+    fig.tight_layout(rect=[0, FOOTER_FRAC, 1, 1])
+    fig.text(0.5, FOOTER_FRAC / 2, note, ha="center", va="center",
+             fontsize=7, color="#444")
+
+
 def make_maud_figures(res: dict, figdir: Path) -> None:
     if "contracts_text" not in res:
         return
@@ -544,8 +559,7 @@ def make_maud_figures(res: dict, figdir: Path) -> None:
              "chars", "MAUD contract size", "#6d28d9")
     ax.axvline(90_000, color="crimson", ls="--", lw=1.2)
     ax.text(91_000, ax.get_ylim()[1] * 0.9, "90k chunk window", color="crimson", fontsize=8)
-    fig.text(0.99, 0.01, CITES["maud"], ha="right", fontsize=7, color="gray")
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    _add_citation(fig, CITES["maud"])
     fig.savefig(figdir / "maud_contract_size.png", dpi=110)
     plt.close(fig)
 
@@ -556,8 +570,7 @@ def make_maud_figures(res: dict, figdir: Path) -> None:
     ax.set_title("MAUD consideration-type subclass GT")
     ax.set_ylabel("contracts")
     ax.tick_params(axis="x", rotation=30)
-    fig.text(0.99, 0.01, CITES["maud"], ha="right", fontsize=7, color="gray")
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    _add_citation(fig, CITES["maud"])
     fig.savefig(figdir / "maud_subclasses.png", dpi=110)
     plt.close(fig)
 
@@ -570,8 +583,7 @@ def make_maud_figures(res: dict, figdir: Path) -> None:
         ax.set_yticklabels(names, fontsize=7)
         ax.set_xlabel("rows")
         ax.set_title("MAUD per-question task volume")
-        fig.text(0.99, 0.01, CITES["maud"], ha="right", fontsize=7, color="gray")
-        fig.tight_layout(rect=(0, 0.04, 1, 1))
+        _add_citation(fig, CITES["maud"])
         fig.savefig(figdir / "maud_task_volume.png", dpi=110)
         plt.close(fig)
 
@@ -602,8 +614,7 @@ def make_docclass_figures(res: dict, figdir: Path) -> None:
     ax.bar(names, vals, color="#1d4ed8")
     ax.set_title("Merged doc-class surface — doc_type balance")
     ax.set_ylabel("rows")
-    fig.text(0.99, 0.01, CITES["docclass"], ha="right", fontsize=7, color="gray")
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    _add_citation(fig, CITES["docclass"])
     fig.savefig(figdir / "docclass_balance.png", dpi=110)
     plt.close(fig)
 
@@ -617,8 +628,7 @@ def make_docclass_figures(res: dict, figdir: Path) -> None:
         ax.set_yticklabels(names, fontsize=8)
         ax.set_xlabel("rows")
         ax.set_title(f"Subclass GT (without/None = {res['subclass_none']}, GT-other = {res['gt_other']})")
-        fig.text(0.99, 0.01, CITES["docclass"], ha="right", fontsize=7, color="gray")
-        fig.tight_layout(rect=(0, 0.04, 1, 1))
+        _add_citation(fig, CITES["docclass"])
         fig.savefig(figdir / "docclass_subclasses.png", dpi=110)
         plt.close(fig)
 
@@ -634,8 +644,7 @@ def make_legalbench_figures(res: dict, figdir: Path) -> None:
     ax.set_xticklabels(names, rotation=60, ha="right", fontsize=7)
     ax.set_ylabel("rows")
     ax.set_title("LegalBench task surface sizes")
-    fig.text(0.99, 0.01, CITES["legalbench"], ha="right", fontsize=7, color="gray")
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    _add_citation(fig, CITES["legalbench"])
     fig.savefig(figdir / "legalbench_surfaces.png", dpi=110)
     plt.close(fig)
 

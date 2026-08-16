@@ -53,6 +53,11 @@ CUAD_CITE = ("Source: CUAD — Contract Understanding Atticus Dataset "
              "(Hendrycks et al., NeurIPS 2021), The Atticus Project · "
              "https://huggingface.co/datasets/theatticusproject/cuad")
 
+# Fraction of the figure height reserved for the citation footer band. Large
+# enough for a wrapped two-line citation on the shortest figures, so the axes
+# (with its x labels / legend) always sits fully above the band.
+FOOTER_FRAC = 0.10
+
 # Title -> 25-family subtype matcher for the per-subtype length stats. Patterns
 # are built from the taxonomy's CUAD folder names (`SUBTYPE_CUAD_FOLDERS`),
 # each family's `CONTRACT_SUBTYPES` label, and observed CUAD title variants;
@@ -91,11 +96,17 @@ def _subtype_from_title(title: str) -> str | None:
 
 
 def _add_citation(fig, ax, note: str = "") -> None:
-    """Footer dataset citation on a figure (drawn below the axes)."""
+    """Footer dataset citation on a figure (dedicated band below the axes).
+
+    Reserves a footer band under the axes and centers the citation inside it,
+    so it never collides with the x-axis labels, tick labels, or a legend
+    (a plain ``ax.text`` at negative axes coordinates would render the text
+    overlapping the label area on short figures).
+    """
     txt = CUAD_CITE + (f" · {note}" if note else "")
-    ax.text(0, -0.07, txt, transform=ax.transAxes, fontsize=7.5,
-            color="#444", va="top")
-    fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.tight_layout(rect=[0, FOOTER_FRAC, 1, 1])
+    fig.text(0.5, FOOTER_FRAC / 2, txt, ha="center", va="center",
+             fontsize=7, color="#444")
 
 # Ground-truth CUAD contract subclass counts (mailroom 25-family taxonomy) for
 # the 509-contract eval corpus (`mailroom-cuad-contracts-full`), derived from
