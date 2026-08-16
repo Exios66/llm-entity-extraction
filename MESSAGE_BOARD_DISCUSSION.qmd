@@ -59,6 +59,63 @@ has a designated profile; posts are signed with the agent name.
 
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
 
+**2026-08-16 — opencode — KANBAN-036: llama-4-scout arm QUEUED after the gpt-4.1-nano arm (full-509, sorter_v13)**
+
+Human directive: queue a **Llama 4 Scout** run on the same v13 full-corpus
+subtype surface, sequenced **after** the OpenAI arm. Slug verified live against
+the OpenRouter catalog: **`meta-llama/llama-4-scout`** (no `-instruct` suffix;
+$0.10/M prompt + $0.30/M completion, 1.31M ctx). Smoke-tested 1 doc (default
+key, Phoenix sink): **exact 1.0 / subtype 1.0, 26.3k tokens/doc** (1,894
+completion — reasoning_effort=medium is token-heavy on this model, so the full
+run lands ~$1.5 est.). Run reserved: **`llama-4-scout_sorter_v13_subtype_langfuse`**
++ manifest `data/manifests/llama4scout_sorter_v13_509.jsonl` — launch AFTER the
+gpt-4.1-nano full run (`gpt-4.1-nano_sorter_v13_subtype_langfuse`) finishes:
+both deepseek-v4-flash and gpt-4.1-nano full-509 runs are in flight right now
+(launched 01:25, `--research-funding-key`), so the llama arm waits rather than
+trampling. **Env gotcha found:** my shell exports a stale `BRAINTRUST_API_KEY`
+(`sk-yp7…`, user axios337@gmail.com / UW-Madison) that overrides the correct
+`sk-6r2…` in `config/environments/braintrust.env` and 403s on
+`mailroom-cuad-contracts-full` — run with `env -u BRAINTRUST_API_KEY` (or
+unset it) so the file key wins.
+
+:::
+
+::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-037"}
+
+**2026-08-16 — opencode — KANBAN-037 in_review: env files consolidated under config/environments/ + data placeholder folders**
+
+Two-part board-only task delivered. **(1) Env routing fixed to
+`config/environments/`:** the live dotenv files (`braintrust.env`, `.env`,
+`langfuse.env`) and their `.example` templates now live under
+[`config/environments/`](config/environments/) — `src/env_utils.py` exports
+the shared path constants (`ENV_DIR` / `BRAINTRUST_ENV_FILE` / `DOTENV_FILE` /
+`LANGFUSE_ENV_FILE`) plus `resolve_env_file()` (absolute paths pass through;
+bare `--env-file` names resolve under `ENV_DIR`), and `load_env()` iterates
+`(BRAINTRUST_ENV_FILE, DOTENV_FILE)` instead of repo-root paths.
+`src/braintrust_config.py` + `src/langfuse_config.py` default to `None` →
+resolved file and fall back to `DOTENV_FILE` (repo-root-absolute) instead of
+CWD `Path(".env")`; `sync_langfuse_prompts.py` / `sync_langfuse_datasets.py` /
+`run_annotation_queue.py` import the shared constant for their defaults.
+`.gitignore` ignores the new paths (root entries kept one release as a safety
+net); example headers + setup docs (README, AGENTS.md, wiki/Getting-Started,
+config/README, src/README) updated to the new `cp` paths. **(2) Data
+placeholder folders:** committed README placeholders for the wired-in data
+under `data/` — `cuad_pdfs/`, `maud/`, `s1_corporate_records/`,
+`legalbench_local/`, `manifests/`, `judgments/`, `samples/` (each gitignored
+via `/*` + `!README.md` negation so the doc is tracked, the data is not).
+**Verification:** `tests/test_env_utils.py` + `test_braintrust_config.py` +
+`test_sync_langfuse_prompts.py` + `test_sync_langfuse_datasets.py` +
+`test_langfuse_tracing.py` + `test_annotation_queue.py` = 54/54 green
+(network-free). Two pre-existing env-dependent smoke failures unrelated to
+this card: `test_langfuse_subtype_loop_wiring` (Phoenix default from
+KANBAN-031 — passes with `PHOENIX_TRACING=disabled`) and
+`test_subtype_loop_no_braintrust_logging` (real `config/environments/.env`
+carries `LANGSMITH_TRACING=true` — the documented `.env` reload issue).
+
+:::
+
+::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
+
 **2026-08-16 — opencode — KANBAN-036 claimed: deepseek-v4-flash + gpt-4.1-nano full-509 sweep on sorter_v13**
 
 Per the human directive, two more full-509 subtype evals on the champion
