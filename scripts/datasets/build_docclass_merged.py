@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""Build the MERGED docclass corpus: one dataset with every docclass document.
+
+Combines the three docclass corpora into a single flat JSONL dump
+(``data/datasets/docclass_merged.jsonl``, gitignored) — the ONE dataset that
+the hierarchical sorter eval (``run_langfuse_docclass_eval.py --local-dumps``)
+and the Langfuse mirror (``sync_langfuse_datasets.py --docclass``) consume:
+
+    mailroom-cuad-contracts-full  -> 509 contract rows            (Braintrust)
+    data/maud/contracts.jsonl     -> 152 merger_agreement rows    (local dump)
+    data/s1_corporate_records/    ->  15 corporate_record rows    (local dump)
+                                   = 676 rows total
+
+Every row carries the flat streamer-dump shape the docclass eval runner reads:
+``{filename, doc_text, prompt, expected, expected_subclass, metadata}`` where
+``expected`` is the doc_type key and ``expected_subclass`` the second-level
+key (None for contract — CUAD subtype scoring is the shared subtype surface's
+job). ``metadata`` keeps each corpus' original fields plus ``source_dataset``.
+
+The merged dump is deterministically ordered (by corpus, then filename) so
+its dataset fingerprint is reproducible across rebuilds. Use it as the single
+docclass A/B surface:
+
+    python scripts/datasets/build_docclass_merged.py                 # rebuild
+    python scripts/eval/run_langfuse_docclass_eval.py \\
+        --local-dumps data/datasets/docclass_merged.jsonl \\
+        --stratified 30 --seed 42 --prompt-version sorter_docclass_v3
+    python scripts/eval/sync_langfuse_datasets.py --docclass          # -> Langfuse
+
+Usage:
+    python scripts/datasets/build_docclass_merged.py --dry-run
+    python scripts/datasets/build_docclass_merged.py
+    python scripts/datasets/build_docclass_merged.py --out data/datasets/docclass_merged.jsonl
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+DEFAULT_OUT = Path("data/datasets/docclass_merged.jsonl")
+MAUD_DUMP = Path("data/maud/contracts.jsonl")
+S1_DUMP = Path("data/s1_corporate_records/corporate-records.jsonl")
+CUAD_DATASET = "mailroom-cuad-contracts-full"
+CUAD_SUBCLASS_NOTE = (
+    "CUAD contract rows carry no expected_subclass on the docclass surface: "
+    "contract subtype scoring is the shared 509-doc subtype surface's job."
+)
+
+
+def load_cuad_rows(project: str, project_id: str) -> list[dict]:
+    """Load the CUAD contract rows from Braintrust (the reliable CUAD source)."""
+    from src.braintrust_config import load_braintrust_config
+    from src.braintrust_utils import load_braintrust_dataset
+
+    cfg = load_braintrust_config()
+    dataset = load_braintrust_dataset(project or cfg.project_name, CUAD_DATASET,
+                                      valid=None, project_id=project_id or cfg.project_id)
+    rows = []
+    for d in dataset:
+        metadata = dict(d.get("metadata") or {})
+        metadata["source_dataset"] = CUAD_DATASET
+        rows.append({
+            "filename": str(d.get("filename") or ""),
+            "doc_text": str(d.get("doc_text") or ""),
+            "prompt": str(d.get("prompt") or ""),
+            "expected": str(d.get("expected") or "").strip(),
+            "expected_subclass": None,  # contract rows: subclass scored on the subtype surface
+            "metadata": metadata,
+        })
+    return [r for r in rows if r["doc_text"].strip() and r["expected"]]
+
+
+def load_dump_rows(path: Path) -> list[dict]:
+    """Load one streamer ``--local-dump`` JSONL (MAUD / S-1) as flat rows."""
+    rows = []
+    if not path.exists():
+        print(f"WARNING: local dump not found: {path}", file=sys.stderr)
+        return rows
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            metadata = dict(row.get("metadata") or {})
+            metadata["source_dataset"] = str(path)
+            rows.append({
+                "filename": str(row.get("filename") or ""),
+                "doc_text": str(row.get("doc_text") or ""),
+                "prompt": str(row.get("prompt") or ""),
+                "expected": str(row.get("expected") or "").strip(),
+                "expected_subclass": row.get("expected_subclass")
+                                     or metadata.get("expected_subclass"),
+                "metadata": metadata,
+            })
+    return [r for r in rows if r["doc_text"].strip() and r["expected"]]
+
+
+def build_merged(cuad: list[dict], maud: list[dict], s1: list[dict]) -> list[dict]:
+    """Merge the three corpora into one deterministic row list.
+
+    Corpus order: contract (CUAD), merger_agreement (MAUD), corporate_record
+    (S-1); within each corpus rows are filename-sorted so rebuilds produce a
+    byte-identical dump and therefore the same dataset fingerprint.
+    """
+    merged = []
+    for corpus in (cuad, maud, s1):
+        merged.extend(sorted(corpus, key=lambda r: r["filename"]))
+    return merged
+
+
+def main_with_args(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT,
+                        help=f"Output JSONL path (default: {DEFAULT_OUT})")
+    parser.add_argument("--project", default=None,
+                        help="Braintrust project holding the CUAD dataset (default: config)")
+    parser.add_argument("--project-id", default=None, help="Braintrust project id")
+    parser.add_argument("--maud-dump", type=Path, default=MAUD_DUMP,
+                        help=f"MAUD contracts dump (default: {MAUD_DUMP})")
+    parser.add_argument("--s1-dump", type=Path, default=S1_DUMP,
+                        help=f"S-1 corporate-record dump (default: {S1_DUMP})")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Load + count the sources and print the plan without writing")
+    args = parser.parse_args(argv)
+
+    print(f"Loading CUAD rows from Braintrust dataset {CUAD_DATASET} ...")
+    cuad = load_cuad_rows(args.project, args.project_id)
+    maud = load_dump_rows(args.maud_dump)
+    s1 = load_dump_rows(args.s1_dump)
+    print(f"  CUAD contract rows: {len(cuad)}")
+    print(f"  MAUD merger_agreement rows: {len(maud)}")
+    print(f"  S-1 corporate_record rows: {len(s1)}")
+
+    merged = build_merged(cuad, maud, s1)
+    if not merged:
+        parser.error("No rows loaded — check the Braintrust keys and local dumps.")
+    if len(merged) < 600:
+        print(f"WARNING: expected ~676 rows, got {len(merged)} — the CUAD dataset "
+              f"may be org-capped (0 rows when capped).", file=sys.stderr)
+
+    from collections import Counter
+
+    from src.evaluation import dataset_fingerprint
+
+    counts = Counter(r["expected"] for r in merged)
+    sub_counts = Counter(r["expected_subclass"] for r in merged if r["expected_subclass"])
+    print(f"\nMerged docclass corpus: {len(merged)} rows "
+          f"(doc_type {dict(counts)}; subclass GT {dict(sub_counts)})")
+    print(f"CUAD subclass note: {CUAD_SUBCLASS_NOTE}")
+    print(f"dataset_fingerprint: {dataset_fingerprint(merged)}")
+
+    if args.dry_run:
+        print(f"\nDry run: would write {len(merged)} rows -> {args.out}")
+        return 0
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    with args.out.open("w", encoding="utf-8") as fh:
+        for row in merged:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    print(f"\nWrote {len(merged)} rows -> {args.out}")
+    return 0
+
+
+def main() -> int:
+    return main_with_args(sys.argv[1:])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

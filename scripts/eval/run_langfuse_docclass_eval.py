@@ -32,6 +32,24 @@ Usage:
     python scripts/eval/run_langfuse_docclass_eval.py \\
         --local-dumps data/maud/contracts.jsonl,data/s1_corporate_records/corporate-records.jsonl
     python scripts/eval/run_langfuse_docclass_eval.py --sample 5 --seed 42
+
+Vision-primary mode (KANBAN-033 vision arm): ``--input-mode vision-primary``
+classifies each document from its page images FIRST (the
+``sorter_docclass_vision_v0`` prompt), and falls back to the text pass
+(``doc_text``) when the vision pass cannot produce a label — no page images
+for the row, a vision call error, or the model's own UNREADABLE/invalid
+output. ``--pdf-dir`` points at a local PDF mirror whose files are matched to
+rows by filename stem (e.g. the CUAD corpus tree under ``data/cuad_pdfs``);
+rows without a matching PDF skip straight to text. ``--vision-pages all``
+sends every rendered page in one call (the full-document read);
+``--vision-pages first`` sends only page 1 (cheap pilot). The auto-switch
+rule mirrors the classification runner: vision modes default the prompt to
+``sorter_docclass_vision_v0`` unless ``--prompt-version`` is explicit.
+
+    python scripts/eval/run_langfuse_docclass_eval.py \\
+        --local-dumps data/datasets/docclass_merged.jsonl \\
+        --input-mode vision-primary --pdf-dir data/cuad_pdfs \\
+        --vision-pages first --sample 6 --seed 42
 """
 
 from __future__ import annotations
@@ -160,6 +178,60 @@ def random_sample(dataset: list[dict], n: int, seed: int) -> list[dict]:
     return random.Random(seed).sample(dataset, min(n, len(dataset)))
 
 
+def attach_pages_by_filename(dataset: list[dict], pdf_dir: Path) -> tuple[list[dict], int]:
+    """Render local PDF pages and attach ``pages_b64`` to matching rows.
+
+    Matches rows to PDFs by normalized filename stem (lowercased,
+    non-alphanumerics stripped — CUAD row filenames are the PDF stems without
+    the ``.pdf`` extension). Rendering mirrors ``load_local_pdfs`` in
+    ``run_classification_eval.py`` (grayscale 1024x1024 PNGs, hard cap of 40
+    pages per document). Returns ``(dataset, matched_count)``.
+    """
+    import base64
+
+    from src.image_utils import pdf_to_png_bytes
+
+    def _norm(name: str) -> str:
+        import re
+
+        return re.sub(r"[^a-z0-9]", "", Path(name).stem.lower())
+
+    by_stem: dict[str, Path] = {}
+    for path in sorted(pdf_dir.rglob("*.pdf")):
+        by_stem.setdefault(_norm(path.name), path)
+
+    matched = 0
+    for d in dataset:
+        if d.get("pages_b64"):
+            continue
+        pdf_path = by_stem.get(_norm(d.get("filename") or ""))
+        if pdf_path is None:
+            continue
+        try:
+            pdf_bytes = pdf_path.read_bytes()
+            pages = []
+            page_num = 0
+            while True:
+                try:
+                    pages.append(pdf_to_png_bytes(pdf_bytes, page_num=page_num))
+                    page_num += 1
+                except (IndexError, ValueError):
+                    break
+                except Exception as exc:  # noqa: BLE001 - one bad page must not abort
+                    print(f"WARNING: page {page_num + 1} of {pdf_path.name} failed: {exc}",
+                          file=sys.stderr)
+                    break
+                if page_num >= 40:  # hard cap, same as the classification runner
+                    break
+            if pages:
+                d["pages_b64"] = [base64.b64encode(p).decode("utf-8") for p in pages]
+                d["page_count"] = len(pages)
+                matched += 1
+        except Exception as exc:  # noqa: BLE001 - one bad PDF must not abort
+            print(f"WARNING: could not render {pdf_path.name}: {exc}", file=sys.stderr)
+    return dataset, matched
+
+
 def classify_failure(doc_type_ok: bool, subclass_ok: bool,
                      predicted_subclass: str | None) -> str | None:
     """Failure mode for the docclass task (None when the row is correct)."""
@@ -183,6 +255,20 @@ def main_with_args(argv: list[str]) -> int:
                         help="Comma-separated Braintrust datasets to evaluate")
     parser.add_argument("--local-dumps", default=None,
                         help="Comma-separated local JSONL dumps (replaces Braintrust loading)")
+    parser.add_argument("--input-mode", choices=["text", "vision", "vision-primary"],
+                        default="text",
+                        help="text: classify doc_text (default); vision: classify page "
+                             "images ONLY (needs --pdf-dir matches); vision-primary: try "
+                             "the vision pass FIRST, fall back to the text pass when the "
+                             "vision pass cannot produce a label (no pages, call error, "
+                             "UNREADABLE/invalid output)")
+    parser.add_argument("--pdf-dir", type=Path, default=None,
+                        help="Local PDF mirror (e.g. data/cuad_pdfs) whose pages are "
+                             "rendered for the vision pass; rows are matched by filename "
+                             "stem. Only used with --input-mode vision|vision-primary")
+    parser.add_argument("--vision-pages", choices=["all", "first"], default="all",
+                        help="all: send every rendered page in ONE vision call (full-"
+                             "document read, default); first: send only page 1 (cheap pilot)")
     parser.add_argument("--limit", type=int, default=None, help="Evaluate only the first N rows")
     parser.add_argument("--sample", type=int, default=0, help="Random sample of N rows")
     parser.add_argument("--stratified", type=int, default=0,
@@ -220,6 +306,15 @@ def main_with_args(argv: list[str]) -> int:
     if args.prompt_version not in available:
         parser.error(f"Unknown prompt version {args.prompt_version!r}. Available: {available}")
 
+    # Auto-switch rule (mirror of the classification runner): vision modes
+    # default the prompt to the docclass VISION prompt; an explicit
+    # --prompt-version always wins.
+    if args.input_mode in ("vision", "vision-primary") \
+            and args.prompt_version == DEFAULT_PROMPT:
+        args.prompt_version = "sorter_docclass_vision_v0"
+        print(f"  --input-mode {args.input_mode}: defaulting prompt to "
+              f"{args.prompt_version}")
+
     experiment_name = args.experiment_name or (
         f"{args.model.split('/')[-1]}_{args.prompt_version}_docclass_langfuse"
     )
@@ -233,6 +328,15 @@ def main_with_args(argv: list[str]) -> int:
     print(f"Loading datasets: {dataset_names or local_dumps}")
     dataset = load_docclass_dataset(dataset_names, args.dataset_project or args.project,
                                     project_id=_CONFIG.project_id, local_dumps=local_dumps)
+    if args.input_mode in ("vision", "vision-primary"):
+        if not args.pdf_dir:
+            parser.error("--input-mode vision|vision-primary requires --pdf-dir "
+                         "(a local PDF mirror matched to the rows by filename stem)")
+        if not args.pdf_dir.exists():
+            parser.error(f"--pdf-dir not found: {args.pdf_dir}")
+        dataset, matched = attach_pages_by_filename(dataset, args.pdf_dir)
+        print(f"  vision pages attached: {matched}/{len(dataset)} rows "
+              f"({len(dataset) - matched} will use text fallback in vision-primary)")
     if args.stratified:
         dataset = stratified_sample(dataset, args.stratified, args.seed)
         print(f"Stratified {len(dataset)} rows evenly across doc_type "
@@ -262,7 +366,8 @@ def main_with_args(argv: list[str]) -> int:
         print(f"Dry run: {len(dataset)} rows ({how}) -> experiment '{experiment_name}'")
         print(f"  sorter={args.prompt_version} model={args.model} "
               f"classes={DOCCLASS_CLASS_KEYS}")
-        print(f"  tracing={'phoenix' if phoenix_enabled() else 'langfuse'} "
+        print(f"  input_mode={args.input_mode} vision_pages={args.vision_pages} "
+              f"tracing={'phoenix' if phoenix_enabled() else 'langfuse'} "
               f"session={experiment_name} trace_name={args.lf_trace_name}")
         return 0
 
@@ -275,6 +380,7 @@ def main_with_args(argv: list[str]) -> int:
             "dataset_fingerprint": dataset_fingerprint(dataset),
             "model": args.model,
             "prompt_version": args.prompt_version,
+            "input_mode": args.input_mode,
             "tracing_backend": "phoenix" if phoenix_enabled() else "langfuse",
         })
         manifest.initialize()
@@ -338,6 +444,7 @@ def main_with_args(argv: list[str]) -> int:
             "prompt_version": args.prompt_version,
             "model": args.model,
             "reasoning_effort": args.reasoning_effort,
+            "input_mode": args.input_mode,
         }
         with tracer.trace_document(filename, expected_doc_type, trace_meta) as handle:
             sorter = SorterAgent(model=args.model, api_key=openrouter_key,
@@ -347,13 +454,68 @@ def main_with_args(argv: list[str]) -> int:
             sorter._max_input_chars = args.max_input_chars
             sorter._max_tokens = args.max_tokens
             sorter._reasoning_effort = args.reasoning_effort
+
+            input_mode_used = args.input_mode
+            fallback_reason = None
+            vision_usage = None
             try:
-                result = sorter.classify_json(input_data["doc_text"])
+                if args.input_mode == "text":
+                    result = sorter.classify_json(input_data["doc_text"])
+                else:
+                    pages = input_data.get("pages_b64") or []
+                    vision_attempted = bool(pages)
+                    if args.input_mode == "vision-primary" and not pages:
+                        # No page images for the row -> text pass carries it.
+                        fallback_reason = "no_pages"
+                        result = sorter.classify_json(input_data["doc_text"])
+                        input_mode_used = "text_fallback"
+                    elif args.input_mode == "vision" and not pages:
+                        result = {"doc_type": "correspondence", "contract_subtype": None,
+                                  "doc_subclass": None, "confidence": 0.0,
+                                  "reasoning": "no page images", "unreadable": True,
+                                  "invalid_label": False}
+                    elif args.vision_pages == "all":
+                        result = sorter.classify_document(pages)
+                    else:
+                        # Cheap pilot: page 1 only (one image per document).
+                        result = sorter.classify_image(
+                            pages[0], image_format=input_data.get("image_format", "png"))
+                    if vision_attempted:
+                        vision_usage = sorter._last_usage or {}
+                        if args.input_mode == "vision-primary" \
+                                and (result.get("unreadable") or result.get("invalid_label")
+                                     or result.get("doc_type") is None):
+                            fallback_reason = (
+                                "unreadable" if result.get("unreadable")
+                                else "invalid_label" if result.get("invalid_label")
+                                else "no_label")
+                            result = sorter.classify_json(input_data["doc_text"])
+                            input_mode_used = "text_fallback"
+                        elif args.input_mode == "vision-primary":
+                            input_mode_used = "vision"
             except Exception as exc:  # noqa: BLE001 - one bad row must not abort
-                result = {"doc_type": "correspondence", "contract_subtype": None,
-                          "doc_subclass": None, "confidence": 0.0,
-                          "reasoning": f"error: {exc}"}
+                if args.input_mode == "vision-primary":
+                    # Vision call failed -> text fallback carries the row.
+                    fallback_reason = f"vision_error:{type(exc).__name__}"
+                    try:
+                        result = sorter.classify_json(input_data["doc_text"])
+                    except Exception as text_exc:  # noqa: BLE001
+                        result = {"doc_type": "correspondence", "contract_subtype": None,
+                                  "doc_subclass": None, "confidence": 0.0,
+                                  "reasoning": f"error: {text_exc}"}
+                    input_mode_used = "text_fallback"
+                else:
+                    result = {"doc_type": "correspondence", "contract_subtype": None,
+                              "doc_subclass": None, "confidence": 0.0,
+                              "reasoning": f"error: {exc}"}
+
+            # Usage accounting: count the vision call AND the fallback text call.
             usage_by_index[index] = sorter._last_usage or {}
+            if vision_usage and input_mode_used == "text_fallback":
+                merged = dict(usage_by_index[index])
+                for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+                    merged[key] = (merged.get(key) or 0) + (vision_usage.get(key) or 0)
+                usage_by_index[index] = merged
 
             doc_type = str(result.get("doc_type", "correspondence")).strip().lower()
             doc_type_ok = doc_type == expected_doc_type
@@ -386,6 +548,8 @@ def main_with_args(argv: list[str]) -> int:
                     "exact_match": exact,
                     "failure_mode": classify_failure(doc_type_ok, subclass_ok, predicted_subclass),
                     "truncated": sorter._last_truncated,
+                    "input_mode": input_mode_used,
+                    "fallback_reason": fallback_reason,
                 },
             }
 
@@ -412,7 +576,8 @@ def main_with_args(argv: list[str]) -> int:
 
     rows = [
         {"index": i, "filename": d["filename"], "expected": d["expected"],
-         "doc_text": d["doc_text"], "expected_subclass": d.get("expected_subclass")}
+         "doc_text": d["doc_text"], "expected_subclass": d.get("expected_subclass"),
+         "pages_b64": d.get("pages_b64") or []}
         for i, d in enumerate(dataset)
     ]
     results: list[EvalResultShim] = [None] * len(rows)  # type: ignore[list-item]
@@ -569,6 +734,9 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             "max_tokens": args.max_tokens,
             "reasoning_effort": args.reasoning_effort,
             "temperature": args.temperature,
+            "input_mode": args.input_mode,
+            "vision_pages": args.vision_pages,
+            "pdf_dir": str(args.pdf_dir) if args.pdf_dir else None,
             "tracing_backend": tracing_backend,
             "tracing_meta": tracing_meta or {},
         },

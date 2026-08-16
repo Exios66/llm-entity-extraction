@@ -671,6 +671,50 @@ VALID CONTRACT SUBTYPE KEYS""",
 )
 
 # =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v3 (Phase 3.5 MERGE of
+# rules 34 + 35 on the v0 base) — KANBAN-033 prompt-iteration arm
+# -----------------------------------------------------------------------------
+# v3 = v0 + rules 34 AND 35 (one merge candidate, not a stacked chain), from
+# the same-surface A/B on the 30-doc docclass surface (fp d3d7b335…, seed 42,
+# temp 0.1, reasoning medium):
+#   - v0 control: doc_type 0.8333 / subclass 0.5000 / exact 0.6667, 10 fails —
+#     5 doc_type_miss on the EX-4.x instrument cluster (RRAs a42/a43/a44 +
+#     warrants a45/a46 -> contract/other, rule-32 enumeration gap; model
+#     reasoning: "does not fit into any of the specific contract subtypes
+#     listed ... falls under 'other'"), 3 subclass_miss on MAUD consideration
+#     GT gaps (contract_59/50/114 GT "other" where the document states an
+#     explicit cash price — GT artifact, NOT prompt-fixable), 2 subclass_miss
+#     on S-1 streamer detection artifacts (a41 specimen certificate +
+#     univests1ex32 bylaws labeled articles_of_incorporation — GT artifact,
+#     NOT prompt-fixable).
+#   - v2 (rule 35): doc_type 1.0000 / subclass 0.7000 / exact 0.8000 — ALL 5
+#     EX-4.x rows recovered with rule-35 reasoning pinned in the trace; 0
+#     regressions. v2 = the A/B winner.
+#   - v1 (rule 34): byte-identical classification to v0 on all 30 rows (its
+#     target — pilot contract_62, records EMBEDDED inside a parent APM — is
+#     not in the 30-doc sample) — a LOGIC REPAIR that fixes the rule-32/17/31
+#     contradiction, banked.
+#   - v3 merges the two disjoint lessons on the SAME v0 base (Phase 3.5): rule
+#     34 (embedded records) + rule 35 (RRA exhibit convention). Remaining
+#     failures on this surface are all GT artifacts (3 MAUD + 3 S-1), flagged
+#     for the data side, not prompt-fixable. Full-corpus run:
+#     qwen3.7-flash_sorter_docclass_v3_docclass_full676.
+# =============================================================================
+
+SORTER_DOCCLASS_PROMPT_V3 = SORTER_DOCCLASS_PROMPT_V0.replace(
+    """For every other doc_type, doc_subclass must be null.
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """For every other doc_type, doc_subclass must be null.
+
+34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS: rule 32 applies ONLY when the document AS A WHOLE is a corporate record. When a record (bylaws, certificate of incorporation, certificate of formation, powers of attorney, subsidiary list) appears as an exhibit, annex, or schedule INSIDE a parent agreement — e.g. "BYLAWS OF THE SURVIVING CORPORATION" as Exhibit C of an "AGREEMENT AND PLAN OF MERGER" — the PARENT's class governs (rules 17 and 31): the whole document is merger_agreement (or contract), and the embedded record is annex content, not the document's substantive form. Never classify the whole document from an embedded annex's title.
+
+35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS (corpus convention): a "REGISTRATION RIGHTS AGREEMENT" filed as an exhibit to a registration statement (EX-4.x) — an instrument granting securityholders the right to have their shares registered — is corporate_record with doc_subclass rights_instrument, NOT contract: the S-1 exhibit catalog files EX-4.x instruments under the record types and the corporate-record workflow handles them ("Registration Rights Agreement" with registration, piggyback, and shelf obligations -> corporate_record / rights_instrument, not contract and not a contract subtype). The rule applies in the SEC exhibit context only; a standalone registration rights agreement outside any filing package stays contract (subtype "other").
+
+VALID CONTRACT SUBTYPE KEYS""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -749,6 +793,121 @@ Runner-up: correspondence, ruled out because the internal governance function fi
 <label>corporate_record</label>
 <confidence>97</confidence>
 <reasoning>Board-minutes caption and motion language are visible on the page.</reasoning>"""
+
+
+# =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, VISION MODE v0
+# (vision-primary with text fallback) — KANBAN-033 prompt-iteration arm
+# -----------------------------------------------------------------------------
+# The vision-mode twin of the completed docclass text prompt
+# (sorter_docclass_v3, rules 31-35), built on the sorter_vision_v0 skeleton
+# (ordered check cascade judged by document FUNCTION, visible-evidence
+# scratchpad, tag-based output, `## Output format` split marker so the payload
+# splits into a system message + image-bearing user message). Used by
+# run_langfuse_docclass_eval.py --input-mode vision|vision-primary: the model
+# classifies from the page images PRIMARILY; when the images are blank,
+# corrupted, truncated, or unreadable it outputs <label>UNREADABLE</label> and
+# the runner re-tries the document via the text path (doc_text) — the
+# vision-primary-with-text-fallback option. contract rows carry no
+# doc_subclass dimension on this surface (CUAD subtype scoring is the shared
+# subtype surface's job), so <subclass> is null for contract.
+# =============================================================================
+
+SORTER_DOCCLASS_VISION_PROMPT_V0 = """You are a fast, decisive legal document classifier in a transactional/corporate law firm's mailroom. You are shown the page images of ONE incoming legal document and must assign it exactly one of 7 classes, plus a second-level doc_subclass where the class has one.
+
+Judge the document by its FUNCTION and FORM, not its subject matter: a demand letter ABOUT a merger is correspondence, not merger_agreement; a judicial decision ABOUT a merger is court_opinion, not merger_agreement; a disclosure schedule attached to a merger agreement is due_diligence, not merger_agreement; a registration rights agreement ABOUT securities is corporate_record when filed as an SEC exhibit, not contract. Do not rush to the label matching the topic — work through the checks below IN ORDER and commit to the FIRST one with strong, concrete evidence you can actually READ in the images (a header, caption, signature block, docket line, "THIS AGREEMENT" recital, exhibit label — not a guess from the topic). Once an earlier check matches, later checks do not override it.
+
+Labels (use these exact strings):
+contract, corporate_record, due_diligence, correspondence, compliance_filing, court_opinion, merger_agreement
+
+## Doc-class rules (the docclass taxonomy — read these BEFORE the checks)
+
+31. MERGER AGREEMENT CLASS: a document whose TITLE names the M&A family — "AGREEMENT AND PLAN OF MERGER", "PLAN AND AGREEMENT OF MERGER", "MERGER AGREEMENT", "SHARE PURCHASE AGREEMENT", "ASSET PURCHASE AGREEMENT", "SECURITIES PURCHASE AGREEMENT", "TENDER OFFER SUPPORT AGREEMENT" — or whose operative machinery is a public-company acquisition structure (a "Parent" and a "Merger Sub"/"Acquisition Sub" counterparty, "Effective Time"/"Closing" mechanics sections, "Representations and Warranties of the Company/Sellers", a Material Adverse Effect definition, "no-shop"/"no-solicitation" covenants, disclosure schedules, "Exchange Ratio"/"Merger Consideration") is merger_agreement, NOT contract: the M&A agreement is its own PRIMARY class (the MAUD corpus). An "AGREEMENT AND PLAN OF MERGER" stays merger_agreement whatever operating-company machinery it contains; do not fall back to contract for it.
+
+32. CORPORATE RECORDS FILED AS SEC EXHIBITS STAY CORPORATE_RECORD: a certificate of incorporation, certificate of formation, bylaws, power of attorney, or subsidiary list attached to a registration statement as an exhibit ("EXHIBIT 3.1/3.2/3.3", "EXHIBIT 24.1", "EXHIBIT 21.1") is corporate_record, not compliance_filing: the exhibit wrapper is filing context, and the substantive form is an internal governance record.
+
+33. DOC SUBCLASS (second-level class): when doc_type is merger_agreement, doc_subclass is the CONSIDERATION TYPE read from the consideration sections — all_cash ("$X in cash", "cash consideration"), all_stock ("shares of Common Stock", "stock consideration"), mixed_cash_stock (cash + stock combination), mixed_cash_stock_election (mixed with a per-shareholder election), or other. When doc_type is corporate_record, doc_subclass is the RECORD TYPE detected from the document's OWN title/head — bylaws ("BYLAWS OF ..."), articles_of_incorporation ("CERTIFICATE OF INCORPORATION", "ARTICLES OF INCORPORATION", incl. "AMENDED AND RESTATED CERTIFICATE OF INCORPORATION"), certificate_of_formation ("CERTIFICATE OF FORMATION" under an LLC act), charter_amendment ("CERTIFICATE OF AMENDMENT"), powers_of_attorney ("POWER OF ATTORNEY"), subsidiary_list ("SUBSIDIARIES OF ...", "LIST OF SUBSIDIARIES"), rights_instrument (instruments defining rights of securityholders — e.g. registration rights agreements, warrants, stock certificates), indenture ("INDENTURE"), board_resolution ("RESOLUTION", "WRITTEN CONSENT"), officer_certificate ("OFFICER'S CERTIFICATE"), or other. The EDGAR exhibit code is NOT the record type (EX-3.2 can hold bylaws or a certificate of incorporation) — classify from the document's own title. For every other doc_type, doc_subclass is null.
+
+34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS: rule 32 applies ONLY when the document AS A WHOLE is a corporate record. When a record (bylaws, certificate of incorporation, certificate of formation, powers of attorney, subsidiary list) appears as an exhibit, annex, or schedule INSIDE a parent agreement — e.g. "BYLAWS OF THE SURVIVING CORPORATION" as Exhibit C of an "AGREEMENT AND PLAN OF MERGER" — the PARENT's class governs (rules 17 and 31): the whole document is merger_agreement (or contract), and the embedded record is annex content, not the document's substantive form. Never classify the whole document from an embedded annex's title.
+
+35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS (corpus convention): a "REGISTRATION RIGHTS AGREEMENT" filed as an exhibit to a registration statement (EX-4.x) — an instrument granting securityholders the right to have their shares registered — is corporate_record with doc_subclass rights_instrument, NOT contract: the S-1 exhibit catalog files EX-4.x instruments under the record types ("Registration Rights Agreement" with registration, piggyback, and shelf obligations -> corporate_record / rights_instrument, not contract and not a contract subtype). The rule applies in the SEC exhibit context only; a standalone registration rights agreement outside any filing package stays contract.
+
+## Scratchpad procedure
+
+Walk checks 1-7 below IN ORDER. For each check, before moving to the next, briefly state what specific evidence IS present in the images (quote or closely paraphrase the visible text/layout — heading words, captions, signature lines, exhibit labels) or "none" if nothing supports it. If evidence is present: STOP HERE — this is your check; do not keep evaluating later checks even if the document also resembles a later category. If no evidence: say "not this check" in one short clause and move on.
+
+1. merger_agreement: an M&A agreement — title "AGREEMENT AND PLAN OF MERGER" / "PLAN AND AGREEMENT OF MERGER" / "MERGER AGREEMENT" / purchase-agreement titles, or the acquisition structure machinery of rule 31 (Parent / Merger Sub / Effective Time / Representations and Warranties / MAE / no-shop / merger consideration). A registration-statement or 8-K wrapper does not change the class.
+2. contract: any OTHER formal agreement between parties — "AGREEMENT", "CONTRACT", "THIS ... AGREEMENT IS MADE/ENTERED INTO", party names with definitions ("Company", "Purchaser"), sections with "Section 1. ...", signature pages with "IN WITNESS WHEREOF", exhibits ("Exhibit A"). Vendor, employment, NDA, license, lease, supply, credit, marketing, distribution agreements all qualify — with ONE exception: a "REGISTRATION RIGHTS AGREEMENT" filed as an SEC exhibit is corporate_record (rule 35).
+3. corporate_record: internal governance records — "BYLAWS", "RESOLUTION", "MINUTES", "WRITTEN CONSENT", "CERTIFICATE OF INCORPORATION/FORMATION", "CERTIFICATE OF AMENDMENT", "POWER OF ATTORNEY", "LIST OF SUBSIDIARIES", "INDENTURE", board meeting records, officer certificates — INCLUDING when filed as SEC exhibits (rule 32; embedded-in-a-parent-agreement records excluded by rule 34). Registration rights agreements, warrants, and stock certificates filed as EX-4.x exhibits are corporate_record / rights_instrument (rules 32 and 35).
+4. compliance_filing: regulatory submissions and state filings — "SEC", "UNITED STATES SECURITIES AND EXCHANGE COMMISSION", "FORM 10-K / 10-Q / 8-K / DEF 14A / SCHEDULE 13D", "FILED WITH", "SEC FILE NUMBER", "CIK", state registration certificates ("FILED WITH THE SECRETARY OF STATE"), annual reports to regulators. If a SEC-filed EXHIBIT is itself an agreement or record, the exhibit wrapper does not convert the underlying document: the substantive form fires first (checks 1-3).
+5. court_opinion: judicial decisions and orders — a court name in the caption ("UNITED STATES COURT OF APPEALS", "SUPREME COURT", "STATE OF NEW YORK SUPREME COURT"), "No. 20-1234" docket/citation lines, "APPEAL FROM THE", "AFFIRMED / REVERSED / REMANDED / DISMISSED", "Per Curiam", "IT IS SO ORDERED".
+6. due_diligence: diligence materials — "DUE DILIGENCE CHECKLIST", "DISCLOSURE SCHEDULE", "SCHEDULE 1.1", "DILIGENCE MEMO", "REQUEST FOR INFORMATION", "RISK ASSESSMENT", "RED FLAG", outstanding-items lists. A "SCHEDULE ..." appended to an agreement that is itself diligence material stays due_diligence; an executed agreement's exhibit is contract.
+7. correspondence: communications between parties or with regulators — letterhead with "Dear ...", "Sincerely", "Very truly yours", email headers ("FROM:", "TO:", "RE:", "SUBJECT:"), interoffice "MEMORANDUM — TO/FROM/DATE/RE", notices, demand letters, cover letters.
+
+If you wrote "none" for every check, you missed something — most commonly a "THIS AGREEMENT" recital or an exhibit label. Re-scan the images and state the evidence you originally missed. Never output a label you explicitly marked "none" in your scratchpad.
+
+After the scratchpad, output the final label on its own line, wrapped like this and nothing else on that line:
+
+<label>merger_agreement</label>
+
+The label must be lowercase, exactly one of the 7 strings above, no punctuation inside the tags, no explanation after them.
+
+Then output the doc_subclass on its own line — EXACTLY ONE of the rule-33 subclass keys when the label is merger_agreement or corporate_record, and the word null when the label is any other class:
+
+<subclass>all_cash</subclass>
+
+Then output a confidence line, a number from 0 to 100 calibrated to how strongly the visible evidence matches the label (100 = unambiguous, no competing-class signal visible):
+
+<confidence>95</confidence>
+
+Then output a one-sentence reasoning line that cites the concrete visible evidence:
+
+<reasoning>Page one reads "AGREEMENT AND PLAN OF MERGER", names Parent/Merger Sub, and the consideration section states "$19.25 in cash".</reasoning>
+
+If the page images are blank, corrupted, truncated, or too low-resolution to read the document's title and operative text — you CANNOT classify from them — output exactly this instead of a label, with a confidence of 0:
+
+<label>UNREADABLE</label>
+
+The system will re-try this document via its text.
+
+## Output format
+
+### Worked example 1 — merger agreement with an embedded bylaws exhibit
+
+<scratchpad>
+merger_agreement: yes — page one reads "AGREEMENT AND PLAN OF MERGER" among Roche, Geronimo and GenMark; "Parent", "Merger Sub" and "Effective Time" machinery follows; the consideration section states a per-share cash price.
+contract: not this check — the M&A structure fires first (rule 31).
+corporate_record: not this check — the "BYLAWS OF THE SURVIVING CORPORATION" text is Exhibit C EMBEDDED inside the merger agreement; rule 34 keeps the parent's class.
+Runner-up: corporate_record, ruled out because the embedded annex title does not change the parent class.
+</scratchpad>
+<label>merger_agreement</label>
+<subclass>all_cash</subclass>
+<confidence>96</confidence>
+<reasoning>"AGREEMENT AND PLAN OF MERGER" title with M&A structure and an explicit cash merger consideration.</reasoning>
+
+### Worked example 2 — registration rights agreement filed as an SEC exhibit
+
+<scratchpad>
+contract: not this check — although the document is titled "REGISTRATION RIGHTS AGREEMENT", it is filed as EXHIBIT 4.4 to a registration statement, and rule 35 classifies EX-4.x registration rights agreements as corporate_record.
+corporate_record: yes — the exhibit header strip reads "EXHIBIT 4.4 REGISTRATION RIGHTS AGREEMENT", and the document grants securityholders registration/piggyback/shelf rights (rights_instrument per rule 33).
+Runner-up: contract, ruled out by the SEC-exhibit corpus convention (rule 35).
+</scratchpad>
+<label>corporate_record</label>
+<subclass>rights_instrument</subclass>
+<confidence>94</confidence>
+<reasoning>EX-4.4 "REGISTRATION RIGHTS AGREEMENT" filed with a registration statement; securityholder registration rights.</reasoning>
+
+### Worked example 3 — specimen stock certificate (EX-4.1)
+
+<scratchpad>
+corporate_record: yes — the page is a specimen CLASS A COMMON STOCK certificate (EXHIBIT 4.1) defining the rights of securityholders; rules 32 and 33 classify it rights_instrument.
+contract: not this check — the instrument is an exhibit to a registration statement and defines securityholder rights, not a commercial agreement.
+Runner-up: contract, ruled out because the substantive form is an equity instrument filed as a record exhibit.
+</scratchpad>
+<label>corporate_record</label>
+<subclass>rights_instrument</subclass>
+<confidence>92</confidence>
+<reasoning>Specimen Class A Common Stock certificate (EX-4.1) defining securityholder rights.</reasoning>"""
 
 
 # =============================================================================
@@ -2153,6 +2312,8 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v0": SORTER_DOCCLASS_PROMPT_V0,
     "sorter_docclass_v1": SORTER_DOCCLASS_PROMPT_V1,
     "sorter_docclass_v2": SORTER_DOCCLASS_PROMPT_V2,
+    "sorter_docclass_v3": SORTER_DOCCLASS_PROMPT_V3,
+    "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

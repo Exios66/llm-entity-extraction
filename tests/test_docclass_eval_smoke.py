@@ -140,6 +140,67 @@ def test_docclass_eval_smoke(dump_path, tmp_path, monkeypatch, fake_langfuse):
     assert "docclass_smoke_test" in md
 
 
+def test_docclass_eval_vision_primary_falls_back_to_text(dump_path, tmp_path, monkeypatch, fake_langfuse):
+    """--input-mode vision-primary: the vision pass runs FIRST; when it cannot
+    produce a label (UNREADABLE sentinel / call error / no pages) the runner
+    falls back to the text pass and records input_mode + fallback_reason."""
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "log3.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "log3.md"))
+
+    calls = {"vision": 0, "text": 0}
+
+    def fake_classify_document(self, pages_base64, image_format="png"):
+        calls["vision"] += 1
+        # The first page renders fine -> UNREADABLE (images unusable) so the
+        # runner must fall back to text; no page images -> unreadable too.
+        return {"doc_type": None, "contract_subtype": None, "doc_subclass": None,
+                "confidence": 0.0, "reasoning": "blank page", "unreadable": True,
+                "invalid_label": False}
+
+    def fake_classify_json(self, doc_text):
+        calls["text"] += 1
+        if "MERGER" in doc_text.upper():
+            return {"doc_type": "merger_agreement", "contract_subtype": None,
+                    "doc_subclass": "all_cash", "confidence": 0.95, "reasoning": "merger"}
+        if "BYLAWS" in doc_text.upper():
+            return {"doc_type": "corporate_record", "contract_subtype": None,
+                    "doc_subclass": "bylaws", "confidence": 0.95, "reasoning": "bylaws"}
+        if "LICENSE" in doc_text.upper():
+            return {"doc_type": "contract", "contract_subtype": None,
+                    "doc_subclass": None, "confidence": 0.95, "reasoning": "license"}
+        return {"doc_type": "correspondence", "contract_subtype": None,
+                "doc_subclass": None, "confidence": 0.95, "reasoning": "letter"}
+
+    monkeypatch.setattr("agents.sorter_agent.SorterAgent.classify_document",
+                        fake_classify_document)
+    monkeypatch.setattr("agents.sorter_agent.SorterAgent.classify_json", fake_classify_json)
+
+    from scripts.eval.run_langfuse_docclass_eval import main_with_args
+
+    exit_code = main_with_args([
+        "--local-dumps", str(dump_path),
+        "--input-mode", "vision-primary",
+        "--pdf-dir", str(tmp_path),  # no PDFs -> every row falls back to text
+        "--experiment-name", "docclass_smoke_vision_primary",
+        "--manifest", str(tmp_path / "manifest3.jsonl"),
+        "--max-concurrency", "2",
+    ])
+    assert exit_code == 0
+    # No PDFs matched -> zero vision calls, all four rows via text fallback.
+    assert calls["vision"] == 0
+    assert calls["text"] == 4
+
+    records = [json.loads(line) for line in
+               (tmp_path / "log3.jsonl").read_text().strip().splitlines()]
+    rec = records[0]
+    assert rec["scores"]["exact_match"] == 1.0
+    assert rec["parameters"]["input_mode"] == "vision-primary"
+    modes = {r["sorter"]["input_mode"] for r in rec["per_row"]}
+    assert modes == {"text_fallback"}
+    reasons = {r["sorter"].get("fallback_reason") for r in rec["per_row"]}
+    assert reasons == {"no_pages"}
+
+
 def test_docclass_eval_smoke_detects_subclass_miss(dump_path, tmp_path, monkeypatch, fake_langfuse):
     monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "log2.jsonl"))
     monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "log2.md"))

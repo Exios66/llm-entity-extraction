@@ -48,3 +48,10 @@ reports/*.csv
 
 # OS junk
 .DS_Store
+
+# Merged docclass corpus (676 rows, ~170 MB — regenerate via build_docclass_merged.py)
+data/datasets/*
+!data/datasets/README.md
+
+/.quarto/
+**/*.quarto_ipynb

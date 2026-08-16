@@ -338,11 +338,66 @@ def test_sorter_docclass_v2_registered_and_pins_rule_35():
     assert SORTER_DOCCLASS_PROMPT_V2.startswith(SORTER_DOCCLASS_PROMPT_V0[:300])
 
 
+def test_sorter_docclass_v3_registered_and_pins_rules_34_35():
+    """sorter_docclass_v3 (KANBAN-033) = the Phase 3.5 MERGE of the two
+    validated single-change lessons applied to the SAME v0 base: rule 34
+    (embedded-records scope guard, from v1) AND rule 35 (RRA exhibit
+    convention, from v2). Motivated by the same-surface A/B
+    (qwen3.7-flash_sorter_docclass_{v0,v1,v2}_docclass_ab30, fp d3d7b335…,
+    stratified-30 seed 42): v2 recovered the 5-row EX-4.x doc_type cluster
+    (exact 0.6667 -> 0.8000) while v1's rule-34 target was absent from the
+    sample — the merge carries both disjoint lessons."""
+    from src.prompts import (
+        SORTER_DOCCLASS_PROMPT_V0,
+        SORTER_DOCCLASS_PROMPT_V3,
+    )
+
+    assert "sorter_docclass_v3" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_v3")
+    # Both rules present, in rule-number order.
+    assert "34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS" in p
+    assert "35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS" in p
+    assert p.index("34. EMBEDDED RECORDS") < p.index("35. REGISTRATION RIGHTS")
+    # Merge discipline: v3 = v0 + rules 34 AND 35 (v0 has neither).
+    assert "34. EMBEDDED RECORDS" not in SORTER_DOCCLASS_PROMPT_V0
+    assert "35. REGISTRATION RIGHTS" not in SORTER_DOCCLASS_PROMPT_V0
+    assert SORTER_DOCCLASS_PROMPT_V3.startswith(SORTER_DOCCLASS_PROMPT_V0[:300])
+
+
+def test_sorter_docclass_vision_v0_registered_and_pins_vision_contract():
+    """sorter_docclass_vision_v0 (KANBAN-033 vision arm) = the vision-mode
+    twin of the completed docclass text prompt: 7 classes, rules 31-35,
+    the doc_subclass tag, the UNREADABLE sentinel (vision-primary with text
+    fallback), and the ``## Output format`` split marker."""
+    from src.prompts import SORTER_DOCCLASS_VISION_PROMPT_V0
+
+    assert "sorter_docclass_vision_v0" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_vision_v0")
+    # All 7 docclass labels in the label list.
+    for key in ("contract", "corporate_record", "due_diligence", "correspondence",
+                "compliance_filing", "court_opinion", "merger_agreement"):
+        assert key in p, f"vision prompt missing class {key!r}"
+    # The docclass rules are carried over (vision-adapted).
+    assert "31. MERGER AGREEMENT CLASS" in p
+    assert "32. CORPORATE RECORDS FILED AS SEC EXHIBITS" in p
+    assert "33. DOC SUBCLASS" in p
+    assert "34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS" in p
+    assert "35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS" in p
+    # Vision-primary contract: subclass tag + UNREADABLE sentinel + split marker.
+    assert "<subclass>all_cash</subclass>" in p
+    assert "<label>UNREADABLE</label>" in p
+    assert "The system will re-try this document via its text." in p
+    assert "## Output format" in p
+    # The text docclass prompt is untouched by the vision twin.
+    assert "<label>" not in get_prompt("sorter_docclass_v3")
+
+
 def test_sorter_docclass_prompt_option_list_matches_schema():
     """The doc_subclass options visible in the docclass prompts must match the
     DOCCLASS_SCHEMA enum exactly — a subclass the model can output must be in
     the prompt, and nothing in the prompt may be rejected by the schema.
-    Parametrized over every docclass version (v0 baseline, v1/v2 candidates)."""
+    Parametrized over every docclass version (v0 baseline, v1/v2 candidates,
+    v3 merge)."""
     import re
 
     import pytest
@@ -357,7 +412,8 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
     enum = set(DOCCLASS_SCHEMA["properties"]["doc_subclass"]["enum"])
     assert enum == set(DOC_SUBCLASS_KEYS)
 
-    for version in ("sorter_docclass_v0", "sorter_docclass_v1", "sorter_docclass_v2"):
+    for version in ("sorter_docclass_v0", "sorter_docclass_v1",
+                    "sorter_docclass_v2", "sorter_docclass_v3"):
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()

@@ -30,6 +30,9 @@ Usage:
     python scripts/eval/sync_langfuse_datasets.py --cuad --dry-run          # LOCAL CUAD corpus
     python scripts/eval/sync_langfuse_datasets.py --cuad                    # -> mailroom-cuad-contracts
     python scripts/eval/sync_langfuse_datasets.py --cuad --cuad-dir data/cuad_pdfs
+    python scripts/eval/sync_langfuse_datasets.py --maud --s1               # MAUD + S-1 local dumps
+    python scripts/eval/sync_langfuse_datasets.py --docclass --dry-run      # MERGED docclass corpus
+    python scripts/eval/sync_langfuse_datasets.py --docclass                # -> mailroom-docclass
 """
 
 from __future__ import annotations
@@ -349,6 +352,14 @@ def main_with_args(argv: list[str]) -> int:
                         help="Mirror the EDGAR S-1 corporate-record dump "
                              "(data/s1_corporate_records/corporate-records.jsonl) into "
                              "Langfuse 'mailroom-s1-corporate-records'")
+    parser.add_argument("--docclass", action="store_true",
+                        help="Mirror the MERGED docclass corpus (all three docclass "
+                             "corpora in one file — data/datasets/docclass_merged.jsonl, "
+                             "built by scripts/datasets/build_docclass_merged.py) into a "
+                             "SINGLE Langfuse 'mailroom-docclass' dataset")
+    parser.add_argument("--docclass-file", type=Path,
+                        default=Path("data/datasets/docclass_merged.jsonl"),
+                        help="Merged docclass dump (default: data/datasets/docclass_merged.jsonl)")
     parser.add_argument("--maud-dir", type=Path, default=Path("data/maud"),
                         help="Local MAUD dump dir (default: data/maud)")
     parser.add_argument("--s1-dir", type=Path, default=Path("data/s1_corporate_records"),
@@ -359,6 +370,22 @@ def main_with_args(argv: list[str]) -> int:
 
     env_files = [resolve_env_file(p, default=LANGFUSE_ENV_FILE)
                  for p in (args.env_file or [DEFAULT_ENV_FILE])]
+    if args.docclass:
+        print(f"Syncing the MERGED docclass corpus ({args.docclass_file}) into "
+              f"Langfuse dataset 'mailroom-docclass'")
+        for env_file in env_files:
+            if not env_file.exists():
+                print(f"  [warn] {env_file} not found — skipped (add it with --env-file to sync that project)")
+                continue
+            report = _sync_local_dumps(env_file, {"mailroom-docclass": args.docclass_file},
+                                       args.dry_run)
+            if report.get("skipped_env"):
+                print(f"  [warn] {env_file}: no Langfuse keys found — skipped")
+                continue
+            mode = "would upsert" if args.dry_run else "upserted"
+            print(f"  {report['project']}: {mode} {report['items']} items across "
+                  f"{report['datasets']} datasets")
+        return 0
     if args.maud or args.s1:
         dumps = {}
         if args.maud:
