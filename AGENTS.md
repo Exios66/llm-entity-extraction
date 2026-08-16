@@ -131,7 +131,7 @@ carries task state lives in private channels. Channel hierarchy:
 
 | Channel | Carries | Canonical for |
 |---|---|---|
-| `MESSAGE_BOARD.md` (table + archive) / `MESSAGE_BOARD_DISCUSSION.yaml` (log) | ALL task state: claims, lane moves, decisions, results, blockers, handoffs, reopenings — the Kanban table + Archive live in the markdown; the append-only discussion log lives as structured YAML entries (date/agent/card/subject/body, newest at top) | EVERYTHING — the single source of truth |
+| `MESSAGE_BOARD.md` (table + archive) / `MESSAGE_BOARD_DISCUSSION.qmd` (log) | ALL task state: claims, lane moves, decisions, results, blockers, handoffs, reopenings — the Kanban table + Archive live in the markdown; the append-only discussion log lives as a color-coordinated Quarto doc (`.qmd`, newest at top; structured `::: {.entry data-date data-agent data-card}` blocks with inline links to issues/commits/memos) | EVERYTHING — the single source of truth |
 | GitHub issues (label `kanban`) | mirror of a synced card's status + externally verifiable completion | synced cards' status (must never disagree with the board) |
 | Commit messages | card references (`MESSAGE BOARD: KANBAN-00N ...` / `KANBAN-00N (vX): ...`) | which commit landed which card |
 | `CHANGELOG.md` | release-level history | what shipped in which version |

@@ -37,8 +37,8 @@ A task is yours only after you **claim it**, in this order:
 1. **Comment on the GitHub issue** (if the card has one — the `Issue`
    column) saying you are claiming it, OR post to the Discussion board if
    the card is board-only. Discussion posts are appended at the TOP of
-   `entries:` in `MESSAGE_BOARD_DISCUSSION.yaml` (date + agent + card +
-   subject + full post — see the Discussion board section below).
+   `MESSAGE_BOARD_DISCUSSION.qmd` (date + agent + card + subject + full
+   post — see the Discussion board section below).
 2. **Move the card to `in_progress`** and set **Owner** to your agent name
    + today's date.
 3. **Reference the card in your first commit**: `sorter_v7 (KANBAN-003): ...`
@@ -202,13 +202,16 @@ re-targeted to v0.19.0.)
 
 The full discussion log — every claim, lane move, decision, result, blocker,
 handoff, and reopening, newest at top — lives in
-**`MESSAGE_BOARD_DISCUSSION.yaml`** (structured entries: date, agent, card,
-subject, full post). It was moved out of this file on 2026-08-15 to keep the
-board lean; the log itself is UNCHANGED and remains append-only — never edit a
-past entry, post a correction.
+**`MESSAGE_BOARD_DISCUSSION.qmd`** (a Quarto document: color-coordinated
+entries per agent, agent profiles + color legend, inline references/citations
+to issues, commits, memos, and repo paths). It was moved out of this file on
+2026-08-15 (from inline bullets to YAML, then restyled as `.qmd` on
+2026-08-16) to keep the board lean; the log itself is UNCHANGED and remains
+append-only — never edit a past entry, post a correction.
 
 Post to the discussion board by appending a new entry at the TOP of
-`entries:` in `MESSAGE_BOARD_DISCUSSION.yaml` (date + agent + card + subject +
+`entries` in `MESSAGE_BOARD_DISCUSSION.qmd` (the `::: {.entry ...}` block
+template in its "How to append" section — date + agent + card + subject +
 body), and mirror lane changes on the card table above.
 
 
