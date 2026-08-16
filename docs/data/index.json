@@ -8199,5 +8199,95 @@
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
   "data_source_n_samples": 509
+ },
+ {
+  "id": 158,
+  "experiment_name": "qwen3.7-flash_sorter_docclass_v0_docclass_pilot",
+  "task": "docclass_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_docclass_v0",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": null,
+  "n_ok": null,
+  "n_error": 0,
+  "total_tokens": 137468,
+  "cost_usd": null,
+  "cost_total_usd": null,
+  "cost_estimated_usd": 0.004849,
+  "cost_estimated_per_doc_usd": null,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "d460e8acc75eb0d0d2a9b6a1219dc6764263e5384230b6f7b4cd38d6d4c6b9bb",
+  "seed": 42,
+  "sample_key": "d460e8acc75eb0d0d2a9b6a1219dc6764263e5384230b6f7b4cd38d6d4c6b9bb:42:5",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-16T05:15:39.772155+00:00",
+  "git": {
+   "commit": "45956c2",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 5
+ },
+ {
+  "id": 159,
+  "experiment_name": "gpt-5-nano_sorter_v13_subtype_langfuse",
+  "task": "subtype_classification",
+  "model": "openai/gpt-5-nano",
+  "prompts": "sorter_v13",
+  "headline": {
+   "label": "subtype strict",
+   "value": 0.8978,
+   "detail": "doc_type 0.9941 \u00b7 strict 0.8978 \u00b7 equiv 0.9018"
+  },
+  "ci95": {
+   "lo": 0.8703,
+   "hi": 0.9234,
+   "half": 0.0266,
+   "n": 509,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "doc_type_accuracy": 0.9941,
+   "subtype_accuracy": 0.8978,
+   "subtype_accuracy_equiv": 0.9018,
+   "confidence": 0.8957,
+   "n_failed": 52,
+   "mode_counts": {
+    "equivalent_family": 2,
+    "family_confusion": 41,
+    "function_over_form": 3,
+    "other_fallback": 6
+   }
+  },
+  "n_rows": 509,
+  "n_ok": 509,
+  "n_error": 0,
+  "total_tokens": 6944734,
+  "cost_usd": null,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": null,
+  "cost_estimated_per_doc_usd": null,
+  "cost_price_source": null,
+  "fingerprint": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406",
+  "seed": 42,
+  "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+  "global_best_pp": -10.219999999999995,
+  "delta_best_pp": -4.519999999999991,
+  "timestamp": "2026-08-16T05:19:37.571423+00:00",
+  "git": {
+   "commit": "45956c2",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509
  }
 ]

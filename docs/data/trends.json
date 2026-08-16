@@ -1509,6 +1509,26 @@
      "function_over_form": 2,
      "other_fallback": 1
     }
+   },
+   {
+    "id": 159,
+    "experiment_name": "gpt-5-nano_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T05:19:37.571423+00:00",
+    "model": "openai/gpt-5-nano",
+    "prompts": "sorter_v13",
+    "headline_value": 0.8978,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 2,
+     "family_confusion": 41,
+     "function_over_form": 3,
+     "other_fallback": 6
+    }
    }
   ],
   "sorter_classification": [
