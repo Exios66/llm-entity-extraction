@@ -95,3 +95,52 @@ per-row `field_scores`/`predicted.reasoning.entries`, CUAD clause labels from
   day) is a distinct, smaller lesson reserved for v33; the under-extraction nulls
   that the tie-break fix does not reach are part of the same family and get
   re-checked after the v32 A/B.
+
+---
+
+## Run results (2026-08-16, the full-510 pair) + clean-rerun status
+
+**The candidate run is DEGRADED — a clean rerun is in flight.** The reserved
+pair landed: candidate `qwen3.7-flash_contracts_specialist_v32_extraction_langfuse_510_full`
+(00:02) and control `...v31..._510_full` (20:26, champion re-measured 0.8737,
+5/509 errors). **v32 scored only 457/509 rows — 52 transient errors (41
+`generator didn't stop after throw()`, 10 `NoneType`, 1 length-limit), the same
+transient class that degraded the sorter v9 control (KANBAN-023).** A degraded
+candidate cannot yield a release-grade A/B, so the numbers below are the
+intersection signal (454 rows both-ok, paired), and
+`qwen3.7-flash_contracts_specialist_v32_extraction_langfuse_510_full_clean`
+(fresh manifest `data/manifests/v32_510_chunked_full_clean.jsonl`) is running
+for the release verdict.
+
+| Metric (intersection, 454 rows both-ok) | v31 control | v32 candidate | delta |
+|---|---|---|---|
+| composite mean | 0.8751 | 0.8865 | **+0.0115** |
+| paired bootstrap 95% CI | — | — | **[+0.0017, +0.0215]** |
+| P(Δ≤0) | — | — | **0.0115** |
+| `effective_date` | 0.8570 | 0.8869 | **+0.0299** |
+
+Recovered 24 / regressed 6 / tied 409 on effective_date. The 24 recoveries
+include the 12 target 0.0→1.0 docs (Monsanto AG, IMAGEWARE, PACIRA, ArcGroup,
+ROCKYMOUNTAINCHOCOLATE, XYBERNAUTCORP, NOVOINTEGRATED, Neoforma, RareElement,
+Cytodyn, XinhuaSports, NmfSlfI) + 5 partial lifts + 5 0.67→1.0 — the
+rule_contradiction repair fired on the predicted cluster. **The 6 regressions
+are a NEW rule-driven cluster (the v32 rule over-fired):**
+
+| regression | v31 | v32 | mechanism |
+|---|---|---|---|
+| ArcaUsTreasuryFund (Development) | 1.0 | 0.0 | "never null" clause grabbed the **source-metadata filing date** 2/7/2020 (GT null) |
+| ALLIANCEBANCORP (Agency) | 1.0 | 0.0 | **blank-day template** "November ___, 2006" → fabricated 2006-11-01 (GT null) |
+| TRICITYBANKSHARESCORP (Outsourcing) | 1.0 | 0.0 | resolved "date first above written" → null (chunked pass lost the referenced date) |
+| SightLife Surgical | 1.0 | 0.67 | signature-block boundary shift (4/26 vs GT 4/28) |
+| Ipass (Reseller) | 1.0 | 0.67 | signature-block boundary shift (4/24 vs GT 4/25) |
+| DYNTEK (Online Hosting) | 1.0 | 0.67 | execution-wins clause preferred signature date 6/30 over preamble "effective as of June 1" |
+
+**Banked as the v33 lesson:** the "NEVER output null when a stated date appears"
+clause needs a stated-full-date carve-out — a date in the source metadata, a
+blank-day template ("November ___, 2006"), or an indirect "date first above
+written" reference must NOT trigger the never-null duty (matches the previously
+banked blank-template-fabrication lesson). Same-surface note: the fp difference
+between the two runs (`dc371d64` vs `c2341957`) is pure row ordering — v31 ran
+`--sample 510` (seed-42 `random.sample`) while v32 took natural dataset order;
+the 509 doc sets are identical, so the paired intersection is a valid
+same-surface comparison.
