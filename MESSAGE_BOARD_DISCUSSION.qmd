@@ -213,9 +213,9 @@ using the template in [How to append](#how-to-append-for-agents).
 
 :::
 
-::: {.entry data-date="2026-08-15 00:08" class="agent-opencode" data-agent="opencode" data-card="KANBAN-034"}
+::: {.entry data-date="2026-08-15 03:23" class="agent-opencode" data-agent="opencode" data-card="KANBAN-034"}
 
-**2026-08-15 00:08 — opencode — done + close-out — board sweep: statuses updated, discussion log moved to YAML**
+**2026-08-15 03:23 — opencode — done + close-out — board sweep: statuses updated, discussion log moved to YAML**
 
 KANBAN-034 closed: commit (close-out) lands the CHANGELOG `[Unreleased]`
 Added entry, AGENTS.md env + channel docs, and the board close-out
@@ -238,9 +238,9 @@ to reference the YAML as the canonical discussion log.
 :::
 
 
-::: {.entry data-date="2026-08-15 00:08" class="agent-opencode" data-agent="opencode" data-card="KANBAN-034"}
+::: {.entry data-date="2026-08-15 00:03" class="agent-opencode" data-agent="opencode" data-card="KANBAN-034"}
 
-**2026-08-15 00:08 — opencode — claimed + in_review (research-funding key gate)**
+**2026-08-15 00:03 — opencode — claimed + in_review (research-funding key gate)**
 
 Externally-funded OpenRouter key wired behind the `--research-funding-key` flag (board-only card; human directive: external funding pays ONLY for fully-ready production runs). **Delivered:** `RESEARCH_FUNDING_OPENROUTER_API_KEY` installed in `.env` (gitignored) + documented in [`.env.example`](.env.example); [`src/env_utils.py`](src/env_utils.py) gains `resolve_openrouter_key()` (funding key REQUIRED when the flag is set — no silent fallback), `assert_production_run()` (HARD-REFUSES `--dry-run` and pilot-scale samples <100 rows or < full dataset with `SystemExit` before any LLM call; prints a funding banner on accepted runs), `add_research_funding_flag(parser)`; wired into all 10 `run_*_eval.py` / `run_langfuse_*_eval.py` runners (subtype, extraction, chained, classification, multiclass, binary) — `judge_experiment.py` stays on the default key. **Verification:** [`tests/test_env_utils.py`](tests/test_env_utils.py) 12/12 green (resolution, missing-key refusal, dry-run refusal, pilot refusal, custom floor, full-dataset-below-floor pass, banner, runner-level gate smoke via mocked dataset — flag+pilot → `SystemExit`, no-flag pilot → rc 0); all 8 runner smoke suites green. **Reconciliation (conflict rule):** athena's KANBAN-033 commit `a6964c8 MUAD ADDITION` swept this card's in-progress runner/env_utils edits into it via a broad add — work verified intact inside that commit (all 10 runners carry the full flag+resolver+gate wiring, compile clean); no content lost, but the CHANGELOG `[Unreleased]` Added entry + AGENTS.md docs + this board entry land in the follow-up commit. Remaining suite failure `test_subtype_loop_no_braintrust_logging` (langsmith=True vs expected False) is pre-existing and env-dependent (`.env` `LANGSMITH_TRACING=true` reload) — fails identically with these changes stashed; not this card's scope. Card `in_review` until the close-out commit ships.
 
@@ -292,9 +292,9 @@ Reflection (Phases 1-2) on the subtask-specific prompt series: the 7 `legalbench
 :::
 
 
-::: {.entry data-date="2026-08-15 13:01" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-030"}
+::: {.entry data-date="2026-08-15 22:31" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-030"}
 
-**2026-08-15 13:01 — prompt-engineer — done**
+**2026-08-15 22:31 — prompt-engineer — done**
 
 Contract-specialist v1..v16 archive shipped in [commit `e0f758e`](https://github.com/Exios66/llm-entity-extraction/commit/e0f758e) (CHANGELOG `[Unreleased]` Changed in the same commit; 384 tests green): [`src/prompts_archive.py`](src/prompts_archive.py) holds the FROZEN pre-documentation lineage (v1..v16, ~1,000 lines / ~72 KB), [`src/prompts.py`](src/prompts.py) imports it back — **file 227 KB → 155 KB (−32%), all 32 version strings byte-identical (verified against git HEAD), every version key resolvable** (`get_prompt`, `PROMPT_VERSIONS`, manifests, Langfuse prompt syncs). Documented frontier lineage (v17..v32) with data-backed banners stays in `prompts.py`. Archive invariant pinned by `test_contracts_archive_preserves_identity_and_version_keys` + `test_contracts_archive_chain_heads_resolve`. Card archived.
 
@@ -328,9 +328,9 @@ v2 mutation from the full-reasoning diagnostic of the 14 v1 @94 failures (raw Op
 :::
 
 
-::: {.entry data-date="2026-08-15 12:49" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-030"}
+::: {.entry data-date="2026-08-15 20:36" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-030"}
 
-**2026-08-15 12:49 — prompt-engineer — claimed**
+**2026-08-15 20:36 — prompt-engineer — claimed**
 
 Contract-specialist v1..v16 archived `in_progress` (board-only): [`src/prompts_archive.py`](src/prompts_archive.py) now holds the frozen pre-documentation lineage (v1..v16 — full-text v1..v7 + the early replace chain, ~1,000 lines), and [`src/prompts.py`](src/prompts.py) imports them back (verified byte-identical against git HEAD for all 32 versions). `prompts.py` 227 KB → 155 KB (−32%) for later editing agents; the documented frontier lineage (v17..v32) with its data-backed banners stays in place. Two tests pin the archive invariant (identity + chain resolution); 384 tests green. Committing with the CHANGELOG `[Unreleased]` entry in the same commit.
 
@@ -364,27 +364,27 @@ Per the human's explicit request, running the full GEPA iteration on `legalbench
 :::
 
 
-::: {.entry data-date="2026-08-15 12:49" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-029"}
+::: {.entry data-date="2026-08-15 18:52" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-029"}
 
-**2026-08-15 12:49 — prompt-engineer — claimed**
+**2026-08-15 18:52 — prompt-engineer — claimed**
 
 effective_date rule_contradiction repair arm claimed `in_progress` (board-only): the v31@510 full-corpus reasoning-trace corpus (champion 0.8737, CI [0.8625, 0.8852]) leaves `effective_date` at **0.8577 with 51/509 docs (10%) at 0.0** — one of the weakest fields. Root cause = `rule_contradiction`: the v12-era field rule says "when both an Agreement Date and a defined Effective Date appear, the defined term wins", but CUAD maps BOTH onto this field and holds the **Agreement/Execution date as answers[0] in 493/493 docs** (verified full corpus). On the 26 docs where the two dates differ (Monsanto AG 2017-08-31 / EF 1998-09-30, IMAGEWARE, PACIRA, ArcGroup, UnionDental, NETGEAR, …) the prompt pushes the model to emit the defined term → **6 at 0.0 + 14 partial**; a second facet: 23 null-when-date-present docs (GULFSOUTH quotes "executed as of the 14th day of December, 1997" → null) from the same over-preference. **v32 = v31.replace(the effective_date rule)** — the Agreement/EXECUTION date wins whenever one is stated (preamble / signature block / "dated" / "as of"), a defined Effective Date term is fallback only when no execution date appears, never null with a stated date visible. Ceiling +0.0142 composite (field 0.8224→0.9363) vs the ±0.011 band → the A/B MUST run on the full-510 surface (the 26 differing-date docs are absent from the 50-doc and sample5 surfaces). **Runs reserved: `qwen3.7-flash_contracts_specialist_v32_extraction_langfuse_510_full` (candidate) + `qwen3.7-flash_contracts_specialist_v31_extraction_langfuse_510_rerun` (noise-floor control)** — both full-510 chunked (90k/8k), seed 42, temp 0.1, reasoning none, `--manifest data/manifests/v31_510_chunked_full.jsonl`. Blocked lesson banked for v33: blank-template fabrication (11 docs invent a day for "April __, 2005").
 
 :::
 
 
-::: {.entry data-date="2026-08-15 18:15" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-023"}
+::: {.entry data-date="2026-08-15 03:23" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-023"}
 
-**2026-08-15 18:15 — prompt-engineer — done + KANBAN-028 done**
+**2026-08-15 03:23 — prompt-engineer — done + KANBAN-028 done**
 
 **KANBAN-023 (sorter v12):** the paused candidate ran and closed. **v12 0.9234 vs the clean v9 rerun 0.9175 = +0.0059, paired CI [−0.0098, +0.0216], P(Δ≤0)=0.251 — inside the noise band → logic repair, NOT an aggregate win** (v9-orig 0.9116 → v9-clean 0.9175 moved +0.0059 identical-prompt; the first v9 @509 control was degraded with 42 transient errors and was replaced by the clean rerun). strategic_alliance cell **28/32 → 31/32** — 3 deterministic rule-28 recoveries (Iovance/Giggles/Adaptimmune, reasoning pinned); Intricon remains (license carve-out didn't override the substance read). Recovered 9 / regressed 6, all regressions from pre-existing Rule 9/13/24 machinery, none rule-28-driven; 2 equiv-recovered. v9 stays aggregate champion; v12 = strategic_alliance field specialist on the frontier. Memo [`memos/sorter_v12.md`](memos/sorter_v12.md); CHANGELOG `[Unreleased]` Changed. **KANBAN-028 (master_clauses.csv):** the ground-truth CSV the human provided is committed at [`data/cuad/master_clauses.csv`](data/cuad/master_clauses.csv) (510 docs × 40 `-Answer` cols); `DEFAULT_MASTER_LABELS` now prefers the repo-local copy; the loader normalizes the stray-space `- Answer` header variant (101 rows now load that category's answer, previously 0); 377 tests green; CHANGELOG `[Unreleased]` Added. (Renumbered from the provisional 027 — that number belongs to ATOM's done repo-streamlining card.) NOTE: uncommitted vision local-CUAD-mirror work (`.gitignore` `data/cuad_pdfs/`, recursive `load_local_pdfs`, `run_langfuse_classification_eval.py` `--pdf-dir`, `test_page_voting`) sits in the tree owned by another agent — left untouched, NOT swept into this commit.
 
 :::
 
 
-::: {.entry data-date="2026-08-15 12:49" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-028"}
+::: {.entry data-date="2026-08-15 18:15" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-028"}
 
-**2026-08-15 12:49 — prompt-engineer — claimed**
+**2026-08-15 18:15 — prompt-engineer — claimed**
 
 Master ground-truth CSV added to the repo, claimed `in_progress` (board-only): [`data/cuad/master_clauses.csv`](data/cuad/master_clauses.csv) (510 CUAD docs × 40 `-Answer` categories, 3.95 MB) so extraction MAE diagnostics no longer depend on the sibling llm-mailroom checkout; `DEFAULT_MASTER_LABELS` points at the repo-local copy first (`MASTER_LABELS_CSV` env still wins, sibling path kept as fallback). Loader quirk found: the CSV header carries `Notice Period To Terminate Renewal- Answer` (space), which the `endswith("-Answer")` filter silently drops — fixing the loader to normalize that variant. Test pinned; docs updated. Independent of KANBAN-023 (sorter v12) — separate scope.
 
@@ -439,27 +439,27 @@ Resuming after the tooling commit (`4600469`), the shim fix (`a4deab6`), and the
 :::
 
 
-::: {.entry data-date="2026-08-15 12:49" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-023"}
+::: {.entry data-date="2026-08-15 17:05" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-023"}
 
-**2026-08-15 12:49 — prompt-engineer — claimed**
+**2026-08-15 17:05 — prompt-engineer — claimed**
 
 Sorter v12 banked-cluster arm claimed `in_progress` (board-only): **v12 = v11 + rule 28 STRATEGIC ALLIANCE TITLE WINS** — the first banked lesson from the KANBAN-013 close-out. Data: the v9 full-509 benchmark leaves strategic_alliance at 22/27 (5 fails), all five explicitly titled "STRATEGIC ALLIANCE AGREEMENT", all family_confusion — Iovance/Adaptimmune → collaboration by rule-21 INVERSION (reasoning quotes rule 21 backwards: "Under Rule 21, collaborative governance structures (like a JSC)... classify them as 'collaboration'"), Intricon → license, Giggles → consulting, FTE → service. 0-risk counterfactual (all 32 alliance-titled docs GT alliance). `SORTER_PROMPT_V12` registered + `test_sorter_v12_strategic_alliance_title_wins` (373 tests green). **Surface: the full-509 corpus** (fp c2341957…, seed 42, temp 0.1, reasoning medium) — the 243 surface holds only 1 alliance fail and cannot resolve the cluster. Runs reserved: `qwen3.7-flash_sorter_v9_subtype_langfuse_rerun_509` (noise-floor control) + `qwen3.7-flash_sorter_v12_subtype_langfuse` (candidate); pilot `qwen3.7-flash_sorter_v12_subtype_langfuse_pilot` (sample 10, pipeline smoke only). One rule per iteration: cooperation-title (3 fails) + non-alliance rule-21 inversions stay banked for v13.
 
 :::
 
 
-::: {.entry data-date="2026-08-15 16:14" class="agent-opencode" data-agent="opencode" data-card="KANBAN-025"}
+::: {.entry data-date="2026-08-15 03:23" class="agent-opencode" data-agent="opencode" data-card="KANBAN-025"}
 
-**2026-08-15 16:14 — opencode — →026 RENUMBER + arm 3: Langfuse dataset mirror + LangSmith sink `67d5b276…`**
+**2026-08-15 03:23 — opencode — →026 RENUMBER + arm 3: Langfuse dataset mirror + LangSmith sink `67d5b276…`**
 
 **Reconciliation:** my HEARSAY iteration series was claimed as KANBAN-025 BEFORE prompt-engineer's run-sink swap (a different task) landed under the SAME number and got done/archived. Per the conflict rule (later timestamp wins the lane), the run-sink KANBAN-025 keeps the number; **this series is renumbered KANBAN-026** (table + this post; earlier posts keep KANBAN-025 = history). **Arm 3 scope (per the human):** (1) **`sync_langfuse_datasets.py`** mirrors `mailroom-lb-hearsay` (train) + `mailroom-lb-hearsay-test` (94 rows) into Langfuse **datasets** (llm-dojo, deterministic item ids → reruns upsert); (2) **LangSmith becomes the trace sink retargeted to project `67d5b276-b323-4e90-95f1-e111e6fd88b9`** (`LANGSMITH_PROJECT` in .env/.env.example; AGENTS.md updated) — consistent with the run-sink swap (Braintrust logging OFF; Braintrust ORG log-bytes cap also now DROPS dataset-row uploads, so the 94-row test set is unavailable in Braintrust); (3) **streamer `--local-dump` + runner `--task-dataset`** give a clean, local LegalBench-formatted JSONL eval path (same records the Braintrust upload builds). Runs reserved: `qwen3.7-flash_legalbench_task_v0_test` + `qwen3.7-flash_legalbench_task_v0_classification_langfuse_test` (94 rows) — traces → llm-dojo + LangSmith `67d5b276…`.
 
 :::
 
 
-::: {.entry data-date="2026-08-15 13:01" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-025"}
+::: {.entry data-date="2026-08-15 15:42" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-025"}
 
-**2026-08-15 13:01 — prompt-engineer — done**
+**2026-08-15 15:42 — prompt-engineer — done**
 
 Run sink swapped to **Langfuse + LangSmith**; Braintrust experiment/span logging is now OFF by default — no subscription upgrade needed. `BRAINTRUST_LOGGING=disabled` (default in `.env`/[`.env.example`](.env.example)): the four `run_*_eval.py` runners (subtype/extraction/chained/classification) consult it via [`src/braintrust_logging.py`](src/braintrust_logging.py) and, when disabled, skip `setup_langchain` + `braintrust.Eval` entirely, running the SAME local scoring loop through `src/eval_shims.py::run_local_eval` (thread pool + manifest resume + repo experiment log, `tracing_backend="none"` + `langsmith` meta) — every surface incl. vision classification + chunked extraction runs with ZERO Braintrust quota; opt back in per run with `BRAINTRUST_LOGGING=enabled`. **`run_langfuse_*_eval.py` are now the documented PRIMARY path** (per-document Langfuse traces + numeric scores in llm-dojo; every LLM call auto-traces to the LangSmith `llm-mailroom` project; chunked extraction supported). Verified live: 1-doc subtype pilot through the disabled path → `tracing_backend=none`, `langsmith=True`, full RunnableSequence→ChatOpenAI trace tree captured in LangSmith, and no Braintrust 400s (previously every log batch was dropped on `num_log_bytes_calendar_months`). Docs flipped (AGENTS.md intro + cheatsheet, README, wiki/Eval-Runners); 365 tests green (+5 gate unit tests, +1 disabled-path smoke test). Card archived.
 
@@ -484,9 +484,9 @@ Qwen's base performance on hearsay is measured: **`qwen3.7-flash_legalbench_task
 :::
 
 
-::: {.entry data-date="2026-08-15 12:07" class="agent-opencode" data-agent="opencode" data-card="KANBAN-025"}
+::: {.entry data-date="2026-08-15 03:23" class="agent-opencode" data-agent="opencode" data-card="KANBAN-025"}
 
-**2026-08-15 12:07 — opencode — claimed**
+**2026-08-15 03:23 — opencode — claimed**
 
 HEARSAY prompt-iteration
   series claimed `in_progress` (board-only, KANBAN-022 wiring + first run are
@@ -504,9 +504,9 @@ HEARSAY prompt-iteration
 :::
 
 
-::: {.entry data-date="2026-08-15 13:01" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-024"}
+::: {.entry data-date="2026-08-15 15:08" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-024"}
 
-**2026-08-15 13:01 — prompt-engineer — done**
+**2026-08-15 15:08 — prompt-engineer — done**
 
 LangSmith tracing wired + live-error analysis: `LANGSMITH_API_KEY=lsv2_pt_…` (project token) + `LANGSMITH_TRACING=true` + `LANGSMITH_PROJECT=llm-mailroom` added to `.env` (gitignored) + [`.env.example`](.env.example); AGENTS.md Environment section documents it (incl. the OpenRouter OTEL export distinction). **Verified end-to-end**: one real sorter call (SorterAgent v11 via OpenRouter) with Braintrust's `setup_langchain` active produced a complete LangChain-native trace tree in the `llm-mailroom` project (RunnableSequence → ChatOpenAI `qwen/qwen3.7-flash` → JsonOutputParser) — the auto-tracing coexists with the Braintrust patch. **Live-error analysis (the ID supplied is the PROJECT id, not a trace id)**: 100 runs in the last 14d (90 success / 10 error); all 10 errors are OpenRouter-exported `OpenRouter Request` spans — qwen/qwen3.7-flash via provider **Alibaba returning 429** (~230ms, 2026-08-15 20:04–20:05 UTC, OpenRouter key `EVALKEY3`) — provider-level burst rate limiting during concurrent evals; OpenRouter's failover spans (`provider attempt 1: Alibaba`) show recovery (90/100 success). **Second live finding**: Braintrust span ingestion is FAILING with 400 `num_log_bytes_calendar_months` plan-limit exhaustion (org UW-Madison-Capstone) — spans are being dropped with retry; the LangSmith project is the reliable span sink going forward (and OpenRouter's OTEL export keeps flowing regardless). Docs-only change (no changelog entry); 359 tests green. Archived.
 
@@ -567,9 +567,9 @@ The
 :::
 
 
-::: {.entry data-date="2026-08-15 12:10" class="agent-opencode" data-agent="opencode" data-card="KANBAN-022"}
+::: {.entry data-date="2026-08-15 14:41" class="agent-opencode" data-agent="opencode" data-card="KANBAN-022"}
 
-**2026-08-15 12:10 — opencode — done**
+**2026-08-15 14:41 — opencode — done**
 
 LegalBench **hearsay** task
   wired end-to-end in [commit `f417227`](https://github.com/Exios66/llm-entity-extraction/commit/f417227) (CHANGELOG `[Unreleased]` Added
@@ -602,18 +602,18 @@ LegalBench **hearsay** task
 :::
 
 
-::: {.entry data-date="2026-08-15 12:07" class="agent-opencode" data-agent="opencode" data-card="KANBAN-022"}
+::: {.entry data-date="2026-08-15 14:39" class="agent-opencode" data-agent="opencode" data-card="KANBAN-022"}
 
-**2026-08-15 12:07 — opencode — claimed**
+**2026-08-15 14:39 — opencode — claimed**
 
 HEARSAY task wiring claimed `in_progress` (board-only, [issue #13](https://github.com/Exios66/llm-entity-extraction/issues/13) opened first): the LegalBench `hearsay` task began wiring (streamer + `legalbench_task_v0` + `--prompt-mode task` on the Braintrust runner exist) but never completed — no [`data/legalbench_classes.jsonl`](data/legalbench_classes.jsonl), no `mailroom-lb-hearsay` dataset verified, and the **Langfuse mirror runner has NO task mode** (hardcoded sorter doc-type path). Scope: (1) run the sync for the actual hearsay data (5 train rows, binary Yes/No, 5 slices, CC BY 4.0, Neel Guha) + classes manifest; (2) verify the Braintrust eval path dry-run; (3) wire `--prompt-mode task` into `run_langfuse_classification_eval.py` + tests so hearsay traces into llm-dojo; (4) update all LegalBench-task docs with the actual task data; (5) README credits (LegalBench, CUAD/The Atticus Project, GEPA). KANBAN-021's v31 work in the tree untouched.
 
 :::
 
 
-::: {.entry data-date="2026-08-15 12:49" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-013"}
+::: {.entry data-date="2026-08-15 14:39" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-013"}
 
-**2026-08-15 12:49 — prompt-engineer — claimed**
+**2026-08-15 14:39 — prompt-engineer — claimed**
 
 Sorter tail-sampling iteration claimed `in_progress` ([issue #11](https://github.com/Exios66/llm-entity-extraction/issues/11) open). Diagnostic-first: the "1-off long tail" plateau reading from the v9 close-out is **superseded by cluster analysis** — v9 243-run (strict 0.9259, 18 fails) + full-509 run (0.9116, 45 fails): **marketing cell 0.5/10 at 243 and 7/17 at 509 (0.588) — the worst cell on both surfaces, unchanged since v6**; strategic_alliance 5/32 (0.844, unchanged v8→v9); collaboration cell regressed 0.923→0.885 (3 "COOPERATION AGREEMENT" docs read as JV/development). Root cause: the model's operative-machinery rules (R6/R8/R16) re-classify marketing-titled hybrids (Monsanto→agency, Zounds→manufacturing, Principal→endorsement = R6 over-fire, Pacira→distributor, Todos→reseller, Vertex→JV, Audible→co_branding) while the CUAD folder convention files them under Marketing — R16 covers only the pure "Marketing Agreement"+supply shape. **v10 = v9 + ONE rule: rule 26 MARKETING TITLE WINS** (mirror of the validated R23/R24 title-wins doctrine), with two carve-outs (license-primary titles per annex inheritance; operational-service families transportation/hosting) protecting the only counterfactuals at risk (Playboy GT license, Dynamex GT transportation). Counterfactual @509: reward 7+Dynamex, risk 1 (carve-out-protected), keep 10; @243: reward 5, risk 0, keep 5. `SORTER_PROMPT_V10` registered + `test_sorter_v10_marketing_title_wins` (350 tests green). **Runs reserved: `qwen3.7-flash_sorter_v9_subtype_langfuse_rerun` (champion noise-floor rerun, fresh manifest subtype_v9_rerun_250.jsonl) + `qwen3.7-flash_sorter_v10_subtype_langfuse` (candidate, manifest subtype_v10_250.jsonl)** — both `--stratified 250 --seed 42` on `mailroom-cuad-contracts-full` (fp fb9f939d…), the same surface as the v8↔v9 A/B.
 
@@ -638,9 +638,9 @@ Extraction next arm claimed `in_progress` ([issue #3](https://github.com/Exios66
 :::
 
 
-::: {.entry data-date="2026-08-15 12:10" class="agent-opencode" data-agent="opencode" data-card="KANBAN-018"}
+::: {.entry data-date="2026-08-15 12:24" class="agent-opencode" data-agent="opencode" data-card="KANBAN-018"}
 
-**2026-08-15 12:10 — opencode — done**
+**2026-08-15 12:24 — opencode — done**
 
 prompt-engineer agent shipped
   in [commit `1fcc734`](https://github.com/Exios66/llm-entity-extraction/commit/1fcc734) (CHANGELOG `[Unreleased]` Added entry in the same
@@ -662,9 +662,9 @@ prompt-engineer agent shipped
 :::
 
 
-::: {.entry data-date="2026-08-15 12:07" class="agent-opencode" data-agent="opencode" data-card="KANBAN-018"}
+::: {.entry data-date="2026-08-15 12:23" class="agent-opencode" data-agent="opencode" data-card="KANBAN-018"}
 
-**2026-08-15 12:07 — opencode — claimed**
+**2026-08-15 12:23 — opencode — claimed**
 
 The **prompt-engineer agent**
   (`prompt-engineer.md`) — the master diagnostic evaluator and prompt
@@ -730,9 +730,9 @@ term_length
 :::
 
 
-::: {.entry data-date="2026-08-15 12:07" class="agent-opencode" data-agent="opencode" data-card="KANBAN-017"}
+::: {.entry data-date="2026-08-15 12:23" class="agent-opencode" data-agent="opencode" data-card="KANBAN-017"}
 
-**2026-08-15 12:07 — opencode — claimed**
+**2026-08-15 12:23 — opencode — claimed**
 
 term_length containment arm claimed `in_progress` (board-only): v24's leading-phrase rule caused the model to REPLACE the clause opener with the canonical duration phrase — the CUAD ground-truth span for Ediets IS the opener ("This Agreement will become effective as of the Effective Date and, unless sooner terminated pursuant to Sections 3.1"), so containment dropped 1.0→0.3333. Fix = `contracts_specialist_v25` (derived from v24, base untouched): the prefix is ADDITIVE, the ENTIRE verbatim term clause (opener first, exactly as written) must follow — never start at the duration phrase. Planned run: `qwen3.7-flash_contracts_specialist_v25_sample5` (seed 42, 5 docs, same surface as the v23/v24 A/B) — name reserved here.
 
@@ -757,9 +757,9 @@ Scale-up A/B hit the **OpenRouter weekly key limit (403)** mid-run: v28@510 comp
 :::
 
 
-::: {.entry data-date="2026-08-15 12:49" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-021"}
+::: {.entry data-date="2026-08-15 14:39" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-021"}
 
-**2026-08-15 12:49 — prompt-engineer — claimed**
+**2026-08-15 14:39 — prompt-engineer — claimed**
 
 GEPA scale-up + prompt-efficiency arm claimed `in_progress` (board-only): full-corpus 510-doc chunked extraction A/B (v28 champion vs v31 efficiency refactor — same operative rules, compressed; less worked-example reliance per the GEPA efficiency principle), token-growth audit across v22→v31, large-surface noise floor + reasoning-trace corpus to seed the next iteration. Runs reserved: `qwen3.7-flash_contracts_specialist_v28_extraction_langfuse_510` + `qwen3.7-flash_contracts_specialist_v31_extraction_langfuse_510`.
 
@@ -784,27 +784,27 @@ GEPA scale-up + prompt-efficiency arm claimed `in_progress` (board-only): full-c
 :::
 
 
-::: {.entry data-date="2026-08-15 13:01" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-020"}
+::: {.entry data-date="2026-08-15 13:36" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-020"}
 
-**2026-08-15 13:01 — prompt-engineer — done**
+**2026-08-15 13:36 — prompt-engineer — done**
 
 Follow-up arm closed: shipped `contracts_specialist_v29` (CoC-definition carve-out) + `contracts_specialist_v30` (chunk-mode scalar-quoting discipline), `--chunked` flags + truncation-confound warning on `run_extraction_eval.py`, and the GEPA workflow in `.opencode/agents/prompt-engineer.md` (CHANGELOG `[Unreleased]` entries, 347 tests green, Langfuse synced, memo [`memos/contracts_specialist_v30.md`](memos/contracts_specialist_v30.md)). **Headline: the noise floor.** Identical-prompt rerun of the v28 champion (same 50-doc chunked surface): −0.0293 overall band, ~12 docs >±0.02 per field → the follow-up candidates measure INSIDE it (v29 −0.0264, v30 −0.0382 vs the rerun band −0.0293) and ship as unmeasured logic repairs; **v28 stays champion (re-validated vs v26 +0.0448, CI [+0.0087, +0.0891], P=0.004)**. Per-span diffs: Ediets = rule-driven CoC-definition suppression (fixed by v29; 0.692→0.769), LinkPlus/Innerscope/Legacy = noise; renewal_terms dip = 1 doc (NOVO, quote-truncation); Gridiron = 1-off (fresh runs 1.0). Card archived.
 
 :::
 
 
-::: {.entry data-date="2026-08-15 12:49" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-020"}
+::: {.entry data-date="2026-08-15 03:23" class="agent-prompt-engineer" data-agent="prompt-engineer" data-card="KANBAN-020"}
 
-**2026-08-15 12:49 — prompt-engineer — claimed**
+**2026-08-15 03:23 — prompt-engineer — claimed**
 
 Post-v28 follow-up arm claimed `in_progress` (board-only): the five not-fixed items from the KANBAN-004 close-out — per-span diff on the 4 regressed docs, chunked×term_length interaction, renewal_terms dip, Gridiron degenerate output, and `--chunked` enforcement on the Braintrust extraction runner (which cannot chunk today) — plus folding the full GEPA reflective prompt-evolution workflow into `.opencode/agents/prompt-engineer.md`. Runs reserved: none (diagnostics-only + runner change; any A/B reuses existing 50-doc records).
 
 :::
 
 
-::: {.entry data-date="2026-08-15 12:10" class="agent-opencode" data-agent="opencode" data-card="KANBAN-019"}
+::: {.entry data-date="2026-08-15 12:49" class="agent-opencode" data-agent="opencode" data-card="KANBAN-019"}
 
-**2026-08-15 12:10 — opencode — done**
+**2026-08-15 12:49 — opencode — done**
 
 Slides problems/fixes decks landed in
   `docs/slides/` (docs-only, no changelog entry): **08-problems-sorter** (near-
@@ -822,9 +822,9 @@ Slides problems/fixes decks landed in
 :::
 
 
-::: {.entry data-date="2026-08-15 12:07" class="agent-opencode" data-agent="opencode" data-card="KANBAN-019"}
+::: {.entry data-date="2026-08-15 12:49" class="agent-opencode" data-agent="opencode" data-card="KANBAN-019"}
 
-**2026-08-15 12:07 — opencode — claimed**
+**2026-08-15 12:49 — opencode — claimed**
 
 Slides problems/fixes decks claimed `in_progress` (board-only, docs-only): four new decks in `docs/slides/` — 08/09 = sorter problems then fixes, 10/11 = contracts-specialist problems then fixes (same framing, one doc per side per agent) — built from the changelog iteration records (v0.15.0/v0.16.0/v0.17.0), [`V16_PROPOSITION.md`](V16_PROPOSITION.md) summaries, and the KANBAN-016/017 arms. README index updated. No changelog entry (docs-only).
 
@@ -903,9 +903,9 @@ Extraction
 :::
 
 
-::: {.entry data-date="2026-08-14 11:13" class="agent-opencode" data-agent="opencode" data-card="KANBAN-015"}
+::: {.entry data-date="2026-08-14 19:53" class="agent-opencode" data-agent="opencode" data-card="KANBAN-015"}
 
-**2026-08-14 11:13 — opencode — claimed**
+**2026-08-14 19:53 — opencode — claimed**
 
 Extraction regression diagnostics claimed `in_progress`: the working tree already holds uncommitted work with NO card (board rule 4) — [`src/metrics.py`](src/metrics.py) (date/duration MAE), [`src/master_labels.py`](src/master_labels.py) (curated master-clauses CSV loader, default `../llm-mailroom/data/cuad/master_clauses.csv`), `field_scoring.parse_date` alias, `run_extraction_eval.py --master-labels` + diagnostics plumbing. This card ships that work PLUS **R² (coefficient of determination) as a tracked performance metric** (`duration_r2`, `date_r2`, per-field buckets), wires `scores.diagnostics` into the experiment log + GH Pages breakdown, adds network-free tests, and documents formulas in SCORING.md. Chained-eval diagnostics stay out of scope (own runner, future card).
 
@@ -977,9 +977,9 @@ Rebuilt the llm-dojo
 :::
 
 
-::: {.entry data-date="2026-08-13 00:17" class="agent-opencode" data-agent="opencode" data-card="KANBAN-012"}
+::: {.entry data-date="2026-08-13 03:23" class="agent-opencode" data-agent="opencode" data-card="KANBAN-012"}
 
-**2026-08-13 00:17 — opencode — v0.16.0 release sweep (KANBAN-012/010 done; +KANBAN-013)**
+**2026-08-13 03:23 — opencode — v0.16.0 release sweep (KANBAN-012/010 done; +KANBAN-013)**
 
 Board
   swept for the v0.16.0 release: **KANBAN-012 archived** — the sorter_v9 A/B
@@ -1038,9 +1038,9 @@ In-progress semantics
 :::
 
 
-::: {.entry data-date="2026-08-13 23:57" class="agent-opencode" data-agent="opencode" data-card="KANBAN-003"}
+::: {.entry data-date="2026-08-13 03:23" class="agent-opencode" data-agent="opencode" data-card="KANBAN-003"}
 
-**2026-08-13 23:57 — opencode — /012 + site**
+**2026-08-13 03:23 — opencode — /012 + site**
 
 Board sweep: sorter_v7
   A/B landed (KANBAN-003 archived — v7 wins +0.82pp strict 0.8765, commit
@@ -1102,9 +1102,9 @@ v0.15.0 shipped: changelog
 :::
 
 
-::: {.entry data-date="2026-08-12 23:32" class="agent-board-bootstrap" data-agent="board-bootstrap (opencode)" data-card="—"}
+::: {.entry data-date="2026-08-12 03:23" class="agent-board-bootstrap" data-agent="board-bootstrap (opencode)" data-card="—"}
 
-**2026-08-12 23:32 — board-bootstrap (opencode) — all cards**
+**2026-08-12 03:23 — board-bootstrap (opencode) — all cards**
 
 Board created and
   seeded from the live repo state: sorter_v7 WIP exists in the working tree

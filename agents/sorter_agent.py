@@ -240,6 +240,39 @@ def equivalent_subtypes(a: str, b: str) -> bool:
     return any(a in cls and b in cls for cls in SUBTYPE_EQUIVALENCES)
 
 
+# ---------------------------------------------------------------------------
+# Docclass (hierarchical) subclass equivalences — the doc_subclass mirror of
+# SUBTYPE_EQUIVALENCES. Defensible family-level reads for the second-level
+# dimension (KANBAN-033):
+#   - mixed_cash_stock <-> mixed_cash_stock_election (an election structure IS
+#     a mixed cash+stock deal with a per-shareholder choice; MAUD's categories
+#     split them, but the family-level read is the same mixed structure —
+#     mirrors the reseller<->distributor defensibility)
+# Record types (bylaws, articles_of_incorporation, ...) have no cross-type
+# families — a bylaws read is never equivalent to a charter read.
+# ---------------------------------------------------------------------------
+DOC_SUBCLASS_EQUIVALENCES: list[frozenset[str]] = [
+    frozenset({"mixed_cash_stock", "mixed_cash_stock_election"}),
+]
+
+
+def equivalent_doc_subclasses(a: str | None, b: str | None,
+                              doc_type: str | None = None) -> bool:
+    """Return True when two doc_subclass keys are the same family or members
+    of the same interchangeable family class (see
+    ``DOC_SUBCLASS_EQUIVALENCES``), scoped to the doc_type's own dimension
+    (a consideration key is never equivalent to a record-type key)."""
+    if a == b:
+        return True
+    if a is None or b is None:
+        return False
+    if doc_type in SUBCLASS_DIMENSIONS:
+        allowed = {s["key"] for s in SUBCLASS_DIMENSIONS[doc_type]}
+        if a not in allowed or b not in allowed:
+            return False
+    return any(str(a) in cls and str(b) in cls for cls in DOC_SUBCLASS_EQUIVALENCES)
+
+
 def normalize_subtype(value) -> str:
     """Coerce a raw sorter subtype output (or a CUAD folder name) to a
     canonical subtype key; unknown/non-contract values become ``other``."""

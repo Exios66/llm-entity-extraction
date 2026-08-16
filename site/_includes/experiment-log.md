@@ -170,6 +170,7 @@
 | 166 | qwen3.7-flash_sorter_docclass_v3_docclass_ab30 | docclass_classification | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.8000 | — | 631147 |
 | 167 | qwen3.7-flash_sorter_docclass_v3_docclass_full676 | docclass_classification | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.8905 | — | 12913188 |
 | 168 | qwen3.7-flash_sorter_docclass_vision_v0_docclass_vpilot | docclass_classification | qwen/qwen3.7-flash | sorter_docclass_vision_v0 | exact_match 0.8750 | — | 100808 |
+| 169 | qwen3.7-flash_sorter_docclass_v3_docclass_diag30 | docclass_classification | qwen/qwen3.7-flash | sorter_docclass_v3 | exact_match 0.5667 | — | 656691 |
 
 ---
 
@@ -22327,5 +22328,92 @@ The model's own reasoning on every failed row — the evidence it cited for the 
 | Field | Score |
 |---|---|
 | failure_insights | mode_counts: {'subclass_miss': 1} · n_failed: 1 · failures: [{'filename': 'contract_100_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_stock'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_cash'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is titled 'AGREEMENT AND PLAN OF MERGER' between Microsoft Corporation (Parent), Big Sky Merger Sub Inc. (Merger Sub), and Nuance Communications, Inc. (Company), and Section 1.1(iii) explicitly defines the Merger Consideration as '$56.00 in cash, without interest'."}] |
+
+---
+
+## qwen3.7-flash_sorter_docclass_v3_docclass_diag30  (docclass_classification)
+
+### Run metadata
+
+| Key | Value |
+|---|---|
+| Timestamp | 2026-08-16T08:30:44.611537+00:00 |
+| Model | qwen/qwen3.7-flash |
+| Prompt version | sorter: sorter_docclass_v3 |
+| Git commit | `c5dbfc2` (dirty tree) |
+
+### Data source
+
+| Key | Value |
+|---|---|
+| datasets | mailroom-maud-contracts,mailroom-cuad-contracts-full,mailroom-s1-corporate-records |
+| ground_truth | doc_type + doc_subclass |
+| ground_truth_mode | maud_consideration_gt / s1_record_type / cuad_subtype |
+| dataset_fingerprint | 946ac1c42b92795a43b5b8c030557de6defd9dbfdb50bd620d331bd517f993f8 |
+| n_samples | 30 |
+| sample_requested | 0 |
+| stratified | 0 |
+| seed | 42 |
+
+### Parameters
+
+| Key | Value |
+|---|---|
+| datasets | mailroom-maud-contracts,mailroom-cuad-contracts-full,mailroom-s1-corporate-records |
+| sample | 0 |
+| stratified | 0 |
+| seed | 42 |
+| max_input_chars | 100000 |
+| max_tokens | 4096 |
+| reasoning_effort | medium |
+| temperature | 0.1 |
+| input_mode | text |
+| vision_pages | all |
+| max_concurrency | 8 |
+| rate_limit_retries | 0 |
+| tracing_backend | phoenix |
+| tracing_meta | endpoint: http://localhost:6006/v1/traces · service_name: llm-entity-extraction · session_id: qwen3.7-flash_sorter_docclass_v3_docclass_diag30 · trace_name: docclass_classification · disabled: False |
+
+### Token usage
+
+| Stage | Prompt | Completion | Total | Mean cost $ | Total cost $ |
+|---|---|---|---|---|---|
+| all | — | — | — | — | — |
+
+### Scores
+
+| Score | Value |
+|---|---|
+| doc_type_accuracy | 0.8667 |
+| subclass_accuracy | 0.4737 |
+| exact_match | 0.5667 |
+| confidence | 0.9633 |
+| n_rows | 30 |
+| n_errors | 0 |
+
+**Scores — per_class_accuracy**
+
+| Field | Score |
+|---|---|
+| contract | 0.7273 |
+| corporate_record | 1 |
+| merger_agreement | 0.9231 |
+
+**Scores — subclass_confusion**
+
+| Field | Score |
+|---|---|
+| all_cash | mixed_cash_stock: 2 · all_cash: 2 |
+| all_stock | other: 1 · all_cash: 1 · all_stock: 2 |
+| articles_of_incorporation | rights_instrument: 1 · articles_of_incorporation: 1 |
+| bylaws | bylaws: 1 |
+| other | all_cash: 1 · all_stock: 3 · mixed_cash_stock: 1 |
+| rights_instrument | rights_instrument: 3 |
+
+**Scores — sorter**
+
+| Field | Score |
+|---|---|
+| failure_insights | mode_counts: {'doc_type_miss': 4, 'subclass_miss': 9} · n_failed: 13 · failures: [{'filename': 'FEDERATEDGOVERNMENTINCOMESECURITIESINC_04_28_2020-EX-99.SERV AGREE-SERVICES AGREEMENT_POWEROF', 'expected': {'doc_type': 'contract', 'doc_subclass': None}, 'predicted': {'doc_type': 'corporate_record', 'doc_subclass': None}, 'failure_mode': 'doc_type_miss', 'reasoning': "The document is explicitly titled 'LIMITED POWER OF ATTORNEY'. It appoints an agent (FASC) to act on behalf of the Adviser for specific funds. According to Rule 32 and Rule 33, a power of attorney attached as an exhibit or filed in this context is classified as a corporate record with the doc_subclass 'powers_of_attorney'."}, {'filename': 'OLDAPIWIND-DOWNLTD_01_08_2016-EX-1.3-AGENCY AGREEMENT2', 'expected': {'doc_type': 'contract', 'doc_subclass': None}, 'predicted': {'doc_type': 'corporate_record', 'doc_subclass': None}, 'failure_mode': 'doc_type_miss', 'reasoning': "The document is an 'Agents' Certificate' filed as Exhibit I to Schedule A of a registration statement (SEC filing context). It certifies compliance with securities laws in connection with an 'Agency Agreement'. While it references an agency agreement and involves broker-dealers (agents), the document itself is a certificate/record of compliance and status rather than the operative agreement defining the rights and obligations of the parties. Under Rule 32, corporate records or instruments filed as exhibits stay in their substantive form. However, this is not a standard governance record like bylaws or articles. It is a specific certification related to an affiliate/broker-dealer arrangement. Given the strict list of doc_types, 'corporate_record' is the best fit for exhibit filings that are not the main agreement or opinion, especially when they serve as a record of compliance/status. The contract_subtype 'affiliate' is assigned because the core subject matter is the relationship between the Corporation and its U.S. Affiliate/Broker-Dealer agent, and the certificate validates the affiliate's status. Note: If interpreted strictly as a standalone legal instrument creating an obligation, it could be 'contract' -> 'agency', but the 'Certificate' format and SEC exhibit nature strongly point to 'corporate_record' in many classification schemas for such compliance certs. However, looking at the prompt's specific instruction for 'joint_filing_agreements' being contracts, and 'registration_rights' being corporate_records, this 'Agents Certificate' is closer to a compliance filing wrapper or a record. Let's re-evaluate. Is it a 'compliance_filing'? No, that's for SEC forms (10-K, etc.). Is it a 'contract'? It's a certificate *under* a contract. Often these are treated as part of the contract package. But if forced to choose, 'corporate_record' fits the 'exhibit' nature of internal/corporate compliance docs better than 'contract' which implies the primary agreement. Wait, Rule 35 says Registration Rights Agreements are corporate_record. This is an Agents Certificate. It's not a rights instrument. It's a certificate of fact. Let's look at 'contract' again. It executes a certification required by the Agency Agreement. It doesn't create new primary obligations like a license or sale. It's a procedural document. In many datasets, certificates attached to agreements are classified as part of the agreement or as separate contracts if they stand alone. Here it stands alone as an exhibit. Given the ambiguity and the 'certificate' title, 'corporate_record' is a strong candidate for 'other' subclass. However, the content is heavily focused on the 'Affiliate' (U.S. registered broker-dealer). Let's stick with corporate_record due to the exhibit/certificate nature."}, {'filename': 'UNITEDNATIONALBANCORP_03_03_1999-EX-99-Outsourcing Agreement with the BISYS Group, Inc.', 'expected': {'doc_type': 'contract', 'doc_subclass': None}, 'predicted': {'doc_type': 'correspondence', 'doc_subclass': None}, 'failure_mode': 'doc_type_miss', 'reasoning': 'The document is a press release announcing an agreement, not the agreement itself. It contains quotes from executives and contact information for media/investors, which are characteristic of correspondence/press releases rather than the operative legal text of a contract.'}, {'filename': 'contract_2_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'other'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_cash'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative machinery including a cash tender offer followed by a merger, representations and warranties, no-shop covenants, and closing mechanics. The consideration is explicitly defined as '$8.10 per share in cash' plus Contingent Value Rights (CVRs). While CVRs introduce a contingent element, the primary consideration structure is cash-based, fitting the 'all_cash' subclass convention for cash-dominated deals in this corpus context. The embedded 'Contingent Value Rights Agreement' is an annex to the main merger agreement and does not change the parent document's classification."}, {'filename': 'contract_33_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_stock'}, 'predicted': {'doc_type': 'contract', 'doc_subclass': 'other'}, 'failure_mode': 'doc_type_miss', 'reasoning': "The document is a standalone 'Registration Rights Agreement' filed as Exhibit E to the Transaction Agreement. While it contains registration and indemnification obligations typical of securityholder agreements, rule 35 explicitly states that a 'REGISTRATION RIGHTS AGREEMENT' filed as an exhibit to a registration statement (EX-4.x) is classified as a corporate_record with doc_subclass rights_instrument. However, this document is labeled 'Exhibit E' within a Merger/Transaction Agreement package (not an S-1 filing exhibit catalog), and rule 35 specifies the rule applies in the SEC exhibit context only; a standalone registration rights agreement outside any filing package stays contract. Since it does not fit any of the specific contract subtypes (like license, distributor, etc.) and is not a corporate record under the strict exhibit-context rule, it falls into 'other'. Wait, re-reading rule 35: 'a Registration Rights Agreement filed as an exhibit to a registration statement... is corporate_record... The rule applies in the SEC exhibit context only; a standalone registration rights agreement outside any filing package stays contract'. This document is presented as 'Exhibit 2.1' of a 'Transaction Agreement', which is likely part of an SEC filing (Schedule 14A or similar proxy/merger filing). However, the prompt asks to classify the document *as provided*. The text starts with 'Exhibit 2.1 Execution Version TRANSACTION AGREEMENT'. The bulk of the text describes the merger transactions. The end of the text shows '[SIGNATURE PAGE TO REGISTRATION RIGHTS AGREEMENT]'. This indicates the document provided is actually the **Registration Rights Agreement** itself, which is attached as an exhibit to the main Transaction Agreement. Rule 35 says if it's filed as an exhibit to a *registration statement* (S-1), it's corporate_record. If it's just an exhibit to a merger agreement, it stays contract. Given the ambiguity of the wrapper and the fact that it's a distinct agreement granting registration rights, and rule 35's exception for non-registration-statement contexts, it remains a contract. It does not fit any other subtype, so 'other' is correct."}, {'filename': 'contract_71_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_cash'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'mixed_cash_stock'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is explicitly titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative clauses including a tender offer followed by a merger under DGCL Section 251(h), representations and warranties, covenants, and termination fees. This squarely fits the merger_agreement class per Rule 31. The consideration involves both cash (Offer Price of $3.15/share) and stock conversion (Convertible Notes converting to Company Shares), making it a mixed cash/stock transaction."}, {'filename': 'contract_72_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_cash'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'mixed_cash_stock'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is explicitly titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative machinery including a Merger Sub, Effective Time mechanics, Representations and Warranties, Material Adverse Effect definitions, no-shop covenants, and termination fees. Under Rule 31, this falls squarely under the merger_agreement class. The consideration structure involves cash payments (Company Termination Fee, Parent Termination Fee, implied cash-out for options/RSUs) and equity rollover/exchange (Rollover Agreements for equity interests in Ocala Topco), constituting a mixed cash and stock transaction."}, {'filename': 'contract_100_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_stock'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_cash'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is explicitly titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative clauses including a Parent/Merger Sub structure, Effective Time mechanics, Representations and Warranties, and Closing conditions, which squarely fits the merger_agreement class under Rule 31. The Merger Consideration is defined in Section 1.1(ii) as '$56.00 in cash', indicating an all-cash transaction for doc_subclass."}, {'filename': 'contract_93_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'other'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_stock'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative clauses including merger mechanics, representations and warranties, covenants, and conditions to closing. Rule 31 classifies this as a merger_agreement. Article II (Section 2.01(d)) specifies that the consideration for the merger is an exchange ratio of Buyer Common Stock ('0.275 of a share... of Buyer Common Stock'), with cash only provided in lieu of fractional shares (Section 2.04). This constitutes an all-stock transaction."}, {'filename': 'contract_120_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'other'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'mixed_cash_stock'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is explicitly titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative clauses including a Merger structure (Parent/Merger Sub/Company), Representations and Warranties, Covenants (no-shop, regulatory approvals), and Conditions to Closing. This fits the merger_agreement class perfectly under Rule 31. The consideration involves both equity (exchange of Company Common Stock) and debt financing ('Debt Financing', 'Equity Commitment Letter'), indicating a mixed cash/stock or mixed consideration structure, fitting the 'mixed_cash_stock' subclass."}, {'filename': 'contract_108_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'other'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_stock'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is explicitly titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative clauses including merger mechanics, representations and warranties, covenants, and conditions precedent. Rule 31 mandates classifying this as 'merger_agreement'. The consideration section (Article II) specifies that shares of Company stock are converted into shares of Parent Common Stock via an exchange ratio, with no cash consideration mentioned, indicating an all-stock transaction."}, {'filename': 'contract_121_merger_agreement.txt', 'expected': {'doc_type': 'merger_agreement', 'doc_subclass': 'other'}, 'predicted': {'doc_type': 'merger_agreement', 'doc_subclass': 'all_stock'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is explicitly titled 'AGREEMENT AND PLAN OF MERGER' and contains standard M&A operative clauses including a merger structure (Parent/Merger Sub/Company), representations and warranties, no-shop covenants, and closing conditions. This squarely fits the merger_agreement class under Rule 31. The consideration section (Section 3.1) specifies that Company Common Stock will be converted into the right to receive Merger Consideration consisting of Parent Common Shares (stock). There is no mention of cash consideration, making it an all-stock transaction."}, {'filename': '0001547903-13-000020_a41specimenclassacommonsto.htm', 'expected': {'doc_type': 'corporate_record', 'doc_subclass': 'articles_of_incorporation'}, 'predicted': {'doc_type': 'corporate_record', 'doc_subclass': 'rights_instrument'}, 'failure_mode': 'subclass_miss', 'reasoning': "The document is a specimen stock certificate (EX-4.1). Under rule 32, corporate records filed as SEC exhibits are classified as corporate_record. Specifically, rule 35 states that instruments defining rights of securityholders (like stock certificates) filed as exhibits are classified as corporate_record with doc_subclass 'rights_instrument'. Although it is an exhibit to a registration statement, the substantive form is a corporate record defining equity rights."}] |
 
 ---
