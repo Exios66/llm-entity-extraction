@@ -5,6 +5,7 @@
 - [Architecture](Architecture)
 - [Eval-Runners](Eval-Runners)
 - [Langfuse-Traces](Langfuse-Traces)
+- [Phoenix-Tracing](Phoenix-Tracing)
 - [Annotation-Queues](Annotation-Queues)
 - [Experiment-Log](Experiment-Log)
 - [Scoring](Scoring)

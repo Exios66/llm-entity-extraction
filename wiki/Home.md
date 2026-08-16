@@ -21,6 +21,7 @@ GitHub Pages:
 | [Architecture](Architecture) | repo layout, data flow, agents |
 | [Eval-Runners](Eval-Runners) | every eval runner, flags, matrices |
 | [Langfuse-Traces](Langfuse-Traces) | how to read the Langfuse trace graphs — node-by-node, chunked examples |
+| [Phoenix-Tracing](Phoenix-Tracing) | the local Phoenix trace sink + the resume / checkpoint / queue / cache cost-efficiency configuration |
 | [Annotation-Queues](Annotation-Queues) | the HITL review loop — low-performing extraction traces and failed sorter classifications, enqueued for human annotation |
 | [Experiment-Log](Experiment-Log) | the JSONL log, the markdown renderer, the site |
 | [Scoring](Scoring) | every metric, where it is computed, how to read it |

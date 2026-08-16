@@ -7,6 +7,7 @@ runner-level gate smoke test mocks the dataset loader and the resolver.
 from __future__ import annotations
 
 from argparse import ArgumentParser
+from pathlib import Path
 
 import pytest
 
@@ -175,3 +176,18 @@ def test_subtype_runner_gate_smoke(monkeypatch, tmp_path):
     # Without the flag, the same pilot runs normally.
     rc = runner.main_with_args(common + ["--sample", "5"])
     assert rc == 0
+
+
+def test_env_example_documents_phoenix_sink():
+    """The .env.example template pins the Phoenix local trace sink surface
+    (KANBAN-046 / issue #18) so the cost-efficiency configuration cannot
+    silently drift out of the committed template."""
+    example = Path(__file__).resolve().parents[1] / "config" / "environments" / ".env.example"
+    text = example.read_text(encoding="utf-8")
+    for var in (
+        "PHOENIX_TRACING=enabled",
+        "PHOENIX_ENDPOINT=http://localhost:6006/v1/traces",
+        "LANGCHAIN_TRACING_V2=true",
+    ):
+        assert var in text, f"{var} missing from .env.example"
+    assert "Arize Phoenix local trace sink" in text

@@ -56,6 +56,11 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-046/KANBAN-047"}
+**2026-08-16 — opencode — KANBAN-046 + KANBAN-047 claimed: issues #18 (Phoenix local trace sink) and #19 (llm-dojo-scoring hierarchy coverage)**
+
+Claimed on [issue #18](https://github.com/Exios66/llm-entity-extraction/issues/18) (→ KANBAN-046) and [issue #19](https://github.com/Exios66/llm-entity-extraction/issues/19) (→ KANBAN-047), 2026-08-16, human request ("address the most recent GitHub issues"). **KANBAN-046** — document the full local Arize Phoenix trace sink (Langfuse-primary resolution, Phoenix fallback, OTel spans, local SQLite, discard-by-delete) and cement the resume / checkpoint / queue / cache configurations for cost efficiency (`ManifestStore` resume + `--manifest` header contract, annotation queue, embedding cache reuse, `--dry-run` + `assert_production_run` gates). **KANBAN-047** — extend the `llm-dojo-scoring` library to cover the additional document hierarchy: **MAUD** (merger-agreement doc-class + consideration subclass + per-question), **LegalBench** (task-mode exact-match + per-class + CI), **chained evaluation runs** (sorter→extractor composite + handoff ablations), **multi classification**, and **court opinions**. Both cards now `in_progress`, Owner opencode, target v0.19.0. The Monte Carlo issue (#17) is deliberately NOT touched — another agent picked it up.
+:::
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-014"}
 **2026-08-16 — opencode — KANBAN-014 follow-on done: EDA figures 01–10 regenerated with CUAD dataset citations + self-contained data paths**
 

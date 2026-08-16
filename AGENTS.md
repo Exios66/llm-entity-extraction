@@ -250,7 +250,12 @@ single-session, low-risk) do NOT need issues.
   stack, and requires no cloud subscription. Spans are poured in, inspected
   locally, and discarded by deleting the DB file. Enable LangChain OpenTelemetry
   instrumentation via `LANGCHAIN_TRACING_V2=true` + `OTEL_EXPORTER_OTLP_ENDPOINT`
-  pointing at Phoenix for full LLM call traces.
+  pointing at Phoenix for full LLM call traces. Full documentation — including
+  the **resume / checkpoint / queue / cache** cost-efficiency configuration
+  (manifest resume + header contract, append-only experiment-log checkpoint,
+  HITL annotation queue, embedding-cache reuse, `--dry-run` /
+  `assert_production_run` cost gates) — lives in `wiki/Phoenix-Tracing.md`;
+  env-var templates are in `config/environments/.env.example`.
 - **LangSmith tracing** (optional, off by default): set `LANGSMITH_TRACING=true`
   + `LANGSMITH_API_KEY` + `LANGSMITH_PROJECT` in `.env` (see `.env.example`) and
   every LangChain LLM call (sorter/specialists via OpenRouter) auto-traces to
