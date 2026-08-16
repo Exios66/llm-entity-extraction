@@ -100,6 +100,11 @@ champion (0.9430), +0.98pp — but cross-model significance is NOT claimed (the
 all 7 models (llama-4-scout + gpt-4.1-nano full-509 are absent; needs
 `openpyxl`).
 
+---
+
+**2026-08-16 — opencode — KANBAN-036 done: gpt-4.1-nano full-509 resumed to completion — subtype 0.8605, the sweep's cost-floor arm**
+
+Resumed the partial `gpt-4.1-nano_sorter_v13_subtype_langfuse` run per the human request (the last in-progress v13 sorter run: 332/509 rows cached in `data/manifests/gpt41nano_sorter_v13_509.jsonl`, no experiment-log record). Env note: the live dotenv files sat at the repo root while loaders expect `config/environments/` — copied `.env` + `braintrust.env` in (gitignored); the root `langfuse.env` was left OUT so the tracer resolves Phoenix, matching the checkpoint header (`tracing_backend: phoenix`) and letting the manifest reuse the 332 cached rows. **Result (509/509): subtype 0.8605 (bootstrap 95% CI [0.8291, 0.8900]), equiv 0.8782, exact 0.9666, conf 0.9432, 71 fails** (36 family_confusion / 17 function_over_form / 9 equivalent_family / 9 other_fallback) — the lowest subtype AND the lowest exact-match of the full-509 sweep (the 17 function_over_form + 9 other_fallback misses vs 2/1 for gpt-4o-mini). Tokens recorded 2.25M (resume: manifest-replayed rows carry no usage — 177 newly-run rows only; extrapolated full-509 ≈ 6.48M ≈ **$0.66 est. at $0.10/$0.40 per M**). LangSmith 429 trace-limit noise non-fatal (known tenant monthly limit). **Artifacts**: experiment-log md regenerated (185 records); `Sorter_Model_Sweep_Results.xlsx` regenerated (9 rows — gpt-4.1-nano added) → copied to `~/Downloads`; CHANGELOG `[Unreleased]` entry written; uncommitted — commit left to the human. Sweep final: deepseek-v4-pro 0.9528 · qwen 0.9430 · gpt-4o-mini 0.9312 · deepseek-v4-flash 0.9253 · gpt-5-nano 0.8978 · llama-3.3-70b 0.8782 · llama-4-scout 0.8762 · gpt-4.1-nano 0.8605.
 :::
 
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-042"}

@@ -1795,6 +1795,136 @@
      "function_over_form": 3,
      "other_fallback": 1
     }
+   },
+   {
+    "id": 179,
+    "experiment_name": "llama-4-scout_sorter_v13_smoke1",
+    "timestamp": "2026-08-16T11:29:43.488370+00:00",
+    "model": "meta-llama/llama-4-scout",
+    "prompts": "sorter_v13",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 1,
+    "seed": 42,
+    "sample_key": "17c89792a5b4bf9d5decfee7fe31164aab6c05218f7cc2ac76b2d6b5045a3678:42:1",
+    "mode_counts": {}
+   },
+   {
+    "id": 180,
+    "experiment_name": "gpt-4o-mini_sorter_v13_smoke1",
+    "timestamp": "2026-08-16T11:37:04.773084+00:00",
+    "model": "openai/gpt-4o-mini",
+    "prompts": "sorter_v13",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 1,
+    "seed": 42,
+    "sample_key": "17c89792a5b4bf9d5decfee7fe31164aab6c05218f7cc2ac76b2d6b5045a3678:42:1",
+    "mode_counts": {}
+   },
+   {
+    "id": 181,
+    "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T11:40:49.128119+00:00",
+    "model": "meta-llama/llama-4-scout",
+    "prompts": "sorter_v13",
+    "headline_value": 0.8762,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 9,
+     "family_confusion": 42,
+     "function_over_form": 3,
+     "other_fallback": 9
+    }
+   },
+   {
+    "id": 182,
+    "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T11:41:28.259715+00:00",
+    "model": "meta-llama/llama-4-scout",
+    "prompts": "sorter_v13",
+    "headline_value": 0.8762,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 9,
+     "family_confusion": 42,
+     "function_over_form": 3,
+     "other_fallback": 9
+    }
+   },
+   {
+    "id": 183,
+    "experiment_name": "llama-4-scout_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T11:43:22.341020+00:00",
+    "model": "meta-llama/llama-4-scout",
+    "prompts": "sorter_v13",
+    "headline_value": 0.8762,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 9,
+     "family_confusion": 42,
+     "function_over_form": 3,
+     "other_fallback": 9
+    }
+   },
+   {
+    "id": 184,
+    "experiment_name": "gpt-4o-mini_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T11:50:09.706423+00:00",
+    "model": "openai/gpt-4o-mini",
+    "prompts": "sorter_v13",
+    "headline_value": 0.9312,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 2,
+     "family_confusion": 30,
+     "function_over_form": 2,
+     "other_fallback": 1
+    }
+   },
+   {
+    "id": 185,
+    "experiment_name": "gpt-4.1-nano_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T11:59:03.249777+00:00",
+    "model": "openai/gpt-4.1-nano",
+    "prompts": "sorter_v13",
+    "headline_value": 0.8605,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 9,
+     "family_confusion": 36,
+     "function_over_form": 17,
+     "other_fallback": 9
+    }
    }
   ],
   "sorter_classification": [
