@@ -52,7 +52,13 @@ from src.env_utils import (  # noqa: E402
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset  # noqa: E402
+from src.evaluation import (  # noqa: E402
+    ManifestStore,
+    call_with_rate_limit_retry,
+    dataset_fingerprint,
+    resolve_concurrency,
+    validate_dataset,
+)
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
 from src.field_scoring import get_field_types, score_category_presence, score_extraction  # noqa: E402
 from src.langfuse_config import load_langfuse_config  # noqa: E402
@@ -109,7 +115,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="Hard safety cap on document text fed to the agents "
                              "(150k default: the full corpus's largest contracts run "
                              "106-122k chars; head+tail window when exceeded)")
-    parser.add_argument("--max-concurrency", type=int, default=8, help="Concurrent API calls")
+    parser.add_argument("--max-concurrency", type=int, default=None,
+                        help="Concurrent API calls (default: AUTO — scales with the "
+                             "sample size, 8..32 workers, until diminishing returns / "
+                             "rate limits; pass N to pin)")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{sorter}+{extractor}_chained_langfuse)")
     parser.add_argument("--manifest", type=Path, default=Path("data/manifests/chained_langfuse.jsonl"),
@@ -241,7 +250,8 @@ def main_with_args(argv: list[str]) -> int:
             with tracer.agent_observation(
                 "sorter",
                 {"prompt_version": args.sorter_prompt_version, "model": args.model,
-                 "reasoning_effort": args.sorter_reasoning_effort},
+                 "reasoning_effort": args.sorter_reasoning_effort,
+                 "max_concurrency": args.max_concurrency},
             ) as sorter_handle:
                 sorter = SorterAgent(model=args.model, api_key=openrouter_key,
                                      prompt_version=args.sorter_prompt_version,
@@ -448,8 +458,12 @@ def main_with_args(argv: list[str]) -> int:
         for i, d in enumerate(with_truth)
     ]
     results: list[EvalResultShim] = [None] * len(rows)  # type: ignore[list-item]
+    # Adaptive concurrency: scale the worker pool with the sample size until
+    # diminishing returns / rate limits (explicit --max-concurrency N wins).
+    args.max_concurrency = resolve_concurrency(len(rows), args.max_concurrency)
+    retry_stats: dict = {"rate_limit_retries": 0}
     with ThreadPoolExecutor(max_workers=args.max_concurrency) as pool:
-        futures = {pool.submit(chain_one, row): i for i, row in enumerate(rows)}
+        futures = {pool.submit(call_with_rate_limit_retry, chain_one, row, stats=retry_stats): i for i, row in enumerate(rows)}
         for future, i in futures.items():
             try:
                 results[i] = future.result()

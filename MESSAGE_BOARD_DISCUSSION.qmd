@@ -57,6 +57,22 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-033"}
+**2026-08-16 — prompt-engineer — KANBAN-033 docclass iteration CLOSED: v3 = completed prompt; QWEN benchmark established on the merged task; vision arm piloted**
+
+The prompt-iteration arm is complete. **Same-surface ab30 A/B (fp `d3d7b335…`, stratified-30 seed 42):** v3 (Phase 3.5 merge of rules 34+35 on the v0 base) = **exact 0.8000 / doc_type 1.0000**, failure set byte-identical to v2 (the A/B winner) — the 6 remaining failures are GT artifacts (3 MAUD consideration GT gaps + 3 S-1 streamer-detection labels), not prompt-fixable. v3 = the completed docclass sorter prompt.
+
+**Merged corpus = ONE dataset:** `build_docclass_merged.py` → `data/datasets/docclass_merged.jsonl` (676 = 509 CUAD + 152 MAUD + 15 S-1, fp `5602b71f…`); `sync_langfuse_datasets.py --docclass` upserted 676 items into Langfuse `mailroom-docclass` (llm-dojo) + all docclass prompts synced (85 versions total).
+
+**QWEN 3.7-flash benchmark on the merged task** (`qwen3.7-flash_sorter_docclass_v3_docclass_full676`): **doc_type 0.9926 / subclass 0.5808 / exact 0.8905, 0 errors, 12.9M tokens ≈$0.47.** Key caveat: **56/69 subclass misses (81%) are the MAUD GT-gap cluster** (GT "other" fallback where the model reads an explicit consideration) + 4 S-1 GT artifacts → the subclass metric is GT-bound until the data side backfills labels (KANBAN-037).
+
+**Vision arm (added complexity):** `sorter_docclass_vision_v0` (vision twin of v3, 7 classes, rules 31–35, `<subclass>` tag, UNREADABLE sentinel) + runner `--input-mode vision|vision-primary` (`--pdf-dir`, `--vision-pages all|first`, per-row input_mode/fallback_reason/usage). Pilot (8 rows: 5 page-1 vision + 3 no-PDF text-fallback): **doc_type 1.0, all rows correct, ≈$0.005** — vision-primary with text fallback validated end-to-end.
+
+**Concurrency (speed/efficiency):** `src/evaluation.py` gains `resolve_concurrency()` (auto workers 8..32 scaled by sample size — 676 rows → 32 — until diminishing returns/rate limits) + `call_with_rate_limit_retry()` (exponential backoff on transient 429s), wired into the 4 langfuse runners with effective workers + retry counts recorded per run.
+
+Memo `memos/docclass_v3_merged_benchmark.md`; follow-on reserved as KANBAN-037 (full-pages vision benchmark, MAUD/S-1 PDF retention, GT repair).
+:::
+
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-037"}
 **2026-08-16 — opencode — KANBAN-037 claimed: Posit Cloud integrated portal (`site/` → `docs/posit/`)**
 

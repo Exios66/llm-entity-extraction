@@ -446,6 +446,7 @@ class SorterAgent(BaseAgent):
         return [d["key"] for d in self.doc_classes]
 
     def _parse_vision_output(self, raw: str, valid_keys: list[str]) -> dict:
+        """Parse the tag-based vision output into the standard contract.
 
         Handles the docclass vision prompt's extended tags (``<label>``,
         ``<subclass>``, ``<confidence>``, ``<reasoning>``) and the

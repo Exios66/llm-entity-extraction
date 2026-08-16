@@ -77,7 +77,13 @@ from scripts.eval.run_subtype_eval import _reasoning_span  # noqa: E402
 from src.braintrust_config import load_braintrust_config  # noqa: E402
 from src.braintrust_utils import load_braintrust_dataset  # noqa: E402
 from src.env_utils import require_env  # noqa: E402
-from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset  # noqa: E402
+from src.evaluation import (  # noqa: E402
+    ManifestStore,
+    call_with_rate_limit_retry,
+    dataset_fingerprint,
+    resolve_concurrency,
+    validate_dataset,
+)
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
 from src.langfuse_config import load_langfuse_config  # noqa: E402
 from src.langfuse_tracing import LangfuseTracer  # noqa: E402
@@ -284,7 +290,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="Reasoning effort for the classification call (default: medium)")
     parser.add_argument("--max-input-chars", type=int, default=100_000,
                         help="Hard safety cap on document text fed to the sorter")
-    parser.add_argument("--max-concurrency", type=int, default=8, help="Concurrent API calls")
+    parser.add_argument("--max-concurrency", type=int, default=None,
+                        help="Concurrent API calls (default: AUTO — scales with the "
+                             "sample size, 8..32 workers, until diminishing returns / "
+                             "rate limits; pass N to pin)")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{prompt-version}_docclass_langfuse)")
     parser.add_argument("--manifest", type=Path, default=Path("data/manifests/docclass_langfuse.jsonl"),
@@ -347,6 +356,12 @@ def main_with_args(argv: list[str]) -> int:
         dataset = dataset[: args.limit]
     if not dataset:
         parser.error("No rows found in the datasets.")
+
+    # Adaptive concurrency: scale the worker pool with the sample size until
+    # diminishing returns / rate limits (explicit --max-concurrency N wins).
+    args.max_concurrency = resolve_concurrency(len(dataset), args.max_concurrency)
+    print(f"  concurrency: {args.max_concurrency} workers "
+          f"(auto-scaled for {len(dataset)} rows)")
 
     class_counts = Counter(d["expected"] for d in dataset)
     subclass_counts = Counter(d["expected_subclass"] for d in dataset if d.get("expected_subclass"))
@@ -581,13 +596,21 @@ def main_with_args(argv: list[str]) -> int:
         for i, d in enumerate(dataset)
     ]
     results: list[EvalResultShim] = [None] * len(rows)  # type: ignore[list-item]
+    retry_stats: dict = {"rate_limit_retries": 0}
     with ThreadPoolExecutor(max_workers=args.max_concurrency) as pool:
-        futures = {pool.submit(classify_one, row): i for i, row in enumerate(rows)}
+        futures = {
+            pool.submit(call_with_rate_limit_retry, classify_one, row,
+                        stats=retry_stats): i
+            for i, row in enumerate(rows)
+        }
         for future, i in futures.items():
             try:
                 results[i] = future.result()
             except Exception as exc:  # noqa: BLE001 - one bad row must not abort
                 results[i] = EvalResultShim(rows[i], None, str(exc))
+    if retry_stats["rate_limit_retries"]:
+        print(f"  rate-limit retries: {retry_stats['rate_limit_retries']} "
+              f"(exponential backoff)", file=sys.stderr)
     failures = [r for r in results if r.error]
     for failure in failures:
         print(f"ERROR {failure.input['filename']}: {failure.error}", file=sys.stderr)
@@ -622,6 +645,7 @@ def main_with_args(argv: list[str]) -> int:
         usage_by_index, log_path, md_log_path,
         tracing_backend=tracing_backend,
         tracing_meta=tracing_meta,
+        extra_params={"rate_limit_retries": retry_stats.get("rate_limit_retries", 0)},
     )
     print(f"\nExperiment logged to {log_path}")
     return 0
@@ -630,7 +654,8 @@ def main_with_args(argv: list[str]) -> int:
 def log_experiment_to_repo(result, dataset, args, experiment_name,
                            usage, log_path, md_log_path,
                            tracing_backend: str = "langfuse",
-                           tracing_meta: dict | None = None) -> None:
+                           tracing_meta: dict | None = None,
+                           extra_params: dict | None = None) -> None:
     """Append ONE experiment-log record for the docclass run."""
     from statistics import mean
 
@@ -737,6 +762,8 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             "input_mode": args.input_mode,
             "vision_pages": args.vision_pages,
             "pdf_dir": str(args.pdf_dir) if args.pdf_dir else None,
+            "max_concurrency": args.max_concurrency,
+            "rate_limit_retries": (extra_params or {}).get("rate_limit_retries", 0),
             "tracing_backend": tracing_backend,
             "tracing_meta": tracing_meta or {},
         },
