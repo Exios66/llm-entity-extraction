@@ -56,6 +56,25 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-046"}
+**2026-08-16 — opencode — KANBAN-046 claimed: Monte Carlo simulation suite ported from the RVL-CDIP-classifier (issue #17)**
+
+Claimed `in_progress`. Issue #17 links the RVL-CDIP-classifier Posit Cloud Monte
+Carlo section; porting its zero-spend what-if suite to this repo's joint corpus
+(experiment log + manifests). Scope (per human decision): the core 5 scenarios
++ verification (no ALE/stop-word/trace-language), repo-internal (no Posit
+portal section), corpus.jsonl gitignored (outputs tracked). Scenarios:
+(1) ensemble voting accuracy(K) + confidence-gated escalation Pareto,
+(2) paired-bootstrap prompt ablation gate, (3) retry/failover/fallback failure
+simulation at 1K/25K/320K, (4) near-miss exemplar mining for confusion pairs,
+(5) spend-minimal verification recipe. No model spend (plan-free card).
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-046/KANBAN-047"}
+**2026-08-16 — opencode — KANBAN-046 + KANBAN-047 done: Phoenix local trace sink documented + llm-dojo-scoring v0.2.0 hierarchy coverage**
+
+Both issues closed by commit `98d4ed7`; issues #18/#19 CLOSED on GitHub with closing comments naming the commit + CHANGELOG entries. **KANBAN-046 (issue #18):** new [`wiki/Phoenix-Tracing.md`](wiki/Phoenix-Tracing.md) documents the local Arize Phoenix sink (Langfuse-primary resolution with Phoenix fallback via `resolve_tracer`, OTLP spans, SQLite, discard-by-delete) and cements the **resume/checkpoint/queue/cache** cost-efficiency configuration (`ManifestStore` resume + header contract, append-only experiment-log checkpoint, HITL annotation queue, embedding-cache reuse + usage accounting, `--dry-run`/`assert_production_run`/`--research-funding-key` gates). `config/environments/.env.example` gains the Phoenix config surface; AGENTS.md points at the wiki; drift-guard test pins the template. Wiki pushed (`sync-wiki.sh`). **KANBAN-047 (issue #19):** `llm-dojo-scoring` re-pinned `@v0.2.0` (upstream commit `2a7e37b`, tag `v0.2.0`): new `llm_dojo_scoring.tasks` module — `score_task()` dispatcher + task-aware normalization covering **MAUD** (merger-agreement doc-class + consideration-type subclass strict/equiv + per-question), **LegalBench** (Yes/No exact-match + per-class + P/R/F1), **multi-classification** (macro/micro + confusion), **court opinions**, **chained runs** (`chained_composite`/`chained_summary`, 0.25/0.75 weights); config task registries; 10 upstream tests (144 suite green). Posit portal re-rendered (claims + close-outs live); full suite 485 green (`test_quarto_render_is_deterministic_and_clean` passes). Cards archived under v0.19.0. Monte Carlo (#17) untouched — another agent's.
+:::
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-046/KANBAN-047"}
 **2026-08-16 — opencode — KANBAN-046 + KANBAN-047 claimed: issues #18 (Phoenix local trace sink) and #19 (llm-dojo-scoring hierarchy coverage)**
 
