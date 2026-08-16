@@ -3,7 +3,8 @@
 
 Mirrors the exact records the streamer builds
 (``scripts/datasets/stream_legalbench_tasks_to_bt.py``) into Langfuse
-**datasets** (default: the llm-dojo project, keys in ``langfuse.env``) so
+**datasets** (default: the llm-dojo project, keys in
+``config/environments/langfuse.env``) so
 prompt iterations have the task data as versioned, queryable dataset items in
 the SAME environment their traces land — the Langfuse-side twin of the
 Braintrust ``mailroom-lb-<task>`` datasets (and of the ``--local-dump`` JSONL
@@ -50,9 +51,10 @@ from scripts.datasets.stream_legalbench_tasks_to_bt import (  # noqa: E402
     valid_classes_for,
 )
 from src.braintrust_utils import _deterministic_record_id  # noqa: E402
+from src.env_utils import LANGFUSE_ENV_FILE, resolve_env_file  # noqa: E402
 
 DATASET_PREFIX = "mailroom-lb"
-DEFAULT_ENV_FILE = "langfuse.env"
+DEFAULT_ENV_FILE = str(LANGFUSE_ENV_FILE)
 DEFAULT_BASE_URL = "https://us.cloud.langfuse.com"
 
 
@@ -355,7 +357,8 @@ def main_with_args(argv: list[str]) -> int:
                         help="Report what would sync without writing")
     args = parser.parse_args(argv)
 
-    env_files = [Path(p) for p in (args.env_file or [DEFAULT_ENV_FILE])]
+    env_files = [resolve_env_file(p, default=LANGFUSE_ENV_FILE)
+                 for p in (args.env_file or [DEFAULT_ENV_FILE])]
     if args.maud or args.s1:
         dumps = {}
         if args.maud:

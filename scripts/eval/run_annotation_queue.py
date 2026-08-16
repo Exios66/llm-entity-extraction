@@ -46,6 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import structlog  # noqa: E402
 
 from src.langfuse_config import load_langfuse_config  # noqa: E402
+from src.env_utils import LANGFUSE_ENV_FILE  # noqa: E402
 
 logger = structlog.get_logger(__name__)
 
@@ -652,8 +653,9 @@ def build_parser() -> argparse.ArgumentParser:
                              "filters items by task")
     common.add_argument("--queue-name", default=None,
                         help="queue name (default per task)")
-    common.add_argument("--env-file", default="langfuse.env",
-                        help="dotenv file with LANGFUSE_* keys (default: langfuse.env)")
+    common.add_argument("--env-file", default=str(LANGFUSE_ENV_FILE),
+                        help="dotenv file with LANGFUSE_* keys "
+                             "(default: config/environments/langfuse.env)")
     common.add_argument("--score-name", default=DEFAULT_SCORE_NAME,
                         help=f"trace score to rank on (default: {DEFAULT_SCORE_NAME})")
     common.add_argument("--session-contains", default=None,

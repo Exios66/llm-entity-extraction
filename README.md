@@ -347,8 +347,8 @@ python3 -m venv .venv && source .venv/bin/activate   # recommended; .venv/ is gi
 pip install -r requirements.txt
 # vision pipeline needs poppler for PDF -> PNG rendering:
 brew install poppler   (or apt install poppler-utils)
-cp braintrust.env.example braintrust.env   # fill in creds (org/project/API key)
-cp .env.example .env                       # fill in OPENROUTER_API_KEY
+cp config/environments/braintrust.env.example config/environments/braintrust.env   # fill in creds (org/project/API key)
+cp config/environments/.env.example config/environments/.env                       # fill in OPENROUTER_API_KEY
 ```
 
 The repo is also pip-installable so the LangChain agents can be imported and
@@ -610,7 +610,8 @@ AGENTS.md "Run sink").
 The `run_langfuse_*_eval.py` runners execute the SAME datasets, tasks, and
 deterministic logic scorers as their Braintrust counterparts, but trace into a
 SEPARATE Langfuse project — **llm-dojo** by default (keys in gitignored
-`langfuse.env`, `langfuse.env.example` in-repo): this repo's prompt
+`config/environments/langfuse.env`, `config/environments/langfuse.env.example`
+in-repo): this repo's prompt
 iterations run and are reviewed there. A second project
 (`llm-mailroom-experiments`) is EXCLUSIVELY for testing the full mailroom
 pipeline in the llm-mailroom repo; insights flow llm-dojo → llm-mailroom,
@@ -642,7 +643,7 @@ Measured on the same 5-doc chained sample: overall 0.8666 vs 0.8497 (+1.7pp)
 and category presence 0.7773 vs 0.7106 (+6.7pp).
 
 ```bash
-cp langfuse.env.example langfuse.env   # fill in the SEPARATE project's keys
+cp config/environments/langfuse.env.example config/environments/langfuse.env   # fill in the SEPARATE project's keys
 python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
     --sorter-prompt-version sorter_v6 --extractor-prompt-version contracts_specialist_v11 \
     --manifest data/manifests/chained_langfuse.jsonl

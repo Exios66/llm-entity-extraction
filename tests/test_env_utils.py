@@ -15,6 +15,8 @@ from src.env_utils import (
     RESEARCH_FUNDING_KEY_ENV,
     add_research_funding_flag,
     assert_production_run,
+    require_env,
+    resolve_env_file,
     resolve_openrouter_key,
 )
 
@@ -91,6 +93,42 @@ def test_flag_registers_on_parser():
     add_research_funding_flag(parser)
     assert parser.parse_args(["--research-funding-key"]).research_funding_key is True
     assert parser.parse_args([]).research_funding_key is False
+
+
+def test_resolve_env_file_bare_name(monkeypatch, tmp_path):
+    """A bare filename resolves under ENV_DIR (config/environments/)."""
+    import src.env_utils as env_utils
+
+    env_dir = tmp_path / "config" / "environments"
+    monkeypatch.setattr(env_utils, "ENV_DIR", env_dir)
+
+    assert resolve_env_file("langfuse.env", default=env_utils.LANGFUSE_ENV_FILE) == env_dir / "langfuse.env"
+    assert resolve_env_file(".env", default=env_utils.DOTENV_FILE) == env_dir / ".env"
+
+    # None falls back to the given default; absolute paths pass through.
+    assert resolve_env_file(None, default=env_utils.BRAINTRUST_ENV_FILE) == env_utils.BRAINTRUST_ENV_FILE
+    abs_path = tmp_path / "custom.env"
+    assert resolve_env_file(abs_path, default=env_utils.LANGFUSE_ENV_FILE) == abs_path
+
+
+def test_env_reads_config_environments(monkeypatch, tmp_path):
+    """require_env() loads keys from config/environments/{braintrust.env,.env}."""
+    import src.env_utils as env_utils
+
+    env_dir = tmp_path / "config" / "environments"
+    env_dir.mkdir(parents=True)
+    (env_dir / "braintrust.env").write_text("BRAINTRUST_TEST_KEY=from-braintrust\n")
+    (env_dir / ".env").write_text("OPENROUTER_TEST_KEY=from-dotenv\n")
+
+    monkeypatch.setattr(env_utils, "ENV_DIR", env_dir)
+    monkeypatch.setattr(env_utils, "BRAINTRUST_ENV_FILE", env_dir / "braintrust.env")
+    monkeypatch.setattr(env_utils, "DOTENV_FILE", env_dir / ".env")
+
+    monkeypatch.delenv("BRAINTRUST_TEST_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_TEST_KEY", raising=False)
+
+    assert require_env("BRAINTRUST_TEST_KEY") == ("from-braintrust",)
+    assert require_env("OPENROUTER_TEST_KEY") == ("from-dotenv",)
 
 
 def test_subtype_runner_gate_smoke(monkeypatch, tmp_path):

@@ -913,7 +913,7 @@ def build_memos() -> dict:
     archive of findings for collaborators and presentation."""
     import re as _re
 
-    memos_dir = REPO_ROOT / "memos"
+    memos_dir = REPO_ROOT / "docs" / "memos"
     out = []
     if not memos_dir.is_dir():
         return {"memos": []}
@@ -921,7 +921,7 @@ def build_memos() -> dict:
         if path.name == "README.md":
             continue
         text = path.read_text(encoding="utf-8")
-        title_match = _re.match(r"^#\s+(.+)$", text, _re.M)
+        title_match = _re.match(r"^#\\s+(.+)$", text, _re.M)
         out.append({
             "file": path.name,
             "title": title_match.group(1).strip() if title_match else path.stem,

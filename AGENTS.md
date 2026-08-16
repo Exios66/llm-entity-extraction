@@ -227,11 +227,14 @@ single-session, low-risk) do NOT need issues.
 
 - Python 3.10+ (tested on 3.13). Deps in `requirements.txt`; the repo is also
   a Python package (`pyproject.toml` — packages `agents`, `src`, `config`).
-- Two dotenv files, both gitignored: `braintrust.env` (Braintrust
-  org/project/keys — the source of truth for config, see
+- Two dotenv files, both gitignored, both living under `config/environments/`
+  (templates committed as `.example`, live files gitignored): `braintrust.env`
+  (Braintrust org/project/keys — the source of truth for config, see
   `src/braintrust_config.py`) and `.env` (OpenRouter key + provider overrides).
-  Copy from the `.example` files. `src/env_utils.py` loads both; real shell
-  env vars always win.
+  Copy from the `.example` files. `src/env_utils.py` loads both (plus the
+  shared `ENV_DIR` / `BRAINTRUST_ENV_FILE` / `DOTENV_FILE` /
+  `LANGFUSE_ENV_FILE` path constants and `resolve_env_file()` for CLI
+  `--env-file` args); real shell env vars always win.
 - **Externally-funded OpenRouter key (research funding)**: `RESEARCH_FUNDING_OPENROUTER_API_KEY`
   in `.env` pays with external research funding and is ONLY reachable through
   the `--research-funding-key` flag on the eval runners (default `OPENROUTER_API_KEY`
@@ -273,8 +276,8 @@ python3 -m venv .venv && source .venv/bin/activate   # recommended; .venv/ is gi
 pip install -r requirements.txt
 pip install -e .        # editable install: agents/src/config importable from ANY codebase
                         # (e.g. llm-mailroom's LangGraph) — new changes picked up instantly
-cp braintrust.env.example braintrust.env   # fill in creds
-cp .env.example .env                       # fill in OPENROUTER_API_KEY
+cp config/environments/braintrust.env.example config/environments/braintrust.env   # fill in creds
+cp config/environments/.env.example config/environments/.env                       # fill in OPENROUTER_API_KEY
 ```
 
 ## Command cheatsheet
@@ -669,7 +672,8 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
 - **New eval runners**: mirror `run_subtype_eval.py` / `run_chained_eval.py`
   (same flags, `main_with_args`, Braintrust composite scoring, manifest,
   experiment-log append) and add a smoke test.
-- **Never commit** real keys: `.env`, `braintrust.env`, `*.env.local` are
+- **Never commit** real keys: `config/environments/.env`,
+  `config/environments/braintrust.env`, `config/environments/*.env.local` are
   gitignored; use the `.example` files.
 - **Never edit `reports/experiment_log.md` by hand** — regenerate it.
 

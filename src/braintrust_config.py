@@ -16,6 +16,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.env_utils import BRAINTRUST_ENV_FILE, DOTENV_FILE, resolve_env_file
+
 DEFAULT_ORG_ID = "b0eea81a-56db-4be2-91a9-bbe17ab6d648"
 DEFAULT_PROJECT_NAME = "mailroom-eval"
 DEFAULT_PROJECT_ID = "02fb28b9-60e2-40b6-a68a-b72ee0b237ad"
@@ -47,12 +49,12 @@ def _load_dotenv(path: Path) -> None:
         pass
 
 
-def _resolve(env_file: str | Path) -> dict:
+def _resolve(env_file: str | Path | None) -> dict:
     """Load braintrust.env (if present) then .env and return resolved values."""
-    env_file = Path(env_file)
+    env_file = resolve_env_file(env_file, default=BRAINTRUST_ENV_FILE)
     if env_file.exists():
         _load_dotenv(env_file)
-    _load_dotenv(Path(".env"))
+    _load_dotenv(DOTENV_FILE)
 
     def get(name: str, default: str) -> str:
         value = os.environ.get(name)
@@ -71,12 +73,12 @@ def _resolve(env_file: str | Path) -> dict:
     }
 
 
-def load_braintrust_config(env_file: str | Path = "braintrust.env") -> BraintrustConfig:
+def load_braintrust_config(env_file: str | Path | None = None) -> BraintrustConfig:
     """Load and resolve the Braintrust configuration (main account)."""
     return BraintrustConfig(**_resolve(env_file))
 
 
-def load_agent_config(env_file: str | Path = "braintrust.env") -> BraintrustConfig:
+def load_agent_config(env_file: str | Path | None = None) -> BraintrustConfig:
     """Load and resolve the **agent** Braintrust account configuration.
 
     Reads AGENT_BRAINTRUST_API_KEY plus optional AGENT_BRAINTRUST_* overrides.

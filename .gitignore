@@ -1,4 +1,11 @@
 # Environment / secrets — never commit real credentials.
+# Live (gitignored) dotenv files live under config/environments/.
+config/environments/.env
+config/environments/braintrust.env
+config/environments/langfuse.env
+config/environments/*.env.local
+# Root-level safety net (one release): still block the old paths in case
+# anyone has not moved their live files yet.
 .env
 braintrust.env
 langfuse.env
@@ -15,19 +22,29 @@ venv/
 .coverage
 htmlcov/
 
-# Local run artifacts
-data/manifests/
-data/samples/
-data/legalbench_local/
+# Local run artifacts — the directories are gitignored (contents regenerated
+# locally) but each keeps a committed README.md placeholder documenting what it
+# holds and how to regenerate it.
+data/manifests/*
+!data/manifests/README.md
+data/samples/*
+!data/samples/README.md
+data/legalbench_local/*
+!data/legalbench_local/README.md
 # the full CUAD v1 PDF corpus (~510 contracts) — local only
-data/cuad_pdfs/
+data/cuad_pdfs/*
+!data/cuad_pdfs/README.md
 # MAUD local dumps (152 agreements, ~168 MB) — regenerate via stream_maud_to_bt.py --local-dump
-data/maud/
+data/maud/*
+!data/maud/README.md
 # EDGAR S-1 corporate-record dumps — regenerate via stream_s1_exhibits.py --local-dump
-data/s1_corporate_records/
+data/s1_corporate_records/*
+!data/s1_corporate_records/README.md
+# post-hoc LLM-judge calibration records — written by judge_experiment.py
+data/judgments/*
+!data/judgments/README.md
 reports/*.png
 reports/*.csv
 
 # OS junk
 .DS_Store
-data/judgments/

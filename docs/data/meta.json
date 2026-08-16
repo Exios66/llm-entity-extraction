@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-16T05:23:30.695568+00:00",
+ "built_at": "2026-08-16T06:12:29.729710+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
   "05b3b17b9ce344b98dd246693ff4b9683db239b4f6b0c8f5ffb0be78b4b2b7c9:42:6",
@@ -18,6 +18,7 @@
   "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
   "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
+  "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
   "9afcf61251405fbcc15221b96a7e316a46fd5fdfdfe920b75479e4107226385a:42:10",
   "a338c80e03aae1f63c76bb39b441ec0ac2ab870cac4636d672df5194b51a7e80:42:6",
   "afb2e0e77981c268fd1b9e9c38811053030860fa936a90a7f8e846164f7bf2cd:42:1",
@@ -37,20 +38,21 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 159,
+ "run_count": 161,
  "tasks": {
   "contract_entity_extraction": 51,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 32,
+  "subtype_classification": 34,
   "sorter_classification": 3,
   "task_classification": 56,
   "docclass_classification": 1
  },
  "models": {
   "qwen/qwen3.7-flash": 156,
-  "deepseek/deepseek-v4-flash": 1,
+  "deepseek/deepseek-v4-flash": 2,
   "deepseek/deepseek-v4-pro": 1,
-  "openai/gpt-5-nano": 1
+  "openai/gpt-5-nano": 1,
+  "openai/gpt-4.1-nano": 1
  },
  "prompts": {
   "contracts_specialist_v2": 1,
@@ -107,7 +109,7 @@
   "legalbench_task_v3_competitive_restriction_exception": 1,
   "legalbench_task_v3_covenant_not_to_sue": 1,
   "legalbench_task_v3_effective_date": 1,
-  "sorter_v13": 3,
+  "sorter_v13": 5,
   "legalbench_task_v4_competitive_restriction_exception": 2,
   "legalbench_task_v4_covenant_not_to_sue": 2,
   "legalbench_task_v4_audit_rights": 2,
@@ -118,10 +120,10 @@
   "sorter_v14": 1,
   "sorter_docclass_v0": 1
  },
- "n_rows": 14847,
- "n_ok": 13932,
+ "n_rows": 14849,
+ "n_ok": 13934,
  "n_error": 873,
- "total_tokens": 199659478,
+ "total_tokens": 199709101,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -174,7 +176,7 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 32,
+   "runs": 34,
    "best": {
     "run_id": 20,
     "value": 1.0
@@ -184,8 +186,8 @@
     "run_id": 84,
     "value": 0.0
    },
-   "documents": 9533,
-   "tokens": 121864498
+   "documents": 9535,
+   "tokens": 121914121
   },
   "sorter_classification": {
    "runs": 3,

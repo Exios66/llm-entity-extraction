@@ -9,17 +9,18 @@ additional project whose keys are provided).
 
 Usage:
     python scripts/eval/sync_langfuse_prompts.py --dry-run
-    python scripts/eval/sync_langfuse_prompts.py            # sync llm-dojo (langfuse.env)
+    python scripts/eval/sync_langfuse_prompts.py            # sync llm-dojo (config/environments/langfuse.env)
     python scripts/eval/sync_langfuse_prompts.py --env-file langfuse.env \\
         --env-file langfuse-primary.env                     # sync multiple projects
 
 Each ``--env-file`` contributes one project: its LANGFUSE_PUBLIC_KEY /
 LANGFUSE_SECRET_KEY route the write (keys are project-scoped), and its
 LANGFUSE_PROJECT value names the project in the report. The default is
-``langfuse.env`` (the llm-dojo experiment environment). A missing env file
-is skipped with a warning — so adding a second project is a drop-in: create
-``langfuse-<project>.env`` with that project's keys and pass it on the
-command line (or add it to the default list).
+``config/environments/langfuse.env`` (the llm-dojo experiment environment). A
+missing env file is skipped with a warning — so adding a second project is a
+drop-in: create ``config/environments/langfuse-<project>.env`` with that
+project's keys and pass it on the command line (or add it to the default
+list).
 
 Idempotency: a prompt whose latest version content already equals the local
 constant is skipped; only changed/absent versions are created. New versions
@@ -44,8 +45,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import requests  # noqa: E402
 
 from src.prompts import PROMPT_VERSIONS  # noqa: E402
+from src.env_utils import LANGFUSE_ENV_FILE, resolve_env_file  # noqa: E402
 
-DEFAULT_ENV_FILES = ["langfuse.env"]
+DEFAULT_ENV_FILES = [str(LANGFUSE_ENV_FILE)]
 DEFAULT_BASE_URL = "https://us.cloud.langfuse.com"
 
 
@@ -131,7 +133,8 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--dry-run", action="store_true", help="Report what would sync without writing")
     args = parser.parse_args(argv)
 
-    env_files = [Path(p) for p in (args.env_file or DEFAULT_ENV_FILES)]
+    env_files = [resolve_env_file(p, default=LANGFUSE_ENV_FILE)
+                 for p in (args.env_file or DEFAULT_ENV_FILES)]
     prompts = dict(PROMPT_VERSIONS)
     print(f"Syncing {len(prompts)} prompt versions from src/prompts.py")
     for env_file in env_files:

@@ -1529,6 +1529,38 @@
      "function_over_form": 3,
      "other_fallback": 6
     }
+   },
+   {
+    "id": 160,
+    "experiment_name": "deepseek-v4-flash_sorter_v13_smoke1",
+    "timestamp": "2026-08-16T05:26:50.114427+00:00",
+    "model": "deepseek/deepseek-v4-flash",
+    "prompts": "sorter_v13",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.001341,
+    "n_rows": 1,
+    "seed": 42,
+    "sample_key": "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
+    "mode_counts": {}
+   },
+   {
+    "id": 161,
+    "experiment_name": "gpt-4.1-nano_sorter_v13_smoke1",
+    "timestamp": "2026-08-16T05:27:13.607096+00:00",
+    "model": "openai/gpt-4.1-nano",
+    "prompts": "sorter_v13",
+    "headline_value": 0.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 1,
+    "seed": 42,
+    "sample_key": "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
+    "mode_counts": {
+     "family_confusion": 1
+    }
    }
   ],
   "sorter_classification": [

@@ -3,6 +3,12 @@
 Require specific env vars are set, with helpful error messages, and load the
 repo's dotenv files (``braintrust.env`` first, then ``.env``) so scripts can
 run without exporting anything. Real shell environment variables always win.
+
+The live (gitignored) dotenv files live under ``config/environments/`` — the
+shared ``ENV_DIR`` / ``BRAINTRUST_ENV_FILE`` / ``DOTENV_FILE`` /
+``LANGFUSE_ENV_FILE`` constants below are the single source of truth for where
+every loader and CLI default resolves them; ``resolve_env_file()`` maps
+bare filenames (and ``--env-file`` args) into that directory.
 """
 
 from __future__ import annotations
@@ -12,6 +18,10 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+ENV_DIR = REPO_ROOT / "config" / "environments"
+BRAINTRUST_ENV_FILE = ENV_DIR / "braintrust.env"
+DOTENV_FILE = ENV_DIR / ".env"
+LANGFUSE_ENV_FILE = ENV_DIR / "langfuse.env"
 
 # Externally-funded OpenRouter key (research funding). Set in .env under this
 # name; only ever resolved through ``--research-funding-key`` and gated to
@@ -23,17 +33,32 @@ RESEARCH_FUNDING_KEY_ENV = "RESEARCH_FUNDING_OPENROUTER_API_KEY"
 PRODUCTION_RUN_MIN_ROWS = 100
 
 
+def resolve_env_file(path: str | Path | None, *, default: Path) -> Path:
+    """Resolve a dotenv path for a loader or CLI ``--env-file`` arg.
+
+    Absolute paths pass through unchanged; bare filenames (e.g.
+    ``"langfuse.env"``) resolve under ``ENV_DIR`` (``config/environments/``);
+    ``None`` falls back to ``default``.
+    """
+    if path is None:
+        return default
+    resolved = Path(path)
+    if resolved.is_absolute():
+        return resolved
+    return ENV_DIR / resolved
+
+
 def load_env() -> None:
     """Load ``braintrust.env`` then ``.env`` into the environment (idempotent).
 
-    Existing environment variables are never overridden. Safe to call from any
-    script entry point.
+    Both files live under ``config/environments/``. Existing environment
+    variables are never overridden. Safe to call from any script entry point.
     """
     try:
         from dotenv import load_dotenv
     except ImportError:
         return
-    for env_file in (REPO_ROOT / "braintrust.env", REPO_ROOT / ".env"):
+    for env_file in (BRAINTRUST_ENV_FILE, DOTENV_FILE):
         if env_file.exists():
             load_dotenv(env_file, override=False)
 

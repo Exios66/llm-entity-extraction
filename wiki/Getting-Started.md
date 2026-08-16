@@ -15,8 +15,8 @@ cd llm-entity-extraction
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .            # agents/src/config importable from any codebase
-cp braintrust.env.example braintrust.env   # Braintrust org/project keys
-cp .env.example .env                       # OPENROUTER_API_KEY (+ Langfuse keys for mirrors)
+cp config/environments/braintrust.env.example config/environments/braintrust.env   # Braintrust org/project keys
+cp config/environments/.env.example config/environments/.env                       # OPENROUTER_API_KEY (+ Langfuse keys for mirrors)
 ```
 
 ## Your first run

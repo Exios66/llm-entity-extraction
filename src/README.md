@@ -25,5 +25,5 @@ Everything the eval loop builds on. The package is importable from anywhere
 | `master_labels.py` | curated master ground-truth CSV loader (`master_clauses.csv`) for the MAE diagnostics; degrades to `{}` when absent |
 | `metrics.py` | run-level extraction diagnostics (`scores.diagnostics`): raw list P/R/F1, date/duration/money MAE + R², span-count drift, error decomposition |
 | `image_utils.py` | PDF/TIFF -> 1024x1024 grayscale PNG helpers |
-| `env_utils.py` | dotenv loading + required-var validation |
+| `env_utils.py` | dotenv loading + required-var validation; also the shared `config/environments/` path constants (`ENV_DIR`, `BRAINTRUST_ENV_FILE`, `DOTENV_FILE`, `LANGFUSE_ENV_FILE`) + `resolve_env_file()` |
 | `openrouter_utils.py` | OpenRouter base URLs, message builders, prompt splitting |

@@ -16,6 +16,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.env_utils import DOTENV_FILE, LANGFUSE_ENV_FILE, resolve_env_file
+
 DEFAULT_BASE_URL = "https://us.cloud.langfuse.com"
 # The prompt-iteration experiment environment: ALL eval runs trace to
 # llm-dojo (the keys in langfuse.env route there; the label below rides on
@@ -48,17 +50,18 @@ def _load_dotenv(path: Path) -> None:
         pass
 
 
-def load_langfuse_config(env_file: str | Path = "langfuse.env") -> LangfuseConfig:
+def load_langfuse_config(env_file: str | Path | None = None) -> LangfuseConfig:
     """Load and resolve the Langfuse configuration (separate experiment env).
 
     Reads ``langfuse.env`` first, then ``.env`` (like ``env_utils.load_env``);
-    existing shell environment variables always win. A missing ``langfuse.env``
-    is fine — the tracer degrades to a no-op unless keys are present.
+    both resolve under ``config/environments/``. Existing shell environment
+    variables always win. A missing ``langfuse.env`` is fine — the tracer
+    degrades to a no-op unless keys are present.
     """
-    env_file = Path(env_file)
+    env_file = resolve_env_file(env_file, default=LANGFUSE_ENV_FILE)
     if env_file.exists():
         _load_dotenv(env_file)
-    _load_dotenv(Path(".env"))
+    _load_dotenv(DOTENV_FILE)
 
     def get(name: str, default: str = "") -> str:
         value = os.environ.get(name)
