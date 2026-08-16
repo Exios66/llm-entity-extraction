@@ -599,8 +599,7 @@ def make_s1_figures(res: dict, figdir: Path) -> None:
     ax2.bar(res["subclasses"].keys(), res["subclasses"].values(), color="#0f766e")
     ax2.set_title("record-type subclass")
     ax2.tick_params(axis="x", rotation=30)
-    fig.text(0.99, 0.01, CITES["s1"], ha="right", fontsize=7, color="gray")
-    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    _add_citation(fig, CITES["s1"])
     fig.savefig(figdir / "s1_exhibits_and_subclasses.png", dpi=110)
     plt.close(fig)
 
