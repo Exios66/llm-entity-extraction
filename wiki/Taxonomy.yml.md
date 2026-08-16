@@ -76,6 +76,15 @@ doc_classes:
       contract_value: money
       renewal_terms: free_text
 
+  - key: merger_agreement
+    label: "Merger / Acquisition Agreement"
+    schema: ContractExtraction
+    specialist: contracts_specialist
+    description: "Merger and acquisition agreements: agreements and plans of merger, share/asset purchase agreements (MAUD corpus)"
+    # Subclass: consideration type (MAUD expert GT) — all_cash / all_stock /
+    # mixed_cash_stock / mixed_cash_stock_election / other. No tertiary level
+    # (data-necessity rule): MAUD categories are metadata.
+
   - key: corporate_record
     label: "Corporate Record"
     schema: CorporateRecordExtraction

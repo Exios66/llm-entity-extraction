@@ -233,6 +233,97 @@ def _sync_cuad(env_file: Path, cuad_dir: Path, dry_run: bool) -> dict:
     return {"project": project, "items": n, "datasets": 1, "total": 1, "skipped_env": False}
 
 
+def _records_from_local_dump(path: Path) -> list[dict]:
+    """Convert a streamer ``--local-dump`` JSONL back into record dicts.
+
+    The flat dump shape is ``{filename, doc_text, prompt, expected,
+    expected_subclass, metadata}``; the mirror upsert path consumes
+    ``{input, expected, metadata}`` records (deterministic content-addressed
+    ids, so reruns upsert in place).
+    """
+    import json as _json
+
+    records = []
+    if not path.exists():
+        return records
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            row = _json.loads(line)
+            metadata = dict(row.get("metadata") or {})
+            expected = row.get("expected") or ""
+            records.append({
+                "input": {
+                    "doc_text": row.get("doc_text", ""),
+                    "filename": row.get("filename", ""),
+                    "metadata": {
+                        **metadata,
+                        "expected_doc_type": expected,
+                        "expected_subclass": row.get("expected_subclass"),
+                    },
+                },
+                "expected": {"doc_type": expected},
+                "expected_output": {"doc_type": expected},
+                "metadata": metadata,
+            })
+    return records
+
+
+def _sync_local_dumps(env_file: Path, dumps: dict[str, Path], dry_run: bool) -> dict:
+    """Mirror streamer local dumps (MAUD / S-1 corporate records) into Langfuse.
+
+    ``dumps`` maps dataset name -> local JSONL path (the streamers' reliable
+    data path while Braintrust row uploads are org-capped). Offline: reads the
+    dumps only, no archive downloads.
+    """
+    public_key = secret_key = None
+    project = "unknown-project"
+    base_url = DEFAULT_BASE_URL
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip().strip("'\"")
+            if key == "LANGFUSE_PUBLIC_KEY":
+                public_key = value
+            elif key == "LANGFUSE_SECRET_KEY":
+                secret_key = value
+            elif key == "LANGFUSE_PROJECT":
+                project = value
+            elif key in ("LANGFUSE_BASE_URL", "LANGFUSE_HOST"):
+                base_url = value or DEFAULT_BASE_URL
+    public_key = os.environ.get("LANGFUSE_PUBLIC_KEY") or public_key
+    secret_key = os.environ.get("LANGFUSE_SECRET_KEY") or secret_key
+    project = os.environ.get("LANGFUSE_PROJECT") or project
+    base_url = (os.environ.get("LANGFUSE_BASE_URL")
+                or os.environ.get("LANGFUSE_HOST") or base_url).rstrip("/")
+    if not public_key or not secret_key:
+        return {"project": project, "skipped_env": True, "items": 0, "datasets": 0}
+
+    client = Langfuse(public_key=public_key, secret_key=secret_key, host=base_url)
+    total_items = 0
+    synced_datasets = []
+    for dataset_name, path in dumps.items():
+        records = _records_from_local_dump(path)
+        if not records:
+            print(f"  {dataset_name}: no records in {path}; skipping")
+            continue
+        n, _ = _sync_records(client, dataset_name, records, dry_run)
+        total_items += n
+        synced_datasets.append(dataset_name)
+        print(f"  {dataset_name}: {n} items -> Langfuse dataset"
+              + (" (would)" if dry_run else ""))
+    if not dry_run:
+        client.flush()
+        client.shutdown()
+    return {"project": project, "items": total_items, "datasets": len(synced_datasets),
+            "skipped_env": False}
+
+
 def main_with_args(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tasks", default="hearsay",
@@ -249,11 +340,42 @@ def main_with_args(argv: list[str]) -> int:
                              "LegalBench tasks (offline text rows from CUAD_v1.json)")
     parser.add_argument("--cuad-dir", type=Path, default=Path("data/cuad_pdfs"),
                         help="Local CUAD mirror root (default: data/cuad_pdfs)")
+    parser.add_argument("--maud", action="store_true",
+                        help="Mirror the MAUD local dumps (data/maud/contracts.jsonl + "
+                             "classification.jsonl) into Langfuse 'mailroom-maud-*' datasets")
+    parser.add_argument("--s1", action="store_true",
+                        help="Mirror the EDGAR S-1 corporate-record dump "
+                             "(data/s1_corporate_records/corporate-records.jsonl) into "
+                             "Langfuse 'mailroom-s1-corporate-records'")
+    parser.add_argument("--maud-dir", type=Path, default=Path("data/maud"),
+                        help="Local MAUD dump dir (default: data/maud)")
+    parser.add_argument("--s1-dir", type=Path, default=Path("data/s1_corporate_records"),
+                        help="Local S-1 corporate-record dump dir (default: data/s1_corporate_records)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report what would sync without writing")
     args = parser.parse_args(argv)
 
     env_files = [Path(p) for p in (args.env_file or [DEFAULT_ENV_FILE])]
+    if args.maud or args.s1:
+        dumps = {}
+        if args.maud:
+            dumps["mailroom-maud-contracts"] = args.maud_dir / "contracts.jsonl"
+            dumps["mailroom-maud-classification"] = args.maud_dir / "classification.jsonl"
+        if args.s1:
+            dumps["mailroom-s1-corporate-records"] = args.s1_dir / "corporate-records.jsonl"
+        print(f"Syncing local dumps into Langfuse datasets: {sorted(dumps)}")
+        for env_file in env_files:
+            if not env_file.exists():
+                print(f"  [warn] {env_file} not found — skipped (add it with --env-file to sync that project)")
+                continue
+            report = _sync_local_dumps(env_file, dumps, args.dry_run)
+            if report.get("skipped_env"):
+                print(f"  [warn] {env_file}: no Langfuse keys found — skipped")
+                continue
+            mode = "would upsert" if args.dry_run else "upserted"
+            print(f"  {report['project']}: {mode} {report['items']} items across "
+                  f"{report['datasets']} datasets")
+        return 0
     if args.cuad:
         print(f"Syncing the LOCAL CUAD corpus ({args.cuad_dir}) into Langfuse datasets")
         for env_file in env_files:

@@ -5,10 +5,31 @@ from src.taxonomy import agent_config, doc_class_by_key, doc_class_keys, doc_cla
 
 def test_doc_classes_match_prompts():
     keys = doc_class_keys()
+    # The shared 6-class surface plus the MAUD corpus class merger_agreement
+    # (KANBAN-033) — the first six stay the sorter's default surface.
     assert keys == [
         "contract", "corporate_record", "due_diligence",
         "correspondence", "compliance_filing", "court_opinion",
+        "merger_agreement",
     ]
+
+
+def test_doc_class_subclass_dimensions():
+    """The data-necessitated second level per class (KANBAN-033): consideration
+    types for merger_agreement, record types for corporate_record. The
+    tertiary level is absent by design — MAUD categories and EDGAR exhibit
+    codes are dataset metadata, not classification dimensions."""
+    merger = doc_class_by_key("merger_agreement")
+    subclasses = {s["key"] for s in merger["subclasses"]}
+    assert subclasses == {"all_cash", "all_stock", "mixed_cash_stock",
+                          "mixed_cash_stock_election", "other"}
+    corp = doc_class_by_key("corporate_record")
+    corp_subclasses = {s["key"] for s in corp["subclasses"]}
+    assert {"bylaws", "articles_of_incorporation", "certificate_of_formation",
+            "powers_of_attorney", "subsidiary_list", "indenture", "other"} <= corp_subclasses
+    # No class carries a tertiary_classes key — the level was dropped.
+    for cls in load_taxonomy()["doc_classes"]:
+        assert "tertiary_classes" not in cls
 
 
 def test_doc_class_labels():

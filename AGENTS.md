@@ -292,6 +292,19 @@ python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay  # e.g.
                                     # UPSERT via deterministic row ids — never duplicate)
 
 # Evals (each tests ONE prompt version; naming is {model-slug}_{prompt-version}[_suffix])
+# Hierarchical doc-class eval (KANBAN-033): extended 7-class primary dimension
+# (incl. merger_agreement from MAUD) + doc_subclass second level (consideration
+# type for merger agreements — MAUD expert GT; record type for corporate
+# records — content-detected). Data: data/maud/*.jsonl (152 merger agreements
+# + 25,827 per-question rows), data/s1_corporate_records/*.jsonl (EDGAR S-1
+# corporate-record exhibits), CUAD contracts. Tertiary level dropped by
+# design (data-necessity rule): MAUD categories + exhibit codes are metadata.
+python scripts/eval/run_langfuse_docclass_eval.py --dry-run
+python scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/maud/contracts.jsonl,data/s1_corporate_records/corporate-records.jsonl \
+    --stratified 120 --seed 42
+python scripts/datasets/stream_maud_to_bt.py --local-dump data/maud/          # rebuild MAUD dumps
+python scripts/datasets/stream_s1_exhibits.py --max-filings 40 --local-dump data/s1_corporate_records/  # EDGAR S-1 exhibits
+python scripts/eval/sync_langfuse_datasets.py --maud --s1 --dry-run           # mirror dumps into Langfuse
 # Run sink is Langfuse + LangSmith + the repo experiment log — Braintrust
 # experiment/span logging is OFF by default (BRAINTRUST_LOGGING=disabled), so
 # the run_langfuse_*_eval.py runners are the PRIMARY eval path (per-document

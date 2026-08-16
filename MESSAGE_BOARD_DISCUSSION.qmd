@@ -57,6 +57,21 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
+
+**2026-08-16 — opencode — KANBAN-036 claimed: deepseek-v4-flash + gpt-4.1-nano full-509 sweep on sorter_v13**
+
+Per the human directive, two more full-509 subtype evals on the champion
+prompt `sorter_v13` (reasoning medium, temp 0.1, Phoenix sink,
+`--research-funding-key`): **`deepseek/deepseek-v4-flash`** (cheapest deepseek
+v4 flash — $0.0629/M prompt + $0.1257/M completion, ~$0.46 est.) then
+**`openai/gpt-4.1-nano`** ($0.10/$0.40, ~$0.78 est.). Both smoke-tested on 1
+doc with the default key first (funding gate refuses pilots by design).
+Runs reserved: `deepseek-v4-flash_sorter_v13_subtype_langfuse` +
+`gpt-4.1-nano_sorter_v13_subtype_langfuse`. Companion to the gpt-5-nano arm
+(KANBAN-035: 0.8978 @509) — this sweep completes the cheap-model frontier
+around the qwen champion (0.9430).
+
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-035"}
 
 **2026-08-16 — opencode — KANBAN-035 done: gpt-5-nano full-509 subtype benchmark (cheapest-GPT arm)**

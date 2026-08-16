@@ -93,6 +93,13 @@ SUBCLASS_DIMENSIONS: dict[str, list[dict]] = {
     "corporate_record": CORPORATE_RECORD_SUBCLASSES,
 }
 
+# Common phrasings that do not normalize to their key (singular/plural,
+# spacing) — mirror of the subtype alias table above.
+_DOC_SUBCLASS_ALIASES = {
+    "powerofattorney": "powers_of_attorney",
+    "powerattorney": "powers_of_attorney",
+}
+
 
 def normalize_doc_subclass(value, doc_type: str | None = None) -> str:
     """Coerce a raw sorter subclass output to a canonical doc_subclass key.
@@ -114,12 +121,16 @@ def normalize_doc_subclass(value, doc_type: str | None = None) -> str:
         for candidate in allowed:
             if key == re.sub(r"[^a-z0-9]", "", candidate.lower()):
                 return candidate
+        if key in _DOC_SUBCLASS_ALIASES and _DOC_SUBCLASS_ALIASES[key] in allowed:
+            return _DOC_SUBCLASS_ALIASES[key]
         return DOC_SUBCLASS_UNKNOWN
     if raw in DOC_SUBCLASS_KEYS:
         return raw
     for candidate in DOC_SUBCLASS_KEYS:
         if key == re.sub(r"[^a-z0-9]", "", candidate.lower()):
             return candidate
+    if key in _DOC_SUBCLASS_ALIASES:
+        return _DOC_SUBCLASS_ALIASES[key]
     for subclass in DOC_SUBCLASSES:
         norm_label = re.sub(r"[^a-z0-9]", "", subclass["label"].lower())
         if key == norm_label or key.startswith(norm_label[:8]):

@@ -286,6 +286,50 @@ def test_sorter_v14_marketing_title_wins_strengthened():
     assert "30. MARKETING TITLE WINS" not in SORTER_PROMPT_V13
 
 
+def test_sorter_docclass_v0_registered_and_extends_v14():
+    """sorter_docclass_v0 (KANBAN-033) = v14 + the hierarchical doc-class
+    rules (merger_agreement class, SEC-exhibit corporate records, doc_subclass
+    dimension). v14 itself stays byte-identical (a change needs a new key)."""
+    from src.prompts import SORTER_PROMPT_V14, SORTER_DOCCLASS_PROMPT_V0
+
+    assert "sorter_docclass_v0" in PROMPT_VERSIONS
+    assert SORTER_DOCCLASS_PROMPT_V0.startswith(SORTER_PROMPT_V14[:300])
+    p = get_prompt("sorter_docclass_v0")
+    assert "31. MERGER AGREEMENT CLASS" in p
+    assert "32. CORPORATE RECORDS FILED AS SEC EXHIBITS STAY CORPORATE_RECORD" in p
+    assert "33. DOC SUBCLASS" in p
+    assert "doc_subclass: EXACTLY ONE" in p
+    # base unchanged
+    assert "31. MERGER AGREEMENT CLASS" not in SORTER_PROMPT_V14
+    assert "doc_subclass" not in SORTER_PROMPT_V14
+
+
+def test_sorter_docclass_prompt_option_list_matches_schema():
+    """The doc_subclass options visible in sorter_docclass_v0 must match the
+    DOCCLASS_SCHEMA enum exactly — a subclass the model can output must be in
+    the prompt, and nothing in the prompt may be rejected by the schema."""
+    import re
+
+    from agents.sorter_agent import (
+        DOCCLASS_CLASSES,
+        DOCCLASS_SCHEMA,
+        DOC_SUBCLASS_KEYS,
+        SorterAgent,
+    )
+
+    enum = set(DOCCLASS_SCHEMA["properties"]["doc_subclass"]["enum"])
+    assert enum == set(DOC_SUBCLASS_KEYS)
+    prompt = SorterAgent(prompt_version="sorter_docclass_v0",
+                         doc_classes=DOCCLASS_CLASSES,
+                         schema=DOCCLASS_SCHEMA).system_prompt()
+    # Every schema key appears in the rule-33 text.
+    for key in DOC_SUBCLASS_KEYS:
+        assert key in prompt, f"doc_subclass key {key!r} missing from the prompt"
+    # The output contract names the field.
+    assert "- doc_subclass: EXACTLY ONE" in prompt
+    assert "merger_agreement" in prompt
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt

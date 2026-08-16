@@ -98,6 +98,120 @@ def test_schema_enum_matches_classes():
     assert SUBTYPE_UNKNOWN in subtype["enum"]
 
 
+def test_docclass_schema_extends_shared_surface():
+    """The extended schema (KANBAN-033) adds merger_agreement + doc_subclass
+    WITHOUT mutating the shared SORTER_SCHEMA the existing evals use."""
+    from agents.sorter_agent import (
+        DOCCLASS_CLASS_KEYS,
+        DOCCLASS_SCHEMA,
+        DOC_SUBCLASS_KEYS,
+        MERGER_AGREEMENT_CLASS,
+    )
+
+    assert SORTER_SCHEMA["properties"]["doc_type"]["enum"] == DOC_CLASS_KEYS  # untouched
+    enum = DOCCLASS_SCHEMA["properties"]["doc_type"]["enum"]
+    assert enum == DOCCLASS_CLASS_KEYS
+    assert enum[-1] == MERGER_AGREEMENT_CLASS["key"]
+    assert len(enum) == len(DOC_CLASS_KEYS) + 1
+    subclass = DOCCLASS_SCHEMA["properties"]["doc_subclass"]
+    assert subclass["type"] == ["string", "null"]
+    assert set(subclass["enum"]) == set(DOC_SUBCLASS_KEYS)
+
+
+def test_normalize_doc_subclass_dimension():
+    from agents.sorter_agent import (
+        DOC_SUBCLASS_UNKNOWN,
+        normalize_doc_subclass,
+    )
+
+    # merger_agreement dimension = consideration types
+    assert normalize_doc_subclass("all_cash", "merger_agreement") == "all_cash"
+    assert normalize_doc_subclass("All Stock", "merger_agreement") == "all_stock"
+    assert normalize_doc_subclass("Mixed Cash/Stock", "merger_agreement") == "mixed_cash_stock"
+    assert normalize_doc_subclass("Mixed Cash/Stock: Election", "merger_agreement") == "mixed_cash_stock_election"
+    # corporate_record dimension = record types
+    assert normalize_doc_subclass("bylaws", "corporate_record") == "bylaws"
+    assert normalize_doc_subclass("Articles of Incorporation", "corporate_record") == "articles_of_incorporation"
+    assert normalize_doc_subclass("Certificate of Formation", "corporate_record") == "certificate_of_formation"
+    assert normalize_doc_subclass("Power of Attorney", "corporate_record") == "powers_of_attorney"
+    # wrong-dimension values are rejected (a record type is not a consideration type)
+    assert normalize_doc_subclass("bylaws", "merger_agreement") == DOC_SUBCLASS_UNKNOWN
+    assert normalize_doc_subclass("all_cash", "corporate_record") == DOC_SUBCLASS_UNKNOWN
+    # degenerate inputs
+    assert normalize_doc_subclass(None, "corporate_record") == DOC_SUBCLASS_UNKNOWN
+    assert normalize_doc_subclass("", "corporate_record") == DOC_SUBCLASS_UNKNOWN
+    assert normalize_doc_subclass("totally unknown", "corporate_record") == DOC_SUBCLASS_UNKNOWN
+
+
+def test_docclass_agent_opt_in_preserves_defaults(mocker):
+    """The extended class list + schema are opt-in constructor params; the
+    default SorterAgent keeps the shared 6-class surface byte-for-byte."""
+    from agents.sorter_agent import (
+        DOCCLASS_CLASSES,
+        DOCCLASS_SCHEMA,
+        SORTER_SCHEMA,
+        SorterAgent,
+    )
+
+    default = SorterAgent(prompt_version="sorter_v1")
+    assert default.doc_classes == [
+        {"key": "contract", "label": "Contract / Agreement",
+         "description": "Formal agreements between parties: M&A, vendor, employment, NDAs, etc."},
+        {"key": "corporate_record", "label": "Corporate Record",
+         "description": "Bylaws, resolutions, board minutes, cap table entries, incorporation docs"},
+        {"key": "due_diligence", "label": "Due Diligence",
+         "description": "Checklists, disclosure schedules, diligence memos, risk assessments"},
+        {"key": "correspondence", "label": "Correspondence",
+         "description": "Letters, emails, memos, notices between parties or with regulators"},
+        {"key": "compliance_filing", "label": "Compliance Filing",
+         "description": "SEC filings, state registrations, regulatory submissions, annual reports"},
+        {"key": "court_opinion", "label": "Court Opinion",
+         "description": "Judicial opinions and orders: published decisions, memorandum opinions, rulings"},
+    ]
+    assert default.schema is SORTER_SCHEMA
+    assert "merger_agreement" not in default.system_prompt()
+
+    extended = SorterAgent(prompt_version="sorter_v1", doc_classes=DOCCLASS_CLASSES,
+                           schema=DOCCLASS_SCHEMA)
+    assert extended.schema is DOCCLASS_SCHEMA
+    prompt = extended.system_prompt()
+    assert "merger_agreement" in prompt
+    assert "Merger / Acquisition Agreement" in prompt
+
+
+def test_docclass_classify_json_normalizes_subclass(mocker):
+    from agents.sorter_agent import (
+        DOCCLASS_CLASSES,
+        DOCCLASS_SCHEMA,
+        DOC_SUBCLASS_UNKNOWN,
+        SorterAgent,
+    )
+
+    sorter = SorterAgent(prompt_version="sorter_docclass_v0", doc_classes=DOCCLASS_CLASSES,
+                         schema=DOCCLASS_SCHEMA)
+    mocker.patch.object(
+        sorter,
+        "_call_structured",
+        return_value={"doc_type": "merger_agreement", "contract_subtype": None,
+                      "doc_subclass": "All Cash", "confidence": 0.9, "reasoning": "cash"},
+    )
+    result = sorter.classify_json("AGREEMENT AND PLAN OF MERGER")
+    assert result["doc_type"] == "merger_agreement"
+    assert result["doc_subclass"] == "all_cash"
+
+    # Subclass normalized away for classes without a subclass dimension.
+    mocker.patch.object(
+        sorter,
+        "_call_structured",
+        return_value={"doc_type": "correspondence", "contract_subtype": "license",
+                      "doc_subclass": "bylaws", "confidence": 0.8, "reasoning": "letter"},
+    )
+    result = sorter.classify_json("a letter")
+    assert result["doc_type"] == "correspondence"
+    assert result["contract_subtype"] == SUBTYPE_UNKNOWN
+    assert result["doc_subclass"] == DOC_SUBCLASS_UNKNOWN
+
+
 def test_classify_returns_parsed_result_with_subtype(mocker):
     sorter = SorterAgent(prompt_version="sorter_v1")
     mocker.patch.object(

@@ -35,6 +35,26 @@ experiment/span logging is OFF by default (`BRAINTRUST_LOGGING=disabled` in
 the same local scoring loop (manifest resume, experiment log). Opt back into
 Braintrust logging per run with `BRAINTRUST_LOGGING=enabled`.
 
+## Hierarchical doc-class (`scripts/eval/run_langfuse_docclass_eval.py`)
+
+The new sorter task (KANBAN-033): the EXTENDED primary classification — the
+shared 6 doc classes plus `merger_agreement` (MAUD corpus) — scored with a
+second-level `doc_subclass` where the data necessitates it (consideration
+type for merger agreements from MAUD expert GT; record type for corporate
+records, content-detected from EDGAR S-1 exhibits). Tertiary dropped by
+design: MAUD categories + exhibit codes are dataset metadata.
+
+```bash
+python scripts/eval/run_langfuse_docclass_eval.py --dry-run
+python scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/maud/contracts.jsonl,data/s1_corporate_records/corporate-records.jsonl \
+    --stratified 120 --seed 42          # mixed surface: MAUD + CUAD + S-1
+```
+
+One sorter call per document (`sorter_docclass_v0`, extended schema); scores:
+doc_type_accuracy, subclass_accuracy (rows without subclass GT unscored),
+exact_match, confidence; per-class accuracy + subclass confusion +
+failure insights (doc_type_miss / subclass_miss) in the repo log.
+
 ## Subtype (`scripts/eval/run_langfuse_subtype_eval.py` — primary; `run_subtype_eval.py` — local/resume)
 
 Sorter-only subtype routing: one call per document decides the primary class

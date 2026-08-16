@@ -53,6 +53,19 @@ taxonomy/prompts.
    in-court, non-assertive conduct, standard hearsay, non-verbal hearsay,
    not-introduced-to-prove-truth; CC BY 4.0) lives in `mailroom-lb-hearsay`
    and evaluates with `--valid-classes Yes,No`.
+3. **Hierarchical doc-class classification** — the sorter classifies into the
+   EXTENDED primary dimension (`sorter_docclass_v0`): the shared 6 doc classes
+   plus **`merger_agreement`** (the MAUD corpus class), with a second-level
+   `doc_subclass` for the classes whose data necessitates it — consideration
+   type for merger agreements (MAUD expert GT: all_cash / all_stock /
+   mixed_cash_stock / mixed_cash_stock_election) and record type for
+   corporate records (content-detected: bylaws, certificate of incorporation,
+   powers of attorney, ...). The mixed eval surface
+   (`run_langfuse_docclass_eval.py`) scores doc_type + subclass across
+   `mailroom-maud-contracts`, `mailroom-cuad-contracts-full` and
+   `mailroom-s1-corporate-records` (EDGAR S-1 exhibit corporate records).
+   The tertiary level is deliberately absent — MAUD categories and EDGAR
+   exhibit codes are dataset metadata, not classification dimensions.
 
 The sorter receives **full documents** — either the full extracted text
 (100k-char hard safety cap; past the cap the input becomes a HEAD + TAIL
@@ -210,7 +223,12 @@ Under `scripts/` the key files are:
 ```
 scripts/datasets/
   stream_cuad_to_bt.py            CUAD v1: 510 contract PDFs, every page rendered
-  stream_legalbench_to_bt.py      MAUD v1: 139 agreements + 13k-row classification suite
+  stream_legalbench_to_bt.py      LegalBench MAUD v1 via Zenodo: contracts + per-question suite
+  stream_maud_to_bt.py            MAUD v1 (Zenodo/HF): 152 merger agreements (GT merger_agreement +
+                                  consideration-type subclass) + 25,827-row per-question suite;
+                                  --local-dump + Langfuse mirror paths
+  stream_s1_exhibits.py           EDGAR S-1 corporate-record exhibits (EX-3.x/4.x/21.x/24.x/25.x):
+                                  text-extracted via SEC FTS + filing indexes -> mailroom-s1-corporate-records
   stream_legalbench_tasks_to_bt.py  60+ LegalBench classification tasks
   download_cuad_pdfs.py           full CUAD v1 corpus (PDFs + CUAD_v1.json) to data/cuad_pdfs/
 scripts/eda/
@@ -382,10 +400,34 @@ python scripts/datasets/stream_cuad_to_bt.py --limit 12               # 12 PDFs,
 python scripts/datasets/stream_cuad_to_bt.py                          # all 510 PDFs
 python scripts/datasets/stream_cuad_to_bt.py --category "Franchise" --max-pages 30
 
-# 2. LegalBench MAUD: 139 merger agreements (full text) + the per-question
-#    multi-class classification suite (13,256 rows, answer spaces embedded)
+# 2. LegalBench MAUD (via Zenodo; legacy Braintrust path)
 python scripts/datasets/stream_legalbench_to_bt.py --limit 6 --dry-run
 python scripts/datasets/stream_legalbench_to_bt.py
+
+# 2b. MAUD as a UTILIZED dataset (KANBAN-033): 152 merger agreements with the
+#     merger_agreement doc class + consideration-type subclass GT, plus the
+#     25,827-row per-question suite (22 question families, 7 MAUD categories
+#     as metadata). --local-dump is the reliable path while Braintrust row
+#     uploads are org-capped; the Langfuse mirror upserts the same records.
+python scripts/datasets/stream_maud_to_bt.py --dry-run
+python scripts/datasets/stream_maud_to_bt.py --local-dump data/maud/
+python scripts/datasets/stream_maud_to_bt.py --source huggingface --split all --dry-run
+python scripts/eval/sync_langfuse_datasets.py --maud --dry-run
+
+# 2c. EDGAR S-1 corporate-record exhibits (EX-3.x/4.x/21.x/24.x/25.x):
+#     SEC full-text search -> filing index -> text extraction. Ground truth
+#     corporate_record + content-detected record_type subclass; the exhibit
+#     code stays in metadata (provenance, not a classification level).
+python scripts/datasets/stream_s1_exhibits.py --dry-run
+python scripts/datasets/stream_s1_exhibits.py --max-filings 40 --limit 100 --local-dump data/s1_corporate_records/
+python scripts/eval/sync_langfuse_datasets.py --s1 --dry-run
+
+# 2d. Hierarchical doc-class eval (the new sorter task): doc_type (7 classes,
+#     incl. merger_agreement) + doc_subclass (consideration type / record
+#     type) scored across MAUD + CUAD + S-1 records in one mixed surface.
+python scripts/eval/run_langfuse_docclass_eval.py --dry-run
+python scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/maud/contracts.jsonl,data/s1_corporate_records/corporate-records.jsonl \
+    --stratified 120 --seed 42
 
 # 3. LegalBench multi-class classification tasks (cuad_*, hearsay, and more)
 #    from the GitHub raw data — one Braintrust dataset per task; synced rows
@@ -538,7 +580,7 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 
 | Family | Versions |
 |---|---|
-| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1` … `sorter_v12` |
+| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1` … `sorter_v14`, `sorter_docclass_v0` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
 | Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v31` |

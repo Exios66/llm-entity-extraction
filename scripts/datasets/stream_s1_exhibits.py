@@ -34,11 +34,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 import time
 import urllib.parse
 from pathlib import Path
+
+import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -98,13 +101,17 @@ def _session():
 
 
 def os_environ_user_agent() -> str:
-    """A SEC-compliant identifying User-Agent (env override supported)."""
+    """A SEC-compliant identifying User-Agent (env override supported).
+
+    SEC's edge rejects User-Agents with parenthetical URLs (403); the
+    compliant form is ``<app> <contact>`` — keep it plain. Override with
+    ``EDGAR_USER_AGENT`` for a production identity.
+    """
     import os
 
     return os.environ.get(
         "EDGAR_USER_AGENT",
-        "llm-entity-extraction research contact@example.com "
-        "(https://github.com/Exios66/llm-entity-extraction)",
+        "llm-entity-extraction research contact@example.com",
     )
 
 
@@ -127,12 +134,40 @@ class _Throttle:
         self._last = time.time()
 
 
+def get_with_retry(session, url: str, retries: int = 4) -> str:
+    """GET with SEC fair-access backoff (403/429 -> exponential retry).
+
+    SEC's edge rejects bursty request patterns with 403 even when the
+    per-second rate is legal; a short backoff with jitter clears it. The
+    caller's throttle is applied per attempt, so retries never pile up.
+    """
+    import random
+
+    delay = 1.0
+    for attempt in range(retries):
+        try:
+            resp = session.get(url, timeout=60)
+            if resp.status_code in (403, 429):
+                raise requests.HTTPError(f"{resp.status_code} for {url}")
+            resp.raise_for_status()
+            return resp.text
+        except requests.RequestException as exc:
+            if attempt == retries - 1:
+                raise
+            time.sleep(delay + random.random() * delay)
+            delay *= 2
+    raise RuntimeError("unreachable")
+
+
 def fetch_fts_exhibit_hits(session, query: str, forms: str, size: int) -> list[dict]:
-    """Query the SEC full-text search for exhibit documents in S-1 filings."""
-    url = EDGAR_FTS + "?" + urllib.parse.urlencode({"q": query, "forms": forms, "size": size})
-    resp = session.get(url, timeout=60)
-    resp.raise_for_status()
-    data = resp.json()
+    """Query the SEC full-text search for exhibit documents in S-1 filings.
+
+    The exhibit description is a quoted PHRASE query — SEC's search requires
+    the quote (unquoted multi-word queries are rejected with 403 as a bot
+    filter)."""
+    url = EDGAR_FTS + "?" + urllib.parse.urlencode(
+        {"q": f'"{query}"', "forms": forms, "size": size})
+    data = json.loads(get_with_retry(session, url))
     return [h["_source"] for h in data.get("hits", {}).get("hits", [])]
 
 
@@ -337,7 +372,7 @@ def discover_and_extract(
             print(f"  filing {adsh} ({hit.get('file_date', '')}) {hit.get('file_type', '')}")
             throttle.wait()
             try:
-                index_html = fetch_filing_index(session, cik, adsh)
+                index_html = get_with_retry(session, index_url(cik, adsh))
             except Exception as exc:  # noqa: BLE001
                 print(f"    WARNING: index fetch failed: {exc}", file=sys.stderr)
                 continue
@@ -349,7 +384,7 @@ def discover_and_extract(
                     continue
                 throttle.wait()
                 try:
-                    raw = session.get("https://www.sec.gov" + ex["href"], timeout=60).text
+                    raw = get_with_retry(session, "https://www.sec.gov" + ex["href"])
                 except Exception as exc:  # noqa: BLE001
                     print(f"    WARNING: exhibit {ex['exhibit_type']} download failed: {exc}",
                           file=sys.stderr)
@@ -361,6 +396,11 @@ def discover_and_extract(
                     continue
                 rows.append({
                     **ex,
+                    # Namespace the filename by accession: different filings
+                    # routinely carry IDENTICALLY-named exhibit files, and the
+                    # eval loop keys rows by filename (dataset fingerprint +
+                    # manifest resume).
+                    "filename": f"{adsh}_{ex['filename']}",
                     "text": text,
                     "accession": adsh,
                     "cik": cik,
@@ -371,12 +411,15 @@ def discover_and_extract(
     return rows
 
 
+def index_url(cik: str, adsh: str) -> str:
+    """The filing's human-readable index (``-index.html``)."""
+    return (f"{EDGAR_ARCHIVE}/edgar/data/{cik}/{adsh.replace('-', '')}/"
+            f"{adsh}-index.html")
+
+
 def fetch_filing_index(session, cik: str, adsh: str) -> str:
     """Fetch a filing's human-readable index (``-index.html``)."""
-    url = f"{EDGAR_ARCHIVE}/edgar/data/{cik}/{adsh.replace('-', '')}/{adsh}-index.html"
-    resp = session.get(url, timeout=60)
-    resp.raise_for_status()
-    return resp.text
+    return get_with_retry(session, index_url(cik, adsh))
 
 
 def main() -> int:

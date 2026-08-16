@@ -249,7 +249,7 @@ def main_with_args(argv: list[str]) -> int:
     print(f"doc_type distribution: {dict(class_counts)}")
     if subclass_counts:
         print(f"subclass GT distribution (where present): {dict(subclass_counts)}")
-    validate_dataset(dataset)
+    validate_dataset(dataset, valid=set(DOCCLASS_CLASS_KEYS))
 
     log_path = args.experiment_log or default_jsonl_path()
     md_log_path = default_md_path()
@@ -361,7 +361,10 @@ def main_with_args(argv: list[str]) -> int:
                 result.get("doc_subclass") if doc_type in ("merger_agreement", "corporate_record") else None,
                 doc_type,
             ) if expected_subclass else None
-            subclass_ok = bool(expected_subclass) and predicted_subclass == expected_subclass
+            # subclass_ok is None when the row carries no subclass GT (the
+            # class has no second level) — those rows neither count for nor
+            # against subclass_accuracy.
+            subclass_ok = (predicted_subclass == expected_subclass) if expected_subclass else None
             exact = doc_type_ok and (subclass_ok if expected_subclass else True)
             try:
                 confidence = float(result.get("confidence", 0.0))
@@ -389,8 +392,9 @@ def main_with_args(argv: list[str]) -> int:
             handle.set_output(composite)
             handle.score("doc_type_accuracy", 1.0 if doc_type_ok else 0.0,
                          comment="predicted doc_type == expected")
-            handle.score("subclass_accuracy", 1.0 if subclass_ok else 0.0,
-                         comment="predicted doc_subclass == GT (where present)")
+            if expected_subclass:
+                handle.score("subclass_accuracy", 1.0 if subclass_ok else 0.0,
+                             comment="predicted doc_subclass == GT (rows without subclass GT are unscored)")
             handle.score("exact_match", 1.0 if exact else 0.0,
                          comment="doc_type AND subclass exact")
             handle.score("confidence", confidence, comment="model-reported confidence")
@@ -465,7 +469,7 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
     """Append ONE experiment-log record for the docclass run."""
     from statistics import mean
 
-    from src.experiment_log import append_experiment, append_markdown, git_snapshot
+    from src.experiment_log import append_experiment, append_markdown, git_snapshot, tokens_summary
 
     rows = [r for r in result.results if r.error is None and isinstance(r.output, dict)]
     ok = [r.output for r in rows if isinstance(r.output, dict)]
@@ -540,12 +544,22 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
     }
 
     record = {
+        "type": "experiment",
         "experiment_name": experiment_name,
         "task": "docclass_classification",
         "model": args.model,
-        "prompt_version": args.prompt_version,
-        "data_source": args.datasets,
-        "data_fingerprint": dataset_fingerprint(dataset),
+        "prompt_versions": {"sorter": args.prompt_version},
+        "data_source": {
+            "datasets": args.datasets,
+            "ground_truth": "doc_type + doc_subclass",
+            "ground_truth_mode": "maud_consideration_gt / s1_record_type / cuad_subtype",
+            "dataset_fingerprint": dataset_fingerprint(dataset),
+            "n_samples": len(dataset),
+            "sample_requested": args.sample,
+            "stratified": args.stratified,
+            "limit": args.limit,
+            "seed": args.seed,
+        },
         "parameters": {
             "datasets": args.datasets,
             "sample": args.sample,
@@ -560,8 +574,9 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
         },
         "scores": scores,
         "per_row": per_row,
-        "tokens": {"total": sum(int((u or {}).get("total_tokens", 0)) for u in usage.values())},
-        "git_snapshot": git_snapshot(),
+        "tokens": {"sorter": tokens_summary(list(usage.values()), model=args.model),
+                   "total": tokens_summary(list(usage.values()), model=args.model)},
+        "git": git_snapshot(),
     }
     jsonl_path = append_experiment(record, log_path)
     append_markdown(record, md_log_path)
