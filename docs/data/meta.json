@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-16T04:23:24.217183+00:00",
+ "built_at": "2026-08-16T04:38:36.441301+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
   "05b3b17b9ce344b98dd246693ff4b9683db239b4f6b0c8f5ffb0be78b4b2b7c9:42:6",
@@ -36,16 +36,16 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 156,
+ "run_count": 157,
  "tasks": {
   "contract_entity_extraction": 51,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 30,
+  "subtype_classification": 31,
   "sorter_classification": 3,
   "task_classification": 56
  },
  "models": {
-  "qwen/qwen3.7-flash": 154,
+  "qwen/qwen3.7-flash": 155,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -111,12 +111,13 @@
   "legalbench_task_v4_cap_on_liability": 2,
   "legalbench_task_v4_change_of_control": 2,
   "legalbench_task_v4_effective_date": 2,
-  "legalbench_task_v4_anti_assignment": 1
+  "legalbench_task_v4_anti_assignment": 1,
+  "sorter_v14": 1
  },
- "n_rows": 13829,
- "n_ok": 12914,
+ "n_rows": 14338,
+ "n_ok": 13423,
  "n_error": 873,
- "total_tokens": 184986878,
+ "total_tokens": 192577276,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -169,18 +170,18 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 30,
+   "runs": 31,
    "best": {
     "run_id": 20,
     "value": 1.0
    },
-   "median": 0.9129499999999999,
+   "median": 0.9143,
    "worst": {
     "run_id": 84,
     "value": 0.0
    },
-   "documents": 8515,
-   "tokens": 107329366
+   "documents": 9024,
+   "tokens": 114919764
   },
   "sorter_classification": {
    "runs": 3,

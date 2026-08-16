@@ -527,6 +527,46 @@ SORTER_PROMPT_V13 = SORTER_PROMPT_V12.replace(
 )
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v14 (marketing title-wins strengthening)
+# -----------------------------------------------------------------------------
+# v14 = v13 + rule 30, the rule-26 reinforcement for the last deterministic
+# marketing cell. The marketing cell has been stuck at 14/17 (0.8235) since
+# v12 (identical 14/17 in v12-orig, v12-rerun, v13-clean) with THREE
+# deterministic fails across ALL runs (v9-clean/v12/v13): Zounds
+# "MANUFACTURING, DESIGN AND MARKETING AGREEMENT" -> manufacturing, PACIRA
+# "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT" -> distributor,
+# Audible "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT" -> co_branding.
+# Mechanism = rule-26 NARROWING, proven by the model's own reasoning: Zounds
+# quotes rule 26 and then defeats it ("a title naming marketing usually wins
+# if the core is promotion; however, here the core is clearly
+# production/manufacturing") even though rule 26's literal example IS that
+# exact title; PACIRA applies rule 9's hybrid machinery read over the
+# marketing title; Audible lets the FIRST-named family (co-branding) win.
+# Same inversion shape rule 29 fixed for maintenance and rule 28 for alliance.
+# Counterfactual verified 0-score-risk at 509: of the 20 marketing-titled
+# docs, 17 are GT marketing (3 fail), 2 are Playboy license-primary (carve-out
+# (a) protected), 1 is HEMISPHERX GT supply (ALREADY wrong as distributor;
+# the strengthened rule flips it to marketing, still wrong — no score change,
+# boundary noted in the memo). 0 GT-marketing docs lack "marketing" in the
+# title. Rule 30 kills the narrowing: marketing title wins over machinery
+# re-reads, over rule 9's hybrid read, and over first-named-family precedence,
+# while preserving carve-outs (a) license-primary and (b) operational-service
+# families. Target: strict > 0.9430 on the full-509 surface with a v13@509
+# rerun bounding the noise floor.
+# =============================================================================
+
+SORTER_PROMPT_V14 = SORTER_PROMPT_V13.replace(
+    """a "Strategic Alliance Agreement" for labor, materials and site acquisition under purchase orders -> strategic_alliance, not service).
+
+29. MAINTENANCE TITLE WINS: an agreement whose TITLE names maintenance — "Maintenance Agreement", "Yield Maintenance Agreement", "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT", "UNCONDITIONAL CAPITAL MAINTENANCE AGREEMENT", "NET INVESTMENT INCOME MAINTENANCE AGREEMENT", "Network Build and Maintenance Agreement", "CONSTRUCTION AND MAINTENANCE AGREEMENT" — is maintenance even when its operative machinery reads as financial (capital contributions or loans to maintain financial ratios, yield-maintenance confirmations under an ISDA master agreement, completion and liquidity covenants supporting a credit facility) or as build/construction-plus-maintenance services: rule 13's financial-sense clause means financial-sense "maintenance" agreements (capital maintenance, net investment income maintenance, completion and liquidity maintenance) ARE maintenance — never "other" and never "service" for a document whose title names maintenance. Rule 13 does NOT route financial-sense maintenance to "other"; a maintenance-titled agreement stays maintenance whatever its machinery ("MAINTENANCE AGREEMENT" with an Investor's Required Capital Contributions -> maintenance, not other; "Yield Maintenance Agreement" confirming an interest rate cap transaction -> maintenance, not other; "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT" requiring $25,000,000 liquidity as a credit-agreement covenant -> maintenance, not other; "Network Build and Maintenance Agreement" with build/install/maintain obligations under an MSA -> maintenance, not service; "CONSTRUCTION AND MAINTENANCE AGREEMENT" for infrastructure upkeep -> maintenance, not service).""",
+    """a "Strategic Alliance Agreement" for labor, materials and site acquisition under purchase orders -> strategic_alliance, not service).
+
+29. MAINTENANCE TITLE WINS: an agreement whose TITLE names maintenance — "Maintenance Agreement", "Yield Maintenance Agreement", "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT", "UNCONDITIONAL CAPITAL MAINTENANCE AGREEMENT", "NET INVESTMENT INCOME MAINTENANCE AGREEMENT", "Network Build and Maintenance Agreement", "CONSTRUCTION AND MAINTENANCE AGREEMENT" — is maintenance even when its operative machinery reads as financial (capital contributions or loans to maintain financial ratios, yield-maintenance confirmations under an ISDA master agreement, completion and liquidity covenants supporting a credit facility) or as build/construction-plus-maintenance services: rule 13's financial-sense clause means financial-sense "maintenance" agreements (capital maintenance, net investment income maintenance, completion and liquidity maintenance) ARE maintenance — never "other" and never "service" for a document whose title names maintenance. Rule 13 does NOT route financial-sense maintenance to "other"; a maintenance-titled agreement stays maintenance whatever its machinery ("MAINTENANCE AGREEMENT" with an Investor's Required Capital Contributions -> maintenance, not other; "Yield Maintenance Agreement" confirming an interest rate cap transaction -> maintenance, not other; "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT" requiring $25,000,000 liquidity as a credit-agreement covenant -> maintenance, not other; "Network Build and Maintenance Agreement" with build/install/maintain obligations under an MSA -> maintenance, not service; "CONSTRUCTION AND MAINTENANCE AGREEMENT" for infrastructure upkeep -> maintenance, not service).
+
+30. MARKETING TITLE WINS — STRENGTHENED: rule 26's marketing-title guard is NOT defeated by machinery re-reads, by rule 9's hybrid machinery read, or by the ORDER of families in the title. When the TITLE names marketing — even alongside manufacturing, distributor, co-branding, licensing, or servicing, and even when another family is named FIRST ("MANUFACTURING, DESIGN AND MARKETING AGREEMENT", "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT", "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT") — the agreement is MARKETING when it contains marketing/promotion obligations, whatever the operative machinery says ("MANUFACTURING, DESIGN AND MARKETING AGREEMENT" with purchase orders, tooling, delivery and warranty clauses -> marketing, not manufacturing — a manufacturing-supply section does NOT make the agreement manufacturing; "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT" appointing an exclusive distributor with resale terms -> marketing, not distributor and not license — rule 9's hybrid machinery weighing does NOT apply to a marketing-named title; "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT" with joint branding and joint press releases -> marketing, not co_branding — a co-branding section does NOT outrank the marketing title). Carve-outs preserved: (a) a title whose PRIMARY family is another specific family — license ("Content License Agreement" with a marketing annex) or an operational service family, transportation or hosting — keeps that family per annex inheritance (rule 17); (b) rule 16's pure "Marketing Agreement" shape stays covered by rule 26.""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2005,6 +2045,7 @@ PROMPT_VERSIONS = {
     "sorter_v11": SORTER_PROMPT_V11,
     "sorter_v12": SORTER_PROMPT_V12,
     "sorter_v13": SORTER_PROMPT_V13,
+    "sorter_v14": SORTER_PROMPT_V14,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

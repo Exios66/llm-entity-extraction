@@ -256,6 +256,36 @@ def test_sorter_v13_maintenance_title_wins():
     assert "29. MAINTENANCE TITLE WINS" not in SORTER_PROMPT_V12
 
 
+def test_sorter_v14_marketing_title_wins_strengthened():
+    from src.prompts import SORTER_PROMPT_V13, SORTER_PROMPT_V14
+
+    # v14 is a strict derivation of v13: the base is untouched, the derived
+    # prompt adds the rule-26 reinforcement for the 3 deterministic marketing
+    # fails at 509 (Zounds -> manufacturing, PACIRA -> distributor, Audible ->
+    # co_branding — identical predictions in v9-clean/v12-orig/v12-rerun/v13),
+    # all marketing-titled with marketing obligations and a verified
+    # 0-score-risk counterfactual (17/20 marketing-titled docs GT marketing;
+    # Playboy license-primary protected by carve-out (a); HEMISPHERX already
+    # wrong either way).
+    assert SORTER_PROMPT_V14 != SORTER_PROMPT_V13
+    assert SORTER_PROMPT_V14.startswith(SORTER_PROMPT_V13[:300])
+    assert "sorter_v14" in PROMPT_VERSIONS
+
+    v14 = SORTER_PROMPT_V14
+    assert "30. MARKETING TITLE WINS" in v14
+    assert "marketing, not manufacturing" in v14
+    assert "marketing, not distributor" in v14
+    assert "marketing, not co_branding" in v14
+    assert "MANUFACTURING, DESIGN AND MARKETING AGREEMENT" in v14
+    assert "STRATEGIC LICENSING, DISTRIBUTION AND MARKETING AGREEMENT" in v14
+    assert "CO-BRANDING, MARKETING AND DISTRIBUTION AGREEMENT" in v14
+    assert "29. MAINTENANCE TITLE WINS" in v14
+    assert "28. STRATEGIC ALLIANCE TITLE WINS" in v14
+    assert "VALID CONTRACT SUBTYPE KEYS" in v14
+    # v13 predates the rule.
+    assert "30. MARKETING TITLE WINS" not in SORTER_PROMPT_V13
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt
