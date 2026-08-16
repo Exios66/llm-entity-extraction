@@ -48,3 +48,6 @@ reports/*.csv
 
 # OS junk
 .DS_Store
+
+# Arize Phoenix local trace sink (SQLite + wasm runtime) — never commit
+.phoenix/
