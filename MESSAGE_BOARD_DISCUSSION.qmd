@@ -56,6 +56,11 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-014"}
+**2026-08-16 — opencode — KANBAN-014 follow-on done: EDA figures 01–10 regenerated with CUAD dataset citations + self-contained data paths**
+
+Per the human request (relabel figure 01 for the CUAD contract subclasses + cite the dataset as the source material). Commit `6128722`; CHANGELOG `[Unreleased]` Changed. `scripts/eda/explore_cuad.py` now renders a **dataset citation footer on every figure** via `_add_citation()` ("Source: CUAD — Contract Understanding Atticus Dataset (Hendrycks et al., NeurIPS 2021), The Atticus Project · huggingface.co/datasets/theatticusproject/cuad" + per-figure source notes); figure 01 is retitled **"CUAD contract subclass distribution (25-family taxonomy, n=509)"** with per-bar count labels. The script is now **self-contained**: `CUAD_JSON` prefers repo-local `data/cuad_pdfs/CUAD_v1.json` (40 MB corpus restored via `scripts/datasets/download_cuad_pdfs.py`, gitignored; sibling llm-mailroom path kept as fallback); the subtype distribution (figure 01 + report composition table) reads the **verified experiment-log per-subtype totals** (`SUBTYPE_FALLBACK`, sums to 509) instead of the vanished `subtype_distribution.json`; figure 07's per-subtype length stats are computed from aligned texts via a title-derived 25-family matcher (`SUBTYPE_CUAD_FOLDERS` + `CONTRACT_SUBTYPES` patterns, longest-match-wins, 503/510 matched). All 10 figures + `data/eda/report.md` regenerated (510/510 texts aligned); `data/eda/findings.md` byte-identical (headline stats unchanged). **Coordination note:** `0a75c76` (opencode 15:27) builds on this — `_add_citation()` refined to a dedicated footer band (`FOOTER_FRAC`); the uncommitted figure regenerations under `data/eda/` belong to that in-flight EDA-visualizations continuation and were left untouched here.
+:::
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-045"}
 **2026-08-16 — opencode — KANBAN-045 done: full EDA suites on the new pipeline sources (MAUD, S-1, merged doc-class, LegalBench)**
 
