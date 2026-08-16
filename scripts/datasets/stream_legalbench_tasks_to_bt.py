@@ -101,6 +101,25 @@ CURATED_OTHER_TASKS = [
     "corporate_lobbying",
     "unfair_tos",
     "diversity_1",
+    # Additional LegalBench classification tasks for broader coverage:
+    "contract_nli_confidentiality_of_agreement",
+    "contract_nli_explicit_identification",
+    "contract_nli_inclusion_of_verbally_conveyed_information",
+    "contract_nli_limited_use",
+    "contract_nli_notice_on_compelled_disclosure",
+    "contract_nli_permissible_acquirement_of_similar_information",
+    "contract_nli_permissible_development_of_similar_information",
+    "contract_nli_permissible_post-agreement_possession",
+    "contract_nli_sharing_with_employees",
+    "cuad_affiliate_license-licensee",
+    "cuad_affiliate_license-licensor",
+    "cuad_anti-assignment",
+    "cuad_audit_rights",
+    "cuad_cap_on_liability",
+    "cuad_change_of_control",
+    "cuad_competitive_restriction_exception",
+    "cuad_covenant_not_to_sue",
+    "cuad_effective_date",
 ]
 
 # Task families with non-classification outputs (skipped by --tasks all).

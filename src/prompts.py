@@ -624,6 +624,57 @@ Output the answer on a single line and nothing else."""
 )
 
 
+# -----------------------------------------------------------------------------
+# v2 — purpose-first ACT/STATE carve-out + knowledge-contradiction repair
+# (GEPA iteration, KANBAN-026 arm 5).
+# Data: qwen3.7-flash_legalbench_task_v1_test @94 = 0.8511 (80/94). Full-
+# reasoning diagnostic (raw OpenRouter reasoning_content on all 14 failures,
+# same v1 prompt, temp 0.0) split them: 8 runner artifacts (the _answer_task
+# 512-token reasoning truncation + reasoning_effort=none retry degrades rows
+# 21/30/44/79/82/85/86 that full reasoning answers correctly — RUNNER fix,
+# banked for the next iteration, NOT a prompt rule) + 6 genuine content
+# failures, quoted model reasoning:
+#   91: "'I am aware of the conduct' to prove knowledge' matches exactly the
+#       structure of 'told his friend that the patent was poorly written' to
+#       prove knowledge" — v1's own YES-example is a rule_contradiction vs GT
+#       (a statement NAMING a person/thing, offered to show the speaker's
+#       acquaintance/knowledge, is circumstantial → No).
+#   74: "Pointing is assertive non-verbal conduct communicating an
+#       identification... offered to prove the truth of the matter asserted
+#       (identification)" — GT No: the ACT of identifying is the operative
+#       fact; the content's truth is not the point.
+#   78: "the content asserts his sobriety... Yes" — GT No: a defamatory
+#       utterance IS the act damaging reputation (verbal act).
+#   72: "carried signs demanding equitable compensation... fits the
+#       definition of hearsay → Yes" — GT No: protest signs show the workers'
+#       grievance/demand, not that the demand is true.
+#   68: "Stickers on a car are generally considered non-assertive conduct...
+#       → No" — GT Yes: stickers asserting support ARE assertive conduct;
+#       the v1 "poster hung as decoration" example was misread as covering
+#       them.
+#   39: will-change read as circumstantial → No (GT Yes) — 1-off, banked.
+# v2 = v1.replace(rule 6) with ONE lesson: read the ISSUE phrase first and
+# answer by what is being proved — the content's truth (Yes) vs an ACT or a
+# STATE (No) — plus the contradiction repair (knowledge-acquaintance → No;
+# statements of intent offered to prove the planned act stay Yes; sticker
+# boundary drawn both ways). Regression-scanned against all 80 v1-correct
+# rows (no predicted flip).
+# -----------------------------------------------------------------------------
+
+LEGALBENCH_TASK_PROMPT_V2 = LEGALBENCH_TASK_PROMPT_V1.replace(
+    """6. When the question asks whether there is hearsay, apply the task's own definition (an out-of-court statement offered to prove the truth of the matter asserted) completely:
+   - A "statement" includes spoken words, writings (emails, texts, reports, cards, signs), and assertive non-verbal conduct that communicates (a nod or head-shake in answer to a question, pointing, displaying a slogan or sign). Non-assertive conduct (a poster hung as decoration, appearing or behaving) is NOT a statement.
+   - Answer YES when the statement's CONTENT is itself the fact the question asks about — the content asserts the very thing to be proved (e.g. "I am the boss" to prove who is boss; a congratulation card to prove a marriage; "I am aware of the conduct" to prove knowledge; a head-shake denying a purchase to prove no purchase). This includes a party's OWN out-of-court statement: a party admission is an exception to admissibility, NOT to the hearsay definition.
+   - Answer NO when the statement is offered only for the FACT that it was made or its effect on a person's state — to show the listener was told, knew, or was provoked, to show the declarant's feeling or belief, or as circumstantial evidence (the mere ability to speak shows the declarant knew a language; the making of a statement shows the declarant was alive or present). Here the CONTENT'S TRUTH is not what matters.
+   - A statement made in court, under oath and subject to cross-examination, is NOT hearsay.""",
+    """6. When the question asks whether there is hearsay, apply the task's own definition (an out-of-court statement offered to prove the truth of the matter asserted) completely. The phrase "on the issue of X" / "to prove X" names the fact to be proved — compare the statement's CONTENT to X itself, not to the surrounding story. The question is whether X IS the statement's content (hearsay) or whether X is an ACT or STATE that the making of the statement shows (not hearsay):
+   - A "statement" includes spoken words, writings (emails, texts, reports, cards, signs), and assertive non-verbal conduct that communicates (a nod or head-shake in answer to a question, pointing, displaying a slogan or sign). Non-assertive conduct (appearing, behaving, a poster hung as decoration) is NOT a statement.
+   - Answer YES when X IS the statement's content — the content asserts the very thing to be proved: e.g. "I am the boss" to prove who is boss; a congratulation card to prove a marriage; a head-shake denying a purchase to prove no purchase; stickers asserting support of a cause to prove that support; gossip asserting bad things about Alice, offered to prove her reputation was harmed by what was believed; an admission that earlier statements "were all lies", offered to prove the lies were knowingly spread; an email acknowledging "awareness of the conduct", offered to prove knowledge — the content itself IS the knowledge. A statement of intent or plan offered to prove the planned act is also YES (an email saying she planned to purchase a car, offered to prove she bought one). This includes a party's OWN out-of-court statement: a party admission is an exception to admissibility, NOT to the hearsay definition.
+   - Answer NO when X is NOT the content — when what is being proved is an ACT or a STATE shown by the making of the statement: whether the act of identifying occurred (pointing offered to show that X identified the suspect — the issue is the act, not whether the identification was correct); whether a defamatory utterance was made (a reputation suit where the utterance itself is the harm — what was said is the operative act, not the truth of its content); whether the listener was told, knew, or was provoked; the declarant's feeling, belief, or support; the workers' grievance behind protest signs (the signs show the demand, not that the demand is true); or a circumstantial fact (the mere ability to speak shows the declarant knew a language; the making of a statement shows the declarant was alive or present; a statement naming a person or thing — "Dave is dishonest", "the patent was poorly written" — shows the speaker's acquaintance with it, not that the content is true). Here the CONTENT'S TRUTH is not what matters.
+   - A statement made in court, under oath and subject to cross-examination, is NOT hearsay.""",
+)
+
+
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
 # =============================================================================
@@ -1858,6 +1909,7 @@ PROMPT_VERSIONS = {
     # Sorter — LegalBench multi-class task classification
     "legalbench_task_v0": LEGALBENCH_TASK_PROMPT_V0,
     "legalbench_task_v1": LEGALBENCH_TASK_PROMPT_V1,
+    "legalbench_task_v2": LEGALBENCH_TASK_PROMPT_V2,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

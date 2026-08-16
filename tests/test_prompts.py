@@ -281,6 +281,81 @@ def test_legalbench_task_v1_hearsay_doctrine():
     assert "effect on the listener" not in LEGALBENCH_TASK_PROMPT_V0
 
 
+def test_legalbench_task_v2_operative_fact_purpose_carveout():
+    """legalbench_task_v2 is a strict derivation of v1 that refines rule 6
+    with the purpose-first ACT/STATE carve-out + knowledge-contradiction
+    repair (KANBAN-026 arm 5).
+
+    Data: qwen3.7-flash_legalbench_task_v1_test @94 = 0.8511 (80/94).
+    Full-reasoning diagnostic on all 14 v1 failures (raw OpenRouter
+    reasoning_content, same v1 prompt, temp 0.0): 8 runner artifacts (the
+    _answer_task 512-token reasoning truncation + reasoning_effort=none
+    retry degrades rows 21/30/44/79/82/85/86 that full reasoning answers
+    correctly — runner fix banked, NOT a prompt rule) + 6 genuine content
+    failures. The 6: (91) rule_contradiction — model quotes v1's YES-example
+    "'I am aware of the conduct' to prove knowledge" verbatim on a
+    knowledge-acquaintance row GT labels No; (74) pointing offered to prove
+    the identification ACT; (78) defamatory statement = the verbal act
+    damaging reputation; (72) protest signs offered to show the workers'
+    grievance, not the truth of the demand; (68) stickers asserting support
+    ARE assertive (model misread the "poster hung as decoration" example);
+    (39) will-change 1-off, banked. v2 = v1.replace(rule 6) with ONE lesson
+    (read the ISSUE phrase first: content-truth → Yes, ACT/STATE → No) +
+    contradiction repair (knowledge-acquaintance → No; intent-plan → Yes
+    guardrail), regression-scanned against all 80 v1-correct rows.
+    """
+    from src.prompts import LEGALBENCH_TASK_PROMPT_V1, LEGALBENCH_TASK_PROMPT_V2
+
+    # v2 is a strict derivation of v1: base + v0/v1 rules survive, rule 6 is
+    # the only thing replaced.
+    assert LEGALBENCH_TASK_PROMPT_V2 != LEGALBENCH_TASK_PROMPT_V1
+    assert LEGALBENCH_TASK_PROMPT_V2.startswith(LEGALBENCH_TASK_PROMPT_V1[:300])
+    assert "legalbench_task_v2" in PROMPT_VERSIONS
+
+    v2 = LEGALBENCH_TASK_PROMPT_V2
+    # v0's output-format rules + the v1 doctrine skeleton survive.
+    assert "Output ONLY the answer" in v2
+    assert "Output the answer on a single line and nothing else." in v2
+    assert "offered to prove the truth of the matter asserted" in v2
+    assert "in court, under oath" in v2
+    assert "party admission" in v2.lower()
+    # Purpose-first: the issue phrase names the fact to be proved.
+    assert "names the fact to be proved" in v2
+    # The decision question: is X the content (Yes) or an ACT/STATE shown by
+    # the making (No)?
+    assert "X IS the statement's content" in v2
+    assert "an ACT or a STATE shown by the making" in v2
+    # ACT carve-out: identification act + defamatory utterance as the act —
+    # conditional on the issue being the act, NOT the content (rows 74/78 No,
+    # while 64/42/52 whose issue IS the content stay Yes).
+    assert "pointing offered to show that X identified the suspect" in v2
+    assert "the utterance itself is the harm" in v2
+    assert "not whether the identification was correct" in v2
+    # STATE carve-out: listener told/knew + declarant feeling + grievance.
+    assert "the listener was told, knew, or was provoked" in v2
+    assert "workers' grievance behind protest signs" in v2
+    # Knowledge-acquaintance → NO (the contradiction repair): a statement
+    # naming a person or thing shows the speaker's acquaintance with it.
+    assert "shows the speaker's acquaintance with it" in v2
+    # The harmful v1 YES-example ("I am aware of the conduct" → knowledge)
+    # is REMOVED — it contradicted GT on rows 82/91.
+    assert '"I am aware of the conduct" to prove knowledge' not in v2
+    # Content-is-X still covers the knowledge rows whose content IS the
+    # knowledge (rows 59/60/61/71/84 stay Yes).
+    assert "an email acknowledging" in v2
+    assert "the content itself IS the knowledge" in v2
+    # Intent-plan guardrail: statements of intent offered to prove the
+    # planned act stay YES (row 44 email-plan → ownership).
+    assert "statement of intent or plan offered to prove the planned act" in v2
+    # Sticker boundary drawn BOTH ways: stickers asserting support → YES
+    # (row 68), protest signs showing grievance → NO (row 72).
+    assert "stickers asserting support of a cause" in v2
+    assert "not that the demand is true" in v2
+    # Reputation-harm boundary: gossip whose content IS the harm → YES
+    # (row 42); defamatory utterance as the operative act → NO (row 78).
+    assert "gossip asserting bad things about Alice" in v2
+
+
 def test_sorter_prompt_mentions_classes():
     prompt = get_prompt("sorter")
     for cls in ("contract", "corporate_record", "due_diligence", "court_opinion"):
