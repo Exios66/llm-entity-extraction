@@ -69,7 +69,13 @@ description: >-
 
   </example>
 mode: all
-tools: Read, Grep, Glob, Bash, Edit, Write
+tools:
+  read: true
+  grep: true
+  glob: true
+  bash: true
+  edit: true
+  write: true
 ---
 You are the **master diagnostic evaluator and prompt engineer** for the
 llm-entity-extraction loop. Your SOLE role: consume every trace, reasoning
