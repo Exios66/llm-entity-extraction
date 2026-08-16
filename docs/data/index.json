@@ -1159,7 +1159,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -14.149999999999995,
-  "delta_best_pp": -8.44999999999999,
+  "delta_best_pp": -8.649999999999991,
   "timestamp": "2026-08-11T00:47:49.441715+00:00",
   "git": {
    "commit": "3a03d5c",
@@ -1914,7 +1914,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -6.879999999999997,
-  "delta_best_pp": -1.1799999999999922,
+  "delta_best_pp": -1.3799999999999923,
   "timestamp": "2026-08-11T01:52:09.063281+00:00",
   "git": {
    "commit": "a660aea",
@@ -3829,7 +3829,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -9.819999999999995,
-  "delta_best_pp": -4.11999999999999,
+  "delta_best_pp": -4.3199999999999905,
   "timestamp": "2026-08-13T05:25:04.658796+00:00",
   "git": {
    "commit": "d5bc234",
@@ -3888,7 +3888,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -8.840000000000003,
-  "delta_best_pp": -3.1399999999999983,
+  "delta_best_pp": -3.3399999999999985,
   "timestamp": "2026-08-13T05:38:03.680912+00:00",
   "git": {
    "commit": "d5bc234",
@@ -6052,7 +6052,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -8.57,
-  "delta_best_pp": -2.8699999999999948,
+  "delta_best_pp": -3.069999999999995,
   "timestamp": "2026-08-15T21:54:33.759808+00:00",
   "git": {
    "commit": "a4deab6",
@@ -6111,7 +6111,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -7.66,
-  "delta_best_pp": -1.959999999999995,
+  "delta_best_pp": -2.1599999999999953,
   "timestamp": "2026-08-15T22:19:00.259142+00:00",
   "git": {
    "commit": "a89a08f",
@@ -6170,7 +6170,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -8.250000000000002,
-  "delta_best_pp": -2.5499999999999967,
+  "delta_best_pp": -2.749999999999997,
   "timestamp": "2026-08-15T22:36:16.617869+00:00",
   "git": {
    "commit": "3d84cf2",
@@ -7560,7 +7560,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -7.0699999999999985,
-  "delta_best_pp": -1.3699999999999934,
+  "delta_best_pp": -1.5699999999999936,
   "timestamp": "2026-08-16T03:27:27.367612+00:00",
   "git": {
    "commit": "3ec21bf",
@@ -7618,7 +7618,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -22.59,
-  "delta_best_pp": -16.889999999999993,
+  "delta_best_pp": -17.089999999999993,
   "timestamp": "2026-08-16T03:39:32.986842+00:00",
   "git": {
    "commit": "4dd5404",
@@ -7677,7 +7677,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -5.700000000000005,
-  "delta_best_pp": 0.0,
+  "delta_best_pp": -0.20000000000000018,
   "timestamp": "2026-08-16T03:56:38.900287+00:00",
   "git": {
    "commit": "4dd5404",
@@ -8191,7 +8191,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -6.289999999999996,
-  "delta_best_pp": -0.5899999999999905,
+  "delta_best_pp": -0.7899999999999907,
   "timestamp": "2026-08-16T04:32:44.933952+00:00",
   "git": {
    "commit": "5eb76dc",
@@ -8281,7 +8281,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -10.219999999999995,
-  "delta_best_pp": -4.519999999999991,
+  "delta_best_pp": -4.719999999999991,
   "timestamp": "2026-08-16T05:19:37.571423+00:00",
   "git": {
    "commit": "45956c2",
@@ -8487,7 +8487,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -12.180000000000001,
-  "delta_best_pp": -6.479999999999997,
+  "delta_best_pp": -6.679999999999997,
   "timestamp": "2026-08-16T06:27:47.123936+00:00",
   "git": {
    "commit": "1b70e8b",
@@ -8589,7 +8589,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -11.2,
-  "delta_best_pp": -5.499999999999994,
+  "delta_best_pp": -5.699999999999994,
   "timestamp": "2026-08-16T06:36:30.832397+00:00",
   "git": {
    "commit": "1b70e8b",
@@ -8648,7 +8648,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -6.679999999999997,
-  "delta_best_pp": -0.979999999999992,
+  "delta_best_pp": -1.1799999999999922,
   "timestamp": "2026-08-16T06:38:50.226783+00:00",
   "git": {
    "commit": "1b70e8b",
@@ -8703,5 +8703,235 @@
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
   "data_source_n_samples": 1
+ },
+ {
+  "id": 168,
+  "experiment_name": "llama-3.3-70b-instruct_sorter_v13_subtype_langfuse",
+  "task": "subtype_classification",
+  "model": "meta-llama/llama-3.3-70b-instruct",
+  "prompts": "sorter_v13",
+  "headline": {
+   "label": "subtype strict",
+   "value": 0.89,
+   "detail": "doc_type 0.9921 \u00b7 strict 0.8900 \u00b7 equiv 0.9116"
+  },
+  "ci95": {
+   "lo": 0.8625,
+   "hi": 0.9175,
+   "half": 0.0275,
+   "n": 509,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "doc_type_accuracy": 0.9921,
+   "subtype_accuracy": 0.89,
+   "subtype_accuracy_equiv": 0.9116,
+   "confidence": 0.9406,
+   "n_failed": 56,
+   "mode_counts": {
+    "equivalent_family": 11,
+    "family_confusion": 40,
+    "function_over_form": 4,
+    "other_fallback": 1
+   }
+  },
+  "n_rows": 509,
+  "n_ok": 509,
+  "n_error": 0,
+  "total_tokens": 6657582,
+  "cost_usd": null,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": null,
+  "cost_estimated_per_doc_usd": null,
+  "cost_price_source": null,
+  "fingerprint": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406",
+  "seed": 42,
+  "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+  "global_best_pp": -10.999999999999998,
+  "delta_best_pp": -5.499999999999994,
+  "timestamp": "2026-08-16T06:54:54.312793+00:00",
+  "git": {
+   "commit": "1b1d455",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509
+ },
+ {
+  "id": 169,
+  "experiment_name": "qwen3.7-flash_sorter_v15_subtype_langfuse",
+  "task": "subtype_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v15",
+  "headline": {
+   "label": "subtype strict",
+   "value": 1.0,
+   "detail": "doc_type 1.0000 \u00b7 strict 1.0000 \u00b7 equiv 1.0000"
+  },
+  "ci95": {
+   "lo": 1.0,
+   "hi": 1.0,
+   "half": 0.0,
+   "n": 5,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "doc_type_accuracy": 1.0,
+   "subtype_accuracy": 1.0,
+   "subtype_accuracy_equiv": 1.0,
+   "confidence": 0.96,
+   "n_failed": 0,
+   "mode_counts": {}
+  },
+  "n_rows": 5,
+  "n_ok": 5,
+  "n_error": 0,
+  "total_tokens": 102586,
+  "cost_usd": null,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.003482,
+  "cost_estimated_per_doc_usd": 0.000696,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d",
+  "seed": 42,
+  "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
+  "global_best_pp": 0.0,
+  "delta_best_pp": 0.0,
+  "timestamp": "2026-08-16T07:02:43.525439+00:00",
+  "git": {
+   "commit": "1b1d455",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 5
+ },
+ {
+  "id": 170,
+  "experiment_name": "qwen3.7-flash_sorter_v15_subtype_langfuse",
+  "task": "subtype_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "sorter_v15",
+  "headline": {
+   "label": "subtype strict",
+   "value": 0.945,
+   "detail": "doc_type 0.9961 \u00b7 strict 0.9450 \u00b7 equiv 0.9509"
+  },
+  "ci95": {
+   "lo": 0.9234,
+   "hi": 0.9646,
+   "half": 0.0206,
+   "n": 509,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "doc_type_accuracy": 0.9961,
+   "subtype_accuracy": 0.945,
+   "subtype_accuracy_equiv": 0.9509,
+   "confidence": 0.9574,
+   "n_failed": 28,
+   "mode_counts": {
+    "equivalent_family": 3,
+    "family_confusion": 22,
+    "function_over_form": 2,
+    "other_fallback": 1
+   }
+  },
+  "n_rows": 509,
+  "n_ok": 509,
+  "n_error": 0,
+  "total_tokens": 7555755,
+  "cost_usd": null,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.278476,
+  "cost_estimated_per_doc_usd": 0.000547,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406",
+  "seed": 42,
+  "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+  "global_best_pp": -5.500000000000005,
+  "delta_best_pp": 0.0,
+  "timestamp": "2026-08-16T07:22:48.578904+00:00",
+  "git": {
+   "commit": "1b1d455",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509
+ },
+ {
+  "id": 171,
+  "experiment_name": "llama-4-scout_contracts_specialist_v31_extraction_langfuse",
+  "task": "contract_entity_extraction",
+  "model": "meta-llama/llama-4-scout",
+  "prompts": "contracts_specialist_v31",
+  "headline": {
+   "label": "extraction",
+   "value": 0.6968
+  },
+  "ci95": {
+   "lo": 0.6836,
+   "hi": 0.71,
+   "half": 0.0132,
+   "n": 509,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "overall_extraction_score": 0.6968,
+   "field_presence": 0.9447,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 0.9876,
+    "effective_date": 0.8565,
+    "governing_law": 0.8287,
+    "key_obligations": 0.2587,
+    "parties": 0.8701,
+    "renewal_terms": 0.5097,
+    "term_length": 0.2531,
+    "termination_clauses": 0.7143
+   },
+   "field_exact_rate": 0.5872,
+   "list_f1": 0.3019,
+   "date_mae_days": 50.1843,
+   "date_r2": 0.9751,
+   "duration_mae_days": 161.1538,
+   "duration_r2": 0.9653
+  },
+  "n_rows": 509,
+  "n_ok": 509,
+  "n_error": 0,
+  "total_tokens": 10337518,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": null,
+  "cost_estimated_per_doc_usd": null,
+  "cost_price_source": null,
+  "fingerprint": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266",
+  "seed": 42,
+  "sample_key": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509",
+  "global_best_pp": -29.42,
+  "delta_best_pp": -17.690000000000005,
+  "timestamp": "2026-08-16T07:22:48.950222+00:00",
+  "git": {
+   "commit": "1b1d455",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509
  }
 ]

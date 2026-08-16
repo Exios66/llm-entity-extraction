@@ -672,6 +672,20 @@
     "n_rows": 509,
     "seed": 42,
     "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509"
+   },
+   {
+    "id": 171,
+    "experiment_name": "llama-4-scout_contracts_specialist_v31_extraction_langfuse",
+    "timestamp": "2026-08-16T07:22:48.950222+00:00",
+    "model": "meta-llama/llama-4-scout",
+    "prompts": "contracts_specialist_v31",
+    "headline_value": 0.6968,
+    "headline_label": "extraction",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509"
    }
   ],
   "chained_sorter_extractor": [
@@ -1666,6 +1680,61 @@
     "seed": 42,
     "sample_key": "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
     "mode_counts": {}
+   },
+   {
+    "id": 168,
+    "experiment_name": "llama-3.3-70b-instruct_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T06:54:54.312793+00:00",
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "prompts": "sorter_v13",
+    "headline_value": 0.89,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 11,
+     "family_confusion": 40,
+     "function_over_form": 4,
+     "other_fallback": 1
+    }
+   },
+   {
+    "id": 169,
+    "experiment_name": "qwen3.7-flash_sorter_v15_subtype_langfuse",
+    "timestamp": "2026-08-16T07:02:43.525439+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v15",
+    "headline_value": 1.0,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.003482,
+    "n_rows": 5,
+    "seed": 42,
+    "sample_key": "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
+    "mode_counts": {}
+   },
+   {
+    "id": 170,
+    "experiment_name": "qwen3.7-flash_sorter_v15_subtype_langfuse",
+    "timestamp": "2026-08-16T07:22:48.578904+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v15",
+    "headline_value": 0.945,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.278476,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 3,
+     "family_confusion": 22,
+     "function_over_form": 2,
+     "other_fallback": 1
+    }
    }
   ],
   "sorter_classification": [
