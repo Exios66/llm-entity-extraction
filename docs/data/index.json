@@ -1159,7 +1159,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -14.149999999999995,
-  "delta_best_pp": -8.44999999999999,
+  "delta_best_pp": -9.429999999999994,
   "timestamp": "2026-08-11T00:47:49.441715+00:00",
   "git": {
    "commit": "3a03d5c",
@@ -1914,7 +1914,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -6.879999999999997,
-  "delta_best_pp": -1.1799999999999922,
+  "delta_best_pp": -2.1599999999999953,
   "timestamp": "2026-08-11T01:52:09.063281+00:00",
   "git": {
    "commit": "a660aea",
@@ -3829,7 +3829,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -9.819999999999995,
-  "delta_best_pp": -4.11999999999999,
+  "delta_best_pp": -5.099999999999993,
   "timestamp": "2026-08-13T05:25:04.658796+00:00",
   "git": {
    "commit": "d5bc234",
@@ -3888,7 +3888,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -8.840000000000003,
-  "delta_best_pp": -3.1399999999999983,
+  "delta_best_pp": -4.120000000000001,
   "timestamp": "2026-08-13T05:38:03.680912+00:00",
   "git": {
    "commit": "d5bc234",
@@ -6052,7 +6052,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -8.57,
-  "delta_best_pp": -2.8699999999999948,
+  "delta_best_pp": -3.849999999999998,
   "timestamp": "2026-08-15T21:54:33.759808+00:00",
   "git": {
    "commit": "a4deab6",
@@ -6111,7 +6111,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -7.66,
-  "delta_best_pp": -1.959999999999995,
+  "delta_best_pp": -2.939999999999998,
   "timestamp": "2026-08-15T22:19:00.259142+00:00",
   "git": {
    "commit": "a89a08f",
@@ -6170,7 +6170,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -8.250000000000002,
-  "delta_best_pp": -2.5499999999999967,
+  "delta_best_pp": -3.53,
   "timestamp": "2026-08-15T22:36:16.617869+00:00",
   "git": {
    "commit": "3d84cf2",
@@ -7560,7 +7560,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -7.0699999999999985,
-  "delta_best_pp": -1.3699999999999934,
+  "delta_best_pp": -2.3499999999999965,
   "timestamp": "2026-08-16T03:27:27.367612+00:00",
   "git": {
    "commit": "3ec21bf",
@@ -7618,7 +7618,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -22.59,
-  "delta_best_pp": -16.889999999999993,
+  "delta_best_pp": -17.869999999999997,
   "timestamp": "2026-08-16T03:39:32.986842+00:00",
   "git": {
    "commit": "4dd5404",
@@ -7677,7 +7677,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -5.700000000000005,
-  "delta_best_pp": 0.0,
+  "delta_best_pp": -0.9800000000000031,
   "timestamp": "2026-08-16T03:56:38.900287+00:00",
   "git": {
    "commit": "4dd5404",
@@ -8191,7 +8191,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -6.289999999999996,
-  "delta_best_pp": -0.5899999999999905,
+  "delta_best_pp": -1.5699999999999936,
   "timestamp": "2026-08-16T04:32:44.933952+00:00",
   "git": {
    "commit": "5eb76dc",
@@ -8281,7 +8281,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -10.219999999999995,
-  "delta_best_pp": -4.519999999999991,
+  "delta_best_pp": -5.499999999999994,
   "timestamp": "2026-08-16T05:19:37.571423+00:00",
   "git": {
    "commit": "45956c2",
@@ -8475,7 +8475,7 @@
   "seed": 42,
   "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "global_best_pp": -7.469999999999999,
-  "delta_best_pp": -1.7699999999999938,
+  "delta_best_pp": -2.749999999999997,
   "timestamp": "2026-08-16T05:44:26.948991+00:00",
   "git": {
    "commit": "1de3ee7",
@@ -8938,5 +8938,119 @@
   },
   "data_source_project": null,
   "data_source_n_samples": 676
+ },
+ {
+  "id": 177,
+  "experiment_name": "deepseek-v4-pro_sorter_v13_subtype_langfuse",
+  "task": "subtype_classification",
+  "model": "deepseek/deepseek-v4-pro",
+  "prompts": "sorter_v13",
+  "headline": {
+   "label": "subtype strict",
+   "value": 0.9528,
+   "detail": "doc_type 0.9961 \u00b7 strict 0.9528 \u00b7 equiv 0.9548"
+  },
+  "ci95": {
+   "lo": 0.9332,
+   "hi": 0.9705,
+   "half": 0.0186,
+   "n": 509,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "doc_type_accuracy": 0.9961,
+   "subtype_accuracy": 0.9528,
+   "subtype_accuracy_equiv": 0.9548,
+   "confidence": 0.9555,
+   "n_failed": 24,
+   "mode_counts": {
+    "equivalent_family": 1,
+    "family_confusion": 18,
+    "function_over_form": 2,
+    "other_fallback": 3
+   }
+  },
+  "n_rows": 509,
+  "n_ok": 509,
+  "n_error": 0,
+  "total_tokens": 6970572,
+  "cost_usd": null,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 3.151437,
+  "cost_estimated_per_doc_usd": 0.006191,
+  "cost_price_source": {
+   "model": "deepseek/deepseek-v4-pro",
+   "in_per_1m": 0.435,
+   "out_per_1m": 0.87
+  },
+  "fingerprint": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406",
+  "seed": 42,
+  "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+  "global_best_pp": -4.720000000000002,
+  "delta_best_pp": 0.0,
+  "timestamp": "2026-08-16T10:46:28.289678+00:00",
+  "git": {
+   "commit": "7821c33",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509
+ },
+ {
+  "id": 178,
+  "experiment_name": "meta-llama-llama-3.3-70b-instruct_sorter_v13_subtype_langfuse",
+  "task": "subtype_classification",
+  "model": "meta-llama/llama-3.3-70b-instruct",
+  "prompts": "sorter_v13",
+  "headline": {
+   "label": "subtype strict",
+   "value": 0.8782,
+   "detail": "doc_type 0.9941 \u00b7 strict 0.8782 \u00b7 equiv 0.8998"
+  },
+  "ci95": {
+   "lo": 0.8487,
+   "hi": 0.9057,
+   "half": 0.0285,
+   "n": 509,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "doc_type_accuracy": 0.9941,
+   "subtype_accuracy": 0.8782,
+   "subtype_accuracy_equiv": 0.8998,
+   "confidence": 0.9424,
+   "n_failed": 62,
+   "mode_counts": {
+    "equivalent_family": 11,
+    "family_confusion": 47,
+    "function_over_form": 3,
+    "other_fallback": 1
+   }
+  },
+  "n_rows": 509,
+  "n_ok": 509,
+  "n_error": 0,
+  "total_tokens": 6657770,
+  "cost_usd": null,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": null,
+  "cost_estimated_per_doc_usd": null,
+  "cost_price_source": null,
+  "fingerprint": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406",
+  "seed": 42,
+  "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+  "global_best_pp": -12.180000000000001,
+  "delta_best_pp": -7.46,
+  "timestamp": "2026-08-16T10:51:33.387225+00:00",
+  "git": {
+   "commit": "7821c33",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 509
  }
 ]
