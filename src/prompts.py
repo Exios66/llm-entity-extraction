@@ -713,6 +713,69 @@ LEGALBENCH_TASK_PROMPT_V3 = LEGALBENCH_TASK_PROMPT_V2 + """"
 6. SPECIAL CASE — Prohibition clauses: When a clause uses prohibition language such as "shall not have the right to X," "shall not X," or "may not X," recognize that this establishes a RESTRICTION where X is not permitted without consent or notice. In Yes/No classification tasks, if the question asks whether consent/notice is required for the restricted action, output "Yes." Do not misread prohibition language as permitting the action.
 """
 
+# =============================================================================
+# LEGALBENCH TASK — v4 (subtask-series base: hygiene fix + CUAD subtask keys)
+# -----------------------------------------------------------------------------
+# v4 = v3 with TWO hygiene repairs (no doctrine change):
+#   (1) STRAY QUOTE removed — v3 was built as `V2 + """"` which prepends a
+#       literal `"` character to the prohibition rule (the model receives a
+#       dangling quote in the system prompt).
+#   (2) RULE-NUMBERING COLLISION fixed — v3 numbers the prohibition rule "6."
+#       while the hearsay doctrine rule is also "6."; renumbered to 7.
+# Motivation (LegalBench subtask series, 2026-08-15): the 7 CUAD subtask
+# prompts (legalbench_task_v3_anti_assignment, ..._audit_rights,
+# ..._cap_on_liability, ..._change_of_control,
+# ..._competitive_restriction_exception, ..._covenant_not_to_sue,
+# ..._effective_date) were registered as aliases of the generic v3 prompt and
+# carry the hearsay doctrine that never fires on CUAD clause tasks. v4 becomes
+# the base for subtask-specific v4_<subtask> versions: hygiene-fixed generic
+# scaffolding + one subtask-specific operative rule per version.
+# =============================================================================
+
+LEGALBENCH_TASK_PROMPT_V4 = LEGALBENCH_TASK_PROMPT_V3.replace(
+    'Output the answer on a single line and nothing else."\n\n6. SPECIAL CASE — Prohibition clauses:',
+    'Output the answer on a single line and nothing else.\n\n7. SPECIAL CASE — Prohibition clauses:',
+)
+
+# -----------------------------------------------------------------------------
+# v4_competitive_restriction_exception — ONE subtask rule (conditional-
+# permission carveouts), from the deterministic failure on the 6-row CRE
+# surface (fp de6ae646, temp 0.1): cuad_competitive_restriction_exception_0
+# failed 0.8333 in BOTH the anti_assignment-named sweep and the
+# competitive_restriction_exception-named run. GT Yes: the IGER/CERES clause
+# is a conditional-permission carveout — "if IGER would enter into any
+# agreement ... with a not-for-profit third party ... such agreement must
+# provide that (i) IGER will receive the exclusive right (subject to Articles
+# 5.1.2(a) and 5.2) ..." — an exception framework whose permission structure
+# IS the carveout, with no explicit "except / provided, however" qualifier.
+# The task few-shot teaches only the explicit-qualifier pattern ("provided,
+# however", "but nonexclusive"), so the model missed the permission-structure
+# shape. Rule stated as a FAMILY rule (carveout = permission structure,
+# applicable to any clause of the CRE family), not a document recall.
+# -----------------------------------------------------------------------------
+
+LEGALBENCH_TASK_PROMPT_V4_CRE = LEGALBENCH_TASK_PROMPT_V4 + """
+
+8. COMPETITIVE-RESTRICTION EXCEPTIONS (this task): an exception or carveout includes BOTH of these shapes — (a) explicit qualifier vocabulary that narrows a restriction ("provided, however", "except", "but nonexclusive as to", "notwithstanding", "subject to"); AND (b) a conditional-PERMISSION structure that carves conduct out of a restriction: a clause that says a party MAY enter into a specified agreement or take a specified action subject to stated conditions (e.g. "if X would enter into any agreement with a third party, such agreement must provide that...") is itself an exception to the restriction, even when no explicit "except"/"provided, however" words appear. The permission structure IS the carveout. Answer Yes when the clause grants such a conditional permission or narrows the restriction with qualifier vocabulary; answer No when the clause only states a restriction or a termination right without granting a permission or narrowing."""
+
+# -----------------------------------------------------------------------------
+# v4_covenant_not_to_sue — ONE subtask rule (conduct-restriction covenants),
+# from the oscillating failure on the 6-row CNTS surface (fp 0068f5b9, temp
+# 0.1): cuad_covenant_not_to_sue_2 failed 1.0/0.8333 (one of two runs). GT
+# Yes: "Allied shall not at any time do, or cause to be done, directly or
+# indirectly any act that may impair or tarnish any part of Newegg's goodwill
+# and reputation in the Newegg Marks and the Newegg Products" — a covenant
+# restricting CONDUCT toward the counterparty's IP (impair/tarnish the marks)
+# is a covenant not to sue even though the word "sue" never appears. The model
+# over-matched on literal "contest validity / bring a claim" vocabulary.
+# Weaker evidence (1/2) than the CRE cluster -> logic-repair grade, shipped
+# with the family rule that generalizes to any conduct-restriction covenant.
+# -----------------------------------------------------------------------------
+
+LEGALBENCH_TASK_PROMPT_V4_CNTS = LEGALBENCH_TASK_PROMPT_V4 + """
+
+8. COVENANT NOT TO SUE (this task): the restriction need NOT use the words "sue", "contest", or "claim". A covenant that restricts CONDUCT toward the counterparty's intellectual property is a covenant not to sue: a promise not to do, or cause to be done, directly or indirectly, any act that may impair, tarnish, or challenge the counterparty's marks, goodwill, or ownership of its intellectual property (e.g. "shall not at any time do any act that may impair or tarnish the Marks") IS a restriction against contesting validity / bringing a claim. Answer Yes when a party is barred from conduct that would undermine the counterparty's IP rights, even without litigation vocabulary; answer No only when the clause imposes a duty unrelated to the counterparty's IP (e.g. record-keeping, audit, payment)."""
+
 
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
@@ -1951,7 +2014,11 @@ PROMPT_VERSIONS = {
     "legalbench_task_v1": LEGALBENCH_TASK_PROMPT_V1,
     "legalbench_task_v2": LEGALBENCH_TASK_PROMPT_V2,
     "legalbench_task_v3": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v4": LEGALBENCH_TASK_PROMPT_V4,
 
+    # v3_<subtask> keys stay registered at v3 (their runs used that string —
+    # the version key IS the experiment identity). v4_<subtask> keys are the
+    # subtask-specific next loop: hygiene-fixed base + one subtask rule.
     "legalbench_task_v3_anti_assignment": LEGALBENCH_TASK_PROMPT_V3,
     "legalbench_task_v3_audit_rights": LEGALBENCH_TASK_PROMPT_V3,
     "legalbench_task_v3_cap_on_liability": LEGALBENCH_TASK_PROMPT_V3,
@@ -1959,6 +2026,13 @@ PROMPT_VERSIONS = {
     "legalbench_task_v3_competitive_restriction_exception": LEGALBENCH_TASK_PROMPT_V3,
     "legalbench_task_v3_covenant_not_to_sue": LEGALBENCH_TASK_PROMPT_V3,
     "legalbench_task_v3_effective_date": LEGALBENCH_TASK_PROMPT_V3,
+    "legalbench_task_v4_anti_assignment": LEGALBENCH_TASK_PROMPT_V4,
+    "legalbench_task_v4_audit_rights": LEGALBENCH_TASK_PROMPT_V4,
+    "legalbench_task_v4_cap_on_liability": LEGALBENCH_TASK_PROMPT_V4,
+    "legalbench_task_v4_change_of_control": LEGALBENCH_TASK_PROMPT_V4,
+    "legalbench_task_v4_competitive_restriction_exception": LEGALBENCH_TASK_PROMPT_V4_CRE,
+    "legalbench_task_v4_covenant_not_to_sue": LEGALBENCH_TASK_PROMPT_V4_CNTS,
+    "legalbench_task_v4_effective_date": LEGALBENCH_TASK_PROMPT_V4,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

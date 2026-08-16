@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-16T03:16:34.275078+00:00",
+ "built_at": "2026-08-16T03:58:25.501128+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
@@ -30,16 +30,16 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 140,
+ "run_count": 143,
  "tasks": {
   "contract_entity_extraction": 51,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 27,
+  "subtype_classification": 30,
   "sorter_classification": 3,
   "task_classification": 43
  },
  "models": {
-  "qwen/qwen3.7-flash": 138,
+  "qwen/qwen3.7-flash": 141,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -86,7 +86,7 @@
   "contracts_specialist_v31": 5,
   "sorter_v11": 3,
   "legalbench_task_v0": 17,
-  "sorter_v12": 2,
+  "sorter_v12": 3,
   "legalbench_task_v1": 3,
   "contracts_specialist_v32": 2,
   "legalbench_task_v2": 1,
@@ -97,12 +97,13 @@
   "legalbench_task_v3_change_of_control": 1,
   "legalbench_task_v3_competitive_restriction_exception": 1,
   "legalbench_task_v3_covenant_not_to_sue": 1,
-  "legalbench_task_v3_effective_date": 1
+  "legalbench_task_v3_effective_date": 1,
+  "sorter_v13": 2
  },
- "n_rows": 12224,
- "n_ok": 11309,
+ "n_rows": 13751,
+ "n_ok": 12836,
  "n_error": 873,
- "total_tokens": 164104313,
+ "total_tokens": 184851364,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -155,18 +156,18 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 27,
+   "runs": 30,
    "best": {
     "run_id": 20,
     "value": 1.0
    },
-   "median": 0.9116,
+   "median": 0.9129499999999999,
    "worst": {
     "run_id": 84,
     "value": 0.0
    },
-   "documents": 6988,
-   "tokens": 86582315
+   "documents": 8515,
+   "tokens": 107329366
   },
   "sorter_classification": {
    "runs": 3,

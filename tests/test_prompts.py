@@ -382,6 +382,131 @@ def test_legalbench_task_v2_operative_fact_purpose_carveout():
     assert "gossip asserting bad things about Alice" in v2
 
 
+def test_legalbench_task_v4_hygiene_fix():
+    """legalbench_task_v4 is the subtask-series base: v3 with TWO hygiene
+    repairs and no doctrine change — (1) the stray `"` character prepended to
+    the prohibition rule by the v3 string-concatenation construction, and (2)
+    the rule-numbering collision (v3 numbers the prohibition rule "6." while
+    the hearsay doctrine rule is also "6.").
+
+    Data: the 7 CUAD subtask prompts (legalbench_task_v3_<subtask>) were
+    aliases of generic v3 carrying the hearsay doctrine that never fires on
+    CUAD clause tasks; the subtask runs at temp 0.1 show the model decides
+    from the task few-shot alone (see v4_<subtask> tests for the failure
+    clusters). v4 becomes the hygiene-fixed base for the subtask-specific
+    v4_<subtask> versions.
+    """
+    from src.prompts import LEGALBENCH_TASK_PROMPT_V3, LEGALBENCH_TASK_PROMPT_V4
+
+    assert LEGALBENCH_TASK_PROMPT_V4 != LEGALBENCH_TASK_PROMPT_V3
+    assert LEGALBENCH_TASK_PROMPT_V4.startswith(LEGALBENCH_TASK_PROMPT_V3[:300])
+    assert "legalbench_task_v4" in PROMPT_VERSIONS
+
+    v3, v4 = LEGALBENCH_TASK_PROMPT_V3, LEGALBENCH_TASK_PROMPT_V4
+    # The stray quote bug: v3 = V2 + """" prepends a literal `"` before the
+    # prohibition rule. v4 removes it.
+    assert 'nothing else."\n\n6. SPECIAL CASE' in v3
+    assert 'nothing else."\n\n6. SPECIAL CASE' not in v4
+    # Numbering collision fixed: v3 has TWO "6." rules (hearsay + prohibition),
+    # v4 renumbers the prohibition rule to 7.
+    assert v3.count("\n6. ") == 2
+    assert v4.count("\n6. ") == 1
+    assert "\n7. SPECIAL CASE — Prohibition clauses:" in v4
+    # No doctrine change: everything else survives byte-identical.
+    assert "offered to prove the truth of the matter asserted" in v4
+    assert "Output ONLY the answer" in v4
+
+
+def test_legalbench_task_v4_competitive_restriction_exception_rule():
+    """legalbench_task_v4_competitive_restriction_exception = v4 + ONE rule:
+    the conditional-permission carveout shape. Data: cuad_competitive_
+    restriction_exception_0 failed DETERMINISTICALLY on the 6-row CRE surface
+    (fp de6ae646, temp 0.1) — 0.8333 in BOTH the anti_assignment-named sweep
+    and the competitive_restriction_exception-named run. GT Yes: the
+    IGER/CERES clause is a conditional-permission carveout ("if IGER would
+    enter into any agreement ... with a not-for-profit third party ... such
+    agreement must provide that (i) IGER will receive the exclusive right
+    (subject to Articles 5.1.2(a) and 5.2) ...") — an exception framework
+    with no explicit "except"/"provided, however" qualifier, which the task
+    few-shot never demonstrates. The rule is stated as a FAMILY rule
+    (permission structure = carveout), not a document recall.
+    """
+    from src.prompts import LEGALBENCH_TASK_PROMPT_V4, LEGALBENCH_TASK_PROMPT_V4_CRE
+
+    assert LEGALBENCH_TASK_PROMPT_V4_CRE != LEGALBENCH_TASK_PROMPT_V4
+    assert LEGALBENCH_TASK_PROMPT_V4_CRE.startswith(LEGALBENCH_TASK_PROMPT_V4)
+    assert "legalbench_task_v4_competitive_restriction_exception" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["legalbench_task_v4_competitive_restriction_exception"] is LEGALBENCH_TASK_PROMPT_V4_CRE
+
+    cre = LEGALBENCH_TASK_PROMPT_V4_CRE
+    assert "COMPETITIVE-RESTRICTION EXCEPTIONS (this task)" in cre
+    assert "conditional-PERMISSION" in cre
+    assert "The permission structure IS the carveout" in cre
+    assert "may enter into a specified agreement" in cre.lower()
+    assert "subject to stated conditions" in cre
+    # Negative boundary: a restriction/termination right without a permission
+    # stays No (rows 3-5 of the CRE surface).
+    assert "only states a restriction or a termination right" in cre
+
+
+def test_legalbench_task_v4_covenant_not_to_sue_rule():
+    """legalbench_task_v4_covenant_not_to_sue = v4 + ONE rule: conduct-
+    restriction covenants count as covenants not to sue even without the
+    word "sue". Data: cuad_covenant_not_to_sue_2 oscillated on the 6-row
+    CNTS surface (fp 0068f5b9, temp 0.1) — 1.0 / 0.8333 across two runs. GT
+    Yes: "Allied shall not at any time do, or cause to be done, directly or
+    indirectly any act that may impair or tarnish any part of Newegg's
+    goodwill and reputation in the Newegg Marks and the Newegg Products" — a
+    covenant restricting CONDUCT toward the counterparty's IP. The model
+    over-matched on literal "contest validity / bring a claim" vocabulary.
+    Weaker evidence (1/2) than the CRE cluster -> logic-repair grade, stated
+    as a family rule generalizing to any conduct-restriction covenant.
+    """
+    from src.prompts import LEGALBENCH_TASK_PROMPT_V4, LEGALBENCH_TASK_PROMPT_V4_CNTS
+
+    assert LEGALBENCH_TASK_PROMPT_V4_CNTS != LEGALBENCH_TASK_PROMPT_V4
+    assert LEGALBENCH_TASK_PROMPT_V4_CNTS.startswith(LEGALBENCH_TASK_PROMPT_V4)
+    assert "legalbench_task_v4_covenant_not_to_sue" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["legalbench_task_v4_covenant_not_to_sue"] is LEGALBENCH_TASK_PROMPT_V4_CNTS
+
+    cnts = LEGALBENCH_TASK_PROMPT_V4_CNTS
+    assert "COVENANT NOT TO SUE (this task)" in cnts
+    assert "need NOT use the words" in cnts
+    assert "impair, tarnish, or challenge" in cnts
+    assert "conduct that would undermine the counterparty's IP rights" in cnts
+    # Negative boundary: unrelated duties (record-keeping, audit, payment)
+    # stay No (rows 3-5 of the CNTS surface).
+    assert "record-keeping, audit, payment" in cnts
+
+
+def test_legalbench_subtask_v4_keys_resolve():
+    """All seven v4_<subtask> keys resolve; the two rule versions are the
+    CRE/CNTS specialists, the other five are the hygiene-fixed v4 base (they
+    sat at 1.0/6 on their surfaces — no measurable headroom, so no rule)."""
+    from src.prompts import (
+        LEGALBENCH_TASK_PROMPT_V4,
+        LEGALBENCH_TASK_PROMPT_V4_CRE,
+        LEGALBENCH_TASK_PROMPT_V4_CNTS,
+    )
+
+    base_keys = [
+        "legalbench_task_v4_anti_assignment",
+        "legalbench_task_v4_audit_rights",
+        "legalbench_task_v4_cap_on_liability",
+        "legalbench_task_v4_change_of_control",
+        "legalbench_task_v4_effective_date",
+    ]
+    for k in base_keys:
+        assert PROMPT_VERSIONS[k] is LEGALBENCH_TASK_PROMPT_V4, k
+    assert PROMPT_VERSIONS["legalbench_task_v4_competitive_restriction_exception"] is LEGALBENCH_TASK_PROMPT_V4_CRE
+    assert PROMPT_VERSIONS["legalbench_task_v4_covenant_not_to_sue"] is LEGALBENCH_TASK_PROMPT_V4_CNTS
+    # v3_<subtask> identity preserved (their runs used those strings).
+    from src.prompts import LEGALBENCH_TASK_PROMPT_V3
+
+    for k in ("legalbench_task_v3_anti_assignment", "legalbench_task_v3_effective_date"):
+        assert PROMPT_VERSIONS[k] is LEGALBENCH_TASK_PROMPT_V3, k
+
+
 def test_sorter_prompt_mentions_classes():
     prompt = get_prompt("sorter")
     for cls in ("contract", "corporate_record", "due_diligence", "court_opinion"):

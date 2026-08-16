@@ -1430,6 +1430,65 @@
      "function_over_form": 2,
      "other_fallback": 3
     }
+   },
+   {
+    "id": 141,
+    "experiment_name": "qwen3.7-flash_sorter_v12_subtype_langfuse",
+    "timestamp": "2026-08-16T03:27:27.367612+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v12",
+    "headline_value": 0.9293,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.271088,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 3,
+     "family_confusion": 27,
+     "function_over_form": 2,
+     "other_fallback": 4
+    }
+   },
+   {
+    "id": 142,
+    "experiment_name": "qwen3.7-flash_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T03:39:32.986842+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v13",
+    "headline_value": 0.7741,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.2255,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 1,
+     "family_confusion": 19,
+     "function_over_form": 95
+    }
+   },
+   {
+    "id": 143,
+    "experiment_name": "qwen3.7-flash_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T03:56:38.900287+00:00",
+    "model": "qwen/qwen3.7-flash",
+    "prompts": "sorter_v13",
+    "headline_value": 0.943,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.27547,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 2,
+     "family_confusion": 24,
+     "function_over_form": 2,
+     "other_fallback": 1
+    }
    }
   ],
   "sorter_classification": [
