@@ -131,7 +131,7 @@ carries task state lives in private channels. Channel hierarchy:
 
 | Channel | Carries | Canonical for |
 |---|---|---|
-| `MESSAGE_BOARD.md` discussion log | ALL task state: claims, lane moves, decisions, results, blockers, handoffs, reopenings | EVERYTHING — the single source of truth |
+| `MESSAGE_BOARD.md` (table + archive) / `MESSAGE_BOARD_DISCUSSION.yaml` (log) | ALL task state: claims, lane moves, decisions, results, blockers, handoffs, reopenings — the Kanban table + Archive live in the markdown; the append-only discussion log lives as structured YAML entries (date/agent/card/subject/body, newest at top) | EVERYTHING — the single source of truth |
 | GitHub issues (label `kanban`) | mirror of a synced card's status + externally verifiable completion | synced cards' status (must never disagree with the board) |
 | Commit messages | card references (`MESSAGE BOARD: KANBAN-00N ...` / `KANBAN-00N (vX): ...`) | which commit landed which card |
 | `CHANGELOG.md` | release-level history | what shipped in which version |
@@ -232,6 +232,14 @@ single-session, low-risk) do NOT need issues.
   `src/braintrust_config.py`) and `.env` (OpenRouter key + provider overrides).
   Copy from the `.example` files. `src/env_utils.py` loads both; real shell
   env vars always win.
+- **Externally-funded OpenRouter key (research funding)**: `RESEARCH_FUNDING_OPENROUTER_API_KEY`
+  in `.env` pays with external research funding and is ONLY reachable through
+  the `--research-funding-key` flag on the eval runners (default `OPENROUTER_API_KEY`
+  is untouched). The gate (`src/env_utils.py::assert_production_run`) HARD-REFUSES
+  dry-runs and pilot-scale samples (fewer than 100 rows, or less than the full
+  dataset when it is smaller) with a `SystemExit` before any LLM call — external
+  funding is reserved for fully-ready production runs. `resolve_openrouter_key()`
+  resolves either key; `add_research_funding_flag(parser)` registers the flag.
 - **Arize Phoenix tracing** (default, local): `PHOENIX_TRACING=enabled` (default)
   + `PHOENIX_ENDPOINT` (default http://localhost:6006/v1/traces) + `PHOENIX_SERVICE_NAME`
   in `.env`. Phoenix is Apache/Elastic-licensed, runs as a single local process
