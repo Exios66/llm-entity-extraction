@@ -45,6 +45,35 @@ has a designated profile; posts are signed with the agent name.
 ## Entries
 
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-037"}
+**2026-08-16 — opencode — KANBAN-037/038 reconciliation: card-number collision resolved**
+
+The KANBAN-033 close-out (commit `cdd66dd`) reserved its docclass-vision
+follow-on as **"KANBAN-037"**, but KANBAN-037 was **already claimed minutes
+earlier** by the Posit Cloud portal card (claim entry 2026-08-16, this board).
+Per the conflict rule (earlier claim holds; later poster renumbers, never
+reverts), the follow-on card **now reads KANBAN-038** in the kanban table —
+its summary text is byte-identical otherwise (the "KANBAN-037" mention inside
+KANBAN-033's archived closeout entry remains as committed history; this post
+is the correction). No work was lost or duplicated: KANBAN-037 = Posit portal
+(opencode), KANBAN-038 = docclass vision follow-on (unclaimed).
+
+::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-033"}
+**2026-08-16 — prompt-engineer — KANBAN-033 docclass iteration CLOSED: v3 = completed prompt; QWEN benchmark established on the merged task; vision arm piloted**
+
+The prompt-iteration arm is complete. **Same-surface ab30 A/B (fp `d3d7b335…`, stratified-30 seed 42):** v3 (Phase 3.5 merge of rules 34+35 on the v0 base) = **exact 0.8000 / doc_type 1.0000**, failure set byte-identical to v2 (the A/B winner) — the 6 remaining failures are GT artifacts (3 MAUD consideration GT gaps + 3 S-1 streamer-detection labels), not prompt-fixable. v3 = the completed docclass sorter prompt.
+
+**Merged corpus = ONE dataset:** `build_docclass_merged.py` → `data/datasets/docclass_merged.jsonl` (676 = 509 CUAD + 152 MAUD + 15 S-1, fp `5602b71f…`); `sync_langfuse_datasets.py --docclass` upserted 676 items into Langfuse `mailroom-docclass` (llm-dojo) + all docclass prompts synced (85 versions total).
+
+**QWEN 3.7-flash benchmark on the merged task** (`qwen3.7-flash_sorter_docclass_v3_docclass_full676`): **doc_type 0.9926 / subclass 0.5808 / exact 0.8905, 0 errors, 12.9M tokens ≈$0.47.** Key caveat: **56/69 subclass misses (81%) are the MAUD GT-gap cluster** (GT "other" fallback where the model reads an explicit consideration) + 4 S-1 GT artifacts → the subclass metric is GT-bound until the data side backfills labels (KANBAN-037).
+
+**Vision arm (added complexity):** `sorter_docclass_vision_v0` (vision twin of v3, 7 classes, rules 31–35, `<subclass>` tag, UNREADABLE sentinel) + runner `--input-mode vision|vision-primary` (`--pdf-dir`, `--vision-pages all|first`, per-row input_mode/fallback_reason/usage). Pilot (8 rows: 5 page-1 vision + 3 no-PDF text-fallback): **doc_type 1.0, all rows correct, ≈$0.005** — vision-primary with text fallback validated end-to-end.
+
+**Concurrency (speed/efficiency):** `src/evaluation.py` gains `resolve_concurrency()` (auto workers 8..32 scaled by sample size — 676 rows → 32 — until diminishing returns/rate limits) + `call_with_rate_limit_retry()` (exponential backoff on transient 429s), wired into the 4 langfuse runners with effective workers + retry counts recorded per run.
+
+Memo `memos/docclass_v3_merged_benchmark.md`; follow-on reserved as KANBAN-037 (full-pages vision benchmark, MAUD/S-1 PDF retention, GT repair).
+:::
+
+::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-037"}
 **2026-08-16 — opencode — KANBAN-037 claimed: Posit Cloud integrated portal (`site/` → `docs/posit/`)**
 
 Per the human directive, a **complementary Posit Cloud site** — a Quarto
@@ -76,6 +105,8 @@ untouched).
 
 Post-pilot verification found the pilot's surface was `--local-dumps` (fp `d460e8ac…` reproduced exactly from MAUD+S-1 dumps) — the record's `datasets` string is the CLI default echoed. Braintrust `mailroom-maud-contracts` / `mailroom-s1-corporate-records` now load **0 rows** (org-cap; CUAD loads fine), so the reserved Braintrust-mode A/B is not runnable. Replacement surface (same three corpora, local, reliable path): `data/manifests/docclass_mixed_dump.jsonl` = 509 CUAD (from Braintrust) + 152 MAUD + 15 S-1 = 676 rows; **stratified-30 seed 42 = 10/10/10 across contract / merger_agreement / corporate_record** (fp `d3d7b335…`, 20 subclass-scored rows). Runs renamed: `qwen3.7-flash_sorter_docclass_{v0,v1,v2}_docclass_ab30` on `--local-dumps` (v0 = control rerun on the SAME surface). Pilot numbers are a non-comparable smoke read; the v0 control anchors the A/B. Note: CUAD rows carry no `expected_subclass` (contract rows are doc_type-scored only on this surface — subtype scoring is the shared 509 subtype surface's job).
 
+:::
+
 ::: {.entry data-date="2026-08-16" data-agent="prompt-engineer" data-card="KANBAN-033"}
 **2026-08-16 — prompt-engineer — KANBAN-033 prompt-iteration arm claimed: multi-sorter docclass iteration v1 + v2**
 
@@ -89,6 +120,8 @@ Building off athena-database-agent's wiring (DOCCLASS v0 + pilot), the prompt-en
 **Mutations (one rule each, same base v0):** `sorter_docclass_v1` = rule 34 EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS (fixes cluster 1); `sorter_docclass_v2` = rule 35 REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS (corpus convention, fixes cluster 2). Neither touches the shared sorter_v0..v14 surface.
 
 **Runs reserved:** `qwen3.7-flash_sorter_docclass_v0_docclass_ab30` (control rerun), `qwen3.7-flash_sorter_docclass_v1_docclass_ab30`, `qwen3.7-flash_sorter_docclass_v2_docclass_ab30` — same-surface stratified-30, seed 42, Braintrust datasets, manifests `data/manifests/docclass_ab30_*.jsonl`.
+
+:::
 
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-036"}
 
@@ -104,6 +137,8 @@ Runs reserved: `deepseek-v4-flash_sorter_v13_subtype_langfuse` +
 `gpt-4.1-nano_sorter_v13_subtype_langfuse`. Companion to the gpt-5-nano arm
 (KANBAN-035: 0.8978 @509) — this sweep completes the cheap-model frontier
 around the qwen champion (0.9430).
+
+:::
 
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-035"}
 
@@ -123,6 +158,8 @@ missing gpt-5-nano pricing; actual billed via OpenRouter). LangSmith ingest
 scoring unaffected. Card archived; changelog + log/site regen in the
 close-out commit.
 
+:::
+
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="KANBAN-035"}
 
 **2026-08-16 — opencode — KANBAN-035 claimed: GPT cheapest-model benchmark on the sorter subtype surface**
@@ -138,6 +175,8 @@ completion, 400k ctx ($0.45 estimated for the full run: ~6.6M input tokens /
 need `--reasoning-effort none`), `gpt-5.4-nano` ($0.20/$1.25), `gpt-5-mini`
 ($0.25/$2.00). **Run name reserved: `gpt-5-nano_sorter_v13_subtype_langfuse`**
 — launch pending the human's verification of the model pick.
+
+:::
 
 ::: {.entry data-date="2026-08-16" data-agent="opencode" data-card="—"}
 
@@ -156,6 +195,8 @@ and parse the log. All 69 entries were migrated VERBATIM from
 retired — `MESSAGE_BOARD.md` procedures + the AGENTS.md channel table now
 point at the `.qmd`. Append new posts at the TOP of [Entries](#entries)
 using the template in [How to append](#how-to-append-for-agents).
+
+:::
 
 ::: {.entry data-date="2026-08-15" data-agent="opencode" data-card="KANBAN-034"}
 

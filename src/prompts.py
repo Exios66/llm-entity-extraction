@@ -715,6 +715,71 @@ VALID CONTRACT SUBTYPE KEYS""",
 )
 
 # =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v4 (M&A package
+# machinery rule) — KANBAN-033 prompt-iteration arm
+# -----------------------------------------------------------------------------
+# v4 = v3 + ONE rule (rule 36), from the full-676 benchmark
+# (qwen3.7-flash_sorter_docclass_v3_docclass_full676, fp 5602b71f…, 5 doc_type
+# misses):
+#   - contract_2 (ADAMAS/SUPERNUS "AGREEMENT AND PLAN OF MERGER" with a
+#     Contingent Value Rights consideration package) -> contract/other. Model
+#     reasoning: "The document is a standalone 'Contingent Value Rights
+#     Agreement' ... which serves as an exhibit to the main Merger Agreement."
+#     The document IS the main APM (404k chars) awarding CVRs as part of the
+#     consideration; the CVR machinery dominated the model's read over rule
+#     31's own literal title.
+#   - contract_33 (CONTANGO "TRANSACTION AGREEMENT" among Parent/Merger-Sub
+#     parties, "THE TRANSACTIONS" article, with registration-rights sections)
+#     -> contract/other. Model reasoning: content "exclusively governs
+#     registration rights ... Under Rule 35 ... classified as corporate_record"
+#     — rule-35 OVER-FIRE on registration-rights machinery inside an M&A
+#     agreement; rule 31's title list has no "TRANSACTION AGREEMENT".
+#   Both rows share ONE mechanism: M&A-package machinery (CVRs, registration
+#   rights, support covenants) misread as standalone ancillary instruments.
+#   Rule 36 makes the deal structure govern and guards rule 35's scope.
+# =============================================================================
+
+SORTER_DOCCLASS_PROMPT_V4 = SORTER_DOCCLASS_PROMPT_V3.replace(
+    """For every other doc_type, doc_subclass must be null.
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """For every other doc_type, doc_subclass must be null.
+
+36. M&A PACKAGE MACHINERY GOVERNS ANCILLARY INSTRUMENTS: a document whose TITLE names the M&A family — including "TRANSACTION AGREEMENT", "ARRANGEMENT AGREEMENT", "MERGER SUPPORT AGREEMENT" — or whose operative machinery is the deal structure (parties include a "Parent" and a "Merger Sub"/"Pubco", articles titled "THE MERGER"/"THE TRANSACTIONS", "Conversion of Shares"/"Merger Consideration" sections) is merger_agreement EVEN WHEN it also contains ancillary deal machinery — contingent value rights (CVRs), registration-rights provisions, support-agreement covenants, earn-outs, escrow — because those are CONSIDERATION and ancillary instruments INSIDE the deal, not separate agreements: an "AGREEMENT AND PLAN OF MERGER" that awards CVRs stays merger_agreement; a "TRANSACTION AGREEMENT" with registration-rights sections stays merger_agreement. Rule 35 applies ONLY when the document's own title is a "REGISTRATION RIGHTS AGREEMENT" (or the instrument is filed as a pure EX-4.x rights instrument) — registration-rights machinery inside an M&A agreement does NOT trigger rule 35 and does NOT make the document a rights_instrument.
+
+VALID CONTRACT SUBTYPE KEYS""",
+)
+
+# =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v5 (agreement-package
+# composition rule — rule-34 extension) — KANBAN-033 prompt-iteration arm
+# -----------------------------------------------------------------------------
+# v5 = v3 + ONE rule (rule 37), from the full-676 benchmark (same run as v4):
+#   - FEDERATEDGOVERNMENTINCOMESECURITIESINC (EX-99 "SERVICES AGREEMENT" package
+#     whose text OPENS with a "LIMITED POWER OF ATTORNEY" appointing FASC) ->
+#     corporate_record. Model reasoning: "The document is explicitly titled
+#     'LIMITED POWER OF ATTORNEY' ... Under Rule 32 and Rule 33, a power of
+#     attorney attached as an exhibit ... is classified as a corporate_record."
+#     The document ALSO contains the services agreement (recitals, operative
+#     sections, IN WITNESS signature page later in the text); rule 34 did not
+#     fire because the record text LEADS the package, so the model stopped at
+#     the first title. Rule 37 extends rule 34: record/certificate text inside
+#     an agreement package never changes the class — scan past it to the
+#     parent agreement; a standalone record filed alone stays corporate_record.
+# =============================================================================
+
+SORTER_DOCCLASS_PROMPT_V5 = SORTER_DOCCLASS_PROMPT_V3.replace(
+    """For every other doc_type, doc_subclass must be null.
+
+VALID CONTRACT SUBTYPE KEYS""",
+    """For every other doc_type, doc_subclass must be null.
+
+37. AGREEMENT PACKAGES: RECORD OR CERTIFICATE TEXT INSIDE AN AGREEMENT PACKAGE DOES NOT CHANGE THE CLASS: rule 32 applies only when the document AS A WHOLE is a corporate record (rule 34). When a record — power of attorney, certificate, schedule, or annex — appears in a document that ALSO contains the parent agreement (printed before, inside, or after the agreement's own title, recitals, or signature page), scan past the record text to the parent agreement: if the parent agreement is present, the document's class is the PARENT's (contract or merger_agreement), and the record is annex content. A "LIMITED POWER OF ATTORNEY" printed at the front of a services-agreement exhibit is annex content; the services agreement governs. A standalone record filed ALONE (an EX-24.x power of attorney, an EX-3.1 charter, a solo certificate) stays corporate_record — rule 37 fires only when the SAME document also contains the parent agreement.
+
+VALID CONTRACT SUBTYPE KEYS""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -2313,6 +2378,8 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v1": SORTER_DOCCLASS_PROMPT_V1,
     "sorter_docclass_v2": SORTER_DOCCLASS_PROMPT_V2,
     "sorter_docclass_v3": SORTER_DOCCLASS_PROMPT_V3,
+    "sorter_docclass_v4": SORTER_DOCCLASS_PROMPT_V4,
+    "sorter_docclass_v5": SORTER_DOCCLASS_PROMPT_V5,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
 
     # Sorter — vision (RVL-CDIP-style image classification)

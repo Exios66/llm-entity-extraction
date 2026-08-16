@@ -114,6 +114,8 @@ def _experiment_log_include(records: list[dict]) -> str:
                 continue
         if line.startswith("# "):
             continue  # the page supplies its own h1
+        if line.startswith("_Generated from "):
+            continue  # render timestamp would dirty git on every render
         for header in _RESULT_SECTIONS:
             if line.startswith(f"### {header}"):
                 dropping = header
