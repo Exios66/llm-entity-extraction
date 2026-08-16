@@ -489,9 +489,6 @@ SORTER_PROMPT_V12 = SORTER_PROMPT_V11.replace(
 28. STRATEGIC ALLIANCE TITLE WINS: an agreement whose TITLE names the alliance family — "Strategic Alliance Agreement", "Alliance Agreement" — is strategic_alliance even when its operative machinery reads as collaboration (a joint steering committee, a joint research program and shared governance), license (royalties, exclusivity terms, IP ownership retention), consulting (independent-contractor services, investor introductions, branding), or service/subcontracting (labor, materials and site acquisition under purchase orders): the corpus files these documents under Strategic Alliance and the ground truth follows the title, mirroring the title-wins doctrine (rules 23/24/26 — promotion, outsourcing, marketing titles beat their machinery). Rule 21's collaboration reading does NOT override the alliance title ("STRATEGIC ALLIANCE AGREEMENT" with a JSC and a joint research program -> strategic_alliance, not collaboration; a "Strategic Alliance Agreement" granting a technology license with royalty payments -> strategic_alliance, not license; a "Strategic Alliance Agreement" engaging an independent contractor for investor introductions and branding -> strategic_alliance, not consulting; a "Strategic Alliance Agreement" for labor, materials and site acquisition under purchase orders -> strategic_alliance, not service).""",
 )
 
-
-
-
 # =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
@@ -673,6 +670,11 @@ LEGALBENCH_TASK_PROMPT_V2 = LEGALBENCH_TASK_PROMPT_V1.replace(
    - Answer NO when X is NOT the content — when what is being proved is an ACT or a STATE shown by the making of the statement: whether the act of identifying occurred (pointing offered to show that X identified the suspect — the issue is the act, not whether the identification was correct); whether a defamatory utterance was made (a reputation suit where the utterance itself is the harm — what was said is the operative act, not the truth of its content); whether the listener was told, knew, or was provoked; the declarant's feeling, belief, or support; the workers' grievance behind protest signs (the signs show the demand, not that the demand is true); or a circumstantial fact (the mere ability to speak shows the declarant knew a language; the making of a statement shows the declarant was alive or present; a statement naming a person or thing — "Dave is dishonest", "the patent was poorly written" — shows the speaker's acquaintance with it, not that the content is true). Here the CONTENT'S TRUTH is not what matters.
    - A statement made in court, under oath and subject to cross-examination, is NOT hearsay.""",
 )
+
+LEGALBENCH_TASK_PROMPT_V3 = LEGALBENCH_TASK_PROMPT_V2 + """"
+
+6. SPECIAL CASE — Prohibition clauses: When a clause uses prohibition language such as "shall not have the right to X," "shall not X," or "may not X," recognize that this establishes a RESTRICTION where X is not permitted without consent or notice. In Yes/No classification tasks, if the question asks whether consent/notice is required for the restricted action, output "Yes." Do not misread prohibition language as permitting the action.
+"""
 
 
 # =============================================================================
@@ -1910,6 +1912,7 @@ PROMPT_VERSIONS = {
     "legalbench_task_v0": LEGALBENCH_TASK_PROMPT_V0,
     "legalbench_task_v1": LEGALBENCH_TASK_PROMPT_V1,
     "legalbench_task_v2": LEGALBENCH_TASK_PROMPT_V2,
+    "legalbench_task_v3": LEGALBENCH_TASK_PROMPT_V3,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,
