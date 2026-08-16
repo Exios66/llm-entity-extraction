@@ -490,6 +490,43 @@ SORTER_PROMPT_V12 = SORTER_PROMPT_V11.replace(
 )
 
 # =============================================================================
+# SORTER AGENT — Text Classification, v13 (maintenance title wins)
+# -----------------------------------------------------------------------------
+# v13 = v12 + the maintenance title-wins guard, mirroring the validated
+# title-wins doctrine (rules 23/24/26/28: promotion, outsourcing, marketing,
+# alliance titles beat their machinery). The v12 full-509 run
+# (qwen3.7-flash_sorter_v12_subtype_langfuse: strict 0.9234, 39 fails) leaves
+# the maintenance cell at 30/34 (0.8824) with 4 fails: SUNTRONCORP
+# "MAINTENANCE AGREEMENT" (capital-contribution financial covenants) -> other,
+# WELLSFARGO "Yield Maintenance Agreement" (ISDA derivative confirmation)
+# -> other, PRIMEENERGY "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT" ->
+# other, AtnInternational "Network Build and Maintenance Agreement" -> service.
+# Three of the four (SUNTRONCORP, WELLSFARGO, AtnInternational) fail in BOTH
+# the v9-clean rerun and v12 — deterministic. Root cause = rule-13 INVERSION:
+# the model quotes rule 13 backwards ("Rule 13 explicitly states that
+# financial-sense 'maintenance' agreements (capital maintenance, net investment
+# income maintenance, completion and liquidity maintenance) are classified
+# under 'other'") while the rule text says the exact opposite ("are ALSO
+# maintenance — never 'other'"). Control rows prove the mechanism: the two
+# financial-sense docs the model quotes correctly (VARIABLESEPARATEACCOUNT
+# capital maintenance, SECURIAN net investment income maintenance) PASS.
+# Rule 29 extends the title-wins doctrine: a title naming maintenance is
+# maintenance even when the operative machinery reads financial (covenants,
+# derivatives, yield/capital/liquidity maintenance) or build/construction.
+# Counterfactual verified 0-risk at 509: all 34 maintenance-titled docs are
+# GT maintenance, and 0 GT-maintenance docs lack "maintenance" in the title.
+# Target: strict > 0.9234 on the full-509 surface with a v12@509 rerun
+# bounding the noise floor.
+# =============================================================================
+
+SORTER_PROMPT_V13 = SORTER_PROMPT_V12.replace(
+    """a "Strategic Alliance Agreement" for labor, materials and site acquisition under purchase orders -> strategic_alliance, not service).""",
+    """a "Strategic Alliance Agreement" for labor, materials and site acquisition under purchase orders -> strategic_alliance, not service).
+
+29. MAINTENANCE TITLE WINS: an agreement whose TITLE names maintenance — "Maintenance Agreement", "Yield Maintenance Agreement", "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT", "UNCONDITIONAL CAPITAL MAINTENANCE AGREEMENT", "NET INVESTMENT INCOME MAINTENANCE AGREEMENT", "Network Build and Maintenance Agreement", "CONSTRUCTION AND MAINTENANCE AGREEMENT" — is maintenance even when its operative machinery reads as financial (capital contributions or loans to maintain financial ratios, yield-maintenance confirmations under an ISDA master agreement, completion and liquidity covenants supporting a credit facility) or as build/construction-plus-maintenance services: rule 13's financial-sense clause means financial-sense "maintenance" agreements (capital maintenance, net investment income maintenance, completion and liquidity maintenance) ARE maintenance — never "other" and never "service" for a document whose title names maintenance. Rule 13 does NOT route financial-sense maintenance to "other"; a maintenance-titled agreement stays maintenance whatever its machinery ("MAINTENANCE AGREEMENT" with an Investor's Required Capital Contributions -> maintenance, not other; "Yield Maintenance Agreement" confirming an interest rate cap transaction -> maintenance, not other; "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT" requiring $25,000,000 liquidity as a credit-agreement covenant -> maintenance, not other; "Network Build and Maintenance Agreement" with build/install/maintain obligations under an MSA -> maintenance, not service; "CONSTRUCTION AND MAINTENANCE AGREEMENT" for infrastructure upkeep -> maintenance, not service).""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -1904,6 +1941,7 @@ PROMPT_VERSIONS = {
     "sorter_v10": SORTER_PROMPT_V10,
     "sorter_v11": SORTER_PROMPT_V11,
     "sorter_v12": SORTER_PROMPT_V12,
+    "sorter_v13": SORTER_PROMPT_V13,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

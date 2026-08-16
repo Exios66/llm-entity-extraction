@@ -85,6 +85,7 @@ class TraceHandle:
     """
     trace_id: str
     disabled: bool = True
+    handler: Any | None = None
 
     def set_output(self, output: Any) -> None:
         return
@@ -98,6 +99,7 @@ class AgentHandle:
     trace_id: str
     observation_id: str = ""
     disabled: bool = True
+    handler: Any | None = None
 
     def set_output(self, output: Any) -> None:
         return

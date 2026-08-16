@@ -230,6 +230,32 @@ def test_sorter_v12_strategic_alliance_title_wins():
 
 
 
+def test_sorter_v13_maintenance_title_wins():
+    from src.prompts import SORTER_PROMPT_V12, SORTER_PROMPT_V13
+
+    # v13 is a strict derivation of v12: the base is untouched, the derived
+    # prompt adds the maintenance title-wins guard for the 4-fail maintenance
+    # cell at 509 (SUNTRONCORP/WELLSFARGO/PRIMEENERGY -> other by rule-13
+    # inversion, AtnInternational -> service), all maintenance-titled with a
+    # verified 0-risk counterfactual (34/34 maintenance-titled docs GT
+    # maintenance at 509).
+    assert SORTER_PROMPT_V13 != SORTER_PROMPT_V12
+    assert SORTER_PROMPT_V13.startswith(SORTER_PROMPT_V12[:300])
+    assert "sorter_v13" in PROMPT_VERSIONS
+
+    v13 = SORTER_PROMPT_V13
+    assert "29. MAINTENANCE TITLE WINS" in v13
+    assert "maintenance, not other" in v13
+    assert "maintenance, not service" in v13
+    assert "Yield Maintenance Agreement" in v13
+    assert "COMPLETION AND LIQUIDITY MAINTENANCE AGREEMENT" in v13
+    assert "28. STRATEGIC ALLIANCE TITLE WINS" in v13
+    assert "27. AFFILIATE IS NOT MARKETING" in v13
+    assert "VALID CONTRACT SUBTYPE KEYS" in v13
+    # v12 predates the rule.
+    assert "29. MAINTENANCE TITLE WINS" not in SORTER_PROMPT_V12
+
+
 def test_contracts_v2_is_completeness_first():
     prompt = get_prompt("contracts_specialist_v2")
     assert "COMPLETENESS IS THE PRIORITY" in prompt
