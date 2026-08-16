@@ -1,0 +1,19 @@
+{
+  "session_id": "llama-4-scout_contracts_specialist_v31_extraction_langfuse",
+  "task": "contract_entity_extraction",
+  "prompt": "contracts_specialist_v31",
+  "model": "llama-4-scout (OpenRouter)",
+  "n_traces": 509,
+  "n_scored": 20,
+  "window": "2026-08-16 06:55-07:22 UTC",
+  "tokens": 10337518,
+  "cost_recorded": 0,
+  "scores": {
+    "overall_extraction_score": 0.6627,
+    "field_presence": 0.8935,
+    "schema_valid": 1.0,
+    "overall_verified_precision": 0.9589,
+    "category_presence": 0.4782
+  },
+  "provenance": "Fetched from Langfuse llm-dojo via langfuse-cli (2026-08-16): 7813 observations in session llama-4-scout_contracts_specialist_v31_extraction_langfuse, 509 contract_entity_extraction traces, 619 ChatOpenAI generations; scores present for 20/509 docs (run truncated). NOT in reports/experiment_log.jsonl. No llama runs exist on the sorter task in the log, Langfuse, Braintrust (403), or LangSmith."
+}

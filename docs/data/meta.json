@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-16T09:36:10.823625+00:00",
+ "built_at": "2026-08-16T12:01:05.019925+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
   "05b3b17b9ce344b98dd246693ff4b9683db239b4f6b0c8f5ffb0be78b4b2b7c9:42:6",
@@ -12,12 +12,14 @@
   "40cfb513e040833d4de6e522145aaa6a8c15fe05e66ee3a2ce37df7b8bd99cdc:42:94",
   "4319a19bca758c065b19c7b4e6f57f772a7a58a3d8c46d121a68fd685791f652:42:6",
   "4e5868bab002b2235c79225abc5ed16d9e7e46884eb65399a69ac07fdd274d49:42:6",
+  "5602b71f6b9adf5f420bd3e7e65c93890f77d9554e9c8d98e80cd4fab568e0d0:42:676",
   "6060a67a42e548f1ab54acde2eea8421e7294beb5552c46c0d9f258d60e0f17f:42:6",
   "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
   "737ee82d06137a5f994a80b972e7735c6d43337a5a8c4f5f75fc7f5a57e1e72d:42:6",
   "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
   "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
+  "946ac1c42b92795a43b5b8c030557de6defd9dbfdb50bd620d331bd517f993f8:42:30",
   "96a9c3d58b3c4f13fed841bb9426351d85f3a951905635ee8f9419ec51da9caf:42:1",
   "9afcf61251405fbcc15221b96a7e316a46fd5fdfdfe920b75479e4107226385a:42:10",
   "a338c80e03aae1f63c76bb39b441ec0ac2ab870cac4636d672df5194b51a7e80:42:6",
@@ -29,32 +31,34 @@
   "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
   "c9c0877f9509b632b11a165796981c62b8168bf88c372a4eed81ce80515fa85d:42:5",
+  "d3d7b335ca5b42f54b575362ee16cf98fc828c5b7e60daa79709c41482b0edb7:42:30",
   "d460e8acc75eb0d0d2a9b6a1219dc6764263e5384230b6f7b4cd38d6d4c6b9bb:42:5",
   "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509",
   "de6ae646e3a6fd45ba179bd000ce0786d52ca8a96211e8dc7f8af29a4f380526:42:6",
   "de75a50bb7beadf48dea229f21056576caa7905e8bf3f1436521a69d0bca770a:42:6",
   "e2f8335450af11e5f5f25a1128e8f1f3022bcfaa8b5489bcc466e096fd730f67:42:6",
+  "e3693b3297d48167611c7ce64a9d24f5c4f1bb8361c62b2ab5ab7edbf68884fa:42:8",
   "fb9f939d925bc6c55b500422309d7e5eeeda145ee45d91ba72c11be789899240:42:243"
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 171,
+ "run_count": 188,
  "tasks": {
   "contract_entity_extraction": 52,
   "chained_sorter_extractor": 16,
-  "subtype_classification": 43,
+  "subtype_classification": 46,
   "sorter_classification": 3,
   "task_classification": 56,
-  "docclass_classification": 1
+  "docclass_classification": 15
  },
  "models": {
-  "qwen/qwen3.7-flash": 158,
-  "deepseek/deepseek-v4-flash": 4,
-  "deepseek/deepseek-v4-pro": 1,
+  "qwen/qwen3.7-flash": 172,
+  "deepseek/deepseek-v4-flash": 5,
+  "deepseek/deepseek-v4-pro": 2,
   "openai/gpt-5-nano": 1,
   "openai/gpt-4.1-nano": 2,
   "meta-llama/llama-4-scout": 3,
-  "meta-llama/llama-3.3-70b-instruct": 2
+  "meta-llama/llama-3.3-70b-instruct": 3
  },
  "prompts": {
   "contracts_specialist_v2": 1,
@@ -111,7 +115,7 @@
   "legalbench_task_v3_competitive_restriction_exception": 1,
   "legalbench_task_v3_covenant_not_to_sue": 1,
   "legalbench_task_v3_effective_date": 1,
-  "sorter_v13": 12,
+  "sorter_v13": 15,
   "legalbench_task_v4_competitive_restriction_exception": 2,
   "legalbench_task_v4_covenant_not_to_sue": 2,
   "legalbench_task_v4_audit_rights": 2,
@@ -120,13 +124,20 @@
   "legalbench_task_v4_effective_date": 2,
   "legalbench_task_v4_anti_assignment": 1,
   "sorter_v14": 1,
-  "sorter_docclass_v0": 1,
-  "sorter_v15": 2
+  "sorter_docclass_v0": 2,
+  "sorter_v15": 2,
+  "sorter_docclass_v1": 1,
+  "sorter_docclass_v2": 1,
+  "sorter_docclass_v3": 5,
+  "sorter_docclass_vision_v0": 1,
+  "sorter_docclass_v4": 2,
+  "sorter_docclass_v5": 2,
+  "sorter_docclass_v6": 1
  },
- "n_rows": 17911,
- "n_ok": 16996,
+ "n_rows": 19438,
+ "n_ok": 18523,
  "n_error": 873,
- "total_tokens": 244678537,
+ "total_tokens": 310746955,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
@@ -179,18 +190,18 @@
    "tokens": 3030791
   },
   "subtype_classification": {
-   "runs": 43,
+   "runs": 46,
    "best": {
     "run_id": 20,
     "value": 1.0
    },
-   "median": 0.9175,
+   "median": 0.92045,
    "worst": {
     "run_id": 84,
     "value": 0.0
    },
-   "documents": 12088,
-   "tokens": 156546039
+   "documents": 13615,
+   "tokens": 177074002
   },
   "sorter_classification": {
    "runs": 3,

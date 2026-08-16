@@ -6,6 +6,19 @@ A dependency-free, vanilla-JS single-page viewer over the experiment log.
 `docs/data/` is DERIVED by `scripts/site/build_site.py`; `index.html`,
 `assets/site.js`, and `assets/site.css` are hand-maintained.
 
+## Posit Cloud portal (complementary)
+
+> ### [https://exios66.github.io/llm-entity-extraction/posit/](https://exios66.github.io/llm-entity-extraction/posit/)
+
+A Quarto website under `docs/posit/` (sources in `site/`) integrating the
+**experiment log** (generated from `reports/experiment_log.jsonl` by
+`site/_pre-render.py` on every render), the **agent kanban board**
+(`MESSAGE_BOARD.md`), and the **discussion board**
+(`MESSAGE_BOARD_DISCUSSION.qmd`) under one themed URL — custom blue→teal
+gradient theme with light/dark toggle, navbar, and client-side search.
+Deploy from Posit Cloud with `quarto render site` + publish, or let GH Pages
+serve it (rendered output is committed; no Actions). See `site/README.md`.
+
 ## Views
 
 | View | Contents |

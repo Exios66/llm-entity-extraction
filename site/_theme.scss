@@ -1,0 +1,387 @@
+/* _theme.scss — llm-entity-extraction Posit portal theme.
+ * Identity: the repo's blue → teal gradient (#2456d6 → #0e7490), a clean
+ * light surface, and a "gradient night" dark mode. Composes on the
+ * bootswatch bases declared in _quarto.yml (cosmo light / darkly dark).
+ */
+
+/*-- scss:defaults --*/
+/* _theme.scss — llm-entity-extraction Posit portal theme.
+ *
+ * Identity: the repo's blue → teal gradient (#2456d6 → #0e7490, the SPA
+ * favicon glyph), a clean light surface, and a "gradient night" dark mode
+ * (deep navy surfaces with radial glows). Composes on top of the bootswatch
+ * bases declared in _quarto.yml (cosmo light / darkly dark).
+ */
+
+:root {
+  --llx-blue: #2456d6;
+  --llx-teal: #0e7490;
+  --llx-cyan: #38e0d6;
+  --llx-grad: linear-gradient(135deg, #2456d6 0%, #0e7490 100%);
+  --llx-ink: #0b2a4a;
+  --llx-muted: #5c7184;
+  --llx-line: rgba(36, 86, 214, 0.16);
+  --llx-card: #ffffff;
+  --llx-card-line: rgba(11, 42, 74, 0.08);
+  --llx-code-bg: rgba(36, 86, 214, 0.06);
+
+  --bs-primary: #2456d6;
+  --bs-primary-rgb: 36, 86, 214;
+  --bs-link-color: #2456d6;
+  --bs-link-color-rgb: 36, 86, 214;
+  --bs-link-hover-color: #0e7490;
+  --bs-emphasis-color: var(--llx-ink);
+  --bs-code-color: #1d4ed8;
+}
+
+[data-bs-theme="dark"] {
+  --llx-ink: #dbe7f5;
+  --llx-muted: #93a7bd;
+  --llx-line: rgba(56, 224, 214, 0.16);
+  --llx-card: rgba(23, 28, 40, 0.72);
+  --llx-card-line: rgba(219, 231, 245, 0.08);
+  --llx-code-bg: rgba(56, 224, 214, 0.07);
+
+  --bs-primary: #6ea8ff;
+  --bs-primary-rgb: 110, 168, 255;
+  --bs-link-color: #7cb3ff;
+  --bs-link-color-rgb: 124, 179, 255;
+  --bs-link-hover-color: #38e0d6;
+  --bs-emphasis-color: var(--llx-ink);
+}
+
+/*-- scss:rules --*/
+/* ---------------------------------------------------------------- surfaces */
+
+body {
+  background:
+    radial-gradient(1100px 500px at 92% -6%, rgba(36, 86, 214, 0.07), transparent 62%),
+    radial-gradient(860px 460px at -8% 108%, rgba(14, 116, 144, 0.06), transparent 55%),
+    #fbfcfe;
+  background-attachment: fixed;
+}
+
+[data-bs-theme="dark"] body {
+  background:
+    radial-gradient(1200px 640px at 88% -14%, rgba(36, 86, 214, 0.18), transparent 62%),
+    radial-gradient(940px 520px at -12% 112%, rgba(14, 116, 144, 0.16), transparent 58%),
+    #0f1118;
+  background-attachment: fixed;
+}
+
+/* ----------------------------------------------------------------- navbar */
+
+.navbar {
+  background: rgba(251, 252, 254, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--llx-line);
+}
+
+[data-bs-theme="dark"] .navbar {
+  background: rgba(15, 17, 24, 0.86);
+}
+
+.navbar .navbar-brand {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  background: var(--llx-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.navbar .nav-link {
+  font-size: 0.94rem;
+}
+
+.navbar .nav-link.active {
+  font-weight: 600;
+  color: var(--bs-link-color) !important;
+  border-bottom: 2px solid var(--llx-cyan);
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.page-footer {
+  margin-top: 3rem;
+  border-top: 1px solid var(--llx-line);
+  color: var(--llx-muted);
+  font-size: 0.85rem;
+}
+
+.page-footer .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+/* --------------------------------------------------------------- masthead */
+
+.quarto-title-block .quarto-title h1,
+h1.title {
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.quarto-title-block .quarto-title h1 {
+  background: var(--llx-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-bs-theme="dark"] .quarto-title-block .quarto-title h1 {
+  background: linear-gradient(135deg, #b9ccff 0%, #38e0d6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+h1, h2, h3, h4, h5 {
+  scroll-margin-top: 5.4rem;
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.llx-hero {
+  background: var(--llx-grad);
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 2.4rem 2.6rem;
+  margin: 1.4rem 0 1.9rem;
+  box-shadow: 0 14px 34px -14px rgba(36, 86, 214, 0.45);
+  position: relative;
+  overflow: hidden;
+}
+
+.llx-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(640px 300px at 88% -30%, rgba(56, 224, 214, 0.34), transparent 60%),
+    radial-gradient(520px 280px at -6% 118%, rgba(255, 255, 255, 0.12), transparent 58%);
+  pointer-events: none;
+}
+
+.llx-hero > * {
+  position: relative;
+}
+
+.llx-hero h1 {
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  font-size: 1.85rem;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.llx-hero .llx-hero-sub {
+  font-size: 1.02rem;
+  opacity: 0.92;
+  max-width: 46rem;
+  margin-bottom: 1.1rem;
+}
+
+.llx-hero .llx-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 6px;
+  padding: 0.1em 0.45em;
+}
+
+.llx-hero .btn {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.5rem 1.25rem;
+}
+
+.llx-hero .btn-light {
+  border: none;
+  color: #0b2a4a;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.llx-hero .btn-outline-light {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+}
+
+[data-bs-theme="dark"] .llx-hero {
+  box-shadow: 0 18px 44px -18px rgba(56, 224, 214, 0.18);
+}
+
+/* ------------------------------------------------------------- stat cards */
+
+.llx-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 0.9rem;
+  margin: 1.2rem 0 1.8rem;
+}
+
+.llx-stat {
+  background: var(--llx-card);
+  border: 1px solid var(--llx-card-line);
+  border-radius: 12px;
+  padding: 1.05rem 1.1rem 1.15rem;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(11, 42, 74, 0.04);
+}
+
+[data-bs-theme="dark"] .llx-stat {
+  box-shadow: none;
+  border-color: var(--llx-card-line);
+}
+
+.llx-stat .num {
+  display: block;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: var(--llx-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1.15;
+}
+
+[data-bs-theme="dark"] .llx-stat .num {
+  background: linear-gradient(135deg, #bdb8ff 0%, #38e0d6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.llx-stat .lbl {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--llx-muted);
+  margin-top: 0.28rem;
+}
+
+/* ------------------------------------------------------------- card links */
+
+.llx-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.95rem;
+  margin: 1.1rem 0 1.7rem;
+}
+
+.llx-card {
+  display: block;
+  background: var(--llx-card);
+  border: 1px solid var(--llx-card-line);
+  border-top: 3px solid var(--llx-blue);
+  border-radius: 12px;
+  padding: 1.2rem 1.25rem 1.25rem;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(15, 42, 74, 0.05);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.llx-card:nth-child(2) { border-top-color: var(--llx-teal); }
+.llx-card:nth-child(3) { border-top-color: var(--llx-cyan); }
+
+.llx-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(36, 86, 214, 0.14);
+  border-color: var(--llx-line);
+  color: inherit;
+}
+
+.llx-card b {
+  display: block;
+  font-size: 1.02rem;
+  margin-bottom: 0.3rem;
+  color: var(--llx-blue);
+}
+
+[data-bs-theme="dark"] .llx-card b { color: #6ea8ff; }
+
+.llx-card span {
+  font-size: 0.9rem;
+  color: var(--llx-muted);
+  line-height: 1.45;
+}
+
+/* ------------------------------------------------------------- typography */
+
+.llx-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+code, kbd, pre {
+  border-radius: 6px;
+}
+
+pre {
+  border: 1px solid var(--llx-line);
+  background: var(--llx-code-bg) !important;
+}
+
+[data-bs-theme="dark"] pre {
+  background: #141823 !important;
+  border-color: rgba(56, 224, 214, 0.12);
+}
+
+/* --------------------------------------------------------------- tables */
+
+.content-block > table,
+.content-block .table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9rem;
+}
+
+.content-block > table thead th,
+.content-block .table thead th {
+  position: sticky;
+  top: 0;
+  background: #f3f6fc;
+  border-bottom: 2px solid var(--llx-line);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--llx-ink);
+}
+
+[data-bs-theme="dark"] .content-block > table thead th,
+[data-bs-theme="dark"] .content-block .table thead th {
+  background: #171c28;
+  color: var(--llx-ink);
+}
+
+/* discussion-board entries blend into the page cards */
+.entry {
+  box-shadow: 0 1px 3px rgba(15, 42, 74, 0.05);
+}
+
+/* --------------------------------------------------------------- callouts */
+
+.callout {
+  border-radius: 10px;
+}
+
+.callout-title {
+  font-weight: 700;
+}
+
+/* high-level misc */
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}

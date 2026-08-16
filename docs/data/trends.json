@@ -1735,6 +1735,66 @@
      "function_over_form": 2,
      "other_fallback": 1
     }
+   },
+   {
+    "id": 173,
+    "experiment_name": "deepseek-v4-flash_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T05:44:26.948991+00:00",
+    "model": "deepseek/deepseek-v4-flash",
+    "prompts": "sorter_v13",
+    "headline_value": 0.9253,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 0.393498,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 3,
+     "family_confusion": 23,
+     "function_over_form": 3,
+     "other_fallback": 9
+    }
+   },
+   {
+    "id": 187,
+    "experiment_name": "deepseek-v4-pro_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T10:46:28.289678+00:00",
+    "model": "deepseek/deepseek-v4-pro",
+    "prompts": "sorter_v13",
+    "headline_value": 0.9528,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": 3.151437,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 1,
+     "family_confusion": 18,
+     "function_over_form": 2,
+     "other_fallback": 3
+    }
+   },
+   {
+    "id": 188,
+    "experiment_name": "meta-llama-llama-3.3-70b-instruct_sorter_v13_subtype_langfuse",
+    "timestamp": "2026-08-16T10:51:33.387225+00:00",
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "prompts": "sorter_v13",
+    "headline_value": 0.8782,
+    "headline_label": "subtype strict",
+    "cost_total_usd": 0,
+    "cost_estimated_usd": null,
+    "n_rows": 509,
+    "seed": 42,
+    "sample_key": "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
+    "mode_counts": {
+     "equivalent_family": 11,
+     "family_confusion": 47,
+     "function_over_form": 3,
+     "other_fallback": 1
+    }
    }
   ],
   "sorter_classification": [

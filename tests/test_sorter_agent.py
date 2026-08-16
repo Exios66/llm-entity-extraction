@@ -118,6 +118,32 @@ def test_docclass_schema_extends_shared_surface():
     assert set(subclass["enum"]) == set(DOC_SUBCLASS_KEYS)
 
 
+def test_equivalent_doc_subclasses_family_reads():
+    """The docclass mirror of subtype equivalence: an election structure IS a
+    mixed cash+stock family read; the equivalence is scoped to the doc_type's
+    own dimension and never crosses consideration <-> record types."""
+    from agents.sorter_agent import equivalent_doc_subclasses
+
+    # Same key trivially equivalent (any dimension).
+    assert equivalent_doc_subclasses("all_cash", "all_cash", "merger_agreement") is True
+    # Defensible family: mixed <-> election (both consideration dimension).
+    assert equivalent_doc_subclasses("mixed_cash_stock", "mixed_cash_stock_election",
+                                     "merger_agreement") is True
+    assert equivalent_doc_subclasses("mixed_cash_stock_election", "mixed_cash_stock",
+                                     "merger_agreement") is True
+    # No cross-family reads within a dimension.
+    assert equivalent_doc_subclasses("all_cash", "all_stock", "merger_agreement") is False
+    assert equivalent_doc_subclasses("bylaws", "articles_of_incorporation",
+                                     "corporate_record") is False
+    # Dimension guard: a consideration key is never equivalent to a record key.
+    assert equivalent_doc_subclasses("mixed_cash_stock", "rights_instrument",
+                                     "merger_agreement") is False
+    assert equivalent_doc_subclasses("bylaws", "mixed_cash_stock_election") is False
+    # None handling.
+    assert equivalent_doc_subclasses(None, "all_cash", "merger_agreement") is False
+    assert equivalent_doc_subclasses("all_cash", None, "merger_agreement") is False
+
+
 def test_normalize_doc_subclass_dimension():
     from agents.sorter_agent import (
         DOC_SUBCLASS_UNKNOWN,
@@ -210,6 +236,97 @@ def test_docclass_classify_json_normalizes_subclass(mocker):
     assert result["doc_type"] == "correspondence"
     assert result["contract_subtype"] == SUBTYPE_UNKNOWN
     assert result["doc_subclass"] == DOC_SUBCLASS_UNKNOWN
+
+
+def test_docclass_vision_parse_extended_tags(mocker):
+    """The vision-path parser handles the docclass vision prompt's extended
+    tags: doc_type validated against the 7-class list, doc_subclass extracted
+    and normalized per the class dimension, UNREADABLE sentinel surfaced so
+    the vision-primary runner can fall back to text."""
+    from agents.sorter_agent import (
+        DOCCLASS_CLASSES,
+        DOCCLASS_SCHEMA,
+        SorterAgent,
+    )
+
+    sorter = SorterAgent(prompt_version="sorter_docclass_vision_v0",
+                         doc_classes=DOCCLASS_CLASSES, schema=DOCCLASS_SCHEMA)
+
+    # Full tag contract: label + subclass + confidence + reasoning.
+    raw = ("<scratchpad>merger_agreement: yes — APM title visible.</scratchpad>\n"
+           "<label>merger_agreement</label>\n<subclass>all_cash</subclass>\n"
+           "<confidence>95</confidence>\n"
+           "<reasoning>APM title with cash consideration.</reasoning>")
+    result = sorter._parse_vision_output(raw, sorter._docclass_keys())
+    assert result["doc_type"] == "merger_agreement"
+    assert result["doc_subclass"] == "all_cash"
+    assert result["confidence"] == 0.95
+    assert result["unreadable"] is False and result["invalid_label"] is False
+
+    # null subclass for a class without the dimension.
+    raw = ("<label>contract</label>\n<subclass>null</subclass>\n"
+           "<confidence>90</confidence>\n<reasoning>license agreement</reasoning>")
+    result = sorter._parse_vision_output(raw, sorter._docclass_keys())
+    assert result["doc_type"] == "contract"
+    assert result["doc_subclass"] is None
+
+    # UNREADABLE sentinel -> unreadable flag (the runner falls back to text).
+    raw = "<label>UNREADABLE</label>\n<confidence>0</confidence>\n<reasoning>blank page</reasoning>"
+    result = sorter._parse_vision_output(raw, sorter._docclass_keys())
+    assert result["unreadable"] is True
+    assert result["doc_type"] is None
+
+    # Invalid label -> invalid_label flag, NOT silently "correspondence".
+    raw = "<label>warrant</label>\n<confidence>80</confidence>\n<reasoning>a warrant</reasoning>"
+    result = sorter._parse_vision_output(raw, sorter._docclass_keys())
+    assert result["invalid_label"] is True
+    assert result["doc_type"] is None
+
+
+def test_docclass_vision_validate_seven_classes(mocker):
+    """classify_document on the extended agent validates against the 7-class
+    list (merger_agreement accepted) and returns the full contract."""
+    from agents.sorter_agent import (
+        DOCCLASS_CLASSES,
+        DOCCLASS_SCHEMA,
+        SorterAgent,
+    )
+
+    sorter = SorterAgent(prompt_version="sorter_docclass_vision_v0",
+                         doc_classes=DOCCLASS_CLASSES, schema=DOCCLASS_SCHEMA)
+    raw = ("<label>merger_agreement</label>\n<subclass>all_stock</subclass>\n"
+           "<confidence>91</confidence>\n<reasoning>stock consideration</reasoning>")
+    mocker.patch.object(sorter, "_call_vision_multi", return_value=raw)
+    result = sorter.classify_document(["cG5nLWJ5dGVz"])
+    assert result["doc_type"] == "merger_agreement"
+    assert result["doc_subclass"] == "all_stock"
+    assert result["unreadable"] is False
+
+
+def test_vision_classify_document_backward_compatible_six_classes(mocker):
+    """The default 6-class sorter keeps its legacy vision behavior byte-for-
+    byte: the contract is exactly {doc_type, confidence, reasoning}, valid
+    labels pass, invalid labels fall back to correspondence."""
+    from agents.sorter_agent import SorterAgent
+
+    sorter = SorterAgent(prompt_version="sorter_vision_v0")
+    mocker.patch.object(
+        sorter, "_call_vision_multi",
+        return_value="<label>correspondence</label>\n<confidence>80</confidence>\n"
+                     "<reasoning>letterhead visible</reasoning>",
+    )
+    result = sorter.classify_document(["cG5nLWJ5dGVz"])
+    assert set(result) == {"doc_type", "confidence", "reasoning"}
+    assert result["doc_type"] == "correspondence"
+
+    mocker.patch.object(
+        sorter, "_call_vision_multi",
+        return_value="<label>warrant</label>\n<confidence>80</confidence>\n"
+                     "<reasoning>a warrant</reasoning>",
+    )
+    result = sorter.classify_document(["cG5nLWJ5dGVz"])
+    assert set(result) == {"doc_type", "confidence", "reasoning"}
+    assert result["doc_type"] == "correspondence"
 
 
 def test_classify_returns_parsed_result_with_subtype(mocker):

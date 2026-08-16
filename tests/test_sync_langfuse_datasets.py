@@ -134,3 +134,57 @@ def test_sync_cuad_mirrors_local_corpus(monkeypatch, tmp_path):
     assert item["input"]["metadata"]["category"] == "License_Agreements"
     assert item["input"]["metadata"]["page_count"] == 0  # text rows carry no page images
     assert item["metadata"]["source"] == "cuad_v1"
+
+
+def _merged_docclass_dump(tmp_path):
+    """A minimal MERGED docclass dump: one row per docclass corpus, in the flat
+    streamer-dump shape ``build_docclass_merged.py`` writes."""
+    import json
+
+    path = tmp_path / "docclass_merged.jsonl"
+    rows = [
+        {"filename": "Acme License Agreement", "doc_text": "LICENSE AGREEMENT " * 50,
+         "prompt": "", "expected": "contract", "expected_subclass": None,
+         "metadata": {"source_dataset": "mailroom-cuad-contracts-full"}},
+        {"filename": "merger_1.txt", "doc_text": "AGREEMENT AND PLAN OF MERGER " * 50,
+         "prompt": "", "expected": "merger_agreement", "expected_subclass": "all_cash",
+         "metadata": {"source_dataset": "data/maud/contracts.jsonl"}},
+        {"filename": "bylaws.htm", "doc_text": "BYLAWS OF ACME INC. " * 50,
+         "prompt": "", "expected": "corporate_record", "expected_subclass": "bylaws",
+         "metadata": {"source_dataset": "data/s1_corporate_records/corporate-records.jsonl"}},
+    ]
+    with path.open("w", encoding="utf-8") as fh:
+        for row in rows:
+            fh.write(json.dumps(row) + "\n")
+    return path
+
+
+def test_sync_docclass_merged_single_dataset(monkeypatch, tmp_path):
+    """``--docclass`` mirrors the MERGED docclass corpus as ONE Langfuse
+    dataset (``mailroom-docclass``) with all three corpora's rows — the
+    single-dataset surface the hierarchical sorter eval consumes."""
+
+    from scripts.eval import sync_langfuse_datasets
+
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-fake")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-fake")
+    monkeypatch.setenv("LANGFUSE_PROJECT", "llm-dojo")
+    client = FakeClient()
+    monkeypatch.setattr(sync_langfuse_datasets, "Langfuse", lambda **kwargs: client)
+
+    dump = _merged_docclass_dump(tmp_path)
+    report = sync_langfuse_datasets._sync_local_dumps(
+        tmp_path / "langfuse.env", {"mailroom-docclass": dump}, dry_run=False)
+
+    assert report["skipped_env"] is False
+    assert report["datasets"] == 1
+    assert report["items"] == 3
+    assert client.datasets == {"mailroom-docclass"}
+    assert len(client.items) == 3
+
+    by_output = {item["expected_output"]: item for item in client.items}
+    assert set(by_output) == {"contract", "merger_agreement", "corporate_record"}
+    # The doc_subclass GT rides in the input metadata (the docclass dimension).
+    merger = by_output["merger_agreement"]
+    assert merger["input"]["metadata"]["expected_subclass"] == "all_cash"
+    assert merger["metadata"]["source_dataset"] == "data/maud/contracts.jsonl"

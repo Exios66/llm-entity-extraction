@@ -339,11 +339,127 @@ def test_sorter_docclass_v0_registered_and_extends_v14():
     assert "doc_subclass" not in SORTER_PROMPT_V14
 
 
+def test_sorter_docclass_v1_registered_and_pins_rule_34():
+    """sorter_docclass_v1 (KANBAN-033 iteration arm) = v0 + ONE rule: the
+    embedded-records scope guard from the docclass pilot
+    (qwen3.7-flash_sorter_docclass_v0_docclass_pilot — contract_62
+    Roche/Geronimo/GenMark APM misrouted to corporate_record/bylaws by rule-32
+    over-fire on its embedded bylaws Exhibit C). v0 stays byte-identical."""
+    from src.prompts import SORTER_DOCCLASS_PROMPT_V0, SORTER_DOCCLASS_PROMPT_V1
+
+    assert "sorter_docclass_v1" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_v1")
+    assert "34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS" in p
+    assert "rule 32 applies ONLY when the document AS A WHOLE is a corporate record" in p
+    # Single-change discipline: v1 carries rule 34 but NOT rule 35; v0 has neither.
+    assert "35. REGISTRATION RIGHTS" not in p
+    assert "34. EMBEDDED RECORDS" not in SORTER_DOCCLASS_PROMPT_V0
+    assert SORTER_DOCCLASS_PROMPT_V1.startswith(SORTER_DOCCLASS_PROMPT_V0[:300])
+
+
+def test_sorter_docclass_v2_registered_and_pins_rule_35():
+    """sorter_docclass_v2 (KANBAN-033 iteration arm) = v0 + ONE rule: the
+    registration-rights-agreement SEC-exhibit convention from the docclass
+    pilot (a44registrationrightsagree — NMI/FBR EX-4.4 RRA misrouted to
+    contract/other; S-1 catalog files EX-4.x instruments as record types)."""
+    from src.prompts import SORTER_DOCCLASS_PROMPT_V0, SORTER_DOCCLASS_PROMPT_V2
+
+    assert "sorter_docclass_v2" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_v2")
+    assert "35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS" in p
+    assert "rights_instrument" in p
+    assert "34. EMBEDDED RECORDS" not in p
+    assert "35. REGISTRATION RIGHTS" not in SORTER_DOCCLASS_PROMPT_V0
+    assert SORTER_DOCCLASS_PROMPT_V2.startswith(SORTER_DOCCLASS_PROMPT_V0[:300])
+
+
+def test_sorter_docclass_v3_registered_and_pins_rules_34_35():
+    """sorter_docclass_v3 (KANBAN-033) = the Phase 3.5 MERGE of the two
+    validated single-change lessons applied to the SAME v0 base: rule 34
+    (embedded-records scope guard, from v1) AND rule 35 (RRA exhibit
+    convention, from v2). Motivated by the same-surface A/B
+    (qwen3.7-flash_sorter_docclass_{v0,v1,v2}_docclass_ab30, fp d3d7b335…,
+    stratified-30 seed 42): v2 recovered the 5-row EX-4.x doc_type cluster
+    (exact 0.6667 -> 0.8000) while v1's rule-34 target was absent from the
+    sample — the merge carries both disjoint lessons."""
+    from src.prompts import (
+        SORTER_DOCCLASS_PROMPT_V0,
+        SORTER_DOCCLASS_PROMPT_V3,
+    )
+
+    assert "sorter_docclass_v3" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_v3")
+    # Both rules present, in rule-number order.
+    assert "34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS" in p
+    assert "35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS" in p
+    assert p.index("34. EMBEDDED RECORDS") < p.index("35. REGISTRATION RIGHTS")
+    # Merge discipline: v3 = v0 + rules 34 AND 35 (v0 has neither).
+    assert "34. EMBEDDED RECORDS" not in SORTER_DOCCLASS_PROMPT_V0
+    assert "35. REGISTRATION RIGHTS" not in SORTER_DOCCLASS_PROMPT_V0
+    assert SORTER_DOCCLASS_PROMPT_V3.startswith(SORTER_DOCCLASS_PROMPT_V0[:300])
+
+
+def test_sorter_docclass_vision_v0_registered_and_pins_vision_contract():
+    """sorter_docclass_vision_v0 (KANBAN-033 vision arm) = the vision-mode
+    twin of the completed docclass text prompt: 7 classes, rules 31-35,
+    the doc_subclass tag, the UNREADABLE sentinel (vision-primary with text
+    fallback), and the ``## Output format`` split marker."""
+    from src.prompts import SORTER_DOCCLASS_VISION_PROMPT_V0
+
+    assert "sorter_docclass_vision_v0" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_vision_v0")
+    # All 7 docclass labels in the label list.
+    for key in ("contract", "corporate_record", "due_diligence", "correspondence",
+                "compliance_filing", "court_opinion", "merger_agreement"):
+        assert key in p, f"vision prompt missing class {key!r}"
+    # The docclass rules are carried over (vision-adapted).
+    assert "31. MERGER AGREEMENT CLASS" in p
+    assert "32. CORPORATE RECORDS FILED AS SEC EXHIBITS" in p
+    assert "33. DOC SUBCLASS" in p
+    assert "34. EMBEDDED RECORDS DO NOT CHANGE THE PARENT CLASS" in p
+    assert "35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS" in p
+    # Vision-primary contract: subclass tag + UNREADABLE sentinel + split marker.
+    assert "<subclass>all_cash</subclass>" in p
+    assert "<label>UNREADABLE</label>" in p
+    assert "The system will re-try this document via its text." in p
+    assert "## Output format" in p
+    # The text docclass prompt is untouched by the vision twin.
+    assert "<label>" not in get_prompt("sorter_docclass_v3")
+
+
+def test_sorter_docclass_v6_registered_and_pins_rule_36_sharpened():
+    """sorter_docclass_v6 (KANBAN-033 iteration arm) = v3 + ONE rule: rule 36
+    SHARPENED from the v4 diag30 A/B — the rule-31 title list is declared
+    illustrative and multi-agreement files are governed by the primary
+    agreement (contract_33's model reasoning showed it second-guessing rule
+    31's enumeration on a TRANSACTION AGREEMENT + RRA-exhibit-E file)."""
+    from src.prompts import SORTER_DOCCLASS_PROMPT_V3, SORTER_DOCCLASS_PROMPT_V6
+
+    assert "sorter_docclass_v6" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_v6")
+    assert "36. M&A PACKAGE MACHINERY GOVERNS ANCILLARY INSTRUMENTS" in p
+    assert "rule 31's M&A-family title list is ILLUSTRATIVE" in p
+    assert '"TRANSACTION AGREEMENT"' in p
+    assert "WHEN A FILE CONTAINS MORE THAN ONE AGREEMENT" in p
+    assert "Rule 35 applies ONLY when the document's own title is" in p
+    # Single-change discipline: v6 carries rule 36 (sharpened) but NOT rule 37.
+    assert "37. AGREEMENT PACKAGES" not in p
+    assert "36. M&A PACKAGE MACHINERY" not in SORTER_DOCCLASS_PROMPT_V3
+    assert SORTER_DOCCLASS_PROMPT_V6.startswith(SORTER_DOCCLASS_PROMPT_V3[:300])
+    # v4's rule-36 text is untouched (never mutate a version that has run).
+    from src.prompts import SORTER_DOCCLASS_PROMPT_V4
+    assert "ILLUSTRATIVE, not exhaustive" not in SORTER_DOCCLASS_PROMPT_V4
+
+
 def test_sorter_docclass_prompt_option_list_matches_schema():
-    """The doc_subclass options visible in sorter_docclass_v0 must match the
+    """The doc_subclass options visible in the docclass prompts must match the
     DOCCLASS_SCHEMA enum exactly — a subclass the model can output must be in
-    the prompt, and nothing in the prompt may be rejected by the schema."""
+    the prompt, and nothing in the prompt may be rejected by the schema.
+    Parametrized over every docclass version (v0 baseline, v1/v2 candidates,
+    v3 merge)."""
     import re
+
+    import pytest
 
     from agents.sorter_agent import (
         DOCCLASS_CLASSES,
@@ -354,15 +470,20 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
 
     enum = set(DOCCLASS_SCHEMA["properties"]["doc_subclass"]["enum"])
     assert enum == set(DOC_SUBCLASS_KEYS)
-    prompt = SorterAgent(prompt_version="sorter_docclass_v0",
-                         doc_classes=DOCCLASS_CLASSES,
-                         schema=DOCCLASS_SCHEMA).system_prompt()
-    # Every schema key appears in the rule-33 text.
-    for key in DOC_SUBCLASS_KEYS:
-        assert key in prompt, f"doc_subclass key {key!r} missing from the prompt"
-    # The output contract names the field.
-    assert "- doc_subclass: EXACTLY ONE" in prompt
-    assert "merger_agreement" in prompt
+
+    for version in ("sorter_docclass_v0", "sorter_docclass_v1",
+                    "sorter_docclass_v2", "sorter_docclass_v3",
+                    "sorter_docclass_v4", "sorter_docclass_v5",
+                    "sorter_docclass_v6"):
+        prompt = SorterAgent(prompt_version=version,
+                             doc_classes=DOCCLASS_CLASSES,
+                             schema=DOCCLASS_SCHEMA).system_prompt()
+        # Every schema key appears in the rule-33 text.
+        for key in DOC_SUBCLASS_KEYS:
+            assert key in prompt, f"{version}: doc_subclass key {key!r} missing from the prompt"
+        # The output contract names the field.
+        assert "- doc_subclass: EXACTLY ONE" in prompt
+        assert "merger_agreement" in prompt
 
 
 def test_contracts_v2_is_completeness_first():

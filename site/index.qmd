@@ -1,0 +1,108 @@
+---
+title: "llm-entity-extraction — Posit Cloud Portal"
+format: html
+toc: false
+---
+
+::: {.llx-hero}
+# llm-entity-extraction
+
+The **prompt-experiment loop** for the llm-mailroom legal document pipeline —
+every evaluation run, every agent card, every decision, in one place.
+
+<span class="llx-hero-sub">This portal brings the three working surfaces of the
+repository to a single URL — the **experiment log** (every eval run, scored),
+the **agent kanban board** (open work, lanes, archive), and the **discussion
+board** (claims, decisions, results, blockers).</span>
+
+[Open the experiment log](experiment-log.html){.btn .btn-light}
+[Kanban board](kanban.html){.btn .btn-outline-light}
+[Discussion board](discussion.html){.btn .btn-outline-light}
+[Interactive explorer](../index.html){.btn .btn-outline-light}
+:::
+
+## In one glance
+
+::: {.llx-stats}
+:::: {.llx-stat}
+<span class="num">{{< var runs >}}</span><span class="lbl">eval runs</span>
+::::
+:::: {.llx-stat}
+<span class="num">{{< var models >}}</span><span class="lbl">models</span>
+::::
+:::: {.llx-stat}
+<span class="num">{{< var prompt_versions >}}</span><span class="lbl">prompt versions</span>
+::::
+:::: {.llx-stat}
+<span class="num">{{< var total_tokens >}}</span><span class="lbl">tokens billed</span>
+::::
+:::: {.llx-stat}
+<span class="num">{{< var open_cards >}}</span><span class="lbl">open cards</span>
+::::
+:::: {.llx-stat}
+<span class="num">{{< var archived_cards >}}</span><span class="lbl">archived cards</span>
+::::
+:::: {.llx-stat}
+<span class="num">{{< var discussion_entries >}}</span><span class="lbl">discussion entries</span>
+::::
+:::
+
+Tasks covered: {{< var task_list >}}. Latest run: {{< var last_run >}}.
+
+## The three working records
+
+::: {.llx-cards}
+::: {.llx-card}
+**Experiment log** — historical record of every eval run (sorter, specialists,
+subtype, docclass, LegalBench tasks): run index, per-run metadata, scores and
+breakdowns, token usage, diagnostics. Each run deep-links into the interactive
+explorer.
+
+[Read the experiment log →](experiment-log.html)
+:::
+::: {.llx-card}
+**Kanban board** — the living cross-agent task board: `backlog` /
+`in_progress` / `blocked` / `in_review` lanes, GitHub-issue links, the
+completion protocol, and the full archive of shipped work.
+
+[Read the kanban board →](kanban.html)
+:::
+::: {.llx-card}
+**Discussion board** — the append-only inter-agent communication log: claims,
+lane moves, decisions, results, blockers, handoffs, reopenings — newest at
+top, color-coded per agent.
+
+[Read the discussion board →](discussion.html)
+:::
+:::
+
+## Latest runs
+
+{{< include _includes/recent-runs.md >}}
+
+The full, filterable run index lives in the
+[experiment log](experiment-log.html); interactive per-run detail (per-document
+scores, traces, confusion matrices) lives in the
+[explorer](../index.html).
+
+## How this site is built
+
+- **Quarto website** (`site/`): rendered to `docs/posit/` — the same `docs/`
+  tree GitHub Pages serves, so one URL prefix hosts both this portal and the
+  explorer (`../index.html`). Deployable from Posit Cloud with
+  `quarto render` + publish; no GitHub Actions anywhere.
+- **Derived, never hand-edited**: every page body regenerates from
+  `reports/experiment_log.jsonl`, `MESSAGE_BOARD.md`, and
+  `MESSAGE_BOARD_DISCUSSION.qmd` via `site/_pre-render.py` on every render;
+  the experiment-log page uses the same renderer
+  (`src/experiment_log.py::render_full_log`) as
+  `reports/experiment_log.md`.
+- **Same-sample honesty** carries over: headline scores show raw values with
+  sample sizes; significant deltas must come from the paired A/B runs in the
+  log, not from cross-sample eyeballing.
+
+::: {.callout-tip}
+**One URL, two sites.** `docs/` is served as a whole: the Posit Cloud portal
+at `posit/` and the interactive experiment-log explorer at the root
+(`index.html`). They link to each other from the navbar.
+:::

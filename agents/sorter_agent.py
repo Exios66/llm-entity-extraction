@@ -240,6 +240,39 @@ def equivalent_subtypes(a: str, b: str) -> bool:
     return any(a in cls and b in cls for cls in SUBTYPE_EQUIVALENCES)
 
 
+# ---------------------------------------------------------------------------
+# Docclass (hierarchical) subclass equivalences — the doc_subclass mirror of
+# SUBTYPE_EQUIVALENCES. Defensible family-level reads for the second-level
+# dimension (KANBAN-033):
+#   - mixed_cash_stock <-> mixed_cash_stock_election (an election structure IS
+#     a mixed cash+stock deal with a per-shareholder choice; MAUD's categories
+#     split them, but the family-level read is the same mixed structure —
+#     mirrors the reseller<->distributor defensibility)
+# Record types (bylaws, articles_of_incorporation, ...) have no cross-type
+# families — a bylaws read is never equivalent to a charter read.
+# ---------------------------------------------------------------------------
+DOC_SUBCLASS_EQUIVALENCES: list[frozenset[str]] = [
+    frozenset({"mixed_cash_stock", "mixed_cash_stock_election"}),
+]
+
+
+def equivalent_doc_subclasses(a: str | None, b: str | None,
+                              doc_type: str | None = None) -> bool:
+    """Return True when two doc_subclass keys are the same family or members
+    of the same interchangeable family class (see
+    ``DOC_SUBCLASS_EQUIVALENCES``), scoped to the doc_type's own dimension
+    (a consideration key is never equivalent to a record-type key)."""
+    if a == b:
+        return True
+    if a is None or b is None:
+        return False
+    if doc_type in SUBCLASS_DIMENSIONS:
+        allowed = {s["key"] for s in SUBCLASS_DIMENSIONS[doc_type]}
+        if a not in allowed or b not in allowed:
+            return False
+    return any(str(a) in cls and str(b) in cls for cls in DOC_SUBCLASS_EQUIVALENCES)
+
+
 def normalize_subtype(value) -> str:
     """Coerce a raw sorter subtype output (or a CUAD folder name) to a
     canonical subtype key; unknown/non-contract values become ``other``."""
@@ -441,24 +474,100 @@ class SorterAgent(BaseAgent):
     # Vision path (RVL-CDIP-style image classification)
     # ------------------------------------------------------------------
 
-    def classify_image(self, image_base64: str, image_format: str = "png") -> dict:
-        """Classify a document PAGE IMAGE with a vision model (qwen).
+    def _docclass_keys(self) -> list[str]:
+        """The doc_type keys of the agent's (possibly extended) class list."""
+        return [d["key"] for d in self.doc_classes]
 
-        Uses the versioned vision prompt (``sorter_vision_v0``): the intro
-        (checks + scratchpad procedure) goes in the system message, the output
-        contract + worked examples go in the image-bearing user message —
-        the same split RVL-CDIP applies (``## Output format`` marker).
+    def _parse_vision_output(self, raw: str, valid_keys: list[str]) -> dict:
+        """Parse the tag-based vision output into the standard contract.
 
-        Returns the SAME contract as ``classify_json``:
-        ``{"doc_type", "confidence", "reasoning"}``.
+        Handles the docclass vision prompt's extended tags (``<label>``,
+        ``<subclass>``, ``<confidence>``, ``<reasoning>``) and the
+        UNREADABLE sentinel: when the model reports the page images are
+        blank/corrupted/truncated (``<label>UNREADABLE</label>``), or the
+        label fails to parse, ``unreadable``/``invalid_label`` are set so the
+        caller (the vision-primary eval path) can fall back to the text pass.
+
+        Returns ``{"doc_type", "contract_subtype", "doc_subclass",
+        "confidence", "reasoning", "unreadable", "invalid_label"}``.
         """
+        import re
+
         from src.classifier import (
             clean_prediction,
             extract_confidence,
             extract_reasoning,
         )
+
+        if not raw or not raw.strip():
+            return {"doc_type": None, "contract_subtype": None, "doc_subclass": None,
+                    "confidence": 0.0, "reasoning": "", "unreadable": True,
+                    "invalid_label": False}
+
+        label_match = re.search(
+            r"<label>\s*([^<]+?)\s*</label>", raw, flags=re.IGNORECASE | re.DOTALL
+        )
+        tag_label = label_match.group(1).strip().lower() if label_match else ""
+        if tag_label == "unreadable":
+            return {"doc_type": None, "contract_subtype": None, "doc_subclass": None,
+                    "confidence": 0.0, "reasoning": extract_reasoning(raw) or "",
+                    "unreadable": True, "invalid_label": False}
+
+        # The tag label validates against the (possibly extended) class list;
+        # ``clean_prediction`` only knows the shared 6 classes, so it is the
+        # fallback for tag-less legacy outputs only.
+        if tag_label and tag_label in valid_keys:
+            doc_type = tag_label
+        else:
+            doc_type = clean_prediction(raw)
+        if doc_type not in valid_keys:
+            logger.error("sorter_vision_invalid_label", raw_label=doc_type)
+            return {"doc_type": None, "contract_subtype": None, "doc_subclass": None,
+                    "confidence": extract_confidence(raw) or 0.0,
+                    "reasoning": extract_reasoning(raw) or "", "unreadable": False,
+                    "invalid_label": True}
+
+        has_subclass = "doc_subclass" in (self.schema.get("properties") or {})
+        raw_subclass = None
+        if has_subclass and doc_type in SUBCLASS_DIMENSIONS:
+            subclass_match = re.search(
+                r"<subclass>\s*([^<]+?)\s*</subclass>", raw,
+                flags=re.IGNORECASE | re.DOTALL,
+            )
+            subclass_text = subclass_match.group(1).strip() if subclass_match else ""
+            if subclass_text.lower() not in ("null", "none", ""):
+                raw_subclass = normalize_doc_subclass(subclass_text, doc_type)
+
+        confidence = extract_confidence(raw)
+        if confidence is None:
+            confidence = 0.5
+        reasoning = extract_reasoning(raw)
+        return {"doc_type": doc_type, "contract_subtype": None,
+                "doc_subclass": raw_subclass, "confidence": confidence,
+                "reasoning": reasoning, "unreadable": False,
+                "invalid_label": False}
+
+    def classify_image(self, image_base64: str, image_format: str = "png") -> dict:
+        """Classify a document PAGE IMAGE with a vision model (qwen).
+
+        Uses the versioned vision prompt (``sorter_vision_v0`` / the docclass
+        vision prompt): the intro (checks + scratchpad procedure) goes in the
+        system message, the output contract + worked examples go in the
+        image-bearing user message — the same split RVL-CDIP applies
+        (``## Output format`` marker).
+
+        Returns the same contract as ``classify_json`` plus the
+        vision-path flags: ``{"doc_type", "contract_subtype", "doc_subclass",
+        "confidence", "reasoning", "unreadable", "invalid_label"}``. The
+        six-class keys are kept byte-compatible: the default 6-class sorter
+        (no extended ``doc_classes``/``schema``) returns no ``doc_subclass``
+        and falls back to ``correspondence`` for invalid labels exactly as
+        before; the extended docclass sorter additionally normalizes
+        ``doc_subclass`` per the class dimension.
+        """
         from src.openrouter_utils import split_prompt
 
+        valid_keys = self._docclass_keys()
         prompt_text = get_prompt(self.prompt_version)
         system_text, user_text = split_prompt(prompt_text)
         if not system_text:
@@ -473,18 +582,18 @@ class SorterAgent(BaseAgent):
             max_tokens=self._max_tokens,
         )
 
-        doc_type = clean_prediction(raw)
-        if doc_type not in DOC_CLASS_KEYS:
-            logger.error("sorter_vision_invalid_label", raw_label=doc_type)
-            doc_type = "correspondence"
-
-        confidence = extract_confidence(raw)
-        if confidence is None:
-            confidence = 0.5
-
-        reasoning = extract_reasoning(raw)
-        logger.info("classified_vision", doc_type=doc_type, confidence=confidence)
-        return {"doc_type": doc_type, "confidence": confidence, "reasoning": reasoning}
+        result = self._parse_vision_output(raw, valid_keys)
+        if result["doc_type"] is None and not result["unreadable"]:
+            result["doc_type"] = "correspondence"
+        if "doc_subclass" not in (self.schema.get("properties") or {}):
+            # Strict legacy contract (6-class surface): the shared vision
+            # consumers read exactly {doc_type, confidence, reasoning}.
+            return {"doc_type": result["doc_type"],
+                    "confidence": result["confidence"],
+                    "reasoning": result["reasoning"]}
+        logger.info("classified_vision", doc_type=result["doc_type"],
+                    confidence=result["confidence"])
+        return result
 
     def classify_document(self, pages_base64: list[str], image_format: str = "png") -> dict:
         """Classify a FULL PDF document in ONE vision call.
@@ -493,19 +602,17 @@ class SorterAgent(BaseAgent):
         (``_call_vision_multi``) — one classification per document, so the
         model reads the entire agreement (recitals, sections, exhibits,
         signature pages) before deciding. Returns the standard contract:
-        ``{"doc_type", "confidence", "reasoning"}``.
+        ``{"doc_type", "confidence", "reasoning"}`` (plus the docclass
+        extension keys — see ``classify_image``).
         """
-        from src.classifier import (
-            clean_prediction,
-            extract_confidence,
-            extract_reasoning,
-        )
         from src.openrouter_utils import split_prompt
 
         if not pages_base64:
-            return {"doc_type": "correspondence", "confidence": 0.0,
-                    "reasoning": "no page images"}
+            return {"doc_type": None, "contract_subtype": None, "doc_subclass": None,
+                    "confidence": 0.0, "reasoning": "no page images",
+                    "unreadable": True, "invalid_label": False}
 
+        valid_keys = self._docclass_keys()
         prompt_text = get_prompt(self.prompt_version)
         system_text, user_text = split_prompt(prompt_text)
         if not system_text:
@@ -519,19 +626,17 @@ class SorterAgent(BaseAgent):
             max_tokens=self._max_tokens,
         )
 
-        doc_type = clean_prediction(raw)
-        if doc_type not in DOC_CLASS_KEYS:
-            logger.error("sorter_vision_invalid_label", raw_label=doc_type)
-            doc_type = "correspondence"
-
-        confidence = extract_confidence(raw)
-        if confidence is None:
-            confidence = 0.5
-
-        reasoning = extract_reasoning(raw)
-        logger.info("classified_document", doc_type=doc_type, pages=len(pages_base64),
-                    confidence=confidence)
-        return {"doc_type": doc_type, "confidence": confidence, "reasoning": reasoning}
+        result = self._parse_vision_output(raw, valid_keys)
+        if result["doc_type"] is None and not result["unreadable"]:
+            result["doc_type"] = "correspondence"
+        if "doc_subclass" not in (self.schema.get("properties") or {}):
+            # Strict legacy contract (6-class surface) — see classify_image.
+            return {"doc_type": result["doc_type"],
+                    "confidence": result["confidence"],
+                    "reasoning": result["reasoning"]}
+        logger.info("classified_document", doc_type=result["doc_type"],
+                    pages=len(pages_base64), confidence=result["confidence"])
+        return result
 
     def re_evaluate(self, doc_text: str, previous_result: dict) -> tuple[str, float, str]:
         """Re-evaluate a document after low-confidence classification.

@@ -3,18 +3,22 @@
 This directory is the static GitHub Pages site for the
 [llm-entity-extraction](https://github.com/Exios66/llm-entity-extraction)
 experiment log: a clean, filterable, searchable viewer over every eval run in
-`reports/experiment_log.jsonl`.
+`reports/experiment_log.jsonl` — **plus the complementary Posit Cloud portal**
+(`posit/`): a Quarto website integrating the experiment log, the agent kanban
+board, and the discussion board under one themed URL.
 
 ## Viewing
 
 **Live site:** `https://exios66.github.io/llm-entity-extraction/`
+**Posit portal:** `https://exios66.github.io/llm-entity-extraction/posit/`
 (once GitHub Pages is enabled — see below).
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `index.html` | The viewer (single page, hash-routed: `#/` index, `#/task/{slug}` / `#/prompt/{v}` / `#/model/{m}` group views, `#/run/{n}` detail, `#/run/{n}/doc/{i}` single-document trace) |
+| `index.html` | The interactive viewer (single page, hash-routed: `#/` index, `#/task/{slug}` / `#/prompt/{v}` / `#/model/{m}` group views, `#/run/{n}` detail, `#/run/{n}/doc/{i}` single-document trace) |
+| `posit/` | **Posit Cloud portal** (Quarto website — see [`site/README.md`](../site/README.md)): `index.html` landing, `experiment-log.html` (generated from the JSONL), `kanban.html`, `discussion.html`, `search.json`, `site_libs/`. Regenerate with `quarto render site`; rendered output is committed. |
 | `assets/` | `site.css` + `site.js` — dependency-free, no CDN, no build step; dark "gradient night" theme via masthead toggle, `?theme=dark`, or system preference |
 | `data/` | **Generated** — `meta.json`, `index.json` (run summaries), `runs/{n}.json` (full records) |
 | `slides/` | **Scoring-method decks** (hand-written markdown) — worked example inputs/outputs + concise scientific explanations of every scoring method, written for parallel researchers who do not have time to read all the docs: field-type scoring, entity lists + bipartite matching, MAE/R² regression diagnostics, factuality audit, failure analysis, and how to read the experiment log |
@@ -105,6 +109,21 @@ so no CI is involved:
 2. **Source**: *Deploy from a branch*
 3. **Branch**: `main` → `/docs` → **Save**
 4. The site appears at `https://exios66.github.io/llm-entity-extraction/`
+   with the Posit portal at `.../posit/`
+
+## Posit Cloud deployment (complementary, no Actions)
+
+The `posit/` portal is a Quarto website whose **sources live in `site/`**
+(theme, pages, `_pre-render.py` hook). Deploy from Posit Cloud:
+
+```bash
+quarto render site        # regenerates site/_includes + _variables.yml,
+                          # renders docs/posit/ (gitignored includes)
+```
+
+Then either push `docs/` (GH Pages serves it — the default path), run
+`quarto publish quarto-pub` from `site/`, or deploy `docs/` as a static
+site to Posit Connect. Full instructions: [`site/README.md`](../site/README.md).
 
 ## Keeping the log and site in sync
 

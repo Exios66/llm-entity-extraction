@@ -65,3 +65,91 @@ def test_manifest_metadata_mismatch_rejected(tmp_path):
     ManifestStore(path, {"a": 1}).initialize()
     with pytest.raises(ValueError, match="does not match"):
         ManifestStore(path, {"a": 2})
+
+
+# ---------------------------------------------------------------------------
+# Adaptive concurrency (sample-size scaling) + rate-limit retry
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_concurrency_explicit_wins():
+    from src.evaluation import resolve_concurrency
+
+    assert resolve_concurrency(676, requested=4) == 4
+    assert resolve_concurrency(30, requested=64) == 64
+    assert resolve_concurrency(676, requested=None) > 8
+
+
+def test_resolve_concurrency_scales_with_sample_size():
+    from src.evaluation import resolve_concurrency
+
+    # auto formula: min(ceiling, max(1, min(floor + ceil(n/step), n)))
+    assert resolve_concurrency(1) == 1          # never more workers than rows
+    assert resolve_concurrency(5) == 5
+    assert resolve_concurrency(8) == 8          # floor
+    assert resolve_concurrency(30) == 10        # 8 + ceil(30/25)
+    assert resolve_concurrency(50) == 10
+    assert resolve_concurrency(200) == 16
+    assert resolve_concurrency(500) == 28
+    assert resolve_concurrency(676) == 32       # ceiling: diminishing returns
+    assert resolve_concurrency(5000) == 32      # hard cap
+
+
+def test_resolve_concurrency_monotonic_and_bounded():
+    from src.evaluation import CONCURRENCY_MAX, resolve_concurrency
+
+    prev = 0
+    for n in range(0, 700, 25):
+        w = resolve_concurrency(n)
+        assert 1 <= w <= CONCURRENCY_MAX
+        assert w >= prev  # more rows never yield fewer workers
+        prev = w
+
+
+def test_rate_limit_retry_succeeds_after_429(monkeypatch):
+    import time
+
+    from src.evaluation import call_with_rate_limit_retry
+
+    calls = {"n": 0}
+    real_sleep = time.sleep
+    slept = []
+
+    def fake_sleep(seconds):
+        slept.append(seconds)
+        real_sleep(0)  # do not actually wait in tests
+
+    monkeypatch.setattr(time, "sleep", fake_sleep)
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise RuntimeError("OpenRouter: 429 Too Many Requests - rate limit exceeded")
+        return "ok"
+
+    stats = {}
+    result = call_with_rate_limit_retry(flaky, retries=4, stats=stats)
+    assert result == "ok"
+    assert calls["n"] == 3
+    assert stats["rate_limit_retries"] == 2
+    assert slept and slept[0] > 0  # exponential backoff actually waited
+
+
+def test_rate_limit_retry_gives_up_and_non_rate_errors_raise():
+    from src.evaluation import call_with_rate_limit_retry
+
+    calls = {"n": 0}
+
+    def always_429():
+        calls["n"] += 1
+        raise RuntimeError("Rate limit reached")
+
+    with pytest.raises(RuntimeError, match="Rate limit"):
+        call_with_rate_limit_retry(always_429, retries=2)
+    assert calls["n"] == 3  # initial + 2 retries
+
+    def other_error():
+        raise ValueError("a real bug")
+
+    with pytest.raises(ValueError, match="real bug"):
+        call_with_rate_limit_retry(other_error, retries=4)

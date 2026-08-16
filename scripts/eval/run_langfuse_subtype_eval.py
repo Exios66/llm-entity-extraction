@@ -54,11 +54,16 @@ from src.env_utils import (  # noqa: E402
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset  # noqa: E402
+from src.evaluation import (  # noqa: E402
+    ManifestStore,
+    call_with_rate_limit_retry,
+    dataset_fingerprint,
+    resolve_concurrency,
+    validate_dataset,
+)
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
-from src.langfuse_config import load_langfuse_config  # noqa: E402
-from src.langfuse_tracing import LangfuseTracer  # noqa: E402
-from src.phoenix_tracing import PhoenixTracer, phoenix_enabled  # noqa: E402
+from src.tracing import resolve_tracer  # noqa: E402
+
 from src.prompts import list_prompts  # noqa: E402
 
 _CONFIG = load_braintrust_config()
@@ -108,7 +113,10 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--max-input-chars", type=int, default=100_000,
                         help="Hard safety cap on document text fed to the sorter "
                              "(head+tail window when exceeded)")
-    parser.add_argument("--max-concurrency", type=int, default=8, help="Concurrent API calls")
+    parser.add_argument("--max-concurrency", type=int, default=None,
+                        help="Concurrent API calls (default: AUTO — scales with the "
+                             "sample size, 8..32 workers, until diminishing returns / "
+                             "rate limits; pass N to pin)")
     parser.add_argument("--experiment-name", default=None,
                         help="Experiment name (default: {model-slug}_{prompt-version}_subtype_langfuse)")
     parser.add_argument("--manifest", type=Path, default=Path("data/manifests/subtype_langfuse.jsonl"),
@@ -174,8 +182,38 @@ def main_with_args(argv: list[str]) -> int:
                f"limit {args.limit}" if args.limit else "all")
         print(f"Dry run: {len(dataset)} contracts ({how}) -> experiment '{experiment_name}'")
         print(f"  sorter={args.sorter_prompt_version} model={args.model}")
-        print(f"  tracing={'phoenix' if phoenix_enabled() else 'langfuse'} session={experiment_name} trace_name={args.lf_trace_name}")
+        print(f"  tracing=langfuse-primary (phoenix fallback) session={experiment_name} trace_name={args.lf_trace_name}")
         return 0
+
+    # ------------------------------------------------------------------
+    # Tracer — Langfuse PRIMARY, local Arize Phoenix server as fallback
+    # (human directive 2026-08-16; resolver in src/tracing.py). Resolved
+    # BEFORE the manifest so the checkpoint header records the real backend.
+    # ------------------------------------------------------------------
+    tracer, tracing_backend, tracing_meta = resolve_tracer(
+        session_id=experiment_name,
+        trace_name=args.lf_trace_name,
+        tags=[f"prompt:{args.sorter_prompt_version}", args.model.split("/")[-1]],
+        lf_project=args.lf_project,
+        lf_environment=args.lf_environment,
+    )
+    if tracing_backend == "langfuse":
+        if tracer.disabled:
+            print("WARNING: Langfuse tracing is DISABLED (missing LANGFUSE keys in "
+                  "langfuse.env) — the run proceeds untraced; results still land in "
+                  "the repo experiment log.", file=sys.stderr)
+        else:
+            print(f"Tracing to Langfuse project '{tracing_meta['project']}' "
+                  f"(environment '{tracing_meta['environment']}') at {tracing_meta['base_url']}")
+    else:
+        if tracer.disabled:
+            print("WARNING: Phoenix tracing is DISABLED (unreachable exporter or "
+                  "PHOENIX_TRACING off) — the run proceeds untraced; results still "
+                  "land in the repo experiment log.", file=sys.stderr)
+        else:
+            print(f"Tracing to Arize Phoenix (local OpenTelemetry, "
+                  f"endpoint={tracing_meta['endpoint']}) "
+                  f"— Langfuse fallback (keys unavailable)")
 
     manifest = None
     if args.manifest:
@@ -186,47 +224,9 @@ def main_with_args(argv: list[str]) -> int:
             "dataset_fingerprint": dataset_fingerprint(dataset),
             "model": args.model,
             "sorter_prompt_version": args.sorter_prompt_version,
-            "tracing_backend": "phoenix" if phoenix_enabled() else "langfuse",
+            "tracing_backend": tracing_backend,
         })
         manifest.initialize()
-
-    # ------------------------------------------------------------------
-    # Tracer — Arize Phoenix (default, local OpenTelemetry) with Langfuse
-    # fallback. Phoenix is the desired default sink (no cloud quota);
-    # set PHOENIX_TRACING=disabled to route through Langfuse instead.
-    # ------------------------------------------------------------------
-    if phoenix_enabled():
-        tracer = PhoenixTracer(
-            session_id=experiment_name,
-            tags=[f"prompt:{args.sorter_prompt_version}", args.model.split("/")[-1]],
-            trace_name=args.lf_trace_name,
-        )
-        if tracer.disabled:
-            print("WARNING: Phoenix tracing is DISABLED (unreachable exporter or "
-                  "PHOENIX_TRACING off) — the run proceeds untraced; results still "
-                  "land in the repo experiment log.", file=sys.stderr)
-        else:
-            print(f"Tracing to Arize Phoenix (local OpenTelemetry, "
-                  f"endpoint={__import__('os').environ.get('PHOENIX_ENDPOINT', 'http://localhost:6006/v1/traces')})")
-    else:
-        lf_config = load_langfuse_config()
-        if args.lf_project:
-            lf_config = replace(lf_config, project=args.lf_project)
-        if args.lf_environment:
-            lf_config = replace(lf_config, environment=args.lf_environment)
-        tracer = LangfuseTracer(
-            config=lf_config,
-            session_id=experiment_name,
-            tags=[f"prompt:{args.sorter_prompt_version}", args.model.split("/")[-1]],
-            trace_name=args.lf_trace_name,
-        )
-        if tracer.disabled:
-            print("WARNING: Langfuse tracing is DISABLED (missing LANGFUSE keys in "
-                  "langfuse.env) — the run proceeds untraced; results still land in "
-                  "the repo experiment log.", file=sys.stderr)
-        else:
-            print(f"Tracing to Langfuse project '{lf_config.project}' "
-                  f"(environment '{lf_config.environment}') at {lf_config.base_url}")
 
     usage_by_index: dict[int, dict] = {}
 
@@ -249,6 +249,7 @@ def main_with_args(argv: list[str]) -> int:
             "prompt_version": args.sorter_prompt_version,
             "model": args.model,
             "reasoning_effort": args.reasoning_effort,
+            "max_concurrency": args.max_concurrency,
         }
         with tracer.trace_document(filename, expected_subtype, trace_meta) as handle:
             sorter = SorterAgent(model=args.model, api_key=openrouter_key,
@@ -320,8 +321,12 @@ def main_with_args(argv: list[str]) -> int:
         for i, d in enumerate(dataset)
     ]
     results: list[EvalResultShim] = [None] * len(rows)  # type: ignore[list-item]
+    # Adaptive concurrency: scale the worker pool with the sample size until
+    # diminishing returns / rate limits (explicit --max-concurrency N wins).
+    args.max_concurrency = resolve_concurrency(len(rows), args.max_concurrency)
+    retry_stats: dict = {"rate_limit_retries": 0}
     with ThreadPoolExecutor(max_workers=args.max_concurrency) as pool:
-        futures = {pool.submit(classify_one, row): i for i, row in enumerate(rows)}
+        futures = {pool.submit(call_with_rate_limit_retry, classify_one, row, stats=retry_stats): i for i, row in enumerate(rows)}
         for future, i in futures.items():
             try:
                 results[i] = future.result()
@@ -334,27 +339,8 @@ def main_with_args(argv: list[str]) -> int:
     tracer.flush()
     tracer.shutdown()
 
-    if phoenix_enabled():
-        tracing_backend = "phoenix"
-        tracing_meta = {
-            "endpoint": __import__("os").environ.get(
-                "PHOENIX_ENDPOINT", "http://localhost:6006/v1/traces"),
-            "service_name": __import__("os").environ.get(
-                "PHOENIX_SERVICE_NAME", "llm-entity-extraction"),
-            "session_id": experiment_name,
-            "trace_name": args.lf_trace_name,
-            "disabled": tracer.disabled,
-        }
-    else:
-        tracing_backend = "langfuse"
-        tracing_meta = {
-            "project": lf_config.project,
-            "environment": lf_config.environment,
-            "base_url": lf_config.base_url,
-            "session_id": experiment_name,
-            "trace_name": args.lf_trace_name,
-            "disabled": tracer.disabled,
-        }
+    # tracing_backend + tracing_meta come from the resolver (Langfuse
+    # primary, local Phoenix fallback).
 
     log_experiment_to_repo(
         EvalRunShim(results), dataset, args, experiment_name,

@@ -607,13 +607,66 @@ def experiment_markdown(record: dict) -> str:
             lines.extend(_diagnostics_lines(diagnostics))
             lines.append("")
 
+    # -------------------------------------------------- docclass subclass depth
+    # Per-subclass accuracy (the second-level dimension, with support counts),
+    # equivalence recovery, and the input-mode split (text/vision/fallback) —
+    # the docclass mirror of the subtype surface's per-class + equiv reporting.
+    if task == "docclass_classification":
+        per_sub = scores.get("per_subclass_accuracy")
+        support = scores.get("per_subclass_support")
+        if isinstance(per_sub, dict) and per_sub:
+            lines.append("### Per-subclass accuracy (second-level dimension)")
+            lines.append("")
+            lines.extend(_md_table(
+                ["subclass", "accuracy", "support (rows with GT)"],
+                [[k, _fmt(per_sub[k]), support.get(k) if isinstance(support, dict) else None]
+                 for k in sorted(per_sub)],
+            ))
+            lines.append("")
+        equiv = scores.get("subclass_accuracy_equiv")
+        if equiv is not None:
+            lines.append(f"- subclass_accuracy_equiv: {equiv} — strict subclass OR a "
+                         f"defensible equivalent family (mixed_cash_stock ↔ "
+                         f"mixed_cash_stock_election); equiv-recovered rows: "
+                         f"{', '.join(scores.get('equiv_recovered') or []) or 'none'}")
+            lines.append("")
+        mode_counts = scores.get("input_mode_counts")
+        if isinstance(mode_counts, dict) and mode_counts:
+            lines.append(f"- input-mode split: {', '.join(f'{k} {v}' for k, v in mode_counts.items())}")
+            lines.append("")
+
     # ----------------------------------------------------------------- results
     results = record.get("results") or []
     if results:
         lines.append("### Per-document results")
         lines.append("")
         first = results[0]
-        if task == "subtype_classification" or (
+        if task == "docclass_classification":
+            # Hierarchical doc-class shape: the second-level doc_subclass
+            # dimension is scored + rendered per document (KANBAN-033).
+            header = ["#", "Document", "Status", "doc_type", "subclass",
+                      "expected subclass", "doc_type ok", "subclass ok",
+                      "subclass ok equiv", "input mode", "confidence",
+                      "failure mode", "error"]
+            rows = []
+            for i, row in enumerate(results):
+                sorter = row.get("sorter") or {}
+                rows.append([
+                    f"d{i + 1}",
+                    _fmt(row.get("filename"), max_len=90),
+                    row.get("status", "—"),
+                    _fmt(sorter.get("doc_type")),
+                    _fmt(sorter.get("doc_subclass")),
+                    _fmt(sorter.get("expected_subclass")),
+                    _fmt(sorter.get("doc_type_ok")),
+                    _fmt(sorter.get("subclass_ok")),
+                    _fmt(sorter.get("subclass_ok_equiv")),
+                    _fmt(sorter.get("input_mode")),
+                    _fmt(sorter.get("confidence")),
+                    _fmt(sorter.get("failure_mode")),
+                    _fmt(row.get("error")),
+                ])
+        elif task == "subtype_classification" or (
                 "sorter" in first and "extractor_scores" not in first):
             # Sorter-only subtype classification shape.
             header = ["#", "Document", "Status", "doc_type", "subtype",
