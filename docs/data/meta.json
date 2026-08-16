@@ -1,7 +1,8 @@
 {
- "built_at": "2026-08-16T03:58:25.501128+00:00",
+ "built_at": "2026-08-16T04:23:24.217183+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
+  "05b3b17b9ce344b98dd246693ff4b9683db239b4f6b0c8f5ffb0be78b4b2b7c9:42:6",
   "0a37dd25bee0b899140980b07c33ed0c201660db9bd924ead7a8d30606e6a49e:42:50",
   "0e5a3c243848289c808bd61307caf96a0e21165dc848aa90f9fecae509d56b16:42:4",
   "19ead966edadf5cf02c8965dd261e0c4bf953f291ab73c91e3c6b97d62ec6028:42:10",
@@ -13,12 +14,16 @@
   "4e5868bab002b2235c79225abc5ed16d9e7e46884eb65399a69ac07fdd274d49:42:6",
   "6060a67a42e548f1ab54acde2eea8421e7294beb5552c46c0d9f258d60e0f17f:42:6",
   "737c63e062627ccd6ef057f5e4dadd62da3241e1f4e16756550d657e6e33bfe2:42:10",
+  "737ee82d06137a5f994a80b972e7735c6d43337a5a8c4f5f75fc7f5a57e1e72d:42:6",
   "7695ba8be10bc04750e056dde59a69cb89aab8814b3bb5ec30ec858a944bda37:42:2",
   "77b799eb6e762d38be9021076384a536e43b0c1f75783275bb231b5b28738f82:42:3",
   "7a25eaa89c96b95329a833089b2168fdeadec003309d1694150bdcc5af4c91e4:42:50",
   "9afcf61251405fbcc15221b96a7e316a46fd5fdfdfe920b75479e4107226385a:42:10",
+  "a338c80e03aae1f63c76bb39b441ec0ac2ab870cac4636d672df5194b51a7e80:42:6",
   "afb2e0e77981c268fd1b9e9c38811053030860fa936a90a7f8e846164f7bf2cd:42:1",
   "b03823cbac348c3c201e6e5897a7f20ecc8614ddfb10a618b15f4291c841c5ce:42:1",
+  "b5d31cc0f036adb858b643f3938eb52e384f4b6fd392b3bd4b1b9cb1d0f2264e:42:6",
+  "bc047896e993bee080babb8b089ed5c2f2c71b2b391b46b644b7517d8af5daf0:42:6",
   "c14b86c9f0f01384cff37ddefaf672757e84d309064682685f44393f795bcc10:42:30",
   "c23419572d4fafefbb2fb8c8141275c9d857d4a1a801fc0ee6a61d605e324406:42:509",
   "c2aa4180d9137a380152aec710441fc4108dccdff32bcc4d52879fc9e853bee7:42:5",
@@ -26,20 +31,21 @@
   "dc371d640f85f91eb6afbcaf3ac730eafcbc609d2408ef9a23c278641a676266:42:509",
   "de6ae646e3a6fd45ba179bd000ce0786d52ca8a96211e8dc7f8af29a4f380526:42:6",
   "de75a50bb7beadf48dea229f21056576caa7905e8bf3f1436521a69d0bca770a:42:6",
+  "e2f8335450af11e5f5f25a1128e8f1f3022bcfaa8b5489bcc466e096fd730f67:42:6",
   "fb9f939d925bc6c55b500422309d7e5eeeda145ee45d91ba72c11be789899240:42:243"
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 143,
+ "run_count": 156,
  "tasks": {
   "contract_entity_extraction": 51,
   "chained_sorter_extractor": 16,
   "subtype_classification": 30,
   "sorter_classification": 3,
-  "task_classification": 43
+  "task_classification": 56
  },
  "models": {
-  "qwen/qwen3.7-flash": 141,
+  "qwen/qwen3.7-flash": 154,
   "deepseek/deepseek-v4-flash": 1,
   "deepseek/deepseek-v4-pro": 1
  },
@@ -98,12 +104,19 @@
   "legalbench_task_v3_competitive_restriction_exception": 1,
   "legalbench_task_v3_covenant_not_to_sue": 1,
   "legalbench_task_v3_effective_date": 1,
-  "sorter_v13": 2
+  "sorter_v13": 2,
+  "legalbench_task_v4_competitive_restriction_exception": 2,
+  "legalbench_task_v4_covenant_not_to_sue": 2,
+  "legalbench_task_v4_audit_rights": 2,
+  "legalbench_task_v4_cap_on_liability": 2,
+  "legalbench_task_v4_change_of_control": 2,
+  "legalbench_task_v4_effective_date": 2,
+  "legalbench_task_v4_anti_assignment": 1
  },
- "n_rows": 13751,
- "n_ok": 12836,
+ "n_rows": 13829,
+ "n_ok": 12914,
  "n_error": 873,
- "total_tokens": 184851364,
+ "total_tokens": 184986878,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,
