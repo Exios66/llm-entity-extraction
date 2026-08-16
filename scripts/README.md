@@ -27,6 +27,21 @@ Every script is `#!/usr/bin/env python3`, runs from the repo root, exposes
 
 `explore_pipeline_sources.py` — full EDA suites on the post-CUAD pipeline sources (KANBAN-045): per-source `data/eda/<source>/{report.md, findings.md, figures/}` for **MAUD** (`--source maud`: 152 merger agreements + the 25,827-row per-question suite), **S-1 corporate records** (`--source s1`: 15 EDGAR exhibits), the **merged doc-class surface** (`--source docclass`: 676 rows) and **LegalBench** (`--source legalbench`: hearsay + 10 CUAD subtasks). `--source all` (default), `--no-figures`, `--out <dir>`. Regeneration is byte-identical (pinned by `tests/test_pipeline_sources_eda.py`).
 
+`monte_carlo_corpus.py` / `monte_carlo_ensemble.py` / `monte_carlo_prompt_ablation.py` /
+`monte_carlo_failures.py` / `monte_carlo_exemplars.py` / `monte_carlo_verify.py` —
+the **Monte Carlo simulation suite** (KANBAN-048, ported from the
+RVL-CDIP-classifier per issue #17): zero-spend what-if analysis over the joint
+reasoning corpus (`reports/monte_carlo/corpus.jsonl`, built by
+`monte_carlo_corpus.py` from the experiment log + manifests). Scenarios:
+committee voting accuracy(K) + confidence-gated escalation Pareto
+(`monte_carlo_ensemble.py`), paired-bootstrap prompt-ablation gate
+(`monte_carlo_prompt_ablation.py`), retry/fallback failure simulation at
+1K/25K/320K (`monte_carlo_failures.py`), near-miss exemplar mining for
+confusion pairs (`monte_carlo_exemplars.py`), and the spend-minimal
+verification recipe (`monte_carlo_verify.py`, dry-run default). Shared helpers
+in `src/monte_carlo.py`; outputs under `reports/monte_carlo/` (corpus.jsonl
+gitignored — rebuild with the corpus script).
+
 ## `scripts/eval/` — the runners (see wiki: Eval-Runners)
 
 Every runner: `main_with_args(argv)`, `--dry-run`, resumable `--manifest`,

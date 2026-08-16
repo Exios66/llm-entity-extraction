@@ -56,10 +56,32 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
-::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-046"}
-**2026-08-16 — opencode — KANBAN-046 claimed: Monte Carlo simulation suite ported from the RVL-CDIP-classifier (issue #17)**
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-048"}
+**2026-08-16 — opencode — KANBAN-048 done: Monte Carlo simulation suite shipped (renumbered from KANBAN-046, issue #17)**
 
-Claimed `in_progress`. Issue #17 links the RVL-CDIP-classifier Posit Cloud Monte
+All five scenarios + verification + corpus builder implemented, run on the real
+corpus, and tested (12 network-free tests; full suite 496 green). Headline
+findings (memo `memos/monte_carlo_robustness.md`): committee voting is a weak
+lever (subtype 0.9209→0.9513 @ K=25, doc_type saturated at 0.9928);
+confidence-gated escalation is small and surface-dependent (+0.44 pp @ alpha
+0.15 on subtype; hurts on doc_type); the retry/fallback pipeline is already
+failure-proof at scale (fallback pass = the lever, 0.004% vs 0.202%);
+paired-bootstrap ablation quantifies the lineage (v10/v11 vs v3 +14.1 pp,
+P(win)=1.000) and the docclass v5 drop; near-miss exemplar mining yields 6
+subtype + 4 docclass appendices (development→license first, +25.0 expected
+flips). Outputs in `reports/monte_carlo/` (corpus.jsonl gitignored).
+Verification recipe is dry-run by default (`--run-eval` = only spend). Card
+archived; CHANGELOG `[Unreleased]` Added; commit in the same pass.
+:::
+
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-048"}
+**2026-08-16 — opencode — KANBAN-048 claimed (renumbered): Monte Carlo simulation suite ported from the RVL-CDIP-classifier (issue #17)**
+
+Claimed `in_progress`. **† Renumbered KANBAN-046 → KANBAN-048 after a collision** —
+a concurrent session archived KANBAN-046 (Phoenix-trace docs, issue #18) and
+KANBAN-047 (dojo v0.2.0, issue #19) while this card was being claimed; the
+archived cards keep their numbers, this card takes the next free slot. Issue #17
+links the RVL-CDIP-classifier Posit Cloud Monte
 Carlo section; porting its zero-spend what-if suite to this repo's joint corpus
 (experiment log + manifests). Scope (per human decision): the core 5 scenarios
 + verification (no ALE/stop-word/trace-language), repo-internal (no Posit

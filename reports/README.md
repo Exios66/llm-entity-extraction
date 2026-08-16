@@ -10,6 +10,14 @@ Related runtime state (repo-root `data/`, gitignored): `data/judgments/`
 and `data/manifests/` (resumable run checkpoints — same metadata = resumable,
 mismatch = invalid by design).
 
+`monte_carlo/` (derived — KANBAN-048): the Monte Carlo simulation suite's
+outputs — `corpus.jsonl` (gitignored, rebuilt by
+`scripts/reporting/monte_carlo_corpus.py`), `corpus-summary.md`, and the
+per-scenario markdown/PNG reports (`ensemble-voting-*`, `escalation-*`,
+`prompt-ablation-*`, `failure-pipeline`, `exemplars-*`, `exemplar-appendix-*`,
+`verify-*`, `escalation_candidates-*`). Never hand-edit — regenerate with the
+scenario scripts (reproducibility pinned by `tests/test_monte_carlo.py`).
+
 Every JSONL record carries: git snapshot, model, prompt version(s), data
 source + dataset fingerprint + seed, all run parameters, tokens + costs
 (incl. the deterministic `cost_estimated_usd`), all scores (with bootstrap

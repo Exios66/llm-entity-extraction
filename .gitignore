@@ -100,8 +100,14 @@ site/_variables.yml
 # Vendored editable checkout of the llm-dojo-scoring dependency (KANBAN-044) —
 # a local dev clone used for the API audit and `pip install -e .`; the
 # authoritative source is the pinned git dependency in pyproject.toml /
-# requirements.txt (`llm-dojo-scoring @ git+…@v0.1.2`).
+# requirements.txt (`llm-dojo-scoring @ git+…@v0.2.0`).
 src/llm-dojo-scoring/
+
+# Monte Carlo joint corpus (KANBAN-048) — derived from the experiment log +
+# manifests, embeds reasoning traces, rebuildable with
+# scripts/reporting/monte_carlo_corpus.py; the scenario md/PNG outputs ARE
+# tracked under reports/monte_carlo/.
+reports/monte_carlo/corpus.jsonl
 
 # Standalone renders of the board sources (quarto render MESSAGE_BOARD_DISCUSSION.qmd)
 MESSAGE_BOARD_DISCUSSION.html
