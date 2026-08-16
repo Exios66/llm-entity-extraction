@@ -740,10 +740,10 @@ VALID CONTRACT SUBTYPE KEYS""",
 # =============================================================================
 
 SORTER_DOCCLASS_PROMPT_V4 = SORTER_DOCCLASS_PROMPT_V3.replace(
-    """For every other doc_type, doc_subclass must be null.
+    """outside any filing package stays contract (subtype "other").
 
 VALID CONTRACT SUBTYPE KEYS""",
-    """For every other doc_type, doc_subclass must be null.
+    """outside any filing package stays contract (subtype "other").
 
 36. M&A PACKAGE MACHINERY GOVERNS ANCILLARY INSTRUMENTS: a document whose TITLE names the M&A family — including "TRANSACTION AGREEMENT", "ARRANGEMENT AGREEMENT", "MERGER SUPPORT AGREEMENT" — or whose operative machinery is the deal structure (parties include a "Parent" and a "Merger Sub"/"Pubco", articles titled "THE MERGER"/"THE TRANSACTIONS", "Conversion of Shares"/"Merger Consideration" sections) is merger_agreement EVEN WHEN it also contains ancillary deal machinery — contingent value rights (CVRs), registration-rights provisions, support-agreement covenants, earn-outs, escrow — because those are CONSIDERATION and ancillary instruments INSIDE the deal, not separate agreements: an "AGREEMENT AND PLAN OF MERGER" that awards CVRs stays merger_agreement; a "TRANSACTION AGREEMENT" with registration-rights sections stays merger_agreement. Rule 35 applies ONLY when the document's own title is a "REGISTRATION RIGHTS AGREEMENT" (or the instrument is filed as a pure EX-4.x rights instrument) — registration-rights machinery inside an M&A agreement does NOT trigger rule 35 and does NOT make the document a rights_instrument.
 
@@ -769,10 +769,10 @@ VALID CONTRACT SUBTYPE KEYS""",
 # =============================================================================
 
 SORTER_DOCCLASS_PROMPT_V5 = SORTER_DOCCLASS_PROMPT_V3.replace(
-    """For every other doc_type, doc_subclass must be null.
+    """outside any filing package stays contract (subtype "other").
 
 VALID CONTRACT SUBTYPE KEYS""",
-    """For every other doc_type, doc_subclass must be null.
+    """outside any filing package stays contract (subtype "other").
 
 37. AGREEMENT PACKAGES: RECORD OR CERTIFICATE TEXT INSIDE AN AGREEMENT PACKAGE DOES NOT CHANGE THE CLASS: rule 32 applies only when the document AS A WHOLE is a corporate record (rule 34). When a record — power of attorney, certificate, schedule, or annex — appears in a document that ALSO contains the parent agreement (printed before, inside, or after the agreement's own title, recitals, or signature page), scan past the record text to the parent agreement: if the parent agreement is present, the document's class is the PARENT's (contract or merger_agreement), and the record is annex content. A "LIMITED POWER OF ATTORNEY" printed at the front of a services-agreement exhibit is annex content; the services agreement governs. A standalone record filed ALONE (an EX-24.x power of attorney, an EX-3.1 charter, a solo certificate) stays corporate_record — rule 37 fires only when the SAME document also contains the parent agreement.
 
