@@ -6178,5 +6178,75 @@
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
   "data_source_n_samples": 509
+ },
+ {
+  "id": 105,
+  "experiment_name": "qwen3.7-flash_legalbench_task_v1_smoke_pilot",
+  "task": "task_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "legalbench_task_v1",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 4,
+  "n_ok": 4,
+  "n_error": 0,
+  "total_tokens": 3864,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.000204,
+  "cost_estimated_per_doc_usd": 5.1e-05,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "0e5a3c243848289c808bd61307caf96a0e21165dc848aa90f9fecae509d56b16",
+  "seed": null,
+  "sample_key": "0e5a3c243848289c808bd61307caf96a0e21165dc848aa90f9fecae509d56b16:42:4",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-15T23:40:35.021852+00:00",
+  "git": {
+   "commit": "ecebfae",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 4
+ },
+ {
+  "id": 106,
+  "experiment_name": "qwen3.7-flash_legalbench_task_v1_test",
+  "task": "task_classification",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "legalbench_task_v1",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 94,
+  "n_ok": 94,
+  "n_error": 0,
+  "total_tokens": 86320,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.004131,
+  "cost_estimated_per_doc_usd": 4.4e-05,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "40cfb513e040833d4de6e522145aaa6a8c15fe05e66ee3a2ce37df7b8bd99cdc",
+  "seed": null,
+  "sample_key": "40cfb513e040833d4de6e522145aaa6a8c15fe05e66ee3a2ce37df7b8bd99cdc:42:94",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-15T23:41:55.609845+00:00",
+  "git": {
+   "commit": "ecebfae",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 94
  }
 ]

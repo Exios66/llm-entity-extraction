@@ -9,6 +9,19 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Changed
+- **LegalBench task prompt `legalbench_task_v1` — hearsay doctrine in the
+  system prompt (KANBAN-026)** — v1 = v0 + ONE hearsay-doctrine rule (the
+  truth-of-matter purpose test + statement scope incl. writings/assertive
+  non-verbal conduct + party-admission-is-still-hearsay + in-court carve-out).
+  Same-surface 94-row A/B (fresh manifest, temp 0.0): **v1 0.8511 (80/94) vs
+  v0 band 0.7766–0.7872 (73–74/94) — recovered 12 (all 10 deterministic v0
+  failures) / regressed 6, paired bootstrap 95% CI [−0.0213, +0.1489],
+  P(Δ≤0)=0.0905 — directional win outside the ±1-row band, not 5%-significant**;
+  yes-cell 0.7805–0.8049 → 0.9268. The 6 regressions are a NEW pattern
+  (non-verbal-conduct clause over-fired on in-court pointing / protest signs /
+  declarant-belief conduct) — banked as the v2 lesson. `LEGALBENCH_TASK_PROMPT_V1`
+  registered + `test_legalbench_task_v1_hearsay_doctrine` (382 tests green);
+  memo `memos/legalbench_task_v1.md`.
 - **Run sink swapped to Langfuse + LangSmith — Braintrust logging OFF by
   default (KANBAN-025)** — the four `run_*_eval.py` runners (subtype,
   extraction, chained, classification) now consult `BRAINTRUST_LOGGING`

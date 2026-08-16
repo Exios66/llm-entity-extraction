@@ -47,9 +47,37 @@ regression scan of all 71 correct rows showing no predicted flip (all correct No
 rows are either non-assertive conduct, in-court, or effect-on-listener purposes;
 all correct Yes rows are statements offered for truth).
 
-**Verification plan (Phase 4):** surgical prompt tests → `--dry-run` →
-sample-5 pilot (same seed 42) → same-surface A/B @94 (fresh manifest) →
-paired bootstrap CI vs the champion band.
+**Same-surface A/B (Phase 4, completed):** `qwen3.7-flash_legalbench_task_v1_test`
+@94 (fresh manifest `data/manifests/legalbench_v1_test.jsonl`, temp 0.0, qwen/
+qwen3.7-flash) vs the v0 band (4 fresh @94 runs = 0.7766–0.7872, 73–74/94):
+
+| Metric | v0 (band) | v1 | Δ |
+|---|---|---|---|
+| exact_match | 0.7766–0.7872 (73–74/94) | **0.8511 (80/94)** | **+6 rows (recovered 12, regressed 6)** |
+| no | 0.7736 (41/53) | 0.7925 (42/53) | +1 |
+| yes | 0.7805–0.8049 (32–33/41) | **0.9268 (38/41)** | **+5** |
+
+Paired bootstrap (2000 resamples, seed 42, paired vs the best v0 fresh run):
+mean Δ +0.0638, 95% CI **[−0.0213, +0.1489]**, P(Δ≤0)=**0.0905**. The delta is
+outside the ±1-row champion band but the bootstrap CI still crosses zero at the
+5% level — **a directional win, not a 5%-significant one** (see Interpretation 6).
+
+**Recovered 12** (incl. ALL 10 deterministic v0 failures): 23, 47, 50, 58, 61,
+69, 71, 76, 80, 94 (4/4 wrong in v0) + 26, 52, 6, 83 (flips). The 10
+deterministic recoveries map 1:1 onto the doctrine rule's targets — purpose
+test (47/76/80), statement-scope party-admission (58), writings (61/71),
+non-verbal assertion (69), verbal-act (94/50), in-court (23).
+
+**Regressed 6** — a NEW pattern, the v2 lesson: 21, 30, 44, 72, 74 (+ one).
+The "assertive non-verbal conduct IS a statement" clause over-fired on
+in-court pointing (21 witness pointed at defendant on the stand; 30 Andrew
+pointed out escape routes during trial; 74 Tom pointed at defendant at the
+scene) and on protest signs (72 workers carried signs demanding equitable
+compensation) — all GT=No (effect-of-act / in-court purposes), now wrongly
+Yes; and 44 (email about planning to purchase a red car, GT=Yes) flipped to
+No. **Banked for v2**: sharpen the non-verbal-conduct clause so in-court
+pointing stays under the in-court carve-out and signs/pointing offered to
+show the act or the declarant's belief (not the truth of the content) stay No.
 
 ### Interpretation
 
@@ -76,13 +104,18 @@ paired bootstrap CI vs the champion band.
 
 ### What questions or uncertainties remain?
 
+- **The v2 lesson is the 6 regressions above** — the non-verbal-conduct clause
+  over-fired on in-court pointing and on signs/pointing offered to show the act
+  or the declarant's belief. That is the next mutation: refine the clause so the
+  in-court carve-out wins over pointing, and so conduct offered for a non-truth
+  purpose (the act of identifying, the workers' belief) stays No.
 - Does the model over-apply the new doctrine and flip any correct effect-on-
-  listener rows to Yes? The 71-row regression scan says no on paper; the A/B
-  resolves it.
+  listener rows to Yes? The 71-row regression scan said no on paper, and the A/B
+  confirmed: only 6 correct rows flipped, all non-verbal-conduct/in-court-shape,
+  none effect-on-listener-textbook (47/76/80 shape stayed fixed).
 - The verbal-act boundary (94 agency, 50 planning) is genuinely arguable in
-  evidence law — the GT labels them hearsay, so the rule states the GT position.
-  If the A/B shows 94/50 still wrong, the rule wording needs sharpening there,
-  not the GT.
+  evidence law — the GT labels them hearsay, so the rule states the GT position;
+  both were recovered by v1, so no sharpening needed there.
 - Runner-level: the first `_answer_task` call burns ~512 reasoning tokens and is
   truncated (finish_reason=length, empty content) before a clean 1-token retry —
   pure cost waste, prompt-independent. Tracked as a follow-on card, not this
