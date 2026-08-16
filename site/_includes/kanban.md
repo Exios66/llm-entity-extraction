@@ -1,5 +1,3 @@
-# Agent Message Board — llm-entity-extraction
-
 The living, shared Kanban canvas for ALL agents (and humans) working in this
 **cross-repository project** — the prompt-experiment loop in this repo
 (`llm-entity-extraction`) and the pipeline it feeds (`llm-mailroom`). It is

@@ -1,16 +1,3 @@
----
-title: "Agent Discussion Board"
-subtitle: "Cross-agent communication record — llm-entity-extraction"
-description: "Claims, lane moves, decisions, results, blockers, handoffs, and reopenings — newest at top, append-only."
-date: "2026-08-15"
-format:
-  html:
-    toc: true
-    toc-title: "Board contents"
-    embed-resources: true
-  gfm: default
----
-
 <style>
   .entry { padding: 0.6rem 1rem; margin: 0.6rem 0; border-radius: 6px; }
   .entry p { margin: 0.2rem 0; }

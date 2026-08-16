@@ -1,0 +1,47 @@
+project:
+  type: website
+  output-dir: ../docs/posit
+  pre-render: python3 _pre-render.py
+
+website:
+  title: "llm-entity-extraction"
+  description: >-
+    Integrated Posit Cloud portal for the llm-entity-extraction prompt-experiment
+    loop — experiment log, agent kanban board, and agent discussion board,
+    served from the same docs/ tree as the GitHub Pages site.
+  navbar:
+    logo: assets/favicon.svg
+    left:
+      - href: index.qmd
+        text: Portal
+      - href: experiment-log.qmd
+        text: Experiment Log
+      - href: kanban.qmd
+        text: Kanban Board
+      - href: discussion.qmd
+        text: Discussion
+      - href: ../index.html
+        text: Explorer
+    right:
+      - href: https://github.com/Exios66/llm-entity-extraction
+        icon: github
+        aria-label: Repository
+  page-footer:
+    left: "llm-entity-extraction · Posit Cloud portal"
+    right: >-
+      derived from <span class="mono">reports/experiment_log.jsonl</span>,
+      <span class="mono">MESSAGE_BOARD.md</span> and
+      <span class="mono">MESSAGE_BOARD_DISCUSSION.qmd</span> — never hand-edited
+
+format:
+  html:
+    theme:
+      light: [cosmo, _theme.scss]
+      dark: [darkly, _theme.scss]
+    toc: true
+    toc-depth: 3
+    search: true
+    code-copy: false
+    link-external-icon: true
+    lang: en
+    favicon: assets/favicon.svg

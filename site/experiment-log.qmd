@@ -1,0 +1,13 @@
+---
+title: "Experiment Log"
+format: html
+toc: false
+---
+
+> This page is generated from `reports/experiment_log.jsonl` on every render —
+> the same renderer as `reports/experiment_log.md`
+> (`src/experiment_log.py::render_full_log`), with per-document dumps omitted.
+> Each run deep-links to its interactive detail page in the
+> [explorer](../index.html).
+
+{{< include _includes/experiment-log.md >}}
