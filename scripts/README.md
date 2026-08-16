@@ -58,6 +58,7 @@ experiment-log append. Names are `{model-slug}_{prompt-version}[_suffix]`.
 | `judge_experiment.py` | post-hoc JudgeAgent review of failed classifications |
 | `backfill_subtype_reasoning.py` | one-time enrichment: full failure reasoning from Braintrust spans |
 | `backfill_cost_estimates.py` | documented one-time backfill: stamp `cost_estimated_usd` on historical records (`--dry-run` first) |
+| `export_experiment_results.py` | regenerate the per-task performance workbooks + codebooks (Google-Sheets-friendly): `Sorter_Experiment_Results.xlsx` (114 cols, Eval Results + Codebook sheets) + `Sorter_Experiment_Codebook.csv` from `subtype_classification` runs, `Entity_Extraction_Results.xlsx` (141 cols) + `Entity_Extraction_Codebook.csv` from `contract_entity_extraction` runs. `--task {sorter,extraction,all}`, `--outdir`, `--log`. Mirrors the reference format byte-for-byte (headers/order, percent/date formats, freeze panes, autofilter, per-subtype ordering). |
 
 ## `scripts/site/`
 

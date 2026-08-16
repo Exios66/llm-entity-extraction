@@ -119,7 +119,7 @@ def sorter_columns() -> list[dict]:
     cols: list[dict] = [
         {"header": "DATE", "get": lambda r: _date(r), "fmt": _DAT,
          "desc": "Date the eval run completed (UTC)", "type": "Date (mm/dd/yyyy)",
-         "src": "timestamp", "example": "08/15/2026"},
+         "src": "experiment_log record.timestamp", "example": "08/15/2026"},
         {"header": "Experiment Name", "get": lambda r: r.get("experiment_name"), "fmt": _STR,
          "desc": "Unique run identifier: {model-slug}_{prompt-version}_subtype[_suffix]",
          "type": "String", "src": "experiment_name", "example": "qwen3.7-flash_sorter_v12_subtype_langfuse"},
@@ -181,10 +181,12 @@ def sorter_columns() -> list[dict]:
         ("function_over_form", "doc_type miss (non-contract parsed as contract or vice versa)"),
         ("other_fallback", "Fallback / low-confidence classification failures"),
     ]:
+        example = {"equivalent_family": "4", "family_confusion": "29",
+                   "function_over_form": "2", "other_fallback": "4"}[mode]
         cols.append({"header": f"Failures: {mode}",
                      "get": lambda r, m=mode: _get(r, f"scores.sorter.failure_insights.mode_counts.{m}"),
                      "fmt": _INT, "desc": desc, "type": "Integer",
-                     "src": f"failure_insights.mode_counts.{mode}", "example": "4"})
+                     "src": f"failure_insights.mode_counts.{mode}", "example": example})
     for sub in PER_SUBTYPE:
         cols.append({"header": f"Accuracy: {sub}",
                      "get": lambda r, s=sub: _get(r, f"scores.sorter.per_subtype.{s}.accuracy"),
@@ -203,13 +205,13 @@ def sorter_columns() -> list[dict]:
     cols.extend([
         {"header": "Prompt Tokens", "get": lambda r: _tok(r, "prompt_tokens"), "fmt": _INT,
          "desc": "Total input tokens across all docs in the run", "type": "Integer",
-         "src": "tokens.sorter.prompt_tokens", "example": '"6,712,981"'},
+         "src": "tokens.sorter.prompt_tokens", "example": "6,712,981"},
         {"header": "Completion Tokens", "get": lambda r: _tok(r, "completion_tokens"), "fmt": _INT,
          "desc": "Total output tokens across all docs in the run", "type": "Integer",
-         "src": "tokens.sorter.completion_tokens", "example": '"529,692"'},
+         "src": "tokens.sorter.completion_tokens", "example": "529,692"},
         {"header": "Total Tokens", "get": lambda r: _tok(r, "total_tokens"), "fmt": _INT,
          "desc": "Prompt + completion tokens", "type": "Integer",
-         "src": "tokens.sorter.total_tokens", "example": '"7,242,673"'},
+         "src": "tokens.sorter.total_tokens", "example": "7,242,673"},
         {"header": "Cost USD", "get": lambda r: _tok(r, "cost_usd"), "fmt": _NUM,
          "desc": "Billed cost (0 when provider not billed through the runner)", "type": "Number",
          "src": "tokens.sorter.cost_usd", "example": "0"},
@@ -257,7 +259,7 @@ def extraction_columns() -> list[dict]:
     cols: list[dict] = [
         {"header": "DATE", "get": lambda r: _date(r), "fmt": _DAT,
          "desc": "Date the eval run completed (UTC)", "type": "Date (mm/dd/yyyy)",
-         "src": "timestamp", "example": "08/15/2026"},
+         "src": "experiment_log record.timestamp", "example": "08/15/2026"},
         {"header": "Experiment Name", "get": lambda r: r.get("experiment_name"), "fmt": _STR,
          "desc": "Unique run identifier: {model-slug}_{prompt-version}_extraction[_suffix]",
          "type": "String", "src": "experiment_name",
@@ -323,7 +325,10 @@ def extraction_columns() -> list[dict]:
                      "get": lambda r, k=f: _get(r, f"scores.entity_list_f1.{k}"), "fmt": _PCT,
                      "desc": f"Entity-list F1 (bipartite match, GT coverage) for {f}", "type": "Percent",
                      "src": f"scores.entity_list_f1.{f}", "example": "0-1"})
-    # Diagnostics block
+    # Diagnostics block — order MUST match the reference workbook exactly:
+    # macro/micro list stats, then per-list-field precision/recall/raw-F1,
+    # then date/duration/span diagnostics, then per-field date/duration/span,
+    # then field presence, then error decomposition.
     diag_map = [
         ("Diag: Field Exact Rate", "field_exact_rate", _PCT, "Fraction of scored fields exact"),
         ("Diag: Field Partial Rate", "field_partial_rate", _PCT, "Fraction of scored fields partial"),
@@ -338,23 +343,12 @@ def extraction_columns() -> list[dict]:
         ("Diag: List Micro Matched", "list_micro_matched", _INT, "Micro matched items"),
         ("Diag: List Micro n Expected", "list_micro_n_expected", _INT, "Micro expected items"),
         ("Diag: List Micro n Predicted", "list_micro_n_predicted", _INT, "Micro predicted items"),
-        ("Diag: Date MAE (days)", "date_mae_days", _NUM, "Mean absolute error over date pairs (days)"),
-        ("Diag: Date Median AE (days)", "date_median_ae_days", _NUM, "Median absolute error over date pairs (days)"),
-        ("Diag: Date R2", "date_r2", _NUM, "R2 for date predictions"),
-        ("Diag: Date n pairs", "date_n_pairs", _INT, "Number of parseable date pairs"),
-        ("Diag: Duration MAE (days)", "duration_mae_days", _NUM, "Mean absolute error over duration pairs (days)"),
-        ("Diag: Duration Median AE (days)", "duration_median_ae_days", _NUM, "Median absolute error over duration pairs (days)"),
-        ("Diag: Duration R2", "duration_r2", _NUM, "R2 for duration predictions"),
-        ("Diag: Duration n pairs", "duration_n_pairs", _INT, "Number of parseable duration pairs"),
-        ("Diag: Money n pairs", "money_n_pairs", _INT, "Number of parseable money pairs"),
-        ("Diag: Span Count MAE", "span_count_mae", _NUM, "Mean absolute span-count error"),
-        ("Diag: Span Count n docs", "span_count_n_docs", _INT, "Documents with span-count diagnostics"),
-        ("Diag: Span Count Signed Mean", "span_count_signed_mean", _NUM, "Signed mean span-count drift (over vs under extraction)"),
     ]
     for header, key, fmt, desc in diag_map:
         cols.append({"header": header, "get": lambda r, k=key: _get(r, f"scores.diagnostics.{k}"), "fmt": fmt,
                      "desc": desc, "type": "Integer" if fmt == _INT else "Number",
                      "src": f"scores.diagnostics.{key}", "example": "0-1"})
+    # Per-list-field precision / recall / raw F1 (reference order: ko, parties, tc)
     for f in _LIST_FIELDS:
         cols.append({"header": f"Diag: List Precision: {f}",
                      "get": lambda r, k=f: _get(r, f"scores.diagnostics.entity_list_precision.{k}"), "fmt": _PCT,
@@ -370,6 +364,16 @@ def extraction_columns() -> list[dict]:
                      "get": lambda r, k=f: _get(r, f"scores.diagnostics.entity_list_raw_f1.{k}"), "fmt": _PCT,
                      "desc": f"Raw entity-list F1 for {f}", "type": "Percent",
                      "src": f"scores.diagnostics.entity_list_raw_f1.{f}", "example": "0-1"})
+    # Date diagnostics
+    for header, key, fmt, desc in [
+        ("Diag: Date MAE (days)", "date_mae_days", _NUM, "Mean absolute error over date pairs (days)"),
+        ("Diag: Date Median AE (days)", "date_median_ae_days", _NUM, "Median absolute error over date pairs (days)"),
+        ("Diag: Date R2", "date_r2", _NUM, "R2 for date predictions"),
+        ("Diag: Date n pairs", "date_n_pairs", _INT, "Number of parseable date pairs"),
+    ]:
+        cols.append({"header": header, "get": lambda r, k=key: _get(r, f"scores.diagnostics.{k}"), "fmt": fmt,
+                     "desc": desc, "type": "Integer" if fmt == _INT else "Number",
+                     "src": f"scores.diagnostics.{key}", "example": "0-1"})
     for f in ["effective_date", "term_length"]:
         cols.append({"header": f"Diag: Date MAE: {f}",
                      "get": lambda r, k=f: _get(r, f"scores.diagnostics.date_mae_per_field.{k}"), "fmt": _NUM,
@@ -380,6 +384,16 @@ def extraction_columns() -> list[dict]:
                      "get": lambda r, k=f: _get(r, f"scores.diagnostics.date_r2_per_field.{k}"), "fmt": _NUM,
                      "desc": f"Date R2 for {f}", "type": "Number",
                      "src": f"scores.diagnostics.date_r2_per_field.{f}", "example": "0-1"})
+    # Duration diagnostics
+    for header, key, fmt, desc in [
+        ("Diag: Duration MAE (days)", "duration_mae_days", _NUM, "Mean absolute error over duration pairs (days)"),
+        ("Diag: Duration Median AE (days)", "duration_median_ae_days", _NUM, "Median absolute error over duration pairs (days)"),
+        ("Diag: Duration R2", "duration_r2", _NUM, "R2 for duration predictions"),
+        ("Diag: Duration n pairs", "duration_n_pairs", _INT, "Number of parseable duration pairs"),
+    ]:
+        cols.append({"header": header, "get": lambda r, k=key: _get(r, f"scores.diagnostics.{k}"), "fmt": fmt,
+                     "desc": desc, "type": "Integer" if fmt == _INT else "Number",
+                     "src": f"scores.diagnostics.{key}", "example": "0-1"})
     for f in ["renewal_terms", "term_length"]:
         cols.append({"header": f"Diag: Duration MAE: {f}",
                      "get": lambda r, k=f: _get(r, f"scores.diagnostics.duration_mae_per_field.{k}"), "fmt": _NUM,
@@ -390,6 +404,16 @@ def extraction_columns() -> list[dict]:
                      "get": lambda r, k=f: _get(r, f"scores.diagnostics.duration_r2_per_field.{k}"), "fmt": _NUM,
                      "desc": f"Duration R2 for {f}", "type": "Number",
                      "src": f"scores.diagnostics.duration_r2_per_field.{f}", "example": "0-1"})
+    # Span diagnostics
+    for header, key, fmt, desc in [
+        ("Diag: Money n pairs", "money_n_pairs", _INT, "Number of parseable money pairs"),
+        ("Diag: Span Count MAE", "span_count_mae", _NUM, "Mean absolute span-count error"),
+        ("Diag: Span Count n docs", "span_count_n_docs", _INT, "Documents with span-count diagnostics"),
+        ("Diag: Span Count Signed Mean", "span_count_signed_mean", _NUM, "Signed mean span-count drift (over vs under extraction)"),
+    ]:
+        cols.append({"header": header, "get": lambda r, k=key: _get(r, f"scores.diagnostics.{k}"), "fmt": fmt,
+                     "desc": desc, "type": "Integer" if fmt == _INT else "Number",
+                     "src": f"scores.diagnostics.{key}", "example": "0-1"})
     for f in _LIST_FIELDS:
         cols.append({"header": f"Diag: Span MAE: {f}",
                      "get": lambda r, k=f: _get(r, f"scores.diagnostics.span_count_mae_per_field.{k}"), "fmt": _NUM,
@@ -417,19 +441,19 @@ def extraction_columns() -> list[dict]:
     cols.extend([
         {"header": "Prompt Tokens", "get": lambda r: _tok(r, "prompt_tokens"), "fmt": _INT,
          "desc": "Total input tokens across all docs in the run", "type": "Integer",
-         "src": "tokens.prompt_tokens", "example": '"6,712,981"'},
+         "src": "tokens.prompt_tokens", "example": "6,712,981"},
         {"header": "Completion Tokens", "get": lambda r: _tok(r, "completion_tokens"), "fmt": _INT,
          "desc": "Total output tokens across all docs in the run", "type": "Integer",
-         "src": "tokens.completion_tokens", "example": '"529,692"'},
+         "src": "tokens.completion_tokens", "example": "529,692"},
         {"header": "Total Tokens", "get": lambda r: _tok(r, "total_tokens"), "fmt": _INT,
          "desc": "Prompt + completion tokens", "type": "Integer",
-         "src": "tokens.total_tokens", "example": '"7,242,673"'},
+         "src": "tokens.total_tokens", "example": "7,242,673"},
         {"header": "Cost USD", "get": lambda r: _tok(r, "cost_usd"), "fmt": _NUM,
          "desc": "Billed cost (0 when provider not billed through the runner)", "type": "Number",
          "src": "tokens.cost_usd", "example": "0"},
-        {"header": "Cost Total USD", "get": lambda r: _tok(r, "cost_total_usd"), "fmt": _NUM,
-         "desc": "Billed total cost bucket", "type": "Number",
-         "src": "tokens.cost_total_usd", "example": "0"},
+        {"header": "Cost Total USD", "get": lambda r: _tok(r, "cost_total_usd"), "fmt": _STR,
+         "desc": "Billed total cost bucket (string in the reference extraction workbook)",
+         "type": "String", "src": "tokens.cost_total_usd", "example": "0"},
         {"header": "Cost Estimated USD", "get": lambda r: _tok(r, "cost_estimated_usd"), "fmt": _NUM,
          "desc": "Estimated cost from local cost model (offline)", "type": "Number",
          "src": "tokens.cost_estimated_usd", "example": "0.270249"},
@@ -439,8 +463,9 @@ def extraction_columns() -> list[dict]:
         {"header": "Reasoning Effort", "get": lambda r: _get(r, "parameters.reasoning_effort"), "fmt": _STR,
          "desc": "reasoning_effort parameter for the extractor (default none)", "type": "String",
          "src": "parameters.reasoning_effort", "example": "none"},
-        {"header": "Max Tokens", "get": lambda r: _get(r, "parameters.max_tokens"), "fmt": _INT,
-         "desc": "LLM max output tokens", "type": "Integer", "src": "parameters.max_tokens", "example": "16384"},
+        {"header": "Max Tokens", "get": lambda r: _tok_str(r, "max_tokens"), "fmt": _STR,
+         "desc": "LLM max output tokens (string in the reference extraction workbook)",
+         "type": "String", "src": "parameters.max_tokens", "example": "16384"},
         {"header": "Max Input Chars", "get": lambda r: _get(r, "parameters.max_input_chars"), "fmt": _INT,
          "desc": "Max input characters before head+tail truncation", "type": "Integer",
          "src": "parameters.max_input_chars", "example": "150000"},
@@ -450,15 +475,15 @@ def extraction_columns() -> list[dict]:
         {"header": "Chunked", "get": lambda r: _chunked(r), "fmt": _INT,
          "desc": "Whether the run used chunked extraction (1 = yes, 0 = no)", "type": "Integer",
          "src": "parameters.chunked", "example": "1"},
-        {"header": "Chunk Chars", "get": lambda r: _get(r, "parameters.chunk_chars"), "fmt": _INT,
-         "desc": "Chunk window size in characters (chunked runs)", "type": "Integer",
-         "src": "parameters.chunk_chars", "example": "90000"},
+        {"header": "Chunk Chars", "get": lambda r: _tok_str(r, "chunk_chars"), "fmt": _STR,
+         "desc": "Chunk window size in characters (string in the reference extraction workbook)",
+         "type": "String", "src": "parameters.chunk_chars", "example": "90000"},
         {"header": "Chunk Overlap", "get": lambda r: _get(r, "parameters.chunk_overlap"), "fmt": _INT,
          "desc": "Chunk overlap in characters (chunked runs)", "type": "Integer",
          "src": "parameters.chunk_overlap", "example": "8000"},
-        {"header": "Judge", "get": lambda r: _get(r, "parameters.judge"), "fmt": _STR,
-         "desc": "Whether the judge LLM pass was enabled", "type": "Boolean/String",
-         "src": "parameters.judge", "example": "False"},
+        {"header": "Judge", "get": lambda r: _tok_str(r, "judge"), "fmt": _STR,
+         "desc": "Whether the judge LLM pass was enabled (string in the reference extraction workbook)",
+         "type": "Boolean/String", "src": "parameters.judge", "example": "False"},
         {"header": "Dataset", "get": lambda r: _get(r, "data_source.project"), "fmt": _STR,
          "desc": "Braintrust dataset project used", "type": "String",
          "src": "data_source.project", "example": "llm-mailroom/mailroom-cuad-contracts-full"},
@@ -507,11 +532,29 @@ def _chunked(record: dict) -> int | None:
     return int(bool(val)) if val is not None else None
 
 
+def _tok_str(record: dict, key: str) -> str | None:
+    """Stringified parameter value (matches the reference workbook's string
+    rendering of Cost Total USD / Max Tokens / Chunk Chars / Judge)."""
+    val = _get(record, f"parameters.{key}")
+    if val is None:
+        return None
+    if isinstance(val, bool):
+        return "True" if val else "False"
+    return str(val)
+
+
 def _avg_rate(record: dict, path: str):
+    """Mean of a per-field rate dict, matching the reference workbook.
+
+    The reference averages the raw values and applies plain float rounding to
+    ̄4 decimals (verified: 0.01995 -> 0.0199, 0.03125 -> 0.0312).
+    """
     d = _get(record, f"scores.{path}")
     if isinstance(d, dict) and d:
         vals = [v for v in d.values() if isinstance(v, (int, float))]
-        return sum(vals) / len(vals) if vals else None
+        if not vals:
+            return None
+        return round(sum(vals) / len(vals), 4)
     return None
 
 
