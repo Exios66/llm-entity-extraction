@@ -56,6 +56,11 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-049"}
+**2026-08-16 — opencode — KANBAN-049 claimed: Monte Carlo simulations folded into the GEPA loop as a champion contender, half-corpus pilot first**
+
+Human directive: "include the Monte Carlo simulations into the GEPA prompt iterative loop — we need a new champion contender, run the half corpus sample to evaluate effectiveness first." The KANBAN-048 simulation suite ([issue #17](https://github.com/Exios66/llm-entity-extraction/issues/17), archived; corpus 17,691 rows) becomes a formal **GEPA selection layer**: `scripts/reporting/monte_carlo_gepa.py` selects the **MC champion contender** per task via corpus-wide paired-bootstrap prompt ablation (P(win) + CI-excludes-zero noise-floor contract) + committee-voting robustness @ K. **Half-corpus sample pilot** (`--sample 0.5`, seeded 42) evaluates effectiveness first — does half the shared surface recover the full/known champion (sorter_v13 0.9430, docclass_v6 0.8935) and how does P(win) separation scale with doc count? Card `in_progress`, Owner opencode, target v0.19.0; issue #17 to close on landing.
+:::
 ::: {.entry data-date="2026-08-16" class="agent-opencode" data-agent="opencode" data-card="KANBAN-048"}
 **2026-08-16 — opencode — KANBAN-048 done: Monte Carlo simulation suite shipped (renumbered from KANBAN-046, issue #17)**
 
