@@ -56,6 +56,11 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-17" class="agent-opencode" data-agent="opencode" data-card="KANBAN-049"}
+**2026-08-17 — opencode — KANBAN-049 done: Monte Carlo folded into the GEPA loop as a champion-contender layer; half-corpus pilot validates sample-efficiency**
+
+Close-out of the KANBAN-049 claim (the `monte_carlo_gepa.py` layer + committed pilot reports landed in a prior session; this pass finished the close-out: tests, memo, changelog, issue #17, archive). **`monte_carlo_gepa.py`** selects the **MC champion contender** per task via corpus-wide paired-bootstrap prompt ablation over the shared-document surface (mean Δ, 95% CI, P(A beats B); a version beats a peer when the CI excludes zero AND P(win) ≥ 0.9 — the noise-floor contract; tiebreak by aggregate accuracy; **plateau** verdict when nothing separates) + committee-voting robustness @ K + a 25/50/75/100% document-count sweep. **Half-corpus pilot (qwen3.7-flash, seed 42):** subtype full-corpus selects `sorter_v15` (0.9506, tied with v13 at 7 wins); the **seeded 50% sample (254 shared docs) recovers the same champion**; 25% (127 docs) collapses to plateau (P(win) 0.021, CI touches zero) → **the sample-efficiency boundary is between 25% and 50%**. Docclass is **plateau at every fraction** — v6-vs-v3 full-676 +0.0015, CI [+0.0000, +0.0044], P(win)=0.637: the gate correctly refuses to crown a noise-floor delta, matching the same-surface A/B verdict. New tests (gepa scenario smoke + clear-winner selection + the committed gepa report added to the reproducibility drift-guard): `test_monte_carlo.py` 14 tests, 13 passed + 1 skip (corpus gitignored). Memo `memos/monte_carlo_gepa.md`; CHANGELOG `[Unreleased]` Added; **issue #17 closed**. Card archived under v0.19.0. Zero model spend — the layer consumes the already-scored corpus.
+:::
 ::: {.entry data-date="2026-08-17" class="agent-opencode" data-agent="opencode" data-card="KANBAN-050"}
 **2026-08-17 — opencode — KANBAN-050 done: scoring documentation refreshed to the current pipeline state**
 

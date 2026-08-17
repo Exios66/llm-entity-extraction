@@ -213,6 +213,69 @@ def test_verify_scenario(synthetic_corpus, tmp_path):
     assert "--dry-run" in plan
 
 
+def _gepa_winner_corpus() -> list[dict]:
+    """A corpus with a clear champion (sorter_v13 strictly beats sorter_v9 on
+    18 of 20 shared docs) so the champion-contender branch is exercised with a
+    bootstrap CI that excludes zero."""
+    rows = []
+    n_docs = 20
+    for prompt, correct_upto in (("sorter_v9", 2), ("sorter_v13", n_docs)):
+        for i in range(1, n_docs + 1):
+            ok = i <= correct_upto
+            rows.append({
+                "task": "subtype_classification",
+                "experiment_name": f"qwen_sorter_{prompt}_run",
+                "model": "qwen/qwen3.7-flash",
+                "prompt_version": prompt,
+                "dataset": "mailroom-cuad-contracts-full",
+                "temperature": 0.1,
+                "reasoning_effort": "medium",
+                "tracing_backend": "langfuse",
+                "filename": f"d{i}",
+                "predicted": "development" if ok else "license",
+                "expected": "development",
+                "correct": ok,
+                "confidence": 0.95 if ok else 0.6,
+                "reasoning": "Development agreement with license grants"
+                             if ok else "License grants dominate",
+                "failure_mode": None if ok else "family_confusion",
+                "status": "completed", "error": "",
+                "tokens": {}, "cost_usd": None,
+            })
+    return rows
+
+
+def test_gepa_scenario(synthetic_corpus, tmp_path):
+    """The GEPA champion-contender layer runs on a synthetic corpus and emits
+    the full + half-corpus pilot reports (KANBAN-049)."""
+    out = tmp_path / "out"
+    assert _run_script("monte_carlo_gepa", synthetic_corpus, out,
+                       "--task", "subtype_classification",
+                       "--min-shared", "1", "--n-boot", "100",
+                       "--sample", "0.5") == 0
+    report = (out / "gepa-champion-contender-subtype_classification-sample50%.md").read_text()
+    assert "## Full-corpus selection" in report
+    assert "## Half-corpus pilot" in report
+    assert "Document-count sweep" in report
+    assert ("Plateau" in report) or ("MC champion contender" in report)
+
+
+def test_gepa_selects_clear_winner(tmp_path):
+    """With a strictly-better version on the shared docs, the MC layer names
+    the champion (the non-plateau branch)."""
+    corpus = tmp_path / "corpus.jsonl"
+    with corpus.open("w", encoding="utf-8") as fh:
+        for row in _gepa_winner_corpus():
+            fh.write(json.dumps(row) + "\n")
+    out = tmp_path / "out"
+    assert _run_script("monte_carlo_gepa", corpus, out,
+                       "--task", "subtype_classification",
+                       "--min-shared", "1", "--n-boot", "100") == 0
+    report = (out / "gepa-champion-contender-subtype_classification.md").read_text()
+    assert "MC champion contender: `sorter_v13`" in report
+    assert "sorter_v13" in report.split("## Half-corpus pilot")[0]
+
+
 def test_corpus_builder_smoke(tmp_path, monkeypatch):
     """The corpus builder runs over the real experiment log (when present) and
     emits the canonical corpus + summary; skipped when the log is absent."""
@@ -244,6 +307,7 @@ def test_reports_monte_carlo_are_current():
 
     import scripts.reporting.monte_carlo_ensemble as ensemble
     import scripts.reporting.monte_carlo_failures as failures
+    import scripts.reporting.monte_carlo_gepa as gepa
     import scripts.reporting.monte_carlo_prompt_ablation as ablation
 
     with tempfile.TemporaryDirectory() as td:
@@ -253,11 +317,14 @@ def test_reports_monte_carlo_are_current():
         ablation.main_with_args(["--corpus", str(corpus), "--out-dir", str(out),
                                  "--task", "subtype_classification"])
         failures.main_with_args(["--corpus", str(corpus), "--out-dir", str(out)])
+        gepa.main_with_args(["--corpus", str(corpus), "--out-dir", str(out),
+                             "--task", "subtype_classification", "--sample", "0.5"])
         for name in ("ensemble-voting-subtype_classification.md",
                      "escalation-subtype_classification.md",
                      "prompt-ablation-subtype_classification.md",
                      "prompt-ablation-classes-subtype_classification.md",
-                     "failure-pipeline.md"):
+                     "failure-pipeline.md",
+                     "gepa-champion-contender-subtype_classification-sample50%.md"):
             committed = REPO_ROOT / "reports" / "monte_carlo" / name
             if not committed.exists():
                 continue
