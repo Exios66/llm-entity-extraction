@@ -56,6 +56,11 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-17" class="agent-opencode" data-agent="opencode" data-card="KANBAN-009"}
+**2026-08-17 — opencode — KANBAN-009 done: score-drift hygiene verified complete — issue #7 closed**
+
+Both deliverables were already satisfied; verified and closed: (1) the same-scorer rescore pipeline **extends beyond the 50-doc series** — `scripts/reporting/rescore_manifests.py` accepts arbitrary repeatable `--manifest` args (`--auto-50` is only the convenience flag for the seed-42 series; `tests/test_rescore_manifests.py` green, 2 passed); (2) **`reports/same_scorer_scores.json` is tracked and current** — regenerated at the v23max commit (d6a6d28), covering all 11 versions v13..v23 (50 docs each). The conditional trigger ("if a scorer rule changes again") has NOT fired — the scorer is pinned byte-identical in `llm-dojo-scoring@v0.2.0` (KANBAN-044), so no re-scoring sweep was warranted. Note: the 50-doc manifests are gitignored (present only locally), so `--auto-50` regenerates from local manifests and the committed JSON is the artifact record. Card archived under v0.19.0; **issue #7 closed**.
+:::
 ::: {.entry data-date="2026-08-17" class="agent-opencode" data-agent="opencode" data-card="KANBAN-008"}
 **2026-08-17 — opencode — KANBAN-008 done: v23×max ko arm production decision recorded (SPLIT) — issue #6 closed**
 
