@@ -56,6 +56,11 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-17" class="agent-opencode" data-agent="opencode" data-card="KANBAN-008"}
+**2026-08-17 — opencode — KANBAN-008 done: v23×max ko arm production decision recorded (SPLIT) — issue #6 closed**
+
+The decision documentation was already complete in the tree; this pass verified the evidence and closed the card. **Recommended production config: SPLIT** — default = **overall arm** (`reasoning_effort=none`; champion line `contracts_specialist_v31` 0.8737 @ full-509, chunked, seed 42), with the **ko arm** (`--reasoning-effort max`, `v23×max`: ko 0.8510, 0 parse errors, lowest ellipsis 18.7%) as a documented opt-in for compliance/covenant-heavy reviews at 2.6× cost — `v19×max` explicitly rejected (1/50 parse error, worst overall 0.9135, highest ellipsis 27.1%). Evidence: README "Recommended production configuration (extraction)" (§87-107, table + decision), AGENTS.md "Production decision (KANBAN-008)" (§768-773), `V16_PROPOSITION.md` §15.1, memo `docs/memos/contracts_specialist_v23.md`. Card archived under v0.19.0; **issue #6 closed**.
+:::
 ::: {.entry data-date="2026-08-17" class="agent-opencode" data-agent="opencode" data-card="KANBAN-049"}
 **2026-08-17 — opencode — KANBAN-049 done: Monte Carlo folded into the GEPA loop as a champion-contender layer; half-corpus pilot validates sample-efficiency**
 
