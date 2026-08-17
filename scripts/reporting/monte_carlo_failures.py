@@ -167,13 +167,13 @@ def render_report(probs: dict, base: dict, scales: list[dict], sweep: list[dict]
     return "\n".join(L)
 
 
-def make_figures(base: dict, scales: list[dict], sweep: list[dict]) -> None:
+def make_figures(out_dir: Path, base: dict, scales: list[dict], sweep: list[dict]) -> None:
     fig, ax = plt.subplots(figsize=(8, 4.5))
     labels = [f"{row['scale']:,}" for row in scales]
     expected = [row["expected"] for row in scales]
     ax.bar(labels, expected, color="#dc2626", alpha=0.85)
     style_axis(ax, "Expected failures at production scale", "scale (documents)", "expected failures")
-    save_figure(fig, OUT_DIR / "failure-scale-expected.png")
+    save_figure(fig, out_dir / "failure-scale-expected.png")
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     on = [r for r in sweep if r["fallback"] == "on"]
@@ -184,7 +184,7 @@ def make_figures(base: dict, scales: list[dict], sweep: list[dict]) -> None:
             marker="o", color="#dc2626", label="fallback off")
     style_axis(ax, "Failure rate vs max_tries × fallback", "max_tries", "failure rate")
     ax.legend()
-    save_figure(fig, OUT_DIR / "failure-sweep.png")
+    save_figure(fig, out_dir / "failure-sweep.png")
 
 
 def main_with_args(argv: list[str]) -> int:
@@ -229,7 +229,7 @@ def main_with_args(argv: list[str]) -> int:
     (out_dir / "failure-pipeline.md").write_text(
         render_report(probs, base, scales, sweep), encoding="utf-8")
     if not args.no_figures:
-        make_figures(base, scales, sweep)
+        make_figures(out_dir, base, scales, sweep)
 
     print(f"failure sim: rate {base['failure_rate']:.4%} (avg attempts "
           f"{base['avg_attempts']:.2f}); 320K expected failures "

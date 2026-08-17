@@ -269,6 +269,9 @@ history of the repository's tags. Format follows
   iterative prompt improvements on this sample. Follow-on arm must sync the
   95-row LegalBench test set (``test.tsv``) so A/B deltas have resolution
   beyond the ceiling.**
+ 
+### Fixed
+- **`monte_carlo_failures.py` figure output honors `--out-dir`** — `make_figures` wrote the two scenario PNGs to the module-level repo `OUT_DIR` instead of the resolved `--out-dir`, so running the script (or its smoke test) with a custom out-dir silently overwrote the committed `reports/monte_carlo/failure-{scale-expected,sweep}.png`. Now takes the resolved `out_dir`; the smoke test no longer pollutes the committed figures. (Same pattern in `monte_carlo_ensemble.py` was already correct.)
 
 ## [v0.18.0] - 2026-08-15
 
