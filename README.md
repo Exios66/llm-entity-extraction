@@ -110,7 +110,12 @@ key_obligations fidelity outweighs the cost/overall tradeoff.
 
 Exact-match-on-extraction treats every field identically, which is wrong. The
 evaluations score each field by its type (`config/taxonomy.yaml →
-field_scoring:`):
+field_scoring:`). The scoring definitions are **outsourced to the
+`llm-dojo-scoring` package** (pinned `@v0.2.0`, shared with llm-mailroom) —
+the local `src/field_scoring.py` / `metrics.py` / `scorers.py` /
+`bootstrap.py` / `cost_models.py` are thin re-export shims, and
+`src/dojo_config.py` wires the taxonomy into the package `Settings` at import
+(see `SCORING.md` §0 for the full map):
 
 - `id` — normalize + exact match (docket/reference numbers)
 - `date` — canonical ISO parse, then exact match ("March 3, 2024" == "03/03/2024")
@@ -160,8 +165,23 @@ the composite score but WHY it is what it is:
 The regression diagnostics parse the curated **master labels CSV**
 (`src/master_labels.py`, default `../llm-mailroom/data/cuad/master_clauses.csv`
 — normalized answers like `"5/8/14"`, `"2 years"`) and degrade gracefully to
-the raw CUAD clause text when it is absent. See `SCORING.md` §4 and the
-worked examples in `docs/slides/`.
+the raw CUAD clause text when it is absent.
+
+Beyond the CUAD extraction surface, the **task-aware scoring dispatcher**
+(`llm_dojo_scoring.tasks`, `score_task()`) covers the additional document
+hierarchy: **MAUD** merger-agreement doc_type + consideration-type subclass
+(strict + equiv), **LegalBench** binary Yes/No (exact match + per-class +
+P/R/F1), **multiclass** (macro/micro), **court opinions**, and **chained**
+sorter→extractor composite scoring (default 0.25/0.75 weights). The **docclass
+eval** (`run_langfuse_docclass_eval.py`) scores doc_type + doc_subclass across
+the merged 676-row surface (CUAD + MAUD + S-1) with per-subclass accuracy,
+equivalence-aware subclass scoring, bootstrap CIs, and input-mode splits; the
+**subtype eval** reports strict + equivalence-aware family accuracy with
+per-family tables and failure-mode insights; and the **Monte Carlo robustness
+suite** (`src/monte_carlo.py`) adds zero-spend committee-voting / escalation /
+paired-bootstrap-ablation / failure-pipeline / exemplar metrics over the joint
+reasoning corpus. Every metric (with formulas and reading) is in
+`SCORING.md`; the worked examples are in `docs/slides/`.
 
 ## Layout
 
@@ -178,28 +198,34 @@ agents/                  LangChain agents under test (see agents/README.md)
 config/                  the control panel (see config/README.md)
   taxonomy.yaml          doc classes, field types, agent->model mapping, thresholds
 src/                     core modules (see src/README.md)
-  bootstrap.py           percentile-bootstrap CIs + two-sample delta significance
+  bootstrap.py           re-export shim -> llm_dojo_scoring.bootstrap (CIs + delta significance)
   braintrust_config.py   loads braintrust.env / .env (org, project, model, api base)
   braintrust_logging.py  BRAINTRUST_LOGGING gate: on/off Braintrust experiment sink
   braintrust_utils.py    Braintrust HTTP, dataset load/upload, experiment fetch
   classifier.py          label/confidence/reasoning parsers (RVL-CDIP style)
-  cost_models.py         verified per-model prices + deterministic cost estimation
+  cost_models.py         re-export shim -> llm_dojo_scoring.cost (prices + estimation)
   cuad_ground_truth.py   CUAD 41-category catalog -> expected fields + presence
+  dojo_compat.py         docclass failure-mode classifier (positional-boolean contract)
+  dojo_config.py         wires config/taxonomy.yaml into llm_dojo_scoring Settings
   env_utils.py           dotenv loading + required-var validation
   eval_shims.py          run_local_eval(): the shared local scoring loop when
                          BRAINTRUST_LOGGING=disabled (thread pool + manifest resume)
   evaluation.py          dataset validation, fingerprints, resumable manifests
   experiment_log.py      append-only repo experiment log (JSONL + markdown renderer)
-  field_scoring.py       deterministic field-type-aware content scoring + factuality audit
+  field_scoring.py       re-export shim -> llm_dojo_scoring.field_scoring
+                         (field-type-aware content scoring + factuality audit)
   image_utils.py         PDF/TIFF -> 1024x1024 grayscale PNG helpers
   langfuse_config.py     Langfuse project config (llm-dojo by default)
   langfuse_tracing.py    Langfuse mirror tracer (one trace per document, scores)
   llm_chain.py           LangChain chain factory for eval loops
   master_labels.py       curated master ground-truth CSV loader (MAE diagnostics)
-  metrics.py             run-level extraction diagnostics (MAE/R2, span drift, decomposition)
+  metrics.py             re-export shim -> llm_dojo_scoring.diagnostics
+                         (run-level MAE/R2, span drift, error decomposition)
+  monte_carlo.py         zero-spend robustness simulation primitives (KANBAN-048)
   openrouter_utils.py    OpenRouter constants + vision message builders
   prompts.py             ALL agent prompts, versioned (the version key IS the identity)
-  scorers.py             deterministic Braintrust scorers (exact_match, failure, cost)
+  scorers.py             re-export shim -> llm_dojo_scoring.classification
+                         (exact_match, failure + local cost registry)
   taxonomy.py            YAML loader for config/taxonomy.yaml
 scripts/                 ops + evals + reporting + site + releases (see scripts/README.md)
   datasets/              sync the HF corpora into Braintrust datasets
@@ -718,9 +744,12 @@ licensed corpora, benchmarks, and frameworks:
   archive).
 - `CHANGELOG.md` — semantic-version history of all significant releases
   (each tagged `vX.Y.Z`).
-- `SCORING.md` — every scorer and metric: classification, binary, multiclass,
-  field-type-aware content scoring, factuality audit, chained stage trackers,
-  A/B deltas, token/cost accounting.
+- `SCORING.md` — every scorer and metric: where scoring lives (the
+  `llm-dojo-scoring` package), classification, binary, multiclass, subtype,
+  docclass hierarchical, task-aware (MAUD / LegalBench / court opinions /
+  chained), field-type-aware content scoring, factuality audit, judge
+  calibration, chained stage trackers + ablation, A/B deltas, cost
+  accounting, Monte Carlo robustness, bootstrap CIs.
 - `V16_PROPOSITION.md` — the historical research proposition behind the
   v16+ prompt iterations (champion lineage, model sweeps).
 

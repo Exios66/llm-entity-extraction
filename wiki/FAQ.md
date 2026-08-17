@@ -9,7 +9,8 @@ bootstrap CIs tell you when a gap is just noise.
 **Q: Why is `cost_total_usd` $0.00 but the site shows an estimate?**
 A: OpenRouter usage payloads carry no cost field, so runs record $0.00 from
 usage. The site computes deterministic estimates from token counts × verified
-per-model prices (`src/cost_models.py`), and shows real billed totals when
+per-model prices (`src/cost_models.py`, a re-export shim for the
+`llm-dojo-scoring` package's `cost` module), and shows real billed totals when
 you rebuild with `--openrouter-csv openrouter_activity.csv`.
 
 **Q: Why does the markdown log look different after `render_experiment_log.py`?**

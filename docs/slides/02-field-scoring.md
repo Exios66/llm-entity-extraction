@@ -10,8 +10,10 @@ Exact-match-on-extraction treats every field identically — which is wrong.
 
 So every field is scored by its declared type
 (`config/taxonomy.yaml → doc_classes[].field_types`; unmapped fields fall
-back to a name heuristic). Each type has its own scorer in
-`src/field_scoring.py`, and the per-field score feeds the composite:
+back to a name heuristic). Each type has its own scorer in the
+`llm-dojo-scoring` package (`llm_dojo_scoring.field_scoring` — the repo's
+`src/field_scoring.py` is a thin re-export shim), and the per-field score
+feeds the composite:
 
 ```
 overall_extraction_score = mean of per-field content scores
@@ -110,10 +112,11 @@ suffixes) → exact match. No fuzzy credit — reference numbers are exact.
 
 | What | Where |
 |---|---|
-| Scorer dispatch | `FIELD_SCORERS` in `src/field_scoring.py` |
+| Scorer dispatch | `FIELD_SCORERS` in `llm_dojo_scoring.field_scoring` (via `src/field_scoring.py` shim) |
 | Type mapping per doc class | `config/taxonomy.yaml → field_types` |
-| Composite assembly | `score_extraction()` in `src/field_scoring.py` |
+| Composite assembly | `score_extraction()` in `llm_dojo_scoring.field_scoring` |
 | Null-expectation date rule | `_date_expected_is_null()` + `score_date_field()` |
+| Settings wiring | `src/dojo_config.py` → package `Settings` |
 
 ---
 

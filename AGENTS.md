@@ -423,8 +423,9 @@ local PDFs ──--pdf-dir──┐                        │ load_braintrust_d
                     │                                │
                     │                 setup_langchain() traces spans
                     ▼                                ▼
-             deterministic scoring          Braintrust experiment
-             (src/field_scoring.py)              │
+deterministic scoring          Braintrust experiment
+              (llm-dojo-scoring pkg,          │
+               via src/*.py shims)            │
                     │                             │
                     ▼                             ▼
    data/manifests/*.jsonl ◀── resumable ──  report_generator / confusion_matrix
@@ -439,23 +440,32 @@ Key modules:
 |---|---|
 | `src/taxonomy.py` | loads `config/taxonomy.yaml` — doc classes, field types, agent→model mapping, thresholds. Changing the taxonomy = YAML edit, not code. |
 | `src/prompts.py` | ALL prompts, versioned in `PROMPT_VERSIONS`; `get_prompt(version)`, `list_prompts()`. The version key IS the experiment identity. |
-| `src/field_scoring.py` | field-type-aware content scorer: date/money/id/name/free_text/entity_list (bipartite matching), embedding rescue (local sentence-transformers, OpenRouter fallback, empty-string guard), factuality verification, ambiguous band. |
+| `src/field_scoring.py` | re-export shim → `llm_dojo_scoring.field_scoring` (field-type-aware content scorer: date/money/id/name/free_text/entity_list (bipartite matching), embedding rescue (local sentence-transformers, OpenRouter fallback, empty-string guard), factuality verification, ambiguous band). |
+| `src/dojo_config.py` | wires `config/taxonomy.yaml` into the `llm_dojo_scoring` package `Settings` at import (thresholds, cost table, type coercion, `LLM_DOJO_SCORING_CONFIG` escape hatch). |
+| `src/dojo_compat.py` | docclass failure-mode classifier `classify_failure(doc_type_ok, subclass_ok, predicted_subclass)` (positional-boolean contract, `None` on success). |
 | `src/cuad_ground_truth.py` | CUAD 41-category catalog → per-document expected fields (type-aware by CUAD folder) + YES/NO presence expectations + `build_subtype_handoff()` (the subtype-scoped specialist cue used by `--handoff-scope subtype`). |
 | `src/master_labels.py` | loader for the curated master ground-truth CSV (`master_clauses.csv`, default the repo-local `data/cuad/master_clauses.csv`; `MASTER_LABELS_CSV` env / `--master-labels` override it; sibling `../llm-mailroom/data/cuad/` kept as fallback) — per-category NORMALIZED answers ("5/8/14", "2 years") preferred over raw clause text by the MAE diagnostics; degrades to `{}` when absent. |
-| `src/metrics.py` | run-level extraction diagnostics (`scores.diagnostics` in the experiment log): raw list precision/recall/F1 (macro + micro), field exact/partial/miss error decomposition + per-field presence, date/duration MAE (days) + money MAE (USD) with median + per-field buckets + pair counts, R² for dates/durations, span-count drift (MAE + signed mean). Consumes the per-row composite; the experiment-log renderer and the site display it. |
+| `src/metrics.py` | re-export shim → `llm_dojo_scoring.diagnostics` (run-level extraction diagnostics `scores.diagnostics` in the experiment log): raw list precision/recall/F1 (macro + micro), field exact/partial/miss error decomposition + per-field presence, date/duration MAE (days) + money MAE (USD) with median + per-field buckets + pair counts, R² for dates/durations, span-count drift (MAE + signed mean). Consumes the per-row composite; the experiment-log renderer and the site display it. |
+| `src/monte_carlo.py` | zero-spend robustness simulation primitives over the joint reasoning corpus (committee voting, confidence-gated escalation, paired-bootstrap prompt ablation, failure-pipeline sim, exemplar mining — KANBAN-048). |
 | `src/langfuse_tracing.py` | Langfuse mirror tracer: one trace per document (session-scoped deterministic id), `agent_observation()` opens one span per pipeline agent with its designated task scores attached to that observation; graceful no-op when keys are missing. |
-| `src/experiment_log.py` | append-only JSONL + markdown renderer (tables, confusion matrices, scoring matrices, outputs, failure insights); `render_full_log()` for the rebuild. |
-| `src/evaluation.py` | dataset validation, fingerprints, `ManifestStore` (thread-safe JSONL resume checkpoints). |
-| `src/scorers.py` | deterministic Braintrust scorers (exact_match, failure, cost) + `normalize_label`. |
+| `src/experiment_log.py` | append-only JSONL + markdown renderer (tables, confusion matrices, scoring matrices, outputs, failure insights); `render_full_log()` for the rebuild; the append/git-snapshot/mean/tokens core re-exports `llm_dojo_scoring.experiment` + `.cost`. |
+| `src/evaluation.py` | dataset validation, fingerprints, `ManifestStore` (thread-safe JSONL resume checkpoints), adaptive `resolve_concurrency`, `call_with_rate_limit_retry`. |
+| `src/scorers.py` | re-export shim → `llm_dojo_scoring.classification` (deterministic scorers exact_match, failure, `normalize_label`) + the local `cost` scorer and name registry. |
 | `src/braintrust_utils.py` | Braintrust HTTP: list/fetch experiments, load/upload datasets, attachment handling. |
 | `agents/` | LangChain agents: `BaseAgent` (structured output, vision, `_last_usage`, head+tail `truncate_input`), `SorterAgent` (doc_type + 25 contract subtypes, default `reasoning_effort="medium"`, `SUBTYPE_EQUIVALENCES`), specialists (per-class schemas), `JudgeAgent` (offline classification/completeness/correctness). |
 
 ## Scoring model (read before touching scorers)
 
 The canonical, formula-level reference for every scorer and metric is
-**`SCORING.md`** (classification, binary, multiclass, field-type-aware content
-scoring, factuality audit, chained stage trackers, A/B deltas, token/cost
-accounting). The rules below are the invariants:
+**`SCORING.md`** — where scoring lives (the **`llm-dojo-scoring` package**,
+pinned `@v0.2.0` and shared with llm-mailroom; the local `src/` modules are
+thin re-export shims), classification, binary, multiclass, subtype, docclass
+hierarchical, task-aware (MAUD / LegalBench / court opinions / chained), the
+field-type-aware content scorer, factuality audit, judge calibration, chained
+stage trackers + ablation, A/B deltas, token/cost accounting, the Monte Carlo
+robustness suite, and bootstrap CIs. **Never edit the scoring algorithm in the
+shims** — change the shared `llm-dojo-scoring` package (upstream repo) and
+re-pin the dependency. The rules below are the invariants:
 
 - **Content accuracy** — per-field deterministic scores by type
   (see README "Scoring"); entity lists via optimal bipartite matching
@@ -484,6 +494,16 @@ accounting). The rules below are the invariants:
   `SUBTYPE_EQUIVALENCES`: reseller↔distributor, maintenance↔license,
   development↔license, affiliate↔joint_venture). Strict stays the
   discriminating signal; equiv recognizes defensible family routing.
+- **Docclass hierarchy** — the docclass eval scores BOTH `doc_type_accuracy`
+  and `subclass_accuracy` (rows without a subclass GT are unscored, not
+  penalized), with `subclass_accuracy_equiv` honoring `DOC_SUBCLASS_EQUIVALENCES`
+  (mixed_cash_stock ↔ mixed_cash_stock_election) and per-subclass accuracy +
+  support counts; failure modes are `doc_type_miss` / `subclass_miss`
+  (`src/dojo_compat.py`).
+- **Task-aware scoring** — `llm_dojo_scoring.tasks::score_task` dispatches by
+  task kind (MAUD consideration strict/equiv, LegalBench binary P/R/F1,
+  multiclass macro/micro, court opinions, chained composite 0.25/0.75);
+  unknown MAUD consideration values degrade to `other` (the GT-gap convention).
 
 ## Experimental testing workflow (the loop)
 
@@ -789,7 +809,8 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   contract's CUAD folder via `build_expected_fields`; don't assume all 41
   categories apply to every document.
 - **Extraction diagnostics are run-level, not trackers**: `scores.diagnostics`
-  (`src/metrics.py`) is computed post-hoc from the stored rows and lives in
+  (`src/metrics.py` → `llm_dojo_scoring.diagnostics`) is computed post-hoc
+  from the stored rows and lives in
   the experiment-log record + md render + site — it is NOT a Braintrust
   tracker. MAE/R² rows are only as good as their parseable-pair counts
   (`date_n_pairs` etc.) — always read the support size with the number.

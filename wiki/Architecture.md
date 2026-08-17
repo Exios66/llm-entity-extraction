@@ -37,7 +37,8 @@ local PDFs ──--pdf-dir──┐                        │ load_braintrust_d
                     │                 setup_langchain() traces spans
                     ▼                                ▼
              deterministic scoring          Braintrust experiment
-             (src/field_scoring.py)              │
+              (llm-dojo-scoring pkg,          │
+               via src/*.py shims)            │
                     │                             │
                     ▼                             ▼
    data/manifests/*.jsonl ◀── resumable ──  report_generator / confusion_matrix

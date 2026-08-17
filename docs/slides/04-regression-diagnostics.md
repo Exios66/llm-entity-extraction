@@ -7,8 +7,9 @@
 A date that is off by 1 day and a date off by 10 years BOTH score 0.0 at the
 content level. To improve a prompt you need to know **how wrong** the
 near-misses are, and in **which direction**. That is what the regression
-diagnostics (`scores.diagnostics`, `src/metrics.py`) measure — against the
-curated ground truth.
+diagnostics (`scores.diagnostics`, `src/metrics.py` — a re-export shim for
+the `llm-dojo-scoring` package's `llm_dojo_scoring.diagnostics`) measure —
+against the curated ground truth.
 
 **Ground truth source**: the master-labels CSV
 (`master_clauses.csv`, default `../llm-mailroom/data/cuad/master_clauses.csv`)

@@ -1,18 +1,61 @@
 # Scoring & Metrics Reference
 
 Every metric this repo reports, where it is computed, and how to read it.
-Scoring is deliberately **deterministic** — Braintrust scorers are trivial
-lookups on locally computed composites, so the Braintrust UI, the run
-manifests, and `reports/experiment_log.jsonl` never disagree.
+Scoring is deliberately **deterministic** — the run scorers are trivial
+lookups on locally computed composites, so the trace UI (Langfuse / Phoenix),
+the run manifests, and `reports/experiment_log.jsonl` never disagree.
 
-## 1. Label normalization (`src/scorers.py`)
+## 0. Where the scoring lives — the `llm-dojo-scoring` package
+
+The scoring definitions are **outsourced to the `llm-dojo-scoring` package**
+(KANBAN-044 / KANBAN-047, pinned `@v0.2.0` in `pyproject.toml` +
+`requirements.txt`), the **single source shared with llm-mailroom**. The local
+`src/` modules are thin re-export shims so every import site (eval runners,
+reporting scripts, tests, and llm-mailroom's `pip install -e .` imports) keeps
+working unchanged:
+
+| Local shim | Package source |
+|---|---|
+| `src/field_scoring.py` | `llm_dojo_scoring.field_scoring` (keeps the one-arg `get_field_types(doc_class)` taxonomy resolver) |
+| `src/metrics.py` | `llm_dojo_scoring.diagnostics` (keeps the `master=` keyword via a resolver closure) |
+| `src/scorers.py` | `llm_dojo_scoring.classification` (keeps the local `cost` scorer + name registry + `EvalResult`-list `per_class_stats`/`macro_accuracy`) |
+| `src/bootstrap.py` | `llm_dojo_scoring.bootstrap` |
+| `src/cost_models.py` | `llm_dojo_scoring.cost` |
+| `src/experiment_log.py` (core) | `llm_dojo_scoring.experiment` + `llm_dojo_scoring.cost` (`append_experiment`, `git_snapshot`, `mean`, `tokens_summary`); the markdown renderers stay local |
+
+Two adapter modules bridge the repo into the package:
+
+- **`src/dojo_config.py`** — wires `config/taxonomy.yaml` into the package
+  `Settings` at import time (idempotent): the `field_scoring:` block (including
+  `embedding_enabled`, which the package defaults off), the `cost_models:`
+  block (YAML dict form → the package's `[input, output]` list form), type
+  coercion (`ambiguous_band` → tuple, `partial_gt_fields`/`containment_fields`
+  → set), and `load_env()` first so the embedding rescue sees the repo keys.
+  `LLM_DOJO_SCORING_CONFIG` pointing at an external YAML file wins wholesale.
+- **`src/dojo_compat.py`** — keeps the runner's `classify_failure(doc_type_ok,
+  subclass_ok, predicted_subclass)` positional-boolean contract (`None` on
+  success) against the package's row-dict `classify_docclass_failure`.
+
+Package surface (importable as `llm_dojo_scoring.*`): `bootstrap`,
+`classification`, `config` (all thresholds/equivalence sets/subtype lists/cost
+tables/failure modes), `cost`, `diagnostics`, `equivalences`, `error_analysis`,
+`experiment`, `export`, `failure_modes`, `field_scoring`, `io`, `interpret`,
+`langfuse_sync`, `phoenix_sync`, `report`, `tasks` (§8), `visualize`. Settings
+are one `Settings` object (per-module ad-hoc accessors replaced): `configure()`
+for inline overrides, `load_settings()` for YAML files, `get_settings()` /
+`clear_settings_cache()` for the process-wide cached object. CLIs:
+`dojo-analyze` / `dojo-export` / `dojo-sync` (and `python -m
+llm_dojo_scoring.cli`).
+
+## 1. Label normalization (`llm_dojo_scoring.classification`)
 
 | Function | Purpose |
 |---|---|
 | `normalize_label(value)` | Coerce an LLM output into a canonical doc-class key: lowercase, strip quoting; prefer a JSON object's `doc_type` field; word-boundary regex fallback (`corporate_record` matches "Corporate Record", "corporate record", ...). |
 | `ERROR_PREFIX` | Sentinel `"ERROR: "` prepended to failed-row outputs so failures are never silently counted as predictions. |
+| `normalize_task_answer(task, value, valid=)` | Task-aware label normalization (see §8): MAUD consideration + LegalBench answers use their own tables; doc-class/subtype/others go through `normalize_label`. |
 
-## 2. Classification scorers (`src/scorers.py`)
+## 2. Classification scorers (`llm_dojo_scoring.classification`)
 
 Used by `run_classification_eval.py` (`--scorers exact_match,failure,cost`).
 
@@ -22,7 +65,7 @@ Used by `run_classification_eval.py` (`--scorers exact_match,failure,cost`).
 | `failure` | `(output, expected) -> float` | `1.0` for rows whose output starts with the `ERROR:` sentinel (model error, invalid class, timeout), else `0.0`. Failed rows are counted as misses in `exact_match` and tracked separately via `failure`. |
 | `cost` | `(input) -> float` | Actual billed USD for the row, captured from OpenRouter `usage.cost` by the task; `0.0` for manifest-replayed rows (paid for in the original run). |
 
-**Per-class / macro** (`run_multiclass_eval.py`, plus helpers in `scorers.py`):
+**Per-class / macro** (`run_multiclass_eval.py`, plus helpers in the package):
 
 | Metric | Definition |
 |---|---|
@@ -33,7 +76,7 @@ Used by `run_classification_eval.py` (`--scorers exact_match,failure,cost`).
 one class as positive and reports `precision`, `recall`, `f1` over
 predicted/expected positives plus exact match.
 
-## 3. Field-type-aware content scoring (`src/field_scoring.py`)
+## 3. Field-type-aware content scoring (`llm_dojo_scoring.field_scoring`)
 
 Each extracted field is scored by its declared type
 (`config/taxonomy.yaml → doc_classes[].field_types`; unmapped fields fall back
@@ -47,7 +90,7 @@ to a name heuristic). `FIELD_SCORERS` dispatch table:
 | `name` | `score_name_field` | Normalized fuzzy matching: max(Jaro-Winkler, token-set ratio), but JW is only trusted when the token sets share ≥ 1 token (JW is dangerously lenient on disjoint short-vs-long names). **Containment first (v20-era scorer):** when EVERY expected token appears in the prediction ("FRANCHISE AGREEMENT" inside "Goosehead Insurance Agency, LLC Franchise Agreement") → 1.0 — short titles contained in longer extracted titles are matches. |
 | `free_text` | `score_free_text_field` | SQuAD-style token F1 over lowercase token multisets. |
 | `containment` | `score_containment_field` | Share of the EXPECTED text's (stopword-filtered) tokens covered by the prediction. For verbatim-clause fields whose label is one sentence of a longer passage — returning the expected sentence plus riders/citations scores 1.0. Applied automatically to `containment_fields` (`governing_law`, `term_length`, `renewal_terms`). |
-| `entity_list[:<element>]` | `score_entity_list` | Pairwise similarity matrix over predicted vs expected items, **optimal bipartite matching** (Hungarian algorithm, `scipy`; greedy fallback), threshold `bipartite_match_threshold` (0.6) → `precision = matched/n_predicted`, `recall = matched/n_expected`, `f1 = 2PR/(P+R)`. |
+| `entity_list[:<element>]` | `score_entity_list` | Pairwise similarity matrix over predicted vs expected items, **optimal bipartite matching** (Hungarian algorithm, `scipy`; greedy fallback), threshold `bipartite_match_threshold` (0.6) → `precision = matched/n_predicted`, `recall = matched/n_expected`, `f1 = 2PR/(P+R)`. A compound type like `entity_list:free_text` resolves to entity-list scoring with `free_text` element similarity via `is_entity_list`. |
 
 **Embedding rescue** — `name`/`free_text` and list elements of those types
 additionally get a second signal when the string score is below
@@ -82,8 +125,8 @@ triggers the optional `--judge` LLM pass (correctness/completeness).
 
 ## 4. Composite extraction-eval metrics (`run_extraction_eval.py`)
 
-The task returns a composite output computed locally; registered Braintrust
-scorers are lookups on it:
+The task returns a composite output computed locally; registered scorers are
+lookups on it:
 
 | Tracker | Definition |
 |---|---|
@@ -146,8 +189,9 @@ output; a chunk that fails to parse is skipped, not fatal. `n_chunks` and
 `chunked` are stored per row for audit.
 
 **Run-level regression diagnostics** (`scores.diagnostics` in the experiment
-log, computed by `src/metrics.py`) — post-hoc aggregates over the stored
-rows, NOT Braintrust trackers (they are run-level, not per-row):
+log, computed by `src/metrics.py` → `llm_dojo_scoring.diagnostics`) — post-hoc
+aggregates over the stored rows, NOT per-row trackers (run-level, not
+per-row):
 
 - **Error decomposition** — `field_exact_rate` / `field_partial_rate` /
   `field_miss_rate`: share of scored (doc, field) pairs at 1.0, `0 < s < 1`,
@@ -219,36 +263,206 @@ Per-stage trackers, registered with `--bt-scores overall|full`:
 | `sorter_confidence` | the sorter's reported confidence. |
 | `extractor_overall` / `extractor_field_presence` / `extractor_verified_precision` / `extractor_category_presence` / `extractor_schema_valid` | the same composite lookups as §4, from the specialist stage. |
 
-## 6. A/B evaluation (`evaluate_prompt_version.py`)
+The package's task layer also provides a single-number composite and a
+record-shaped summary (§8): `chained_composite(sorter_score,
+extractor_score, weights=(0.25, 0.75))` — the extractor carries the
+document-level output the pipeline is ultimately judged on, so it dominates
+the default weighting — and `chained_summary(...)` mirroring the
+sorter-doc_type/subtype + extractor-overall/presence composite.
+
+## 6. Subtype metrics (`run_subtype_eval.py` / `run_langfuse_subtype_eval.py`)
+
+| Tracker | Definition |
+|---|---|
+| `exact_match` | share of rows where doc_type == `contract` |
+| `subtype_accuracy` | share of rows whose normalized subtype exactly equals the CUAD ground-truth folder |
+| `subtype_accuracy_equiv` | strict OR a defensible equivalent family (`SUBTYPE_EQUIVALENCES` in the package `config`: reseller↔distributor, maintenance↔license, development↔license, affiliate↔joint_venture) |
+| `confidence` | mean model-reported confidence |
+| `failure_insights` | `mode_counts` + per-failed-row `{expected, predicted, mode, equiv_recovered, reasoning}`; modes (package `SORTER_FAILURE_MODES`): `function_over_form`, `other_fallback`, `equivalent_family`, `family_confusion` |
+| `per_subtype` | per-family strict/equiv accuracy + counts |
+| `confusion_matrix` | expected x predicted counts |
+| `subtype_accuracy_ci` / `exact_match_ci` | bootstrap 95% CIs over the per-document flags (see §10) |
+
+## 7. Docclass hierarchical metrics (`run_langfuse_docclass_eval.py`)
+
+The hierarchical sorter task scores BOTH the primary `doc_type` and the
+second-level `doc_subclass` dimension (consideration type for merger
+agreements — MAUD expert GT; record type for corporate records —
+content-detected). The merged surface is CUAD 509 + MAUD 152 + S-1 15 = 676
+rows (`docclass_merged.jsonl`, 7-class `DOCCLASS_SCHEMA`).
+
+| Tracker | Definition |
+|---|---|
+| `doc_type_accuracy` (+ `doc_type_accuracy_ci`) | share of rows with the correct primary class (bootstrap 95% CI). |
+| `subclass_accuracy` (+ `subclass_accuracy_ci`) | share of rows whose `doc_subclass` equals the GT — **rows without a subclass GT are unscored** (the class has no second level); they neither count for nor against the metric. |
+| `subclass_accuracy_equiv` | strict subclass OR a defensible equivalent family (`DOC_SUBCLASS_EQUIVALENCES`: `mixed_cash_stock` ↔ `mixed_cash_stock_election` — an election structure IS a mixed cash+stock deal with a per-shareholder choice). |
+| `exact_match` (+ `exact_match_ci`) | `doc_type` AND subclass both exact. |
+| `confidence` | mean model-reported confidence. |
+| `per_class_accuracy` | per-primary-class accuracy (doc_type level). |
+| `per_subclass_accuracy` / `per_subclass_support` | per-subclass accuracy with support counts (the second-level dimension). |
+| `subclass_confusion` | expected x predicted subclass counts. |
+| `equiv_recovered` | named rows wrong strictly but a defensible equivalent family read. |
+| `input_mode_counts` | text / vision / text_fallback split (the vision-primary arm). |
+| `failure_insights` (`sorter.failure_insights`) | `mode_counts` + per-failed-row `{expected, predicted, failure_mode, reasoning}`; modes: `doc_type_miss` (primary class wrong) / `subclass_miss` (primary right, subclass wrong) — classified by `src/dojo_compat.classify_failure` (package `DOCCLASS_FAILURE_MODES`). |
+
+Per-row flags carried in the record: `doc_type_ok`, `subclass_ok`,
+`subclass_ok_equiv`, `failure_mode`, `input_mode`, `fallback_reason`.
+
+## 8. Task-aware scoring dispatcher (`llm_dojo_scoring.tasks`)
+
+The CUAD-focused suite generalized to every task kind the eval loop produces
+(KANBAN-047 / issue #19). `task_kind(task)` maps a task key to a scoring kind
+via `TASK_KINDS` (`subtype`, `doc_class`, `docclass`, `maud_docclass`,
+`maud_question`, `legalbench`, `multiclass`, `court_opinion`, `chained`;
+unknown keys fall back to the task name → plain label classification).
+`score_task(task, expected, predicted, *, valid=, expected_subclass=,
+predicted_subclass=, seed=42, n_boot=2000)` returns a task-appropriate score
+dict — exact match + per-class + confusion + bootstrap CIs for the
+label-classification kinds, plus binary metrics for LegalBench, plus the
+doc_type/subclass pair for the hierarchical kinds. All are deterministic pure
+functions over `(predicted, expected)` pairs so offline rescoring, manifest
+re-scoring, and live scoring never disagree; failed rows (`ERROR_PREFIX`) count
+as mismatches in the headline and are skipped by per-class/confusion
+breakdowns.
+
+**MAUD** — `maud_docclass_score(...)` (merger-agreement doc_type +
+consideration-type subclass with strict + `subclass_accuracy_equiv` scoring)
+and `maud_question_score(...)` (the 25,827-row per-question suite). Answers
+normalize via `normalize_maud_consideration` — canonical keys `all_cash` /
+`all_stock` / `mixed_cash_stock` / `mixed_cash_stock_election` / `other`
+(alias table + label surface; unknown values degrade to `other`, the GT-gap
+convention).
+
+**LegalBench** — `legalbench_score(...)` / task kind `legalbench`: binary
+Yes/No exact match (+ CI), per-class accuracy, and `binary_metrics`
+(precision / recall / f1 with `yes` as the positive label), confusion +
+top confusions. Answers normalize via `normalize_legalbench`
+(`LEGALBENCH_BINARY_LABELS = ("yes", "no")` with `LEGALBENCH_YES_NO` aliases).
+
+**Multiclass** — `multiclass_score(...)`: macro accuracy + `micro_accuracy`
+(= exact match) + per-class + confusion. **Court opinions** —
+`court_opinion_score(...)`: the `court_opinion` doc-class path (plain label
+classification). Task registries live in the package `config`
+(`DOC_CLASS_KEYS`, `MAUD_CONSIDERATION_*`, `LEGALBENCH_BINARY_LABELS`,
+`COURT_OPINION_CLASS`, `TASK_KINDS`).
+
+## 9. A/B evaluation (`evaluate_prompt_version.py`)
 
 Runs prompt A and prompt B on the same dataset, then reports
 `delta exact_match (B − A)` with a verdict (`A wins` / `B wins` / `tie` at
 ±0.001) plus a per-metric side-by-side table. `--compare-only` fetches two
-existing experiments without re-running.
+existing experiments without re-running. A/B deltas are judged against the
+measured identical-prompt noise floor on the same surface (see §10).
 
-## 7. Token & cost accounting
-
-- `tokens_summary()` aggregates per-row `_last_usage` records into
-  prompt/completion/total tokens, mean cost and total cost, and
-  `rows_with_usage` — rows replayed from a manifest carry no usage and are
-  excluded from cost summaries.
-- `cost_usd` = mean per-row cost; `cost_total_usd` = sum. Chained runs report
-  sorter/extractor/total stage rows separately.
-
-## Bootstrap confidence intervals & delta significance (issue #1)
+## 10. Bootstrap confidence intervals & delta significance
 
 - Every run's headline carries a **95% bootstrap CI** (percentile method,
   2000 resamples, seed 42) over its per-document scores — computed by the
-  runner and stored as `scores.*_ci`; the site falls back to resampling the
-  stored `results[]` arrays, then Wilson, for older records.
+  runner and stored as `scores.*_ci` (`src/bootstrap.py` →
+  `llm_dojo_scoring.bootstrap.bootstrap_ci`); the site falls back to
+  resampling the stored `results[]` arrays, then Wilson, for older records.
 - **A/B deltas** (same surface only) get a two-sample bootstrap CI on the
-  difference (`src/bootstrap.delta_significance`): "significant" means the CI
-  excludes zero. A 5-doc 0.94-vs-0.88 gap is a CI overlap, not a win.
+  difference (`delta_significance`): "significant" means the CI excludes
+  zero. A 5-doc 0.94-vs-0.88 gap is a CI overlap, not a win.
+- **Noise floor** — identical-prompt reruns on the same surface quantify the
+  band within which a candidate delta is a logic repair, not a win (measured:
+  ±0.006 subtype on 509 docs, ±0.011 extraction on 510, ±0.03 overall on the
+  50-doc chunked extraction surface). Candidate deltas inside the band are
+  reported as logic repairs.
 - **Same-surface rule enforced end-to-end**: a run's "Δ vs best" is only
   computed/colored against the best run with the same dataset fingerprint +
   seed + sample size; the site refuses to compare across surfaces.
 
-## 8. Post-hoc span-level diagnostics (miss attribution)
+## 11. Judge calibration (`--judge`, `run_extraction_eval.py`)
+
+Every ambiguous-band row the judge reviews is persisted to
+`data/judgments/<experiment>.jsonl` (`kind: calibration`) and aggregated into
+`scores.judge_calibration`:
+
+- `n_judged` / `n_scored` — rows reviewed / rows with a scored verdict;
+- `agree_rate` — deterministic strong (≥ 0.85) & judge `accurate`, or
+  deterministic weak (≤ 0.5) & judge `inaccurate`, over scored rows;
+- `judge_strict` / `judge_lenient` — deterministic strong but judge
+  `inaccurate` (strict) / deterministic weak but judge `accurate` (lenient) —
+  a systematic lean means trusting the judge more broadly needs calibration.
+
+## 12. Chained error-propagation ablation (`--handoff-scope ground_truth`)
+
+`scores.ablation` on the SAME documents compares the specialist under the
+predicted-subtype handoff vs the ground-truth-subtype handoff:
+
+- `predicted_handoff_overall` / `ground_truth_handoff_overall` — extractor
+  scores with each cue;
+- `sorter_loss_pp` — the gap: sorter routing error, isolated from specialist
+  error (same model, prompt, and documents — only the cue differs).
+
+## 13. Token & cost accounting
+
+- `tokens_summary()` (`src/cost_models.py` → `llm_dojo_scoring.cost`)
+  aggregates per-row `_last_usage` records into prompt/completion/total
+  tokens, mean cost and total cost, and `rows_with_usage` — rows replayed
+  from a manifest carry no usage and are excluded from cost summaries.
+- `cost_usd` = mean per-row cost; `cost_total_usd` = sum. Chained runs report
+  sorter/extractor/total stage rows separately.
+- **Cost scoring (every run)** — OpenRouter usage payloads carry no cost, so
+  every run is cost-scored deterministically from its recorded
+  prompt/completion token counts × verified per-model prices (the package
+  `cost_models` table, fed from the taxonomy: qwen $0.03/$0.13 per 1M in/out,
+  deepseek-v4-flash $0.05/$0.25, deepseek-v4-pro $0.435/$0.87; unknown models
+  resolve by prefix and otherwise report `None` — an honest "unknown price",
+  never a fabricated number). `tokens_summary(model=)` stamps
+  `cost_estimated_usd` on every record; historical records were backfilled
+  (`scripts/reporting/backfill_cost_estimates.py`, documented one-time
+  append-only exception). The site shows billed OpenRouter totals when the
+  activity CSV is ingested (`build_site.py --openrouter-csv`), and the
+  estimate otherwise.
+
+## 14. Monte Carlo robustness metrics (`src/monte_carlo.py`, KANBAN-048)
+
+Zero-spend what-if analysis over the joint reasoning corpus (`reports/
+monte_carlo/corpus.jsonl`, gitignored — 17,691 rows from the experiment log +
+manifests, each treated as one sample from a per-document/per-prompt/per-model
+label distribution). Primitives: `normalize_dist` / `shannon_entropy` /
+`majority_margin` (one-document label-distribution statistics), `draw_committee`
+(one Monte Carlo majority-vote draw), `bootstrap` / `paired_delta_bootstrap`
+(resampled CIs + win probabilities), `confidence_score` / `uncertainty_phrases`
+(the escalation heuristic), `task_label_vocabulary` / `decoy_mentioned`
+(near-miss signal for free-form reasoning traces). Scenario metrics
+(`scripts/reporting/monte_carlo_*.py`, outputs in `reports/monte_carlo/`):
+
+| Scenario | Metric | Reference result |
+|---|---|---|
+| Ensemble voting | committee accuracy K (majority vote over K simulated votes) with bootstrap CIs | subtype 0.9209 → 0.9513 @ K=25 (weak lever, ~4pp ceiling); doc_type saturated at 0.9928 (no gain) |
+| Confidence-gated escalation | headroom vs cost at an alpha confidence threshold (Pareto) | subtype +0.44 pp @ alpha 0.15 to a 0.95 model (1.3× cost); docclass escalation loses |
+| Paired-bootstrap prompt ablation | P(win) + CI-excludes-zero per (model, A, B) pair on shared docs | 156 subtype + 12 docclass pairs; sorter_v10/v11 vs v3 +14.1 pp P(win)=1.000; docclass v5 loses |
+| Failure pipeline | retry/fallback event simulation from the observed 0.2374% failure rate | max_tries=1 + fallback → 0.004% vs 0.202% without; ~0 failures at 320K |
+| Exemplar mining | near-miss detection + token-budget subset selection | 6 subtype + 4 docclass exemplar appendices (development→license first, +25.0 expected flips) |
+
+Full results + interpretation: `memos/monte_carlo_robustness.md`; the
+GEPA loop folds the paired-bootstrap ablation + committee-voting robustness
+in as a champion-contender selection step (KANBAN-049).
+
+## 15. Failure-mode taxonomy (`llm_dojo_scoring.failure_modes`)
+
+The shared failure-mode definitions (previously inlined in the subtype
+runner) live in the package so every report aggregates the SAME modes:
+
+- **Sorter/subtype** — `SORTER_FAILURE_MODES`: `function_over_form` (doc_type
+  miss — a document whose function overrode its contract form),
+  `other_fallback` (answered "other" for a corpus-filed family),
+  `equivalent_family` (defensible equivalent, recovered by
+  `subtype_accuracy_equiv`), `family_confusion` (genuine wrong-family pick).
+  `classify_failure(sorter)` + `summarize_failures(rows)` →
+  `{n_total, n_failed, n_ok, mode_counts, rate, mode_rate, failures}`
+  (each failure carries reasoning/filename/confidence when present);
+  `per_subtype_accuracy(rows, keys, equivalences=)` and
+  `confusion_from_rows(rows, keys, unknown=)` power the per-family tables and
+  confusion matrices.
+- **Docclass** — `DOCCLASS_FAILURE_MODES`: `doc_type_miss` / `subclass_miss`
+  (see §7; `classify_docclass_failure(row)` is the package row-dict form,
+  `src/dojo_compat.classify_failure` the runner's positional-boolean form).
+
+## 16. Post-hoc span-level diagnostics (miss attribution)
 
 When a list field's score plateaus, the score alone cannot say WHY. The
 sanctioned diagnostic chain (used for the v15→v18 family-fidelity work)
@@ -274,3 +488,22 @@ operates on the stored rows + the eval manifest's expected spans:
 4. **Recovery check** — re-run the same unmatched-span extraction against
    the candidate prompt's rows to quantify exactly which spans and which
    families a change recovered, before trusting the composite delta.
+
+## Run sink & tracing (how scores reach a UI)
+
+- The primary run path is the **`run_langfuse_*_eval.py` runners** — one trace
+  per document with numeric scores, Langfuse **primary** (`llm-dojo` project,
+  keys in `langfuse.env`) with the **local Arize Phoenix OpenTelemetry server
+  as fallback** (`src/tracing.py::resolve_tracer`; the resolved backend is
+  recorded as `tracing_backend` in the manifest header + experiment-log
+  record). Every LangChain LLM call can also auto-trace to LangSmith
+  (`LANGSMITH_TRACING=true`).
+- **Braintrust experiment/span logging is DISABLED by default**
+  (`BRAINTRUST_LOGGING=disabled`) — with it off, the `run_*_eval.py` runners
+  skip `braintrust.Eval` entirely and use the shared local scoring loop
+  (`src/eval_shims.py`, `run_local_eval()`); the same deterministic scorers
+  feed the manifest, the experiment log, and any opt-in Braintrust run.
+- Adaptive concurrency (`resolve_concurrency`) + rate-limit retry
+  (`call_with_rate_limit_retry`) are recorded per run
+  (`max_concurrency`, `rate_limit_retries`); external research funding is
+  gated behind `--research-funding-key` + `assert_production_run`.

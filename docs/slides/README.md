@@ -12,7 +12,9 @@ explain the scoring methods; **decks 08–11 are the prompt-iteration
 post-mortems** — the problems encountered while tuning the sorter and the
 contracts specialist, and the fixes each version applied, with the A/B
 numbers that validated them (sorter problems → sorter fixes, specialist
-problems → specialist fixes).
+problems → specialist fixes); **deck 12 covers the metrics beyond the CUAD
+extraction surface** (subtype, docclass hierarchical, task-aware MAUD /
+LegalBench / multiclass / chained, and the Monte Carlo robustness suite).
 
 ## The decks
 
@@ -29,6 +31,7 @@ problems → specialist fixes).
 | [09-fixes-sorter](09-fixes-sorter.md) | Fixes applied to the sorter across versions (v7→v9 rule sets, reasoning effort, equivalence framework) with A/B numbers | You want to see what fixed each sorter confusion and by how much |
 | [10-problems-contracts-specialist](10-problems-contracts-specialist.md) | Problems encountered across the specialist prompt iterations (v15→v26): scope/grain divergence, over-extraction, ellipsis/dedupe losses, the reasoning confound, the self-inflicted v24/v25 format regressions | You want to know WHY the extractor misses or breaks spans |
 | [11-fixes-contracts-specialist](11-fixes-contracts-specialist.md) | Fixes applied to the specialist across versions (v18 family-fidelity catalog → v26 containment fix) with A/B numbers | You want the full fix history, wave by wave, with the numbers that validated each version |
+| [12-task-aware-and-robustness-metrics](12-task-aware-and-robustness-metrics.md) | Subtype strict/equiv metrics, docclass hierarchical scoring, the task-aware dispatcher (MAUD / LegalBench / multiclass / chained 0.25-0.75), and the Monte Carlo robustness suite | You are scoring runs beyond the CUAD extraction surface, or reading the sorter/docclass/ablation/Monte Carlo reports |
 
 ## One-paragraph summary (the whole project's scoring in 90 seconds)
 
@@ -44,6 +47,16 @@ money amounts vs the curated master-labels CSV, **span-count drift** (over-
 vs under-extraction), and a per-field **exact / partial / miss**
 decomposition. Braintrust is only ever a lookup on these locally computed
 composites, so the UI, the manifests, and the experiment log never disagree.
+The scoring definitions all live in the shared **`llm-dojo-scoring` package**
+(`@v0.2.0`; the repo's `src/*.py` are thin re-export shims), and the
+**task-aware dispatcher** (`score_task`) extends the same deterministic
+scoring to the sorter **subtype** eval, the hierarchical **docclass** eval
+(doc_type + subclass with equivalence-aware scoring), **MAUD** (consideration
+strict/equiv), **LegalBench** (binary P/R/F1), **multiclass**, **court
+opinions**, and **chained** sorter→extractor composites (0.25/0.75). The
+**Monte Carlo robustness suite** adds zero-spend committee-voting, escalation,
+paired-bootstrap ablation, failure-pipeline, and exemplar metrics over the
+stored reasoning corpus.
 
 ## How to verify a number yourself
 

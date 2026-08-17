@@ -21,4 +21,5 @@ scorer, appended one line per reviewed document.
 ## Related paths
 
 - Judge agent: `agents/judge_agent.py`
-- Deterministic scorer: `src/field_scoring.py`
+- Deterministic scorer: `llm_dojo_scoring.field_scoring` (via the
+  `src/field_scoring.py` re-export shim)
