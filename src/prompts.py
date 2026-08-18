@@ -2067,6 +2067,53 @@ CONTRACTS_SPECIALIST_PROMPT_V32 = CONTRACTS_SPECIALIST_PROMPT_V31.replace(
 )
 
 # =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v33 (reasoning-trace RETAG, issue #21)
+# -----------------------------------------------------------------------------
+# v33 = v32 + ONE rule: the extractor's reasoning-trace entries for the
+# obligation lists must tag `entries[].field` with the CANONICAL CUAD CATEGORY
+# name (Anti-Assignment, Volume Restriction, ...) instead of the umbrella
+# "key_obligations". Root cause (KANBAN-051 diagnosis over the stored v31/v32
+# reasoning corpus): 15,516 of 33,312 entries carry the umbrella tag (plus 37
+# "key_obbligations" misspellings), so category_presence_detail routes generic
+# obligations against specific categories like Anti-Assignment and scores 0.
+# With the canonical tag the runner (v0.3.0 package) routes each entry's
+# evidence directly to its category evaluator; the disaggregation fix handles
+# pre-retag runs. A/B must run on the full-corpus surface.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V33 = CONTRACTS_SPECIALIST_PROMPT_V32.replace(
+    """`field` (the schema key), `evidence` (the short verbatim quote or
+   definition/alias note that grounds the value), and `section_ref` (the
+   section number or header where it was found, or null when unlocatable).""",
+    """`field` (for obligation/termination clauses, the CANONICAL CUAD CATEGORY
+   name the clause belongs to — e.g. "Anti-Assignment", "Volume Restriction",
+   "Non-Compete", "Audit Rights", "Cap On Liability" — NEVER the umbrella
+   "key_obligations" and never a misspelling like "key_obbligations"; for
+   scalar fields the schema key), `evidence` (the short verbatim quote or
+   definition/alias note that grounds the value), and `section_ref` (the
+   section number or header where it was found, or null when unlocatable).
+   RETAG RULE for the obligation lists (`key_obligations`, `termination_clauses`):
+   emit ONE entry per DISTINCT obligation clause, each tagged with its canonical
+   CUAD YES/NO category name; several clauses under one category get one entry
+   each, all carrying that same category name. Canonical CUAD YES/NO categories:
+   Most Favored Nation, Non-Compete, Exclusivity, No-Solicit Of Customers,
+   Competitive Restriction Exception, No-Solicit Of Employees, Non-Disparagement,
+   Termination For Convenience, Rofr/Rofo/Rofn, Change Of Control, Anti-Assignment,
+   Revenue/Profit Sharing, Price Restrictions, Minimum Commitment, Volume Restriction,
+   Ip Ownership Assignment, Joint Ip Ownership, License Grant, Non-Transferable License,
+   Affiliate License-Licensor, Affiliate License-Licensee, Unlimited/All-You-Can-Eat-License,
+   Irrevocable Or Perpetual License, Source Code Escrow, Post-Termination Services,
+   Audit Rights, Uncapped Liability, Cap On Liability, Liquidated Damages, Insurance,
+   Covenant Not To Sue, Third Party Beneficiary.""",
+).replace(
+    """- reasoning: object — {summary: string, entries: [{field, evidence, section_ref}]} — the
+  per-field reasoning trace, produced FIRST (reason before you finalize the extraction)""",
+    """- reasoning: object — {summary: string, entries: [{field, evidence, section_ref}]} — the
+  per-field reasoning trace, produced FIRST (reason before you finalize the extraction);
+  obligation entries' `field` is the canonical CUAD category name (see the RETAG RULE)""",
+)
+
+# =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2520,6 +2567,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v30": CONTRACTS_SPECIALIST_PROMPT_V30,
     "contracts_specialist_v31": CONTRACTS_SPECIALIST_PROMPT_V31,
     "contracts_specialist_v32": CONTRACTS_SPECIALIST_PROMPT_V32,
+    "contracts_specialist_v33": CONTRACTS_SPECIALIST_PROMPT_V33,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

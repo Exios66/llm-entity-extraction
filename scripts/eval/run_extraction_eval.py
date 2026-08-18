@@ -72,6 +72,7 @@ from src.experiment_log import (
     tokens_summary,
 )
 from src.field_scoring import (
+    disaggregate_clause_spans,
     get_field_types,
     is_entity_list,
     score_category_presence,
@@ -372,7 +373,22 @@ def main_with_args(argv: list[str]) -> int:
         # with semantic embedding rescue; never executed on the Braintrust side).
         # doc_text is passed in for the FACTUALITY guard: every predicted list
         # item must match a label or be grounded in the source document.
-        result = score_extraction("contract", field_types, predicted, expected_fields,
+        # KANBAN-051 / issue #21 fix #1: the clause-list fields are
+        # DISAGGREGATED into discrete sentence-level spans before scoring, so
+        # a merged multi-clause item no longer dilutes the 0.6 bipartite match
+        # below threshold — the contained-label rule fires on each span. The
+        # stored ``predicted`` keeps the RAW model output; only the scoring
+        # copy is disaggregated.
+        clause_list_fields = [f for f in ("key_obligations", "termination_clauses")
+                              if predicted.get(f)]
+        scored_predicted = dict(predicted)
+        disaggregated_counts: dict[str, int] = {}
+        for field in clause_list_fields:
+            raw_items = predicted.get(field)
+            spans = disaggregate_clause_spans(raw_items)
+            scored_predicted[field] = spans
+            disaggregated_counts[field] = len(spans)
+        result = score_extraction("contract", field_types, scored_predicted, expected_fields,
                                   doc_text=doc_text)
         populated = sum(
             1 for key, value in expected_fields.items()
@@ -382,9 +398,13 @@ def main_with_args(argv: list[str]) -> int:
 
         # CUAD YES/NO category presence: the 32 presence-type categories each
         # expect a binary answer — labeled clause present (the extraction must
-        # cover it) or absent (satisfied unless fabricated).
+        # cover it) or absent (satisfied unless fabricated). The v0.3.0
+        # evaluator routes each category to the reasoning-trace entry tagged
+        # with the canonical category name, else to the disaggregated spans of
+        # the category's mapped field, and matches by containment/embedding at
+        # 0.7 (issue #21 fixes #2/#3).
         category_presence, presence_detail = score_category_presence(
-            predicted, input_data.get("expected_presence") or {}, field_types
+            scored_predicted, input_data.get("expected_presence") or {}, field_types
         )
 
         composite = {
@@ -420,6 +440,10 @@ def main_with_args(argv: list[str]) -> int:
             # needed (1 = single pass).
             "chunked": bool(getattr(specialist, "_last_chunked", False)),
             "n_chunks": int(getattr(specialist, "_last_n_chunks", 0) or 0),
+            # Disaggregation auditability: clause-list field -> number of
+            # discrete spans the raw items were split into for scoring
+            # (issue #21 fix #1).
+            "disaggregated_counts": disaggregated_counts,
         }
 
         span_meta = {

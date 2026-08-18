@@ -1346,3 +1346,36 @@ def test_contracts_v32_effective_date_convention_fix():
     assert 'the defined term wins' in v31
     assert v32.count("`effective_date`") == 1
     assert "ISO format per the format rules below" in v32
+
+
+def test_contracts_v33_reasoning_trace_retag():
+    """v33 retags obligation reasoning entries with canonical CUAD category
+    names (issue #21 / KANBAN-051): the umbrella 'key_obligations' tag is
+    forbidden and the misspelling guard is present."""
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V32,
+        CONTRACTS_SPECIALIST_PROMPT_V33,
+    )
+
+    # v33 is a strict derivation of v32: base untouched, only the retag rule added.
+    assert "contracts_specialist_v33" in PROMPT_VERSIONS
+    assert CONTRACTS_SPECIALIST_PROMPT_V33 != CONTRACTS_SPECIALIST_PROMPT_V32
+    assert CONTRACTS_SPECIALIST_PROMPT_V33.startswith(CONTRACTS_SPECIALIST_PROMPT_V32[:300])
+
+    v33 = CONTRACTS_SPECIALIST_PROMPT_V33
+    # The retag rule: canonical CUAD category name, never the umbrella.
+    assert "RETAG RULE" in v33
+    assert "CANONICAL CUAD CATEGORY" in v33
+    assert 'NEVER the umbrella' in v33 and '"key_obligations"' in v33
+    assert "key_obbligations" in v33  # the misspelling is explicitly guarded
+    # The canonical vocabulary is enumerated.
+    assert '"Anti-Assignment"' in v33
+    assert '"Volume Restriction"' in v33
+    assert '"Audit Rights"' in v33
+    assert '"Cap On Liability"' in v33
+    assert "Third Party Beneficiary" in v33
+    assert "ONE entry per DISTINCT obligation clause" in v33
+    # The schema description carries the retag semantics too.
+    assert "obligation entries' `field` is the canonical CUAD category name" in v33
+    # Predecessor stays intact.
+    assert "RETAG RULE" not in CONTRACTS_SPECIALIST_PROMPT_V32

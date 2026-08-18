@@ -133,7 +133,7 @@ lookups on it:
 | `overall_extraction_score` | mean of per-field content scores over expected fields with a non-null expected value (`overall_score` in the composite). |
 | `field_presence` | binary conformance: share of expected fields the model populated (non-null/non-empty). |
 | `schema_valid` | `1.0` iff the model returned parseable, schema-conformant JSON. |
-| `category_presence` | CUAD YES/NO category conformance: share of the document's applicable presence-type categories (labeled clauses that must be covered) whose clause text is present in the extraction. Absent categories are satisfied unless fabricated (the factuality guard catches fabrication). |
+| `category_presence` | CUAD YES/NO category conformance: share of the document's applicable presence-type categories (labeled clauses that must be covered) whose clause text is present in the extraction. Absent categories are satisfied unless fabricated (the factuality guard catches fabrication). Since llm-dojo-scoring v0.3.0 (issue #21): the evaluator first routes each category to the reasoning-trace entry tagged with the canonical CUAD category name (v33 retag), else to the DISAGGREGATED spans of the category's mapped field, and a category is matched when any candidate span covers the labeled clause by token containment (≥ `verification_token_coverage` 0.7) or embedding similarity (≥ `presence_embedding_threshold` 0.7). |
 | `overall_verified_precision` | factuality guard: mean `verified_precision` over every audited field (list + scalar) the model populated — anchored to exactly the components that make it up. |
 | `{field}_score` (`--bt-scores full`) | the field's content score (same number that feeds `overall_extraction_score`). |
 | `{field}_f1` (`--bt-scores full`) | the SAME list score that feeds the per-field score (GT coverage for partial-GT fields, F1 otherwise) — tracker consistency rule. |
@@ -488,6 +488,31 @@ operates on the stored rows + the eval manifest's expected spans:
 4. **Recovery check** — re-run the same unmatched-span extraction against
    the candidate prompt's rows to quantify exactly which spans and which
    families a change recovered, before trusting the composite delta.
+
+## 17. ContractEval mapping scorer (`src/contracteval.py`, KANBAN-051)
+
+Benchmarks stored extraction runs against ContractEval (arXiv 2508.03080)
+with ContractEval's EXACT rubric, bridging the task-unit gap (they run one
+(contract, question) per category; we extract the obligation lists in one
+pass). Run via
+`python scripts/reporting/run_contracteval_mapping.py` (offline, free).
+
+- **GT**: `data/cuad/master_clauses.csv` — full per-category clause spans +
+  presence, joined to stored rows by aggressive filename normalization.
+- **Mapping**: each disaggregated predicted span is attributed to the CUAD
+  category it covers — reasoning-trace routing first (v33 retag), then
+  verbatim label containment, then every category with best expected-within-
+  predicted containment ≥ 0.5. The per-category answer is the union of its
+  mapped spans, else "no related clause".
+- **Metrics (ContractEval-verbatim)**: pooled correctness accuracy/P/R/F1/F2
+  with TP = *all* GT label spans verbatim-contained in the answer; token-set
+  Jaccard over positive-label pairs; false-"no related clause" rate over
+  positive-label pairs. `coverage_bands` adds the semantic lens (best-span
+  containment ≥ 0.7/0.5/0.3) to separate paraphrase penalty from missing
+  extraction.
+- **Caveat**: a one-pass extractor never claims a category the GT marks
+  absent, so precision is structurally 1.0 — the discriminating axes vs
+  ContractEval are recall / F2 / Jaccard / false-rate.
 
 ## Run sink & tracing (how scores reach a UI)
 
