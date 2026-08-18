@@ -1446,6 +1446,65 @@ CONTRACTEVAL_PROMPT_V4 = CONTRACTEVAL_PROMPT_V3.replace(
 )
 
 
+# -----------------------------------------------------------------------------
+# contracteval_v5 — the fragment synthesis (GEPA iteration 5, KANBAN-052).
+# Derived from V4 by ONE surgical replace (v0-v4 byte-identical).
+# 5-run A/B (identical 4,182 rows, qwen3.7-flash, temp 0):
+#   v0: F1 0.5541 / F2 0.6164 / J 0.5058 / P 0.4743 / R 0.6664 / fnr 0.0289
+#       (829/2019/919/415)
+#   v1: F1 0.5406 / F2 0.5759 / J 0.6081 / P 0.4905 / R 0.6021 / fnr 0.045
+#       (749/2160/778/495)
+#   v2: F1 0.5349 / F2 0.5608 / J 0.6479 / P 0.4966 / R 0.5796 / fnr 0.0426
+#       (721/2207/731/523)
+#   v3: F1 0.5550 / F2 0.6140 / J 0.5258 / P 0.4785 / R 0.6608 / fnr 0.037
+#       (822/2042/896/422)
+#   v4: F1 0.5619 / F2 0.6169 / J 0.5329 / P 0.4785 / R 0.6608 / fnr 0.0346
+#       (821/2081/857/423); v3->v4: FP->TN 100, TN->FP 61, TP->FN 51,
+#       FN->TP 50; paired J on the 1,567 shared quote rows: mean +0.0035
+#       (1,310 byte-identical, 138 up, 119 down).
+# THE DIAGNOSIS: (1) the verbatim rule is the TP engine - it holds
+# (TP 822->821); (2) the smallest-span rule fires ONLY at the extremes
+# (100 FP->TN + the 138 J winners going 0.06->1.0, 0.17->1.0, 0.25->1.0,
+# 0.37->1.0), but 1,310/1,567 shared quotes are byte-identical to v3: the
+# residual clause "otherwise quote the complete sentence(s), never a
+# fragment of a sentence" still directs sentence-granular quotes, and
+# sentence-granular quotes are the J drag (v4 J 0.533 vs v2's 0.648 where
+# fragment quoting was allowed; on the 688 rows TP at both v2 and v4, v2's
+# fragment-era J mean is 0.765 vs v4's 0.578); (3) the 51 TP->FN losses are
+# 19 partial multi-span rows (v4 quoted only 1-9 of the 2-10 GT spans -
+# smallest-span pressure dropped parts; e.g. PHLVARIABLEINSURANCE 9/10,
+# GpaqAcquisitionHoldi 2/4) + 29 wrong spans + 3 refusals; (4) the 119 J-
+# down rows kept GT inside LONGER quotes (med 626 vs 469 chars - the model
+# padded to cover multi-part answers in one run); v1/v2's fragment-era
+# failures were FIDELITY failures (re-typed spans), already fixed by v3/v4's
+# character-for-character rule.
+# THE SYNTHESIS (v5): delete the sentence-granularity requirement entirely -
+# quote verbatim, as small as the answer allows; fragments are fine, whole
+# sentences are fine, but never more text than the answer needs, never drop
+# words from it, and when the answer has several parts include every part.
+# The verbatim rule remains the sole guard against fidelity failures.
+# Paired-row projection (real rows): TP 815-840 (the 19 partials recover
+# 60-100%; the 771 shared-TP + 50 t50 holds; small over-trim risk), FP
+# 847-867 (binary is trigger-driven - unchanged), J 0.62-0.645 (688
+# shared-TP rows move from v4's 0.578 toward v2's 0.765 fragment-era mean),
+# F1 0.560-0.574, F2 0.612-0.628, fnr ~0.035 (refusals unchanged - trigger
+# held verbatim; v0's 36 remains the record).
+# -----------------------------------------------------------------------------
+CONTRACTEVAL_PROMPT_V5 = CONTRACTEVAL_PROMPT_V4.replace(
+    'Quote the smallest span that carries the complete answer: a date, '
+    'amount, name, or defined term that is itself the complete answer may '
+    'be quoted alone; otherwise quote the complete sentence(s), never a '
+    'fragment of a sentence.',
+    'Quote the smallest span that carries the complete answer: the span '
+    'may be any contiguous run of the original text - a sub-sentence '
+    'fragment, a whole sentence, or several sentences - provided it '
+    'contains every word of the complete answer and no more text than the '
+    'answer needs; when the complete answer has several parts, include '
+    'every part. A date, amount, name, or defined term that is itself the '
+    'complete answer may be quoted alone.',
+)
+
+
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
 # =============================================================================
@@ -2767,13 +2826,16 @@ PROMPT_VERSIONS = {
     # replaced; the mined weakest link was quote fidelity, not the trigger);
     # v4 = v3 + the synthesis (verbatim AND smallest-complete-span: the
     # doubt-bias whole-sentence clause replaced by the smallest-span rule —
-    # breaks the bloat/fragment oscillation); the version key IS the
-    # experiment identity for the GEPA iteration loop.
+    # breaks the bloat/fragment oscillation); v5 = v4 + the fragment
+    # synthesis (sentence-granularity tail deleted: any contiguous run,
+    # every word of the answer, every part of a multi-part answer);
+    # the version key IS the experiment identity for the GEPA iteration loop.
     "contracteval_v0": CONTRACTEVAL_PROMPT_V0,
     "contracteval_v1": CONTRACTEVAL_PROMPT_V1,
     "contracteval_v2": CONTRACTEVAL_PROMPT_V2,
     "contracteval_v3": CONTRACTEVAL_PROMPT_V3,
     "contracteval_v4": CONTRACTEVAL_PROMPT_V4,
+    "contracteval_v5": CONTRACTEVAL_PROMPT_V5,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

@@ -1584,6 +1584,67 @@ def test_contracteval_v4_derived_verbatim_smallest_span():
         assert forbidden not in CONTRACTEVAL_PROMPT_V4
 
 
+def test_contracteval_v5_derived_fragment_permission():
+    """contracteval_v5 (KANBAN-052 GEPA iteration 5 — the fragment
+    synthesis) = v4 with ONE surgical replace: the sentence-granularity
+    tail ("otherwise quote the complete sentence(s), never a fragment of a
+    sentence") is deleted in favor of an explicit fragment permission —
+    any contiguous run, provided it contains every word of the complete
+    answer (and every part of a multi-part answer) and no more text than
+    the answer needs. Verbatim fidelity (the TP engine) and the bounded
+    trigger are untouched. Motivation (v4 A/B, identical 4,182 rows): the
+    smallest-span rule fired only at the extremes (100 FP->TN, J 0.06->1.0
+    wins) while 1,310/1,567 shared quotes stayed byte-identical to v3 —
+    sentence-granular quoting is the J drag (v4 J 0.533 vs v2's 0.648);
+    the 51 TP->FN losses are 19 partial multi-span rows (parts dropped),
+    29 wrong spans, 3 refusals; the 119 J-down rows kept GT inside LONGER
+    quotes."""
+    from src.prompts import (
+        CONTRACTEVAL_PROMPT_V0,
+        CONTRACTEVAL_PROMPT_V1,
+        CONTRACTEVAL_PROMPT_V2,
+        CONTRACTEVAL_PROMPT_V3,
+        CONTRACTEVAL_PROMPT_V4,
+        CONTRACTEVAL_PROMPT_V5,
+        CONTRACTEVAL_SYSTEM_PROMPT,
+    )
+
+    assert "contracteval_v5" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracteval_v5"] is CONTRACTEVAL_PROMPT_V5
+    # Byte-identical derivation chain: v0 -> v1 -> v2 -> v3 -> v4 -> v5.
+    assert CONTRACTEVAL_PROMPT_V0 == CONTRACTEVAL_SYSTEM_PROMPT
+    assert CONTRACTEVAL_PROMPT_V1.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V2.startswith(CONTRACTEVAL_PROMPT_V1)
+    assert CONTRACTEVAL_PROMPT_V3.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V4.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V5.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V5 != CONTRACTEVAL_PROMPT_V4
+    # The synthesis: verbatim fidelity AND fragment permission, both present.
+    assert "Quote the exact text of that span, character for character" in CONTRACTEVAL_PROMPT_V5
+    assert "never clean, normalize, or re-type the text" in CONTRACTEVAL_PROMPT_V5
+    assert "any contiguous run of the original text" in CONTRACTEVAL_PROMPT_V5
+    assert "sub-sentence fragment" in CONTRACTEVAL_PROMPT_V5
+    assert "contains every word of the complete answer" in CONTRACTEVAL_PROMPT_V5
+    assert "when the complete answer has several parts, include every part" in CONTRACTEVAL_PROMPT_V5
+    assert "no more text than the answer needs" in CONTRACTEVAL_PROMPT_V5
+    # Sentence-granularity tail ABSENT (the J drag / part-dropping driver).
+    for forbidden in ("never a fragment of a sentence",
+                      "otherwise quote the complete sentence(s)",
+                      "quote the whole sentence", "when in doubt"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V5
+    # Trigger + no-related contract unchanged; element-alone exception kept.
+    assert "relates to the Question's subject and responds to it" in CONTRACTEVAL_PROMPT_V5
+    assert "that is itself the complete answer may be quoted alone" in CONTRACTEVAL_PROMPT_V5
+    assert CONTRACTEVAL_PROMPT_V5.count('"No related clause."') == 2
+    # Refusal vocabulary still absent; mirror-faithful plain prompt.
+    for forbidden in ("states the answer", "related but different"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V5
+    assert CONTRACTEVAL_PROMPT_V5.startswith(
+        "You are an assistant with strong legal knowledge")
+    for forbidden in ("JSON", "json", "reasoning", "output format", "You are an AI"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V5
+
+
 def test_contracteval_user_template_formats():
     """The ContractEval prompt template reproduces the paper's exact user
     message shape (Context block + Question block)."""
