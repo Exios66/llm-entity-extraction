@@ -1336,6 +1336,61 @@ CONTRACTEVAL_PROMPT_V2 = CONTRACTEVAL_PROMPT_V1 + (
     'includes that qualification - quote the entire sentence.'
 )
 
+# -----------------------------------------------------------------------------
+# contracteval_v3 — quote fidelity (the GEPA lesson from the v2 3-way A/B,
+# identical 4,182 rows, same model/temp/surface, paired comparison exact).
+# 3-run monotonic table:
+#   v0: F1 0.5541 / F2 0.6164 / J 0.5058 / P 0.4743 / R 0.6664 / fnr 0.0289
+#       (829/2019/919/415)
+#   v1: F1 0.5406 / F2 0.5759 / J 0.6081 / P 0.4905 / R 0.6021 / fnr 0.045
+#       (749/2160/778/495)
+#   v2: F1 0.5349 / F2 0.5608 / J 0.6479 / P 0.4966 / R 0.5796 / fnr 0.0426
+#       (721/2207/731/523); v1->v2: FP->TN 134, TN->FP 87, TP->FN 69
+#       (v1 J mean 0.691 - real quotes lost), FN->TP 41.
+# MINED WEAKEST LINK (the "refusal trigger" hypothesis is FALSIFIED): the
+# trigger is NOT the recall problem. Of the 160 v2-FN rows where v0 or v1
+# had a correct quote (146 v0-TP + 69 v1-TP - 55 overlap), only 8 are
+# "No related clause." refusals; the breakdown is: 52 WHITESPACE-ONLY
+# failures (the model re-typed the right text with normalized spacing - GT
+# carries PDF-artifact double spaces and containment is raw-substring, so
+# correct text still zeroes the row), 97 trims/case-changes (Document Name:
+# v1 quoted the preamble sentence -> TP, v2 quoted the ALL-CAPS heading ->
+# FN, containment is case-sensitive; Expiration Date: v1 J 1.0 exact
+# sentence -> v2 "sixty (60) months from the Effective Date"), 11 wrong
+# sentences. Total whitespace-fixable v2-FN rows: 125. Refusal pool: 53
+# v2 false-nrs, only 8 recoverable; trigger-softening risks 268 v2-TN rows
+# (quoted by v0/v1) for those 8 - a 33:1 trade that restores v0's 919-FP
+# behavior. So: KEEP v2's trigger semantics (incl. the related-but-different
+# exclusion that holds the 134+190 FP fixes), REPLACE the span rule with
+# VERBATIM + COMPLETE quoting (character-for-character fidelity, never a
+# fragment, whole sentence when in doubt). Built on V0 (not V2) so the
+# composed text carries NO v1/v2 span/trigger vocabulary (the element-alone
+# rule that caused the trims is replaced, not stacked). Projected from the
+# paired rows: 80% recovery of the 222 fixable rows (125 ws + 97 trims) ->
+# TP 899 / F1 ~0.626 / F2 ~0.680 / J ~0.70-0.77 / fnr 0.036-0.040; even 70%
+# recovery with +40 FP drift -> F1 0.617. Target beats v0 F1 0.5541 with
+# J >= 0.60 and fnr <= 0.04 at every projected point.
+# -----------------------------------------------------------------------------
+CONTRACTEVAL_PROMPT_V3 = CONTRACTEVAL_PROMPT_V0 + (
+    'The following conditions take precedence over the instructions above. '
+    'A passage addresses the Question when it relates to the Question\'s '
+    'subject and responds to it - when it provides the information the '
+    'Question asks about - even when that information is implicit rather '
+    'than a single short element. A passage about a definition of a term, '
+    'or about a different matter that shares only the subject, does not '
+    'respond to the Question. When any passage addresses the Question, '
+    'quote the smallest span that covers it; answer "No related clause." '
+    'only when no passage in the Context addresses the Question at all. '
+    'Quote the exact text of that span, character for character: preserve '
+    'every space, line break, punctuation mark, and capitalization exactly '
+    'as it appears in the Context - never clean, normalize, or re-type the '
+    'text. Quote the complete sentence(s) that carry the answer, never a '
+    'fragment of a sentence; a date, amount, name, or defined term that is '
+    'itself the complete answer may be quoted alone, but when in doubt '
+    'whether a fragment would omit part of the answer, quote the whole '
+    'sentence.'
+)
+
 
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
@@ -2653,12 +2708,14 @@ PROMPT_VERSIONS = {
 
     # ContractEval — clause-level legal risk identification (arXiv 2508.03080,
     # KANBAN-052). v0 = the paper's system prompt verbatim; v1 = v0 + scope-
-    # discipline rule; v2 = v1 + trigger/span decoupling (recall carve-out +
-    # complete-quote span rule); the version key IS the experiment identity
-    # for the GEPA iteration loop.
+    # discipline rule; v2 = v1 + trigger/span decoupling; v3 = v0 + quote-
+    # fidelity rule (verbatim + complete spans; v2 trigger kept, span rule
+    # replaced; the mined weakest link was quote fidelity, not the trigger);
+    # the version key IS the experiment identity for the GEPA iteration loop.
     "contracteval_v0": CONTRACTEVAL_PROMPT_V0,
     "contracteval_v1": CONTRACTEVAL_PROMPT_V1,
     "contracteval_v2": CONTRACTEVAL_PROMPT_V2,
+    "contracteval_v3": CONTRACTEVAL_PROMPT_V3,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

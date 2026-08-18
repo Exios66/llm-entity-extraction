@@ -1480,6 +1480,60 @@ def test_contracteval_v2_derived_trigger_carveout():
         assert forbidden not in CONTRACTEVAL_PROMPT_V2
 
 
+def test_contracteval_v3_derived_quote_fidelity():
+    """contracteval_v3 (KANBAN-052 GEPA iteration 3) = v0 + the quote-
+    fidelity rule: permissive trigger kept with v2's bounded semantics, span
+    rule replaced by verbatim (character-for-character) + complete-quote
+    (never a fragment) discipline. Built on V0 so the composed text carries
+    NO v1/v2 refusal or element-alone vocabulary; the full v0 -> v1 -> v2
+    chain stays byte-identical, and the "No related clause." contract is
+    preserved (exactly 2 occurrences: v0 + the v3 block).
+
+    Motivation (v2 3-way A/B, identical 4,182 rows): of the 160 v2-FN rows
+    with a correct v0/v1 quote, 52 are whitespace-only failures and 97 are
+    trims/case-changes (only 8 are refusals — the trigger was NOT the
+    weakest link; quote fidelity was)."""
+    from src.prompts import (
+        CONTRACTEVAL_PROMPT_V0,
+        CONTRACTEVAL_PROMPT_V1,
+        CONTRACTEVAL_PROMPT_V2,
+        CONTRACTEVAL_PROMPT_V3,
+        CONTRACTEVAL_SYSTEM_PROMPT,
+    )
+
+    assert "contracteval_v3" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracteval_v3"] is CONTRACTEVAL_PROMPT_V3
+    # Built on V0: v3 startswith the paper prompt; the v0->v1->v2 chain is
+    # byte-identical (v3 does NOT stack on v2 — the span rule was replaced).
+    assert CONTRACTEVAL_PROMPT_V3.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V0 == CONTRACTEVAL_SYSTEM_PROMPT
+    assert CONTRACTEVAL_PROMPT_V1.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V2.startswith(CONTRACTEVAL_PROMPT_V1)
+    assert CONTRACTEVAL_PROMPT_V3 != CONTRACTEVAL_PROMPT_V2
+    # Permissive trigger present (v0's own + the bounded clarification).
+    assert "directly address or relate to the Question" in CONTRACTEVAL_PROMPT_V3
+    assert "relates to the Question's subject and responds to it" in CONTRACTEVAL_PROMPT_V3
+    assert 'answer "No related clause." only when no passage in the Context addresses the Question at all' in CONTRACTEVAL_PROMPT_V3
+    # Quote fidelity: verbatim + complete spans.
+    assert "Quote the exact text of that span, character for character" in CONTRACTEVAL_PROMPT_V3
+    assert "never clean, normalize, or re-type the text" in CONTRACTEVAL_PROMPT_V3
+    assert "Quote the complete sentence(s) that carry the answer, never a fragment of a sentence" in CONTRACTEVAL_PROMPT_V3
+    assert "quote the whole sentence" in CONTRACTEVAL_PROMPT_V3
+    # Refusal vocabulary excised: no "states the answer", no "related but
+    # different" phrasing anywhere in the composed v3.
+    for forbidden in ("states the answer", "related but different",
+                      "element alone is the span", "merely relate"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V3
+    # "No related clause." contract: exactly 2 occurrences (v0 + v3 block).
+    assert CONTRACTEVAL_PROMPT_V3.count('"No related clause."') == 2
+    # Mirror faithfulness: plain verbatim-extraction prompt, no JSON, no
+    # thinking preamble, no classification output.
+    assert CONTRACTEVAL_PROMPT_V3.startswith(
+        "You are an assistant with strong legal knowledge")
+    for forbidden in ("JSON", "json", "reasoning", "output format", "You are an AI"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V3
+
+
 def test_contracteval_user_template_formats():
     """The ContractEval prompt template reproduces the paper's exact user
     message shape (Context block + Question block)."""

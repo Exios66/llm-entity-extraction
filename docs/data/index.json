@@ -10035,5 +10035,75 @@
   },
   "data_source_project": null,
   "data_source_n_samples": 4182
+ },
+ {
+  "id": 198,
+  "experiment_name": "qwen3.7-flash_contracteval_v1_contracteval_langfuse",
+  "task": "contracteval",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracteval_v1",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 4182,
+  "n_ok": 4182,
+  "n_error": 0,
+  "total_tokens": 50042510,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 2.193432,
+  "cost_estimated_per_doc_usd": 0.000524,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5",
+  "seed": null,
+  "sample_key": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5:42:4182",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-18T07:48:25.580400+00:00",
+  "git": {
+   "commit": "0b2251d",
+   "dirty": false
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 4182
+ },
+ {
+  "id": 199,
+  "experiment_name": "qwen3.7-flash_contracteval_v2_contracteval_langfuse",
+  "task": "contracteval",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracteval_v2",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 4182,
+  "n_ok": 4182,
+  "n_error": 0,
+  "total_tokens": 50553731,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 2.175832,
+  "cost_estimated_per_doc_usd": 0.00052,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5",
+  "seed": null,
+  "sample_key": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5:42:4182",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-18T08:31:26.807224+00:00",
+  "git": {
+   "commit": "ad3c10e",
+   "dirty": false
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 4182
  }
 ]
