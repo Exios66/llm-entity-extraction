@@ -1438,6 +1438,48 @@ def test_contracteval_v1_derived_scope_discipline():
         assert forbidden not in CONTRACTEVAL_PROMPT_V1
 
 
+def test_contracteval_v2_derived_trigger_carveout():
+    """contracteval_v2 (KANBAN-052 GEPA iteration 2) = v1 + the trigger/span
+    decoupling: recall carve-out on the trigger (addresses/responds-to, not
+    states-the-answer) + complete-quote span rule. Derived append-style; the
+    whole v0 -> v1 -> v2 chain stays byte-identical at each step, and the
+    "No related clause." contract is preserved (still exactly 2 occurrences).
+
+    Motivation (v1 A/B, identical 4,182 rows): TP->FN 118 of which only 11
+    are refusals and 107 are over-trimmed fragments (34 had v0 J >= 0.9);
+    false-nr rose 0.0289 -> 0.045; the 190 FP->TN wins must stay fixed."""
+    from src.prompts import (
+        CONTRACTEVAL_PROMPT_V0,
+        CONTRACTEVAL_PROMPT_V1,
+        CONTRACTEVAL_PROMPT_V2,
+        CONTRACTEVAL_SYSTEM_PROMPT,
+    )
+
+    assert "contracteval_v2" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracteval_v2"] is CONTRACTEVAL_PROMPT_V2
+    # Derived chain intact: v0 (paper verbatim) -> v1 -> v2, all appended.
+    assert CONTRACTEVAL_PROMPT_V2.startswith(CONTRACTEVAL_PROMPT_V1)
+    assert CONTRACTEVAL_PROMPT_V1.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V0 == CONTRACTEVAL_SYSTEM_PROMPT
+    assert CONTRACTEVAL_PROMPT_V2 != CONTRACTEVAL_PROMPT_V1
+    # The carve-out trigger language is present.
+    assert "The following conditions replace the earlier trigger and span conditions" in CONTRACTEVAL_PROMPT_V2
+    assert "relates to the Question's subject AND responds to it" in CONTRACTEVAL_PROMPT_V2
+    assert "Give the no-related response only when no passage in the Context addresses the Question at all" in CONTRACTEVAL_PROMPT_V2
+    # The smallest-span rule survives, completed by the never-fragment rule.
+    assert "Quote the smallest span that carries the complete answer" in CONTRACTEVAL_PROMPT_V2
+    assert "never a fragment of a sentence" in CONTRACTEVAL_PROMPT_V2
+    assert "quote the entire sentence" in CONTRACTEVAL_PROMPT_V2
+    # The "No related clause." contract: still exactly 2 occurrences (v0 + v1).
+    assert CONTRACTEVAL_PROMPT_V2.count('"No related clause."') == 2
+    # Mirror faithfulness: plain verbatim-extraction prompt, no JSON, no
+    # thinking preamble, no classification output.
+    assert CONTRACTEVAL_PROMPT_V2.startswith(
+        "You are an assistant with strong legal knowledge")
+    for forbidden in ("JSON", "json", "reasoning", "output format", "You are an AI"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V2
+
+
 def test_contracteval_user_template_formats():
     """The ContractEval prompt template reproduces the paper's exact user
     message shape (Context block + Question block)."""

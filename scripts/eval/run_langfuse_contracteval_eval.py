@@ -447,6 +447,26 @@ def main_with_args(argv: list[str]) -> int:
     }
     jsonl_path = append_experiment(record, log_path)
     append_markdown(record, md_log_path)
+
+    if tracing_backend == "phoenix":
+        # One run = one Phoenix experiment in the llm-dojo project: per-pair
+        # runs + CODE evaluations (contracteval correct/incorrect, jaccard).
+        # Best-effort — never breaks the run.
+        try:
+            from src.phoenix_tracing import register_phoenix_experiment
+        except Exception:  # noqa: BLE001
+            register_phoenix_experiment = None  # type: ignore[assignment]
+        if register_phoenix_experiment is not None:
+            register_phoenix_experiment(
+                experiment_name=experiment_name,
+                model=args.model,
+                prompt_version=args.prompt_version,
+                dataset_name="contracteval-cuad-test",
+                pairs=dataset,
+                results=per_row,
+                timestamp=record.get("timestamp") or "",
+            )
+
     print(f"\nExperiment logged to {jsonl_path}")
     print(f"  ContractEval: F1 {metrics['f1']} / F2 {metrics['f2']} / "
           f"Jaccard {metrics['jaccard_mean']} / false-nr {metrics['false_no_related_rate']} "

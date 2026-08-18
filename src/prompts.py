@@ -1288,6 +1288,54 @@ CONTRACTEVAL_PROMPT_V1 = CONTRACTEVAL_PROMPT_V0 + (
     '"No related clause."'
 )
 
+# -----------------------------------------------------------------------------
+# contracteval_v2 — trigger/span decoupling (the GEPA lesson from the v1 A/B,
+# identical 4,182 rows, same model/temp/surface, paired comparison exact):
+#   v1: F1 0.5406 / F2 0.5759 / Jaccard 0.6081 / P 0.4905 / R 0.6021 / false-nr
+#   0.045 (56 rows); TP/TN/FP/FN 749/2160/778/495 vs v0 0.5541/0.6164/0.5058/
+#   0.4743/0.6664/0.0289 (36 rows); transitions: FP->TN 190, TP->FN 118,
+#   TN->FP 49, FN->TP 38; paired Jaccard on v0-TP rows mean +0.126.
+# v1's scope rule worked where aimed (Jaccard +0.102; Document Name +0.389,
+# Agreement Date +0.281, Effective Date +0.192; FP -141) but over-fired BOTH
+# directions: (1) TRIGGER: 11 TP->FN are full "No related clause." refusals
+# of clearly responsive passages (v0 J up to 1.0 — Cap On Liability, Document
+# Name, Volume Restriction) + 9 more FN->FN new false-nrs (net false-nr
+# 0.0289 -> 0.045); (2) SPAN: 107 of the 118 TP->FN are NOT refusals but
+# over-trimmed FRAGMENTS — the "short element alone" clause broke verbatim
+# containment on sentence-GT rows (Expiration Date v0 J 1.0 exact sentence
+# -> "February 28, 2004"; Agreement Date GT "[ ] day of [ ], 2020 (" lost its
+# trailing "("; Governing Law sentence truncated mid-way). 34 of the 118 had
+# v0 J >= 0.9. ONE lesson: decouple the TRIGGER (responds-to-the-Question,
+# not states-the-answer) from the SPAN (smallest COMPLETE quote — a bare
+# element may stand alone only when its sentence does not qualify it; never
+# a fragment). The 190 FP->TN must stay fixed: the trigger keeps the
+# "related but different matter" exclusion (definitions, opposite-family
+# clauses). Expected trade from the paired data: recover 118 TP (v0 J mean
+# 0.595) vs partial FP->TN reversion — at 0% reversion F1 0.600/F2 0.655/
+# J 0.612; even 100% reversion F1 0.563/F2 0.637/J 0.612 (beats v1 F1/F2 at
+# every point). false-nr returns toward 0.029-0.036 as refusals recover.
+# The following conditions REPLACE v1's trigger and span conditions (v1
+# stays byte-identical for the 3-way A/B).
+# -----------------------------------------------------------------------------
+CONTRACTEVAL_PROMPT_V2 = CONTRACTEVAL_PROMPT_V1 + (
+    '\nThe following conditions replace the earlier trigger and span '
+    'conditions. A passage addresses the Question when it relates to the '
+    'Question\'s subject AND responds to it - when it provides the '
+    'information the Question asks about - even if it does not state the '
+    'answer as a single short element. Give the no-related response only '
+    'when no passage in the Context addresses the Question at all; a '
+    'passage that concerns a related but different matter (a definition of '
+    'a term, or a clause about a different topic that merely shares the '
+    'subject) does not address the Question. Quote the smallest span that '
+    'carries the complete answer, exactly as it appears with all of its '
+    'punctuation: a date, amount, name, or defined term that is itself the '
+    'complete answer may be quoted alone; otherwise quote the complete '
+    'sentence(s), never a fragment of a sentence. When the sentence '
+    'containing a short element qualifies or conditions it (e.g. "unless '
+    'extended", "provided that", "subject to"), the complete answer '
+    'includes that qualification - quote the entire sentence.'
+)
+
 
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
@@ -2605,10 +2653,12 @@ PROMPT_VERSIONS = {
 
     # ContractEval — clause-level legal risk identification (arXiv 2508.03080,
     # KANBAN-052). v0 = the paper's system prompt verbatim; v1 = v0 + scope-
-    # discipline rule (precision/Jaccard lesson from the full v0 run); the
-    # version key IS the experiment identity for the GEPA iteration loop.
+    # discipline rule; v2 = v1 + trigger/span decoupling (recall carve-out +
+    # complete-quote span rule); the version key IS the experiment identity
+    # for the GEPA iteration loop.
     "contracteval_v0": CONTRACTEVAL_PROMPT_V0,
     "contracteval_v1": CONTRACTEVAL_PROMPT_V1,
+    "contracteval_v2": CONTRACTEVAL_PROMPT_V2,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

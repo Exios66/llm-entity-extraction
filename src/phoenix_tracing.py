@@ -73,6 +73,23 @@ def _instrument_openai() -> None:
         logger.warning("phoenix_openai_instrument_failed", exc_info=True)
 
 
+def phoenix_project_name() -> str:
+    """Return the Phoenix project every run traces into.
+
+    ``PHOENIX_PROJECT`` (default ``llm-dojo`` — the dedicated project for this
+    repo's prompt iterations) is attached to spans as the
+    ``openinference.project.name`` resource attribute, so Phoenix routes each
+    run's traces under that project instead of the ``default`` one.
+    """
+    return os.environ.get("PHOENIX_PROJECT", "llm-dojo").strip() or "llm-dojo"
+
+
+def _phoenix_server_base() -> str:
+    """Strip the OTLP path off PHOENIX_ENDPOINT to get the REST server base."""
+    endpoint = os.environ.get("PHOENIX_ENDPOINT", "http://localhost:6006/v1/traces")
+    return endpoint.split("/v1/")[0]
+
+
 def _init_opentelemetry() -> Any | None:
     """Initialise OpenTelemetry SDK with Phoenix OTLP exporter.
 
@@ -90,13 +107,20 @@ def _init_opentelemetry() -> Any | None:
 
         endpoint = os.environ.get("PHOENIX_ENDPOINT", "http://localhost:6006/v1/traces")
         service_name = os.environ.get("PHOENIX_SERVICE_NAME", "llm-entity-extraction")
-        resource = Resource.create({"service.name": service_name})
+        project = phoenix_project_name()
+        resource = Resource.create({
+            "service.name": service_name,
+            # Phoenix routes ingested spans to the project named here — the
+            # dedicated llm-dojo project (created on first ingest).
+            "openinference.project.name": project,
+        })
 
         provider = TracerProvider(resource=resource)
         exporter = OTLPSpanExporter(endpoint=endpoint)
         provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)
-        logger.info("phoenix_tracing_initialized", endpoint=endpoint, service=service_name)
+        logger.info("phoenix_tracing_initialized", endpoint=endpoint,
+                    service=service_name, project=project)
         _instrument_openai()
         return provider
     except Exception:  # noqa: BLE001
@@ -282,6 +306,10 @@ class PhoenixTracer:
             return
         attributes: dict[str, Any] = {
             "session_id": self.session_id,
+            # OpenInference session convention — Phoenix groups spans into a
+            # session per value, so every run (one session_id per experiment)
+            # is inspectable as its OWN session in the Phoenix UI.
+            "session.id": self.session_id,
             "tags": ",".join(self.tags),
             "filename": filename,
             "expected": expected,
@@ -341,3 +369,107 @@ def init_phoenix_tracing(service_name: str | None = None, endpoint: str | None =
         os.environ["PHOENIX_ENDPOINT"] = endpoint
     # Re-initialise
     _provider = _init_opentelemetry()
+
+
+def register_phoenix_experiment(*, experiment_name: str, model: str,
+                                prompt_version: str, dataset_name: str,
+                                pairs: list[dict[str, Any]],
+                                results: list[dict[str, Any]],
+                                timestamp: str) -> bool:
+    """Best-effort: register ONE run as an experiment in the Phoenix project.
+
+    Creates (idempotently) the project + dataset in Phoenix and logs the run:
+    one experiment record named after the experiment (its own individually
+    inspectable run), one run per (contract, question) pair with the predicted
+    output, and CODE evaluations for the deterministic scores (contracteval
+    correct/incorrect + token-set jaccard). Best-effort by design —
+    observability must never break a run, so any failure only logs a warning.
+
+    ``pairs`` must carry ``id``/``context``/``question``/``category``/
+    ``label_spans``; ``results`` must carry ``id``/``predicted``/
+    ``classification``/``jaccard``.
+    """
+    try:
+        from phoenix.client import Client
+
+        client = Client(base_url=_phoenix_server_base())
+        project = phoenix_project_name()
+        projects = client.projects.list(name_contains=project)
+        if not any(p.name == project for p in projects):
+            client.projects.create(
+                name=project,
+                description="llm-entity-extraction eval iterations (llm-dojo)",
+            )
+
+        datasets = client.datasets.list()
+        dataset = next((d for d in datasets if d.name == dataset_name), None)
+        if dataset is None:
+            dataset = client.datasets.create_dataset(
+                name=dataset_name,
+                dataset_description=(
+                    f"Directly-mirrored ContractEval surface "
+                    f"({len(pairs)} (contract, question) pairs), "
+                    f"faithful full-context inputs"
+                ),
+                examples=[
+                    {
+                        "input": {"context": p["context"], "question": p["question"],
+                                  "category": p["category"]},
+                        "output": {"label_spans": p["label_spans"]},
+                        "metadata": {"id": p["id"], "category": p["category"]},
+                    }
+                    for p in pairs
+                ],
+            )
+        examples = getattr(dataset, "examples", None)
+        if not examples:
+            refreshed = client.datasets.get_dataset(dataset.id)
+            examples = getattr(refreshed, "examples", []) or []
+        example_ids = {
+            dict(ex).get("metadata", {}).get("id"): dict(ex)["id"]
+            for ex in examples if dict(ex).get("metadata", {}).get("id")
+        }
+
+        experiments = client.experiments.list()
+        experiment = next((e for e in experiments if e.name == experiment_name), None)
+        if experiment is None:
+            experiment = client.experiments.create(
+                dataset_id=dataset.id,
+                experiment_name=experiment_name,
+                experiment_metadata={
+                    "model": model, "prompt_version": prompt_version,
+                    "task": "contracteval",
+                },
+            )
+
+        start = end = timestamp
+        logged = 0
+        for row in results:
+            example_id = example_ids.get(row["id"])
+            if example_id is None:
+                continue
+            run = client.experiments.log_run(
+                experiment_id=experiment.id, dataset_example_id=example_id,
+                output=row["predicted"], start_time=start, end_time=end,
+            )
+            cls = row["classification"]
+            client.experiments.log_evaluation(
+                experiment_run_id=run.id, name="contracteval",
+                annotator_kind="CODE",
+                score=1.0 if cls in ("TP", "TN") else 0.0,
+                label="correct" if cls in ("TP", "TN") else "incorrect",
+                explanation=f"{cls} (ContractEval verbatim rubric)",
+            )
+            client.experiments.log_evaluation(
+                experiment_run_id=run.id, name="jaccard", annotator_kind="CODE",
+                score=float(row["jaccard"]),
+                label="correct" if row["jaccard"] >= 0.5 else "incorrect",
+                explanation="token-set Jaccard over the positive pair",
+            )
+            logged += 1
+        logger.info("phoenix_experiment_registered",
+                    experiment=experiment_name, runs=logged, project=project)
+        return True
+    except Exception:  # noqa: BLE001 - observability must never break a run
+        logger.warning("phoenix_experiment_register_failed", exc_info=True)
+        return False
