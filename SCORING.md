@@ -313,17 +313,41 @@ Per-row flags carried in the record: `doc_type_ok`, `subclass_ok`,
 The CUAD-focused suite generalized to every task kind the eval loop produces
 (KANBAN-047 / issue #19). `task_kind(task)` maps a task key to a scoring kind
 via `TASK_KINDS` (`subtype`, `doc_class`, `docclass`, `maud_docclass`,
-`maud_question`, `legalbench`, `multiclass`, `court_opinion`, `chained`;
-unknown keys fall back to the task name → plain label classification).
-`score_task(task, expected, predicted, *, valid=, expected_subclass=,
-predicted_subclass=, seed=42, n_boot=2000)` returns a task-appropriate score
-dict — exact match + per-class + confusion + bootstrap CIs for the
-label-classification kinds, plus binary metrics for LegalBench, plus the
-doc_type/subclass pair for the hierarchical kinds. All are deterministic pure
-functions over `(predicted, expected)` pairs so offline rescoring, manifest
-re-scoring, and live scoring never disagree; failed rows (`ERROR_PREFIX`) count
-as mismatches in the headline and are skipped by per-class/confusion
-breakdowns.
+`maud_question`, `legalbench`, `multiclass`, `court_opinion`, `chained`,
+`contracteval`; unknown keys fall back to the task name → plain label
+classification). `score_task(task, expected, predicted, *, valid=,
+expected_subclass=, predicted_subclass=, seed=42, n_boot=2000)` returns a
+task-appropriate score dict — exact match + per-class + confusion + bootstrap
+CIs for the label-classification kinds, plus binary metrics for LegalBench,
+plus the doc_type/subclass pair for the hierarchical kinds. All are
+deterministic pure functions over `(predicted, expected)` pairs so offline
+rescoring, manifest re-scoring, and live scoring never disagree; failed rows
+(`ERROR_PREFIX`) count as mismatches in the headline and are skipped by
+per-class/confusion breakdowns.
+
+**ContractEval** (KANBAN-052 / arXiv 2508.03080, `llm_dojo_scoring.tasks`
+v0.4.0, the `contracteval` task kind) — the directly-mirrored clause-level
+legal-risk benchmark: one (contract, question) call per row over the CUAD test
+split (4,182 pairs / 102 contracts / 41 categories; 1,244 positives). The
+rubric mirrors the paper's `Evaluation.py` + `open_source_model.py` EXACTLY:
+`score_task("contracteval", expected_spans, outputs, categories=...)` where
+`expected_spans` is a list of GT label-span lists (empty = absent category) and
+`outputs` the raw model answers. Confusion — TP = every GT span
+verbatim-contained in the output (`contracteval_classified`); TN = absent
+category + `No related clause.` (`said_no_related`); FP = absent category +
+non-empty clause; FN = present category + no-related or partial coverage —
+drives accuracy/precision/recall/F1/F2. Output effectiveness = mean/median
+token-set **Jaccard** (`get_jaccard`: strip `.,;:`, lowercase, `/`→space,
+|∩|/|∪|) over **positive** pairs. Laziness = `no_related_rate` (over all
+pairs) and `false_no_related_rate` — reported over BOTH the run's own positive
+count and the paper's hardcoded **1,244** denominator
+(`false_no_related_rate_paper`). Per-category metrics (`per_category`, the
+paper's Fig-4 analogue) when `categories` is supplied. Fidelity: faithful
+full-context (the paper feeds each contract whole, up to 301k chars; the
+`contracteval` runner disables the input cap), temperature 0, max_tokens 5000.
+The paper's reported 4,128 total is a 54-negative-row-smaller snapshot of the
+same `test.json`; the positive set is identical, so F1/F2/Jaccard/false-nr are
+directly comparable.
 
 **MAUD** — `maud_docclass_score(...)` (merger-agreement doc_type +
 consideration-type subclass with strict + `subclass_accuracy_equiv` scoring)

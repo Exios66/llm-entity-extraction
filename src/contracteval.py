@@ -23,6 +23,11 @@ Caveat carried into every result: a one-pass extractor cannot claim a
 category the GT marks absent, so precision is structurally 1.0 and the
 discriminating signals versus ContractEval are recall, F2, Jaccard, and the
 false-"no related clause" rate.
+
+Metric math is a THIN SHIM over the canonical upstream evaluator
+(``llm_dojo_scoring.tasks`` v0.4.0, the ``contracteval`` task kind — mirrors
+``Evaluation.py`` + ``open_source_model.py`` exactly); the mapping logic
+(span->category attribution, per-category output synthesis) is repo-specific.
 """
 
 from __future__ import annotations
@@ -42,14 +47,29 @@ logger = structlog.get_logger(__name__)
 OBLIGATION_FIELDS: tuple[str, ...] = ("key_obligations", "termination_clauses")
 
 # ContractEval Table III (arXiv 2508.03080) — published per-model
-# (F1, F2, Jaccard, false-"no related clause" rate). Reference row for the
-# comparison table; F1/F2 rounded to 3dp as printed in the paper.
+# (F1, F2, Jaccard, false-"no related clause" rate). All 19 models from the
+# paper's Table III, keys lowercased/slugified as printed. Reference rows for
+# the comparison table; F1/F2/Jaccard/false-nr rounded to 3dp as printed.
 CONTRACTEVAL_TABLE_III: dict[str, dict[str, float]] = {
     "gpt-4.1": {"f1": 0.641, "f2": 0.672, "jaccard": 0.472, "false_no_related": 0.071},
     "gpt-4.1-mini": {"f1": 0.644, "f2": 0.678, "jaccard": 0.435, "false_no_related": 0.072},
+    "gemini-2.5-pro-preview": {"f1": 0.497, "f2": 0.604, "jaccard": 0.506, "false_no_related": 0.011},
     "claude-sonnet-4": {"f1": 0.523, "f2": 0.578, "jaccard": 0.458, "false_no_related": 0.025},
-    "gemini-2.5-pro": {"f1": 0.497, "f2": 0.604, "jaccard": 0.506, "false_no_related": 0.011},
+    "deepseek-r1-distill-qwen-7b": {"f1": 0.071, "f2": 0.085, "jaccard": 0.131, "false_no_related": 0.037},
+    "deepseek-r1-0528-qwen3-8b": {"f1": 0.475, "f2": 0.464, "jaccard": 0.404, "false_no_related": 0.100},
+    "llama-3.1-8b-instruct": {"f1": 0.392, "f2": 0.370, "jaccard": 0.300, "false_no_related": 0.214},
+    "gemma-3-4b": {"f1": 0.188, "f2": 0.246, "jaccard": 0.311, "false_no_related": 0.000},
+    "gemma-3-12b": {"f1": 0.391, "f2": 0.421, "jaccard": 0.446, "false_no_related": 0.045},
+    "qwen3-4b": {"f1": 0.411, "f2": 0.362, "jaccard": 0.337, "false_no_related": 0.211},
+    "qwen3-4b-thinking": {"f1": 0.075, "f2": 0.055, "jaccard": 0.300, "false_no_related": 0.198},
+    "qwen3-8b-awq": {"f1": 0.475, "f2": 0.393, "jaccard": 0.303, "false_no_related": 0.306},
+    "qwen3-8b-awq-thinking": {"f1": 0.187, "f2": 0.150, "jaccard": 0.374, "false_no_related": 0.125},
+    "qwen3-8b": {"f1": 0.530, "f2": 0.453, "jaccard": 0.340, "false_no_related": 0.248},
     "qwen3-8b-thinking": {"f1": 0.540, "f2": 0.512, "jaccard": 0.391, "false_no_related": 0.110},
+    "qwen3-8b-fp8": {"f1": 0.491, "f2": 0.411, "jaccard": 0.313, "false_no_related": 0.285},
+    "qwen3-8b-fp8-thinking": {"f1": 0.307, "f2": 0.263, "jaccard": 0.399, "false_no_related": 0.105},
+    "qwen3-14b": {"f1": 0.473, "f2": 0.418, "jaccard": 0.400, "false_no_related": 0.174},
+    "qwen3-14b-thinking": {"f1": 0.387, "f2": 0.334, "jaccard": 0.421, "false_no_related": 0.117},
 }
 
 # Lower bound for the best-match fallback mapping (expected-within-predicted
@@ -133,19 +153,11 @@ def disaggregate_spans(items: Any) -> list[str]:
 
 
 def get_jaccard(gt: str, pred: str) -> float:
-    """Exact copy of ContractEval's ``get_jaccard``: strip ``.,;:``, lowercase,
-    replace ``/`` with space, then token-set Jaccard over whitespace tokens."""
-    for token in (".", ",", ";", ":"):
-        gt = gt.replace(token, "")
-        pred = pred.replace(token, "")
-    gt = gt.lower().replace("/", " ")
-    pred = pred.lower().replace("/", " ")
-    gt_words = set(gt.split(" "))
-    pred_words = set(pred.split(" "))
-    union = gt_words.union(pred_words)
-    if not union:
-        return 0.0
-    return len(gt_words.intersection(pred_words)) / len(union)
+    """Token-set Jaccard — delegated to the canonical upstream copy of
+    ContractEval's ``Evaluation.py`` (``llm_dojo_scoring.tasks`` v0.4.0)."""
+    from llm_dojo_scoring.tasks import get_jaccard as _jaccard
+
+    return _jaccard(gt, pred)
 
 
 def _containment(span: str, label: str) -> float:
@@ -219,54 +231,21 @@ def build_category_output(predicted: dict, doc_gt: dict[str, list[str]]) -> dict
 
 
 def contracteval_metrics(pairs: list[tuple[list[str], str]]) -> dict[str, Any]:
-    """ContractEval metrics over ``(label_spans, output)`` pairs — mirrors
-    ``Evaluation.py`` / ``open_source_model.py`` confusion logic exactly."""
-    tp = tn = fn = fp = 0
-    jaccards: list[float] = []
-    no_related_cnt = 0
-    false_no_related_cnt = 0
-    for label, output in pairs:
-        output_stripped = output.strip(" \n`")
-        said_no_related = _NO_RELATED_PHRASE in output_stripped.lower()
-        if said_no_related:
-            no_related_cnt += 1
-        if len(label) == 0:
-            if said_no_related:
-                tn += 1
-            else:
-                fp += 1
-        else:
-            if said_no_related:
-                false_no_related_cnt += 1
-            classified = all(
-                substr.strip(" \n`") in output_stripped for substr in label
-            )
-            if classified:
-                tp += 1
-            else:
-                fn += 1
-            jaccards.append(get_jaccard(" ".join(label), output_stripped))
+    """ContractEval metrics over ``(label_spans, output)`` pairs.
 
-    total = tp + tn + fn + fp
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
-    recall = tp / (tp + fn) if (tp + fn) else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
-    f2 = 5 * precision * recall / (4 * precision + recall) if (4 * precision + recall) else 0.0
-    n_pos = tp + fn
-    return {
-        "n_pairs": total,
-        "n_positive": n_pos,
-        "tp": tp, "tn": tn, "fn": fn, "fp": fp,
-        "accuracy": round((tp + tn) / total, 4) if total else 0.0,
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1": round(f1, 4),
-        "f2": round(f2, 4),
-        "jaccard_mean": round(sum(jaccards) / len(jaccards), 4) if jaccards else 0.0,
-        "jaccard_median": round(sorted(jaccards)[len(jaccards) // 2], 4) if jaccards else 0.0,
-        "no_related_rate": round(no_related_cnt / total, 4) if total else 0.0,
-        "false_no_related_rate": round(false_no_related_cnt / n_pos, 4) if n_pos else 0.0,
-    }
+    The metric math is delegated to the canonical upstream evaluator
+    (``llm_dojo_scoring.tasks.contracteval_metrics``, v0.4.0) which mirrors
+    ``Evaluation.py`` / ``open_source_model.py`` confusion logic exactly; this
+    adapter keeps the mapping scorer's historical ``(pairs)`` call signature.
+    Upstream also reports ``false_no_related_rate_paper`` (over the paper's
+    hardcoded 1,244 positives) alongside ``false_no_related_rate`` (the run's
+    own positive count).
+    """
+    from llm_dojo_scoring.tasks import contracteval_metrics as _metrics
+
+    expected = [label for label, _ in pairs]
+    outputs = [out for _, out in pairs]
+    return _metrics(expected, outputs)
 
 
 def evaluate_record(record: dict, master_gt: dict[str, dict[str, list[str]]],

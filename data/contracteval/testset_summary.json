@@ -1,0 +1,13 @@
+{
+  "source_url": "https://github.com/TheAtticusProject/cuad/raw/main/data.zip",
+  "n_contracts": 102,
+  "n_rows": 4182,
+  "n_positive": 1244,
+  "n_negative": 2938,
+  "positive_rate": 0.2975,
+  "n_categories": 41,
+  "fingerprint": "dee8fb8d05fd2f873276b0a5c9bd6146541d1a661b12463986f1f870e1a76bc6",
+  "context_min_chars": 645,
+  "context_max_chars": 300768,
+  "fidelity_note": "102 contracts x 41 categories = 4,182 pairs; positives = 1,244 = the hardcoded denominator in ContractEval's Evaluation.py. The paper reports 4,128 total (a 54-negative-row-smaller snapshot); the positive set is identical, so F1/F2/Jaccard/false-nr are directly comparable."
+}

@@ -353,6 +353,18 @@ python scripts/eval/run_langfuse_classification_eval.py --dataset mailroom-cuad-
 python scripts/eval/run_langfuse_classification_eval.py --dataset mailroom-lb-hearsay \
     --prompt-mode task --valid-classes Yes,No --prompt-version legalbench_task_v0  # LegalBench task mode
 
+# Directly-mirrored ContractEval benchmark (arXiv 2508.03080, KANBAN-052): the CUAD
+# test split, one (contract, question) call per row, faithful full-context (temp 0,
+# max_tokens 5000, --max-input-chars 0 = no cap), ContractEval's EXACT rubric (F1/F2,
+# Jaccard over positives, false-"no related clause" rate over the paper's 1,244
+# positives + per-category). Build the dataset first (network, ~18MB), then run:
+python scripts/datasets/build_contracteval_testset.py --dry-run   # 4,182 pairs / 102 contracts / 41 cats
+python scripts/datasets/build_contracteval_testset.py
+python scripts/eval/run_langfuse_contracteval_eval.py --dry-run
+python scripts/eval/run_langfuse_contracteval_eval.py --sample 100 --seed 42   # pilot
+python scripts/eval/run_langfuse_contracteval_eval.py --model gpt-4.1-mini --research-funding-key  # full
+python scripts/reporting/run_contracteval_report.py   # our runs vs the 19-model Table III + per-category
+
 # LOCAL / RESUME path (no Braintrust experiment; Braintrust logging off by default):
 python scripts/eval/run_classification_eval.py --dataset mailroom-cuad-contracts \
     --input-mode vision --prompt-version sorter_vision_v0          # vision, all pages

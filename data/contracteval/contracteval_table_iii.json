@@ -1,0 +1,159 @@
+{
+  "source": "arXiv 2508.03080, Table III (results table)",
+  "note": "Metrics: verbatim-containment TP/FN; F1/F2/acc/prec/recall; token-set Jaccard over positives; false rate = false-'no related clause' rate over the paper's 1,244 positives. The paper's header reads 'Model | F1 | F2 | Jaccard Similarity | False Rate'.",
+  "positive_denominator": 1244,
+  "rows": [
+    {
+      "model": "GPT 4.1",
+      "f1": 0.641,
+      "f2": 0.672,
+      "jaccard": 0.472,
+      "false_rate": 0.071,
+      "tier": "proprietary"
+    },
+    {
+      "model": "GPT 4.1 mini",
+      "f1": 0.644,
+      "f2": 0.678,
+      "jaccard": 0.435,
+      "false_rate": 0.072,
+      "tier": "proprietary"
+    },
+    {
+      "model": "Gemini 2.5 Pro Preview",
+      "f1": 0.497,
+      "f2": 0.604,
+      "jaccard": 0.506,
+      "false_rate": 0.011,
+      "tier": "proprietary"
+    },
+    {
+      "model": "Claude Sonnet 4",
+      "f1": 0.523,
+      "f2": 0.578,
+      "jaccard": 0.458,
+      "false_rate": 0.025,
+      "tier": "proprietary"
+    },
+    {
+      "model": "DeepSeek R1 Distill Qwen 7B",
+      "f1": 0.071,
+      "f2": 0.085,
+      "jaccard": 0.131,
+      "false_rate": 0.037,
+      "tier": "open"
+    },
+    {
+      "model": "DeepSeek R1 0528 Qwen3 8B",
+      "f1": 0.475,
+      "f2": 0.464,
+      "jaccard": 0.404,
+      "false_rate": 0.1,
+      "tier": "open"
+    },
+    {
+      "model": "Llama 3 1.8B Instruct",
+      "f1": 0.392,
+      "f2": 0.37,
+      "jaccard": 0.3,
+      "false_rate": 0.214,
+      "tier": "open"
+    },
+    {
+      "model": "Gemma 3 4B",
+      "f1": 0.188,
+      "f2": 0.246,
+      "jaccard": 0.311,
+      "false_rate": 0.0,
+      "tier": "open"
+    },
+    {
+      "model": "Gemma 3 12B",
+      "f1": 0.391,
+      "f2": 0.421,
+      "jaccard": 0.446,
+      "false_rate": 0.045,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 4B",
+      "f1": 0.411,
+      "f2": 0.362,
+      "jaccard": 0.337,
+      "false_rate": 0.211,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 4B (thinking)",
+      "f1": 0.075,
+      "f2": 0.055,
+      "jaccard": 0.3,
+      "false_rate": 0.198,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 8B AWQ",
+      "f1": 0.475,
+      "f2": 0.393,
+      "jaccard": 0.303,
+      "false_rate": 0.306,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 8B AWQ (thinking)",
+      "f1": 0.187,
+      "f2": 0.15,
+      "jaccard": 0.374,
+      "false_rate": 0.125,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 8B",
+      "f1": 0.53,
+      "f2": 0.453,
+      "jaccard": 0.34,
+      "false_rate": 0.248,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 8B (thinking)",
+      "f1": 0.54,
+      "f2": 0.512,
+      "jaccard": 0.391,
+      "false_rate": 0.11,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 8B FP8",
+      "f1": 0.491,
+      "f2": 0.411,
+      "jaccard": 0.313,
+      "false_rate": 0.285,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 8B FP8 (thinking)",
+      "f1": 0.307,
+      "f2": 0.263,
+      "jaccard": 0.399,
+      "false_rate": 0.105,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 14B",
+      "f1": 0.473,
+      "f2": 0.418,
+      "jaccard": 0.4,
+      "false_rate": 0.174,
+      "tier": "open"
+    },
+    {
+      "model": "Qwen3 14B (thinking)",
+      "f1": 0.387,
+      "f2": 0.334,
+      "jaccard": 0.421,
+      "false_rate": 0.117,
+      "tier": "open"
+    }
+  ]
+}

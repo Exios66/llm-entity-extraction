@@ -1379,3 +1379,39 @@ def test_contracts_v33_reasoning_trace_retag():
     assert "obligation entries' `field` is the canonical CUAD category name" in v33
     # Predecessor stays intact.
     assert "RETAG RULE" not in CONTRACTS_SPECIALIST_PROMPT_V32
+
+
+def test_contracteval_v0_registered_and_verbatim():
+    """contracteval_v0 (KANBAN-052) = the paper's system prompt VERBATIM and
+    registered as a versioned prompt (the experiment identity for the GEPA
+    iteration loop)."""
+    from src.prompts import (
+        CONTRACTEVAL_PROMPT_V0,
+        CONTRACTEVAL_SYSTEM_PROMPT,
+        CONTRACTEVAL_USER_TEMPLATE,
+    )
+
+    assert "contracteval_v0" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracteval_v0"] is CONTRACTEVAL_PROMPT_V0
+    # v0 is the paper's exact system prompt (arXiv 2508.03080, open_source_model.py).
+    assert CONTRACTEVAL_PROMPT_V0 == CONTRACTEVAL_SYSTEM_PROMPT
+    assert "extract and return only the sentence(s) from the Context" in CONTRACTEVAL_SYSTEM_PROMPT
+    assert 'respond with: "No related clause."' in CONTRACTEVAL_SYSTEM_PROMPT
+    assert "Do not rephrase or summarize in any way" in CONTRACTEVAL_SYSTEM_PROMPT
+    # The runner-side Context:/Question: template carries the placeholders.
+    assert "{context}" in CONTRACTEVAL_USER_TEMPLATE and "{question}" in CONTRACTEVAL_USER_TEMPLATE
+    assert CONTRACTEVAL_USER_TEMPLATE.startswith("Context:")
+
+
+def test_contracteval_user_template_formats():
+    """The ContractEval prompt template reproduces the paper's exact user
+    message shape (Context block + Question block)."""
+    from src.prompts import CONTRACTEVAL_USER_TEMPLATE
+
+    msg = CONTRACTEVAL_USER_TEMPLATE.format(
+        context="FULL CONTRACT TEXT", question="Document Name question")
+    assert "FULL CONTRACT TEXT" in msg
+    assert "Document Name question" in msg
+    assert msg.index("Context:") < msg.index("Question:")
+    assert "```" in msg
+

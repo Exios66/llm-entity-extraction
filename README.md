@@ -276,8 +276,15 @@ scripts/eval/
   run_langfuse_chained_eval.py        PRIMARY-sink mirror of run_chained_eval
   run_langfuse_extraction_eval.py     PRIMARY-sink mirror of run_extraction_eval (--chunked)
   run_langfuse_classification_eval.py Langfuse mirror of run_classification_eval (--prompt-mode task)
+  run_langfuse_contracteval_eval.py    directly-mirrored ContractEval benchmark (arXiv 2508.03080):
+                                       one (contract, question) call per row over the CUAD test split,
+                                       faithful full-context, ContractEval's exact rubric (F1/F2/Jaccard/
+                                       false-"no related clause" rate) — see the evals section below
   sync_langfuse_prompts.py        mirror versioned prompts into Langfuse (idempotent)
   sync_langfuse_datasets.py       mirror Braintrust datasets into Langfuse datasets
+scripts/datasets/
+  build_contracteval_testset.py   build the ContractEval CUAD test split (4,182 pairs / 102 contracts /
+                                  41 categories; positives = 1,244) into data/contracteval/
 scripts/reporting/
   render_experiment_log.py        rebuild the markdown log from the JSONL source
   report_generator.py             markdown experiment report from Braintrust
@@ -288,6 +295,9 @@ scripts/reporting/
   judge_experiment.py             post-hoc JudgeAgent review of failed classifications
   backfill_subtype_reasoning.py   one-time enrichment: full failure reasoning from spans
   backfill_cost_estimates.py      one-time backfill: stamp cost_estimated_usd on historical records
+  run_contracteval_mapping.py     benchmark stored ONE-PASS extraction runs vs ContractEval Table III (offline)
+  run_contracteval_report.py      benchmark directly-mirrored contracteval runs vs the 19-model Table III
+                                   + per-category breakdown (offline, reads the experiment log)
 scripts/site/
   build_site.py                   rebuild docs/ (GitHub Pages) data from the JSONL
 ```
@@ -602,6 +612,7 @@ never collide.
 | `run_langfuse_chained_eval.py` | **Primary-sink mirror** of the chained eval: per-agent spans (`sorter`, `contracts_specialist`) with each agent's designated task scores attached to its own observation; `--handoff-scope subtype` (default) cues the specialist with the predicted subtype's CUAD field groups |
 | `run_langfuse_extraction_eval.py` | **Primary-sink mirror** of the specialist-only extraction eval (`--chunked` supported — the truncation-doctrine A/B surface) |
 | `run_langfuse_classification_eval.py` | **Langfuse mirror** of the doc-type classification eval (text mode); `--prompt-mode task` + `--valid-classes` mirror the LegalBench task eval too (e.g. `mailroom-lb-hearsay`), one `legalbench_task` observation per row |
+| `run_langfuse_contracteval_eval.py` | **Directly-mirrored ContractEval benchmark** (arXiv 2508.03080, KANBAN-052): one (contract, question) call per row over the CUAD test split (4,182 pairs / 102 contracts / 41 categories; build via `scripts/datasets/build_contracteval_testset.py`), ContractEval's exact system prompt (`contracteval_v0`), faithful full-context (`--max-input-chars 0` = no cap; temp 0; max_tokens 5000), ContractEval's EXACT rubric scored upstream (`llm-dojo-scoring` v0.4.0 `contracteval` kind): F1/F2/acc/prec/recall, token-set Jaccard over positives, false-"no related clause" rate (own + paper's 1,244 denominator), per-category breakdown; one `contracteval` observation per pair + one experiment-log record (`task: contracteval`). Compare vs Table III with `scripts/reporting/run_contracteval_report.py` |
 
 Every runner supports `--samples-per-class`/`--sample`, `--sample-seed`/`--seed`,
 `--limit`, `--dry-run`, `--experiment-log`, and stamps the full prompt text

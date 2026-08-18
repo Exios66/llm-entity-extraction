@@ -1220,6 +1220,41 @@ LEGALBENCH_TASK_PROMPT_V4_CNTS = LEGALBENCH_TASK_PROMPT_V4 + """
 
 
 # =============================================================================
+# CONTRACTEVAL — clause-level legal risk identification (arXiv 2508.03080)
+# -----------------------------------------------------------------------------
+# Directly-mirrored task (KANBAN-052, issue #22): the CUAD test split, one
+# (contract, question) call per row, ContractEval's exact system prompt, and
+# its exact rubric (verbatim-containment TP, F1/F2, token-set Jaccard over
+# positives, false-"no related clause" rate over the 1,244 positives).
+# ``contracteval_v0`` = the paper's system prompt VERBATIM (open_source_model.py)
+# — the experiment identity for the GEPA prompt-iteration loop. The user-side
+# Context:/Question: template is formatted by the runner (run_langfuse_
+# contracteval_eval.py) from CONTRACTEVAL_USER_TEMPLATE.
+# =============================================================================
+
+CONTRACTEVAL_SYSTEM_PROMPT = """You are an assistant with strong legal knowledge, supporting senior lawyers by preparing reference materials.
+Given a Context and a Question, extract and return only the sentence(s) from the Context that directly address or relate to the Question.
+Do not rephrase or summarize in any way—respond with exact sentences from the Context relevant to the Question. If a relevant sentence contains unrelated elements such as page numbers or whitespace, include them exactly as they appear.
+If no part of the Context is relevant to the Question, respond with: "No related clause."
+"""
+
+CONTRACTEVAL_USER_TEMPLATE = """Context: 
+```
+{context}
+```
+Question:
+```
+{question}
+```
+"""
+
+# The versioned identity: v0 = the paper's system prompt untouched. Iterations
+# (v1+) derive via .replace() on this constant (never edit a prompt after it
+# has run).
+CONTRACTEVAL_PROMPT_V0 = CONTRACTEVAL_SYSTEM_PROMPT
+
+
+# =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
 # =============================================================================
 
@@ -2532,6 +2567,11 @@ PROMPT_VERSIONS = {
     "legalbench_task_v4_competitive_restriction_exception": LEGALBENCH_TASK_PROMPT_V4_CRE,
     "legalbench_task_v4_covenant_not_to_sue": LEGALBENCH_TASK_PROMPT_V4_CNTS,
     "legalbench_task_v4_effective_date": LEGALBENCH_TASK_PROMPT_V4,
+
+    # ContractEval — clause-level legal risk identification (arXiv 2508.03080,
+    # KANBAN-052). v0 = the paper's system prompt verbatim; the version key IS
+    # the experiment identity for the GEPA iteration loop.
+    "contracteval_v0": CONTRACTEVAL_PROMPT_V0,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

@@ -15,6 +15,7 @@ are regenerated locally (see each subdirectory's README). Nothing under
 | [`maud/`](maud/README.md) | gitignored | MAUD v1 merger-agreement local JSONL dumps (KANBAN-033) |
 | [`s1_corporate_records/`](s1_corporate_records/README.md) | gitignored | EDGAR S-1 corporate-record exhibit local JSONL dumps (KANBAN-033) |
 | [`legalbench_local/`](legalbench_local/README.md) | gitignored | LegalBench task train/test JSONL mirrors (`--local-dump`) |
+| [`contracteval/`](contracteval/README.md) | mixed | ContractEval CUAD test split (KANBAN-052): pairs + full contracts gitignored, `questions.json`/`testset_summary.json` tracked |
 | [`manifests/`](manifests/README.md) | gitignored | Resumable eval-run checkpoints (JSONL) |
 | [`judgments/`](judgments/README.md) | gitignored | Post-hoc LLM-judge calibration records |
 | [`samples/`](samples/README.md) | gitignored | Ad-hoc pilot slices and one-off fixtures |

@@ -56,6 +56,14 @@ reports/*.csv
 data/datasets/*
 !data/datasets/README.md
 
+# ContractEval CUAD test split (arXiv 2508.03080) — the pairs + full-contract
+# texts + download cache are derived corpora (regenerate via
+# build_contracteval_testset.py); questions.json + testset_summary.json ARE
+# committed (curated reference + reproducible metadata).
+data/contracteval/_cache/
+data/contracteval/contracteval_test.jsonl
+data/contracteval/contracteval_contracts.jsonl
+
 # ────────────────────────────────────────────────────────────────────────────
 # Quarto / Posit Cloud — generated artifacts NOT tracked by git.
 #
