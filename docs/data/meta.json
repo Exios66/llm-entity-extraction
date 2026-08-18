@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-18T09:33:12.052391+00:00",
+ "built_at": "2026-08-18T12:15:45.315292+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
   "05b3b17b9ce344b98dd246693ff4b9683db239b4f6b0c8f5ffb0be78b4b2b7c9:42:6",
@@ -45,7 +45,7 @@
  ],
  "source": "reports/experiment_log.jsonl",
  "repo_url": "https://github.com/Exios66/llm-entity-extraction",
- "run_count": 201,
+ "run_count": 203,
  "tasks": {
   "contract_entity_extraction": 52,
   "chained_sorter_extractor": 16,
@@ -53,10 +53,10 @@
   "sorter_classification": 3,
   "task_classification": 56,
   "docclass_classification": 15,
-  "contracteval": 6
+  "contracteval": 8
  },
  "models": {
-  "qwen/qwen3.7-flash": 177,
+  "qwen/qwen3.7-flash": 178,
   "deepseek/deepseek-v4-flash": 5,
   "deepseek/deepseek-v4-pro": 2,
   "openai/gpt-5-nano": 1,
@@ -64,7 +64,8 @@
   "meta-llama/llama-4-scout": 7,
   "meta-llama/llama-3.3-70b-instruct": 3,
   "openai/gpt-4o-mini": 2,
-  "openai/gpt-4.1-mini": 1
+  "openai/gpt-4.1-mini": 1,
+  "qwen3-8b": 1
  },
  "prompts": {
   "contracts_specialist_v2": 1,
@@ -139,15 +140,16 @@
   "sorter_docclass_v4": 2,
   "sorter_docclass_v5": 2,
   "sorter_docclass_v6": 1,
-  "contracteval_v0": 2,
+  "contracteval_v0": 3,
   "contracteval_v1": 2,
   "contracteval_v2": 1,
-  "contracteval_v3": 1
+  "contracteval_v3": 1,
+  "contracteval_v4": 1
  },
- "n_rows": 42995,
- "n_ok": 42080,
+ "n_rows": 51359,
+ "n_ok": 50444,
  "n_error": 873,
- "total_tokens": 573146612,
+ "total_tokens": 650232431,
  "best_per_task": {
   "contract_entity_extraction": {
    "run_id": 64,

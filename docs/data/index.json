@@ -10171,5 +10171,71 @@
   },
   "data_source_project": null,
   "data_source_n_samples": 4182
+ },
+ {
+  "id": 202,
+  "experiment_name": "qwen3.7-flash_contracteval_v4_contracteval_langfuse",
+  "task": "contracteval",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracteval_v4",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 4182,
+  "n_ok": 4182,
+  "n_error": 0,
+  "total_tokens": 51271598,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 2.312648,
+  "cost_estimated_per_doc_usd": 0.000553,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5",
+  "seed": null,
+  "sample_key": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5:42:4182",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-18T10:01:51.115241+00:00",
+  "git": {
+   "commit": "4488253",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 4182
+ },
+ {
+  "id": 203,
+  "experiment_name": "qwen3-8b_contracteval_v0_contracteval_langfuse",
+  "task": "contracteval",
+  "model": "qwen3-8b",
+  "prompts": "contracteval_v0",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 4182,
+  "n_ok": 4182,
+  "n_error": 0,
+  "total_tokens": 25814221,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": null,
+  "cost_estimated_per_doc_usd": null,
+  "cost_price_source": null,
+  "fingerprint": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5",
+  "seed": null,
+  "sample_key": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5:42:4182",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-18T12:10:15.842844+00:00",
+  "git": {
+   "commit": "2f9d416",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 4182
  }
 ]

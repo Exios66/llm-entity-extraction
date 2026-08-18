@@ -45,6 +45,11 @@ data/judgments/*
 !data/judgments/README.md
 reports/*.png
 reports/*.csv
+# Experiment log — the jsonl exceeded GitHub's 100 MB hard limit (GH001,
+# push rejected with an LFS suggestion); kept local-only, never tracked.
+# The public record lives in docs/data (site) + CHANGELOG.md.
+reports/experiment_log.jsonl
+reports/experiment_log.md
 
 # OS junk
 .DS_Store
