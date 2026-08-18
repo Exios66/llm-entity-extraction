@@ -4,6 +4,8 @@ Pooled over the CUAD test split (one (contract, question) call per row; faithful
 
 | Run | n_pairs | n_pos | Acc | P | R | F1 | F2 | Jacc | false-nr (own) | false-nr (paper/1244) |
 |---|---|---|---|---|---|---|---|---|---|---|
+| gpt-4.1-mini v1 | 4182 | 1244 | 0.790 | 0.638 | 0.675 | 0.656 | 0.667 | 0.467 | 0.084 | 0.084 |
+| qwen3.7-flash v3 | 4182 | 1244 | 0.685 | 0.478 | 0.661 | 0.555 | 0.614 | 0.526 | 0.037 | 0.037 |
 | qwen3.7-flash v2 | 4182 | 1244 | 0.700 | 0.497 | 0.580 | 0.535 | 0.561 | 0.648 | 0.043 | 0.043 |
 | qwen3.7-flash v1 | 4182 | 1244 | 0.696 | 0.490 | 0.602 | 0.541 | 0.576 | 0.608 | 0.045 | 0.045 |
 | qwen3.7-flash v0 | 4182 | 1244 | 0.681 | 0.474 | 0.666 | 0.554 | 0.616 | 0.506 | 0.029 | 0.029 |
@@ -35,48 +37,48 @@ ContractEval Table III reference (F1/F2/Jaccard/false-nr, paper's own 1,244-posi
 
 **Caveat:** our runs use this repo's OpenRouter models (not the paper's exact model set) — the comparison is same-shape/same-metric, not same-model. The false-nr column 'own' divides by the run's own positive count; 'paper/1244' divides by the paper's hardcoded 1,244 positives (identical on the full test set).
 
-## Per-category breakdown — qwen3.7-flash v2 (Fig-4 analogue)
+## Per-category breakdown — gpt-4.1-mini v1 (Fig-4 analogue)
 
 | Category | n_pairs | n_pos | P | R | F1 | F2 | Jacc |
 |---|---|---|---|---|---|---|---|
-| Agreement Date | 102 | 93 | 0.902 | 0.892 | 0.897 | 0.894 | 0.633 |
-| Document Name | 102 | 102 | 1.000 | 0.804 | 0.891 | 0.837 | 0.817 |
-| Parties | 102 | 102 | 1.000 | 0.794 | 0.885 | 0.828 | 0.295 |
-| Governing Law | 102 | 83 | 0.970 | 0.771 | 0.859 | 0.804 | 0.917 |
-| Anti-Assignment | 102 | 72 | 0.915 | 0.597 | 0.723 | 0.642 | 0.788 |
-| Insurance | 102 | 32 | 0.719 | 0.719 | 0.719 | 0.719 | 0.831 |
-| Expiration Date | 102 | 78 | 0.842 | 0.615 | 0.711 | 0.650 | 0.758 |
-| No-Solicit Of Employees | 102 | 10 | 0.750 | 0.600 | 0.667 | 0.625 | 0.866 |
-| Effective Date | 102 | 70 | 0.608 | 0.686 | 0.644 | 0.668 | 0.699 |
-| Audit Rights | 102 | 38 | 0.783 | 0.474 | 0.590 | 0.514 | 0.665 |
-| Renewal Term | 102 | 26 | 0.475 | 0.731 | 0.576 | 0.660 | 0.848 |
-| Liquidated Damages | 102 | 14 | 0.471 | 0.571 | 0.516 | 0.548 | 0.585 |
-| Covenant Not To Sue | 102 | 24 | 0.818 | 0.375 | 0.514 | 0.421 | 0.565 |
-| Cap On Liability | 102 | 44 | 0.643 | 0.409 | 0.500 | 0.441 | 0.672 |
-| Termination For Convenience | 102 | 29 | 0.346 | 0.621 | 0.444 | 0.536 | 0.800 |
-| Non-Compete | 102 | 23 | 0.351 | 0.565 | 0.433 | 0.504 | 0.580 |
-| License Grant | 102 | 50 | 0.586 | 0.340 | 0.430 | 0.371 | 0.673 |
-| Revenue/Profit Sharing | 102 | 35 | 0.500 | 0.371 | 0.426 | 0.392 | 0.537 |
-| Change Of Control | 102 | 26 | 0.325 | 0.500 | 0.394 | 0.451 | 0.647 |
-| No-Solicit Of Customers | 102 | 7 | 0.500 | 0.286 | 0.364 | 0.312 | 0.784 |
-| Non-Disparagement | 102 | 7 | 0.300 | 0.429 | 0.353 | 0.395 | 0.577 |
-| Notice Period To Terminate Renewal | 102 | 16 | 0.233 | 0.625 | 0.339 | 0.467 | 0.804 |
-| Uncapped Liability | 102 | 13 | 0.211 | 0.846 | 0.339 | 0.529 | 0.830 |
-| Most Favored Nation | 102 | 3 | 0.333 | 0.333 | 0.333 | 0.333 | 0.487 |
-| Competitive Restriction Exception | 102 | 16 | 0.250 | 0.438 | 0.318 | 0.380 | 0.580 |
-| Exclusivity | 102 | 33 | 0.289 | 0.333 | 0.310 | 0.324 | 0.515 |
-| Rofr/Rofo/Rofn | 102 | 17 | 0.600 | 0.176 | 0.273 | 0.205 | 0.512 |
-| Irrevocable Or Perpetual License | 102 | 13 | 0.152 | 0.538 | 0.237 | 0.357 | 0.704 |
-| Post-Termination Services | 102 | 29 | 0.172 | 0.345 | 0.230 | 0.287 | 0.329 |
-| Ip Ownership Assignment | 102 | 23 | 0.179 | 0.304 | 0.226 | 0.267 | 0.448 |
-| Non-Transferable License | 102 | 22 | 0.160 | 0.364 | 0.222 | 0.290 | 0.686 |
-| Affiliate License-Licensee | 102 | 12 | 0.135 | 0.417 | 0.204 | 0.294 | 0.688 |
-| Unlimited/All-You-Can-Eat-License | 102 | 3 | 0.100 | 0.667 | 0.174 | 0.312 | 0.821 |
-| Third Party Beneficiary | 102 | 6 | 0.088 | 0.500 | 0.150 | 0.259 | 0.664 |
-| Minimum Commitment | 102 | 32 | 0.273 | 0.094 | 0.140 | 0.108 | 0.300 |
-| Warranty Duration | 102 | 10 | 0.095 | 0.200 | 0.129 | 0.164 | 0.379 |
-| Affiliate License-Licensor | 102 | 6 | 0.056 | 0.167 | 0.083 | 0.119 | 0.536 |
-| Volume Restriction | 102 | 17 | 0.071 | 0.059 | 0.065 | 0.061 | 0.158 |
-| Joint Ip Ownership | 102 | 7 | 0.000 | 0.000 | 0.000 | 0.000 | 0.700 |
+| Governing Law | 102 | 83 | 0.987 | 0.904 | 0.943 | 0.919 | 0.722 |
+| Parties | 102 | 102 | 1.000 | 0.882 | 0.938 | 0.904 | 0.194 |
+| Agreement Date | 102 | 93 | 0.926 | 0.946 | 0.936 | 0.942 | 0.149 |
+| Document Name | 102 | 102 | 1.000 | 0.784 | 0.879 | 0.820 | 0.488 |
+| Expiration Date | 102 | 78 | 0.887 | 0.808 | 0.846 | 0.823 | 0.748 |
+| Anti-Assignment | 102 | 72 | 0.962 | 0.708 | 0.816 | 0.748 | 0.689 |
+| Renewal Term | 102 | 26 | 0.619 | 1.000 | 0.765 | 0.890 | 0.735 |
+| Effective Date | 102 | 70 | 0.655 | 0.814 | 0.726 | 0.777 | 0.290 |
+| No-Solicit Of Employees | 102 | 10 | 0.700 | 0.700 | 0.700 | 0.700 | 0.777 |
+| Change Of Control | 102 | 26 | 0.739 | 0.654 | 0.694 | 0.669 | 0.472 |
+| Audit Rights | 102 | 38 | 0.875 | 0.553 | 0.677 | 0.597 | 0.526 |
+| Revenue/Profit Sharing | 102 | 35 | 0.778 | 0.600 | 0.677 | 0.629 | 0.252 |
+| Insurance | 102 | 32 | 0.677 | 0.656 | 0.667 | 0.660 | 0.778 |
+| Liquidated Damages | 102 | 14 | 0.800 | 0.571 | 0.667 | 0.606 | 0.425 |
+| License Grant | 102 | 50 | 0.885 | 0.460 | 0.605 | 0.509 | 0.470 |
+| Competitive Restriction Exception | 102 | 16 | 0.500 | 0.750 | 0.600 | 0.682 | 0.510 |
+| Irrevocable Or Perpetual License | 102 | 13 | 0.533 | 0.615 | 0.571 | 0.597 | 0.678 |
+| Affiliate License-Licensee | 102 | 12 | 0.471 | 0.667 | 0.552 | 0.615 | 0.531 |
+| Covenant Not To Sue | 102 | 24 | 1.000 | 0.375 | 0.545 | 0.429 | 0.384 |
+| Unlimited/All-You-Can-Eat-License | 102 | 3 | 0.375 | 1.000 | 0.545 | 0.750 | 0.705 |
+| Termination For Convenience | 102 | 29 | 0.423 | 0.759 | 0.543 | 0.655 | 0.696 |
+| Non-Compete | 102 | 23 | 0.500 | 0.522 | 0.511 | 0.517 | 0.514 |
+| Most Favored Nation | 102 | 3 | 1.000 | 0.333 | 0.500 | 0.385 | 0.195 |
+| No-Solicit Of Customers | 102 | 7 | 0.444 | 0.571 | 0.500 | 0.540 | 0.603 |
+| Non-Disparagement | 102 | 7 | 0.500 | 0.429 | 0.462 | 0.441 | 0.417 |
+| Uncapped Liability | 102 | 13 | 0.293 | 0.923 | 0.444 | 0.645 | 0.554 |
+| Cap On Liability | 102 | 44 | 0.923 | 0.273 | 0.421 | 0.318 | 0.440 |
+| Exclusivity | 102 | 33 | 0.448 | 0.394 | 0.419 | 0.404 | 0.428 |
+| Affiliate License-Licensor | 102 | 6 | 0.333 | 0.500 | 0.400 | 0.455 | 0.541 |
+| Joint Ip Ownership | 102 | 7 | 0.278 | 0.714 | 0.400 | 0.543 | 0.562 |
+| Minimum Commitment | 102 | 32 | 0.692 | 0.281 | 0.400 | 0.319 | 0.273 |
+| Ip Ownership Assignment | 102 | 23 | 0.333 | 0.478 | 0.393 | 0.440 | 0.442 |
+| Rofr/Rofo/Rofn | 102 | 17 | 1.000 | 0.235 | 0.381 | 0.278 | 0.360 |
+| Notice Period To Terminate Renewal | 102 | 16 | 0.222 | 0.875 | 0.354 | 0.551 | 0.800 |
+| Post-Termination Services | 102 | 29 | 0.226 | 0.414 | 0.293 | 0.355 | 0.298 |
+| Warranty Duration | 102 | 10 | 0.214 | 0.300 | 0.250 | 0.278 | 0.347 |
+| Non-Transferable License | 102 | 22 | 0.173 | 0.409 | 0.243 | 0.321 | 0.471 |
+| Third Party Beneficiary | 102 | 6 | 0.103 | 0.500 | 0.171 | 0.283 | 0.508 |
 | Price Restrictions | 102 | 0 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
-| Source Code Escrow | 102 | 1 | 0.000 | 0.000 | 0.000 | 0.000 | 0.641 |
+| Source Code Escrow | 102 | 1 | 0.000 | 0.000 | 0.000 | 0.000 | 0.911 |
+| Volume Restriction | 102 | 17 | 0.000 | 0.000 | 0.000 | 0.000 | 0.057 |

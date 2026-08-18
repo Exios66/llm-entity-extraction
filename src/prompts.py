@@ -1392,6 +1392,60 @@ CONTRACTEVAL_PROMPT_V3 = CONTRACTEVAL_PROMPT_V0 + (
 )
 
 
+# -----------------------------------------------------------------------------
+# contracteval_v4 — the synthesis (GEPA iteration 4, KANBAN-052). Derived
+# from V3 by ONE surgical replace (v0/v1/v2/v3 byte-identical).
+# 4-run A/B (identical 4,182 rows, qwen3.7-flash, temp 0):
+#   v0: F1 0.5541 / F2 0.6164 / J 0.5058 / P 0.4743 / R 0.6664 / fnr 0.0289
+#       (829/2019/919/415)
+#   v1: F1 0.5406 / F2 0.5759 / J 0.6081 / P 0.4905 / R 0.6021 / fnr 0.045
+#       (749/2160/778/495)
+#   v2: F1 0.5349 / F2 0.5608 / J 0.6479 / P 0.4966 / R 0.5796 / fnr 0.0426
+#       (721/2207/731/523)
+#   v3: F1 0.5550 / F2 0.6140 / J 0.5258 / P 0.4785 / R 0.6608 / fnr 0.037
+#       (822/2042/896/422); v2->v3: TN->FP 208, FN->TP 132, FP->TN 43,
+#       TP->FN 31; paired J on the 1,378 shared quote rows: mean -0.0953.
+# THE OSCILLATION (deduced weakness): the series oscillates between two
+# failure modes - each iteration over-corrects the previous one's fix.
+# Bloat mode (v0, v3): relate-trigger + whole-sentence quoting -> FP
+# 919/896, J 0.506/0.526; v3's verbatim rule recovered 132 TPs (quote
+# fidelity WORKS - TP 822) but its "when in doubt whether a fragment would
+# omit part of the answer, quote the whole sentence" clause re-bloated the
+# outputs (+208 TN->FP, median quote 583 chars, 136/208 > 400 chars;
+# the 132 recoveries are GT-within-quote supersets: med 3.3x, 91/132 > 2x).
+# Fragment/trim mode (v1, v2): smallest-span + element-alone -> J 0.608/
+# 0.648, FP 778/731, but containment failures (trims/case/whitespace
+# re-typing) cost TPs (749/721). Proven axes, each isolated: VERBATIM
+# character-for-character quoting (v3: 132 recovered, zero trigger
+# refusals among the 31 lost - all span-level) + smallest-COMPLETE-span
+# discipline (v2: J 0.648, FP 731). Loser clauses: v3's whole-sentence-
+# when-doubt bias (bloat) and v1/v2's fragment-inducing element-alone
+# trimming without fidelity.
+# THE SYNTHESIS (v4): keep verbatim fidelity + the bounded trigger;
+# REPLACE the doubt-bias tail with the smallest-span-complete rule -
+# quote VERBATIM and SMALL. 31 TP->FN rows at v3 were span failures with
+# zero refusals (24 wrong quotes + 7 fragments), all TP at v2 -> v4's
+# v2-style span rule restores most. Paired-row projection (real rows):
+# TP 827-847 (t132 hold 85-100%, t31 recover 80%), FP 771-813 (40-60% of
+# the 208 bloat-quotes revert), J 0.634-0.640 (shared rows at v2 spans:
+# sumJ2 528.4 + t132 verbatim floor + t31 restored at v2 J), F1 0.574-
+# 0.592, F2 0.625-0.642, fnr 0.037 (refusals unchanged - trigger held).
+# Targets: beat v0 F1 0.5541, J back to 0.60+, fnr <= 0.04 - met at every
+# projected point.
+# -----------------------------------------------------------------------------
+CONTRACTEVAL_PROMPT_V4 = CONTRACTEVAL_PROMPT_V3.replace(
+    'Quote the complete sentence(s) that carry the answer, never a '
+    'fragment of a sentence; a date, amount, name, or defined term that is '
+    'itself the complete answer may be quoted alone, but when in doubt '
+    'whether a fragment would omit part of the answer, quote the whole '
+    'sentence.',
+    'Quote the smallest span that carries the complete answer: a date, '
+    'amount, name, or defined term that is itself the complete answer may '
+    'be quoted alone; otherwise quote the complete sentence(s), never a '
+    'fragment of a sentence.',
+)
+
+
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
 # =============================================================================
@@ -2711,11 +2765,15 @@ PROMPT_VERSIONS = {
     # discipline rule; v2 = v1 + trigger/span decoupling; v3 = v0 + quote-
     # fidelity rule (verbatim + complete spans; v2 trigger kept, span rule
     # replaced; the mined weakest link was quote fidelity, not the trigger);
-    # the version key IS the experiment identity for the GEPA iteration loop.
+    # v4 = v3 + the synthesis (verbatim AND smallest-complete-span: the
+    # doubt-bias whole-sentence clause replaced by the smallest-span rule —
+    # breaks the bloat/fragment oscillation); the version key IS the
+    # experiment identity for the GEPA iteration loop.
     "contracteval_v0": CONTRACTEVAL_PROMPT_V0,
     "contracteval_v1": CONTRACTEVAL_PROMPT_V1,
     "contracteval_v2": CONTRACTEVAL_PROMPT_V2,
     "contracteval_v3": CONTRACTEVAL_PROMPT_V3,
+    "contracteval_v4": CONTRACTEVAL_PROMPT_V4,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

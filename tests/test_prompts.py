@@ -1534,6 +1534,56 @@ def test_contracteval_v3_derived_quote_fidelity():
         assert forbidden not in CONTRACTEVAL_PROMPT_V3
 
 
+def test_contracteval_v4_derived_verbatim_smallest_span():
+    """contracteval_v4 (KANBAN-052 GEPA iteration 4 — the synthesis) = v3
+    with ONE surgical replace: the doubt-bias tail ("when in doubt whether
+    a fragment would omit part of the answer, quote the whole sentence") is
+    replaced by the smallest-span-complete rule. Verbatim fidelity (v3's TP
+    recovery engine) and the bounded trigger are kept; the whole-sentence-
+    when-doubt clause that re-bloated v3 (J -0.0953 on shared rows, +208
+    TN->FP) is gone. The v0 -> v1 -> v2 -> v3 chain stays byte-identical
+    and the "No related clause." contract is preserved (exactly 2)."""
+    from src.prompts import (
+        CONTRACTEVAL_PROMPT_V0,
+        CONTRACTEVAL_PROMPT_V1,
+        CONTRACTEVAL_PROMPT_V2,
+        CONTRACTEVAL_PROMPT_V3,
+        CONTRACTEVAL_PROMPT_V4,
+        CONTRACTEVAL_SYSTEM_PROMPT,
+    )
+
+    assert "contracteval_v4" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracteval_v4"] is CONTRACTEVAL_PROMPT_V4
+    # Byte-identical derivation chain: v0 -> v1 -> v2 -> v3 -> v4, one
+    # surgical replace only.
+    assert CONTRACTEVAL_PROMPT_V0 == CONTRACTEVAL_SYSTEM_PROMPT
+    assert CONTRACTEVAL_PROMPT_V1.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V2.startswith(CONTRACTEVAL_PROMPT_V1)
+    assert CONTRACTEVAL_PROMPT_V3.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V4.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V4 != CONTRACTEVAL_PROMPT_V3
+    # The synthesis: verbatim fidelity AND smallest-complete-span, both present.
+    assert "Quote the exact text of that span, character for character" in CONTRACTEVAL_PROMPT_V4
+    assert "never clean, normalize, or re-type the text" in CONTRACTEVAL_PROMPT_V4
+    assert "Quote the smallest span that carries the complete answer" in CONTRACTEVAL_PROMPT_V4
+    assert "never a fragment of a sentence" in CONTRACTEVAL_PROMPT_V4
+    assert "otherwise quote the complete sentence(s)" in CONTRACTEVAL_PROMPT_V4
+    # The doubt-bias clause is ABSENT (v3's bloat driver).
+    for forbidden in ("when in doubt whether a fragment would omit part of the answer",
+                      "quote the whole sentence", "quote the whole passage"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V4
+    # Trigger + no-related contract unchanged from v3.
+    assert "relates to the Question's subject and responds to it" in CONTRACTEVAL_PROMPT_V4
+    assert CONTRACTEVAL_PROMPT_V4.count('"No related clause."') == 2
+    # Refusal vocabulary still absent; mirror-faithful plain prompt.
+    for forbidden in ("states the answer", "related but different"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V4
+    assert CONTRACTEVAL_PROMPT_V4.startswith(
+        "You are an assistant with strong legal knowledge")
+    for forbidden in ("JSON", "json", "reasoning", "output format", "You are an AI"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V4
+
+
 def test_contracteval_user_template_formats():
     """The ContractEval prompt template reproduces the paper's exact user
     message shape (Context block + Question block)."""
