@@ -1253,6 +1253,41 @@ Question:
 # has run).
 CONTRACTEVAL_PROMPT_V0 = CONTRACTEVAL_SYSTEM_PROMPT
 
+# -----------------------------------------------------------------------------
+# contracteval_v1 — scope discipline (the GEPA lesson from the full v0 run,
+# qwen3.7-flash, 4,182 pairs / 102 contracts / 41 categories, temp 0,
+# max_tokens 5000, ContractEval's EXACT rubric):
+#   F1 0.5541 / F2 0.6164 / P 0.4743 / R 0.6664 / Jaccard 0.5058 / false-nr
+#   0.0289; confusion TP 829 / TN 2019 / FP 919 / FN 415.
+# Root cause mined from the per-row outputs: the model quotes topically
+# RELATED passages instead of ANSWER-STATING spans. (1) FP side: 31.3% of the
+# 2,938 non-positive rows return a clause (median 97 tokens of adjacent
+# passage — e.g. capped-liability Sec 16.2 quoted for "Uncapped Liability",
+# commencement sentence for "Agreement Date") — precision collapses to 0.474.
+# (2) Jaccard side: 425/829 TPs output >2x the GT span (p90 = 20x); short-
+# answer categories over-quote worst — Agreement Date median 14.9x bloat
+# (GT "2018" vs 830-char preamble, J 0.013; F1 0.915 / J 0.129), Effective
+# Date 12.4x (J 0.314), Document Name 11.5x (J 0.268). TP is containment-
+# based so F1 is blind to the padding; Jaccard counts every extra token
+# (ceiling 0.666 with exact quotes vs 0.506 now). (3) The 220 partial-overlap
+# FNs are the same selection fuzziness ("found the area, quoted the
+# neighborhood"). ONE lesson: quote the smallest span that STATES the
+# complete answer — exclude topic-adjacent sentences (FP lever) and padding
+# around short answers (Jaccard lever). The "No related clause." contract is
+# unchanged (false-nr 0.0289 = paper level; do not make the model more
+# trigger-happy). Append-style derived constant; v0 stays byte-identical.
+# -----------------------------------------------------------------------------
+CONTRACTEVAL_PROMPT_V1 = CONTRACTEVAL_PROMPT_V0 + (
+    'Quote the smallest span of the Context that states the complete answer: '
+    'the sentence(s) that contain the answer, and nothing more. When the '
+    'answer is a date, amount, name, or other short element, that element '
+    'alone is the span - do not add the rest of its sentence, the preamble, '
+    'recitals, definitions, or surrounding boilerplate. Exclude sentences '
+    'that merely relate to the Question\'s topic without stating the answer; '
+    'if no sentence in the Context states the answer, respond with: '
+    '"No related clause."'
+)
+
 
 # =============================================================================
 # CONTRACTS SPECIALIST — Contract Extraction
@@ -2569,9 +2604,11 @@ PROMPT_VERSIONS = {
     "legalbench_task_v4_effective_date": LEGALBENCH_TASK_PROMPT_V4,
 
     # ContractEval — clause-level legal risk identification (arXiv 2508.03080,
-    # KANBAN-052). v0 = the paper's system prompt verbatim; the version key IS
-    # the experiment identity for the GEPA iteration loop.
+    # KANBAN-052). v0 = the paper's system prompt verbatim; v1 = v0 + scope-
+    # discipline rule (precision/Jaccard lesson from the full v0 run); the
+    # version key IS the experiment identity for the GEPA iteration loop.
     "contracteval_v0": CONTRACTEVAL_PROMPT_V0,
+    "contracteval_v1": CONTRACTEVAL_PROMPT_V1,
 
     # Specialists
     "contracts_specialist": CONTRACTS_SPECIALIST_PROMPT,

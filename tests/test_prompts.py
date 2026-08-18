@@ -1403,6 +1403,41 @@ def test_contracteval_v0_registered_and_verbatim():
     assert CONTRACTEVAL_USER_TEMPLATE.startswith("Context:")
 
 
+def test_contracteval_v1_derived_scope_discipline():
+    """contracteval_v1 (KANBAN-052 GEPA iteration 1) = v0 + ONE scope-
+    discipline rule (tightest answer-stating span): derived append-style so v0
+    stays byte-identical, and the "No related clause." contract is preserved.
+
+    Motivation (full v0 run, 4,182 pairs, qwen3.7-flash): FP 919 -> precision
+    0.4743 (topic-adjacent passages quoted on negative rows); Jaccard 0.5058
+    with 425/829 TPs outputting >2x the GT span (Agreement Date F1 0.915 but
+    J 0.129)."""
+    from src.prompts import (
+        CONTRACTEVAL_PROMPT_V0,
+        CONTRACTEVAL_PROMPT_V1,
+        CONTRACTEVAL_SYSTEM_PROMPT,
+    )
+
+    assert "contracteval_v1" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracteval_v1"] is CONTRACTEVAL_PROMPT_V1
+    # Derived append-style: v0 is a strict prefix of v1 and is untouched.
+    assert CONTRACTEVAL_PROMPT_V1.startswith(CONTRACTEVAL_PROMPT_V0)
+    assert CONTRACTEVAL_PROMPT_V0 == CONTRACTEVAL_SYSTEM_PROMPT
+    assert CONTRACTEVAL_PROMPT_V1 != CONTRACTEVAL_PROMPT_V0
+    # The new lesson instruction is present.
+    assert "Quote the smallest span of the Context that states the complete answer" in CONTRACTEVAL_PROMPT_V1
+    assert "Exclude sentences that merely relate to the Question's topic without stating the answer" in CONTRACTEVAL_PROMPT_V1
+    # The "No related clause." contract survives in BOTH v0 and v1.
+    assert CONTRACTEVAL_PROMPT_V1.count('"No related clause."') == 2
+    # Mirror faithfulness: still a plain verbatim-extraction prompt — no
+    # analysis preamble, no JSON, no classification output.
+    assert CONTRACTEVAL_PROMPT_V1.startswith(
+        "You are an assistant with strong legal knowledge")
+    assert "Do not rephrase or summarize in any way" in CONTRACTEVAL_PROMPT_V1
+    for forbidden in ("JSON", "json", "reasoning", "output format", "You are an AI"):
+        assert forbidden not in CONTRACTEVAL_PROMPT_V1
+
+
 def test_contracteval_user_template_formats():
     """The ContractEval prompt template reproduces the paper's exact user
     message shape (Context block + Question block)."""

@@ -64,10 +64,19 @@ def test_resolve_tracer_langfuse_primary_when_keys_present(fake_clients, monkeyp
 
 def test_resolve_tracer_phoenix_fallback_when_langfuse_missing(fake_clients, monkeypatch):
     """No Langfuse keys -> the LOCAL Phoenix server is the fallback sink."""
+    from src.langfuse_config import LangfuseConfig
     from src.tracing import PHOENIX_BACKEND, resolve_tracer
 
     monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
     monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
+    # The loader reads langfuse.env (file) too — stub it so the test is
+    # independent of any locally-configured key file.
+    monkeypatch.setattr(
+        "src.tracing.load_langfuse_config",
+        lambda env_file=None: LangfuseConfig(
+            base_url="https://us.cloud.langfuse.com",
+            public_key="", secret_key="", project="llm-dojo", environment="llm-dojo"),
+    )
 
     tracer, backend, meta = resolve_tracer("exp_test", "docclass_classification")
     assert backend == PHOENIX_BACKEND

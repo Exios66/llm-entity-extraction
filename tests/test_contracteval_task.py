@@ -105,6 +105,38 @@ def _fake_propagate_attributes(**kwargs):
     yield
 
 
+class _FakePhoenixTracer:
+    """Stand-in for the Phoenix tracer: records traces, no network."""
+
+    def __init__(self, **kwargs):
+        self.disabled = False
+
+    @contextmanager
+    def trace_document(self, filename, expected=None, metadata=None):
+        yield _FakePhoenixHandle()
+
+    @contextmanager
+    def agent_observation(self, agent_name, metadata=None):
+        yield _FakePhoenixHandle()
+
+    def flush(self):
+        pass
+
+    def shutdown(self):
+        pass
+
+
+class _FakePhoenixHandle:
+    disabled = False
+    handler = None
+
+    def set_output(self, output):
+        pass
+
+    def score(self, name, value, comment=""):
+        pass
+
+
 @pytest.fixture
 def fake_contracteval_env(monkeypatch, tmp_path):
     """Synthetic pairs+contracts + mocked LLM + stubbed Langfuse."""
@@ -202,6 +234,66 @@ def test_runner_smoke_contracteval(fake_contracteval_env, monkeypatch, tmp_path)
     # The ContractEval observation scores are attached per pair.
     assert any(sc["name"] == "classification" for sc in fake_contracteval_env["stub"].scores)
     assert any(sc["name"] == "jaccard" for sc in fake_contracteval_env["stub"].scores)
+
+
+def test_runner_smoke_contracteval_phoenix_backend(fake_contracteval_env, monkeypatch, tmp_path):
+    """--tracing-backend phoenix: the run resolves the Phoenix tracer (no
+    Langfuse), records tracing_backend=phoenix, and dispatches pairs grouped
+    by contract (cache-friendly) while scoring identically."""
+    import scripts.eval.run_langfuse_contracteval_eval as runner
+
+    monkeypatch.setattr("scripts.eval.run_langfuse_contracteval_eval.resolve_openrouter_key",
+                        lambda *a, **k: "fake-key")
+    monkeypatch.setattr(
+        "scripts.eval.run_langfuse_contracteval_eval.resolve_tracer",
+        lambda *a, **k: (_FakePhoenixTracer(), "phoenix",
+                         {"endpoint": "http://localhost:6006/v1/traces",
+                          "session_id": "smoke_ce_phoenix", "trace_name": "contracteval",
+                          "disabled": False}))
+
+    instances: list = []
+    orig_sorter = runner.SorterAgent
+
+    def recording_sorter(*args, **kwargs):
+        inst = orig_sorter(*args, **kwargs)
+        instances.append(inst)
+        return inst
+
+    monkeypatch.setattr("scripts.eval.run_langfuse_contracteval_eval.SorterAgent",
+                        recording_sorter)
+
+    rc = runner.main_with_args([
+        "--task-dataset", str(fake_contracteval_env["pairs"]),
+        "--contracts", str(fake_contracteval_env["contracts"]),
+        "--prompt-version", "contracteval_v0",
+        "--model", "qwen/qwen3.7-flash",
+        "--tracing-backend", "phoenix",
+        "--experiment-name", "smoke_ce_phoenix",
+        "--experiment-log", str(tmp_path / "exp_phoenix.jsonl"),
+        "--manifest", str(tmp_path / "manifest_phoenix.jsonl"),
+        "--max-concurrency", "2",
+    ])
+    assert rc == 0
+
+    records = [json.loads(line) for line in open(tmp_path / "exp_phoenix.jsonl")]
+    assert len(records) == 1
+    record = records[0]
+    assert record["parameters"]["tracing_backend"] == "phoenix"
+    assert record["parameters"]["tracing"]["endpoint"] == "http://localhost:6006/v1/traces"
+
+    s = record["scores"]
+    assert s["tp"] == 1 and s["fn"] == 1 and s["tn"] == 1 and s["fp"] == 0
+
+    # Cache-friendly dispatch: the two ACME pairs run consecutively (contract
+    # grouped, id order within the contract).
+    titles = [r["title"] for r in record["results"]]
+    assert titles == ["ACME - Supply Agreement", "ACME - Supply Agreement",
+                      "BETA - Master Services Agreement"]
+    assert record["results"][0]["id"] == "acme__Anti-Assignment"
+    assert record["results"][1]["id"] == "acme__Document Name"
+
+    # The paper's plain-call convention: no sorter reasoning effort leaks in.
+    assert instances and all(inst._reasoning_effort is None for inst in instances)
 
 
 def test_report_contracteval(tmp_path):

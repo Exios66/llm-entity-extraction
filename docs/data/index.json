@@ -9965,5 +9965,75 @@
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
   "data_source_n_samples": 509
+ },
+ {
+  "id": 196,
+  "experiment_name": "qwen3.7-flash_contracteval_v0_contracteval_langfuse",
+  "task": "contracteval",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracteval_v0",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 100,
+  "n_ok": 100,
+  "n_error": 0,
+  "total_tokens": 1461087,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.06707,
+  "cost_estimated_per_doc_usd": 0.000671,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "f38f6fc79963b588bc4451a7e8a42422d27fdaaede8edf1e7594dcf67894656e",
+  "seed": null,
+  "sample_key": "f38f6fc79963b588bc4451a7e8a42422d27fdaaede8edf1e7594dcf67894656e:42:100",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-18T06:07:16.668911+00:00",
+  "git": {
+   "commit": "2f9d416",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 100
+ },
+ {
+  "id": 197,
+  "experiment_name": "qwen3.7-flash_contracteval_v0_contracteval_langfuse",
+  "task": "contracteval",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracteval_v0",
+  "headline": {},
+  "ci95": null,
+  "breakdown": {},
+  "n_rows": 4182,
+  "n_ok": 4182,
+  "n_error": 0,
+  "total_tokens": 51193025,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 2.386822,
+  "cost_estimated_per_doc_usd": 0.000571,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5",
+  "seed": null,
+  "sample_key": "0ac48b9a3bfca074ef9717c0cc9c2784118a2797484a3f2301ad75294bc849e5:42:4182",
+  "global_best_pp": null,
+  "delta_best_pp": null,
+  "timestamp": "2026-08-18T06:47:29.310603+00:00",
+  "git": {
+   "commit": "2f9d416",
+   "dirty": true
+  },
+  "data_source_project": null,
+  "data_source_n_samples": 4182
  }
 ]

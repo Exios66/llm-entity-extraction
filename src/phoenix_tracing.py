@@ -8,30 +8,40 @@ when a batch is done — ideal for pour-in, poke-around, discard workflows.
 Design
 ------
 - One OpenTelemetry TracerProvider is lazily initialised per process.
-- LangChain's OpenTelemetry integration emits spans for LLM calls, which
-  Phoenix ingests via OTLP HTTP.
-- The tracer is a no-op when PHOENIX_TRACING is disabled or when the
-  environment variable PHOENIX_ENABLED is false — evaluation runs identically
-  without observability overhead.
-- The module exposes a simple ``init_phoenix_tracing`` helper and a
-  ``PhoenixTracer`` context manager that mirrors the Langfuse API surface
-  (trace_document / agent_observation) for minimal code churn in eval runners.
-- Default endpoint: http://localhost:6006/v1/traces (Phoenix's OTLP HTTP
-  receiver). Override with PHOENIX_ENDPOINT.
-- Default project / session tagging via PHOENIX_PROJECT / PHOENIX_SESSION.
+- The provider emits spans over OTLP HTTP to the Phoenix endpoint
+  (``PHOENIX_ENDPOINT``, default ``http://localhost:6006/v1/traces``).
+- ``trace_document`` opens a ROOT span per evaluated document (name =
+  ``trace_name``) carrying session id, tags, filename, expected value and the
+  caller's metadata as span attributes; ``agent_observation`` opens a child
+  span under it. Outputs and deterministic logic scores are recorded on the
+  spans as events (``set_output`` / ``score``), so Phoenix holds the SAME
+  per-document data shape the Langfuse mirror records.
+- Best-effort ``OpenAIInstrumentor`` (openinference-instrumentation-openai,
+  already a dependency) instruments the OpenAI SDK used by the LangChain
+  agents, so every LLM call lands as a nested span with the full prompt,
+  response and token usage — captured under the agent span via context
+  propagation. Instrumentation failure only degrades to manual spans; it
+  never breaks a run.
+- The tracer is a no-op when PHOENIX_TRACING is disabled or when provider
+  initialisation failed — evaluation runs identically without observability.
+- ``flush()``/``shutdown()`` force-flush the batch processor WITHOUT shutting
+  the provider down (a shutdown would permanently disable the process's
+  tracer); batch spans are exported on flush or on a later exit.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import structlog
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterator
 
 logger = structlog.get_logger(__name__)
 
 _TRUE_VALUES = {"1", "true", "enabled", "yes", "on"}
+
 
 def phoenix_enabled() -> bool:
     """Return True when Phoenix tracing should be active.
@@ -40,6 +50,27 @@ def phoenix_enabled() -> bool:
     degrades to a no-op tracer so runs are unaffected.
     """
     return os.environ.get("PHOENIX_TRACING", "enabled").strip().lower() in _TRUE_VALUES
+
+
+def _instrument_openai() -> None:
+    """Best-effort OpenInference instrumentation of the OpenAI SDK.
+
+    The LangChain agents call OpenRouter through langchain-openai, which uses
+    the OpenAI SDK under the hood; instrumenting it emits one span per LLM
+    call (model, token usage, latency, output) nested under the current agent
+    span. ``hide_input_text`` drops the FULL request payload from the spans —
+    the ContractEval contexts run up to 300k chars each and would otherwise
+    balloon the local Phoenix SQLite DB; the bounded question/output/scores
+    stay on the manual document + agent spans.
+    """
+    try:
+        from openinference.instrumentation import TraceConfig
+        from openinference.instrumentation.openai import OpenAIInstrumentor
+
+        OpenAIInstrumentor().instrument(config=TraceConfig(hide_input_text=True))
+        logger.info("phoenix_openai_instrumented")
+    except Exception:  # noqa: BLE001 - observability must never break the run
+        logger.warning("phoenix_openai_instrument_failed", exc_info=True)
 
 
 def _init_opentelemetry() -> Any | None:
@@ -66,6 +97,7 @@ def _init_opentelemetry() -> Any | None:
         provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)
         logger.info("phoenix_tracing_initialized", endpoint=endpoint, service=service_name)
+        _instrument_openai()
         return provider
     except Exception:  # noqa: BLE001
         logger.warning("phoenix_tracing_init_failed", exc_info=True)
@@ -75,92 +107,224 @@ def _init_opentelemetry() -> Any | None:
 # Initialise once per process
 _provider = _init_opentelemetry()
 
+_TRACER_NAME = "llm-entity-extraction"
+
+
+def _tracer() -> Any | None:
+    """Return the module's OTel tracer, or None when tracing is disabled."""
+    if _provider is None:
+        return None
+    try:
+        from opentelemetry import trace
+
+        return trace.get_tracer(_TRACER_NAME)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _set_attributes(span: Any, attributes: dict[str, Any]) -> None:
+    """Set span attributes from a dict, skipping unusable values."""
+    for key, value in attributes.items():
+        if value is None:
+            continue
+        try:
+            span.set_attribute(key, value)
+        except Exception:  # noqa: BLE001 - one bad attribute must not kill the span
+            logger.warning("phoenix_attribute_failed", key=key, exc_info=True)
+
+
+def _annotation_attributes(annotations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Flatten collected scores into OpenInference ``annotations.*`` attributes.
+
+    Phoenix ingests feedback attached via the flattened ``annotations``
+    semantic convention (``annotations.{index}.{field}`` — name/score/label/
+    annotator_kind/explanation) and renders them as span annotations, so each
+    scored entry is filterable as correct/incorrect in the Phoenix UI.
+    """
+    attributes: dict[str, Any] = {}
+    for index, annotation in enumerate(annotations):
+        prefix = f"annotations.{index}"
+        for key, value in annotation.items():
+            if value is None:
+                continue
+            attributes[f"{prefix}.{key}"] = value
+    return attributes
+
 
 @dataclass
 class TraceHandle:
-    """Minimal handle compatible with LangfuseTracer interface.
+    """Document-level span handle (name = the tracer's trace_name)."""
 
-    In Phoenix mode the handle is a no-op for scoring/output attachment —
-    spans are emitted by LangChain's OpenTelemetry instrumentation.
-    """
     trace_id: str
     disabled: bool = True
     handler: Any | None = None
+    _span: Any = None
+    _annotations: list[dict[str, Any]] = field(default_factory=list)
 
     def set_output(self, output: Any) -> None:
-        return
+        """Record the document's composite output as a span event."""
+        if self.disabled or self._span is None:
+            return
+        try:
+            self._span.add_event(
+                "output",
+                {"payload": json.dumps(output, default=str)[:200_000]},
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("phoenix_output_event_failed", trace_id=self.trace_id)
 
-    def score(self, name: str, value: float, comment: str = "", observation_id: str | None = None) -> None:
-        return
+    def score(self, name: str, value: float, comment: str = "",
+              observation_id: str | None = None) -> None:
+        """Record one deterministic logic score as a span event + annotation."""
+        if self.disabled or self._span is None:
+            return
+        try:
+            self._span.add_event("score", {
+                "name": name, "value": str(value), "comment": comment,
+            })
+        except Exception:  # noqa: BLE001
+            logger.warning("phoenix_score_event_failed", trace_id=self.trace_id, name=name)
+        self._annotations.append({
+            "name": name,
+            "score": float(value),
+            "label": "correct" if value >= 0.5 else "incorrect",
+            "annotator_kind": "CODE",
+            "explanation": comment,
+        })
 
 
 @dataclass
 class AgentHandle:
+    """Agent-level span handle (nested under the document span)."""
+
     trace_id: str
     observation_id: str = ""
     disabled: bool = True
     handler: Any | None = None
+    _span: Any = None
+    _annotations: list[dict[str, Any]] = field(default_factory=list)
 
     def set_output(self, output: Any) -> None:
-        return
+        """Record the agent's result as a span event."""
+        if self.disabled or self._span is None:
+            return
+        try:
+            self._span.add_event(
+                "output",
+                {"payload": json.dumps(output, default=str)[:200_000]},
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("phoenix_agent_output_failed", trace_id=self.trace_id)
 
     def score(self, name: str, value: float, comment: str = "") -> None:
-        return
+        """Record one deterministic logic score as a span event + annotation."""
+        if self.disabled or self._span is None:
+            return
+        try:
+            self._span.add_event("score", {
+                "name": name, "value": str(value), "comment": comment,
+            })
+        except Exception:  # noqa: BLE001
+            logger.warning("phoenix_agent_score_failed",
+                           trace_id=self.trace_id, name=name)
+        self._annotations.append({
+            "name": name,
+            "score": float(value),
+            "label": "correct" if value >= 0.5 else "incorrect",
+            "annotator_kind": "CODE",
+            "explanation": comment,
+        })
 
 
 class PhoenixTracer:
-    """Lightweight Phoenix tracer that mirrors LangfuseTracer API.
+    """Phoenix tracer mirroring the LangfuseTracer API surface.
 
-    Real span emission is handled by OpenTelemetry instrumentation; this
-    class provides the context-manager API used by eval runners so they can
-    run with Phoenix as the default backend without code changes.
+    ``trace_document`` opens a ROOT span per document; ``agent_observation``
+    opens a child span under it. Outputs and scores are recorded as span
+    events; the OpenAI SDK instrumentation adds nested LLM-call spans.
     """
 
-    def __init__(self, session_id: str = "", tags: list[str] | None = None, trace_name: str = "evaluation"):
+    def __init__(self, session_id: str = "", tags: list[str] | None = None,
+                 trace_name: str = "evaluation"):
         self.session_id = session_id or os.environ.get("PHOENIX_SESSION", "default")
         self.tags = tags or []
         self.trace_name = trace_name
         self.disabled = not phoenix_enabled() or _provider is None
 
     def flush(self) -> None:
+        """Force-export buffered spans without disabling the provider."""
         if self.disabled or _provider is None:
             return
         try:
-            from opentelemetry.sdk.trace.export import BatchSpanProcessor
-            # Force flush via service shutdown
-            _provider.shutdown()
+            _provider.force_flush()
         except Exception:  # noqa: BLE001
             logger.warning("phoenix_flush_failed")
 
     def shutdown(self) -> None:
+        """Final flush before the process exits (provider stays reusable)."""
         self.flush()
 
     @contextmanager
-    def trace_document(self, filename: str, expected: Any = None, metadata: dict | None = None) -> Iterator[TraceHandle]:
-        """Open a document-level tracing scope.
+    def trace_document(self, filename: str, expected: Any = None,
+                       metadata: dict | None = None) -> Iterator[TraceHandle]:
+        """Open a document-level ROOT span; yields its :class:`TraceHandle`.
 
-        Phoenix spans are generated automatically by LangChain instrumentation;
-        this context manager only provides a compatible handle.
+        The span carries session id, tags, filename, expected value and the
+        caller's metadata as attributes (question, category, prompt version,
+        model, ...), so Phoenix holds the same per-document data shape as the
+        Langfuse mirror.
         """
         trace_id = f"phoenix-{self.session_id}-{filename}"
-        handle = TraceHandle(trace_id=trace_id, disabled=self.disabled)
-        try:
+        handle = TraceHandle(trace_id=trace_id, disabled=True)
+        otel_tracer = _tracer()
+        if self.disabled or otel_tracer is None:
             yield handle
-        finally:
-            pass
+            return
+        attributes: dict[str, Any] = {
+            "session_id": self.session_id,
+            "tags": ",".join(self.tags),
+            "filename": filename,
+            "expected": expected,
+        }
+        for key, value in (metadata or {}).items():
+            attributes[key] = value
+        with otel_tracer.start_as_current_span(self.trace_name,
+                                               attributes=attributes) as span:
+            handle = TraceHandle(trace_id=trace_id, disabled=False, _span=span)
+            try:
+                yield handle
+            finally:
+                _set_attributes(span, _annotation_attributes(handle._annotations))
+                # The start_as_current_span context manager ends the span.
+                pass
 
     @contextmanager
-    def agent_observation(self, agent_name: str, metadata: dict | None = None) -> Iterator[AgentHandle]:
-        """Open an agent-level tracing scope.
+    def agent_observation(self, agent_name: str,
+                          metadata: dict | None = None) -> Iterator[AgentHandle]:
+        """Open an agent-level span NESTED under the current document span.
 
-        No-op beyond API compatibility; OpenTelemetry creates spans for the
-        LLM calls automatically.
+        Must be called INSIDE a :meth:`trace_document` block — the span is a
+        child of the current span via OTel context propagation, and the
+        instrumented OpenAI SDK call nests under it in turn.
         """
-        handle = AgentHandle(trace_id="", disabled=self.disabled)
-        try:
+        handle = AgentHandle(trace_id="", disabled=True)
+        otel_tracer = _tracer()
+        if self.disabled or otel_tracer is None:
             yield handle
-        finally:
-            pass
+            return
+        attributes: dict[str, Any] = {"agent": agent_name}
+        for key, value in (metadata or {}).items():
+            attributes[key] = value
+        with otel_tracer.start_as_current_span(agent_name,
+                                               attributes=attributes) as span:
+            handle = AgentHandle(trace_id="", observation_id=getattr(span, "context", None),
+                                 disabled=False, _span=span)
+            try:
+                yield handle
+            finally:
+                _set_attributes(span, _annotation_attributes(handle._annotations))
+                # The start_as_current_span context manager ends the span.
+                pass
 
 
 def init_phoenix_tracing(service_name: str | None = None, endpoint: str | None = None) -> None:

@@ -172,6 +172,10 @@ def main_with_args(argv: list[str]) -> int:
                         help="Experiment name (default: {model-slug}_{prompt-version}_contracteval_langfuse)")
     parser.add_argument("--manifest", type=Path, default=Path("data/manifests/contracteval_langfuse.jsonl"),
                         help="JSONL checkpoint manifest for resuming an interrupted run")
+    parser.add_argument("--tracing-backend", choices=["langfuse", "phoenix"],
+                        default="langfuse",
+                        help="Tracing sink: langfuse (default) or the local Arize "
+                             "Phoenix server (--tracing-backend phoenix)")
     parser.add_argument("--lf-project", default=None, help="Override the Langfuse project name")
     parser.add_argument("--lf-environment", default=None, help="Override the trace environment tag")
     parser.add_argument("--lf-trace-name", default="contracteval",
@@ -197,6 +201,14 @@ def main_with_args(argv: list[str]) -> int:
         dataset = dataset[: args.limit]
     if not dataset:
         parser.error("No (contract, question) pairs found in the dataset.")
+    # Cache-friendly dispatch: run each contract's 41 pairs CONSECUTIVELY
+    # (stable sort by title, then id). Every pair of a contract shares the
+    # identical system prompt + full-context prefix, so OpenRouter's automatic
+    # prompt cache serves the repeated prefix at ~10% of the input price —
+    # a big saving on the 300k-char contexts WITHOUT deviating from the
+    # paper's one-call-per-pair methodology. Deterministic, so manifest
+    # fingerprints stay stable across runs.
+    dataset = sorted(dataset, key=lambda d: (d["title"], d["id"]))
     assert_production_run(args.research_funding_key, dry_run=args.dry_run,
                           selected_rows=len(dataset), total_rows=total_rows)
 
@@ -213,13 +225,15 @@ def main_with_args(argv: list[str]) -> int:
               f"max_input_chars={args.max_input_chars} (0 = faithful full-context)")
         print(f"  categories: {len({d['category'] for d in dataset})} | "
               f"positive pairs: {sum(1 for d in dataset if d['label_spans'])}")
-        print(f"  tracing=langfuse session={experiment_name} trace_name={args.lf_trace_name}")
+        print(f"  tracing={args.tracing_backend} session={experiment_name} "
+              f"trace_name={args.lf_trace_name}")
         return 0
 
     tracer, tracing_backend, tracing_meta = resolve_tracer(
         session_id=experiment_name,
         trace_name=args.lf_trace_name,
         tags=[f"contracteval:{args.prompt_version}", args.model.split("/")[-1]],
+        prefer="phoenix" if args.tracing_backend == "phoenix" else "langfuse",
         lf_project=args.lf_project,
         lf_environment=args.lf_environment,
     )
@@ -256,9 +270,22 @@ def main_with_args(argv: list[str]) -> int:
         if manifest:
             cached = manifest.get_completed(pair_id)
             if cached:
+                # Resume: re-derive the per-row classification/jaccard from the
+                # stored output so resumed rows carry consistent per-row values
+                # (the pooled metrics are recomputed from outputs regardless).
+                output = (cached.get("predicted") or "").strip()
+                label = input_data["label_spans"]
+                no_related = said_no_related(output)
+                classified = bool(label) and contracteval_classified(label, output)
+                if not label:
+                    cls = "TN" if no_related else "FP"
+                elif classified:
+                    cls = "TP"
+                else:
+                    cls = "FN"
+                jaccard = get_jaccard(" ".join(label), output.strip(" \n`")) if label else 0.0
                 return EvalResultShim(
-                    input_data, cached.get("predicted") or "",
-                    classification=cached.get("classification"))
+                    input_data, output, classification=cls, jaccard=jaccard)
         context = input_data["context"]
         if args.max_input_chars > 0 and len(context) > args.max_input_chars:
             context = context[: args.max_input_chars]
@@ -280,7 +307,17 @@ def main_with_args(argv: list[str]) -> int:
                     model=args.model, api_key=openrouter_key,
                     prompt_version=args.prompt_version,
                     callbacks=[agent_handle.handler] if agent_handle.handler else None)
+                # The paper's calling convention is a PLAIN temp-0 completion;
+                # the sorter's medium reasoning effort (thinking mode) would
+                # deviate from the mirror and burn the token budget on
+                # reasoning — kill it before the LLM client is built.
+                sorter._reasoning_effort = None
                 sorter._max_tokens = args.max_tokens
+                # Trace/log label: the SorterAgent is only a plain-LLM carrier
+                # here — the system prompt is the CONTRACTEVAL prompt (never
+                # the sorter's); name it as such so inspection can't mistake
+                # this task's calls for sorter classification calls.
+                sorter.agent_name = "contracteval"
                 try:
                     output = sorter._call_llm(
                         user_message, system_prompt=system_prompt,
