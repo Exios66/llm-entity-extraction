@@ -562,10 +562,12 @@ python scripts/site/build_site.py                   # rebuild docs/data (the GH 
 ```
 
 Then commit + push — **GitHub Pages serves `/docs` from `main`**, so the
-experiment-log site updates on every push:
+experiment-log site updates on every push. The log files themselves
+(`reports/experiment_log.{jsonl,md}`) are gitignored — only the derived
+site data is committed:
 
 ```bash
-git add reports/experiment_log.jsonl reports/experiment_log.md docs/data
+git add docs/data
 git commit -m "EXPERIMENT: <experiment_name>"
 git push origin main
 ```
