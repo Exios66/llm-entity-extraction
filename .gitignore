@@ -122,7 +122,9 @@ src/llm-dojo-scoring/
 # tracked under reports/monte_carlo/.
 reports/monte_carlo/corpus.jsonl
 
-# Standalone renders of the board sources (quarto render MESSAGE_BOARD_DISCUSSION.qmd)
+# Standalone renders of the board sources (quarto render MESSAGE_BOARD_DISCUSSION.qmd
+# / MESSAGE_BOARD.qmd) — tracked only in the pre-ignore era; KANBAN-053 untracked them
+MESSAGE_BOARD.html
 MESSAGE_BOARD_DISCUSSION.html
 MESSAGE_BOARD_DISCUSSION.md
 
