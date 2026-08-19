@@ -595,6 +595,7 @@ async function issue1Charts(kind, key) {
   if (!series.length) return "";
   const parts = [trendChartHtml(series, key), scatterChartHtml(series)];
   if (key === "subtype_classification") parts.push(failureModeBarsHtml(series));
+  if (key === "contract_entity_extraction") parts.push(kpiChartHtml(series));
   return parts.join("");
 }
 
@@ -1626,6 +1627,35 @@ function scatterChartHtml(series) {
   return `<div class="card"><h2>Cost vs quality</h2>
     ${svgChart({ series: traces, xLabel: "total cost (USD, log scale)", yLabel: "headline score", logX: true })}
     <div class="note">Each point is one run: score against cost. Filled = billed OpenRouter totals (activity-log CSV); hollow = deterministic token × price estimate. Hover to inspect, click to open the run.</div>
+  </div>`;
+}
+
+function kpiChartHtml(series) {
+  /* ContractEval-rubric KPIs across extraction runs (KANBAN-054): F2
+   * (recall-weighted), token-set Jaccard over positive pairs, the
+   * false-"no related clause" rate, and the >=0.7 semantic-coverage band —
+   * the discriminating axes for a one-pass extractor (precision is
+   * structurally 1.0 by construction). One line per KPI, one point per run. */
+  const METRICS = [
+    ["f2", "#5f9e6e", "F2 (recall-weighted)"],
+    ["jaccard_mean", "#d9a866", "Jaccard (mean)"],
+    ["semantic_ge0_7", "#4fb3b3", "semantic coverage >= 0.7"],
+    ["false_no_related_rate", "#e26863", "false no-related-clause rate"],
+  ];
+  const traces = [];
+  for (const [key, color, label] of METRICS) {
+    const points = series
+      .filter((e) => e[key] != null)
+      .map((e) => ({
+        x: e.id, y: e[key], runId: e.id, run: e,
+        tooltip: `${e.experiment_name} (run ${e.id}) — ${label} ${(e[key] * 100).toFixed(1)}%`,
+      }));
+    if (points.length) traces.push({ label, points, color });
+  }
+  if (!traces.length) return "";
+  return `<div class="card"><h2>ContractEval-rubric KPIs — extraction performance across runs</h2>
+    ${svgChart({ series: traces, xLabel: "run (chronological id)", yLabel: "score", smooth: true })}
+    <div class="note">F2 is recall-weighted (beta=2); Jaccard is the token-set similarity over positive (document, category) pairs; false no-related-clause is the share of present categories with no mapped item; semantic coverage >= 0.7 is the share of positive pairs covered by a predicted span at token containment >= 0.7. One-pass extractor caveat: precision is structurally 1.0, so these four are the honest axes (F1 tracks recall). Hover to inspect, click to open the run.</div>
   </div>`;
 }
 

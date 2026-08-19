@@ -813,6 +813,21 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
     diagnostics = extraction_diagnostics(
         diag_rows, field_types or {}, master=master_labels) if diag_rows else {}
 
+    # ContractEval-rubric KPIs (KANBAN-054): F1 / recall-weighted F2 / token-set
+    # Jaccard / false-"no related clause" + the semantic containment bands,
+    # computed offline from the run's own rows + the committed master GT
+    # (same --master-labels chain as the diagnostics). Best-effort: absent when
+    # the master GT or joinable rows are missing, exactly like ``diagnostics``.
+    contracteval_kpis: dict | None = None
+    if master_labels and master_labels_path and diag_rows:
+        from src.contracteval import load_master_gt, run_kpis
+
+        master_gt = load_master_gt(master_labels_path)
+        if master_gt:
+            kpis = run_kpis({"results": diag_rows}, master_gt)
+            if kpis.get("n_pairs"):
+                contracteval_kpis = kpis
+
     record = {
         "type": "experiment",
         "task": "contract_entity_extraction",
@@ -861,6 +876,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "entity_list_f1": entity_f1,
             "verified_precision": verified,
             "hallucination_rate": hallucinations,
+            **({"contracteval_kpis": contracteval_kpis} if contracteval_kpis else {}),
             **({"diagnostics": diagnostics} if diagnostics else {}),
         },
         "n_rows": len(result.results),

@@ -92,6 +92,70 @@ def _kv_table(rows: list[tuple[str, str]]) -> list[str]:
     return _md_table(["Key", "Value"], [[k, v] for k, v in rows if v not in ("", "—")])
 
 
+def _contracteval_kpis_lines(kpis: dict) -> list[str]:
+    """Render the run-level ContractEval-rubric KPIs (``scores.contracteval_kpis``,
+    src/contracteval.py::run_kpis) as grouped tables:
+
+    - **Correctness (ContractEval rubric)** — pooled confusion over the
+      per-CUAD-category synthesized answers: accuracy, precision/recall, F1,
+      the recall-weighted F2, and the "no related clause" / false-"no related
+      clause" rates (the tracking axes for a one-pass extractor — precision
+      is structurally 1.0, so recall / F2 / false-nr discriminate).
+    - **Output effectiveness** — mean/median token-set Jaccard over the
+      positive (document, category) pairs (ContractEval's ``Evaluation.py``).
+    - **Semantic coverage bands** — best predicted-span containment against
+      the GT label per positive pair: verbatim (ContractEval's rule) and the
+      >=0.7/0.5/0.3 bands, separating paraphrase penalty from missing
+      extraction.
+    """
+    lines: list[str] = []
+
+    rows: list[tuple[str, str]] = []
+    for key, label in (
+        ("n_pairs", "Pairs (docs × categories)"),
+        ("n_positive", "Positive pairs (GT category present)"),
+        ("accuracy", "Accuracy"),
+        ("precision", "Precision"),
+        ("recall", "Recall"),
+        ("f1", "F1"),
+        ("f2", "F2 (recall-weighted)"),
+        ("no_related_rate", "No-related-clause rate"),
+        ("false_no_related_rate", "False no-related-clause rate"),
+        ("n_docs", "Docs scored"),
+        ("n_unjoined", "Docs unjoined (GT)"),
+    ):
+        if kpis.get(key) is not None:
+            rows.append((label, _fmt(kpis[key])))
+    if rows:
+        lines.append("**ContractEval-rubric KPIs (KANBAN-054) — pooled confusion over the synthesized per-category answers; TP = every GT label span verbatim-contained; precision is structurally 1.0 for a one-pass extractor — recall / F2 / false-nr / Jaccard are the discriminating axes**")
+        lines.append("")
+        lines.extend(_md_table(["Metric", "Value"], rows))
+        lines.append("")
+
+    j_rows: list[tuple[str, str]] = []
+    for key, label in (("jaccard_mean", "Jaccard (mean)"),
+                       ("jaccard_median", "Jaccard (median)")):
+        if kpis.get(key) is not None:
+            j_rows.append((label, _fmt(kpis[key])))
+    if j_rows:
+        lines.append("**Output effectiveness — token-set Jaccard over positive pairs (ContractEval Evaluation.py)**")
+        lines.append("")
+        lines.extend(_md_table(["Metric", "Value"], j_rows))
+        lines.append("")
+
+    semantic = kpis.get("semantic") or {}
+    if semantic:
+        s_rows = [["Verbatim", _fmt(semantic.get("verbatim"))],
+                  [">= 0.7", _fmt(semantic.get("ge0_7"))],
+                  [">= 0.5", _fmt(semantic.get("ge0_5"))],
+                  [">= 0.3", _fmt(semantic.get("ge0_3"))]]
+        lines.append(f"**Semantic coverage bands — best predicted-span containment vs GT label (n_pos {semantic.get('n_pos', 0)})**")
+        lines.append("")
+        lines.extend(_md_table(["Containment", "Share"], s_rows))
+        lines.append("")
+    return lines
+
+
 def _nested_scores_tables(scores: dict, heading: str) -> list[str]:
     """Render scalar scores inline and nested score dicts as their own tables.
 
@@ -105,6 +169,8 @@ def _nested_scores_tables(scores: dict, heading: str) -> list[str]:
     for key, value in scores.items():
         if key == "diagnostics":
             continue  # rendered by _diagnostics_lines, not flattened here
+        if key == "contracteval_kpis":
+            continue  # rendered by _contracteval_kpis_lines, not flattened here
         if isinstance(value, dict):
             nested.append((key, value))
         else:
@@ -535,6 +601,12 @@ def experiment_markdown(record: dict) -> str:
         diagnostics = scores.get("diagnostics")
         if isinstance(diagnostics, dict) and diagnostics:
             lines.extend(_diagnostics_lines(diagnostics))
+            lines.append("")
+        # ContractEval-rubric KPIs (F1/F2/Jaccard/false-nr + semantic bands) —
+        # src/contracteval.py::run_kpis (KANBAN-054).
+        kpis = scores.get("contracteval_kpis")
+        if isinstance(kpis, dict) and kpis:
+            lines.extend(_contracteval_kpis_lines(kpis))
             lines.append("")
 
     # -------------------------------------------------- docclass subclass depth

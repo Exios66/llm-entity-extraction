@@ -2400,6 +2400,96 @@ CONTRACTS_SPECIALIST_PROMPT_V33 = CONTRACTS_SPECIALIST_PROMPT_V32.replace(
 )
 
 # =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v34 (anti-collapse: field
+# presence + category-level completeness + verbatim GT alignment)
+# -----------------------------------------------------------------------------
+# v34 = v33 + THREE surgical rules (KANBAN-054, human request 2026-08-19 —
+# "NEVER collapse any of the expected fields or groups of clauses; align with
+# the GT labels"). Evidence:
+#  (a) FIELD-level collapse — v32@510 diagnostics: contract_value presence
+#      0.3939, renewal_terms 0.3698, effective_date 0.8818, term_length 0.8271
+#      (fields left null with the clause visible); termination_clauses presence
+#      0.86. R1 = FIELD-PRESENCE SELF-CHECK.
+#  (b) GROUP-level collapse — the ContractEval mapping benchmark (v32@510):
+#      only 42.7% of positive (document, category) pairs covered at >=0.7
+#      token containment, 9.2% verbatim, false-"no related clause" 0.670 —
+#      category-level omission (a whole CUAD family present with zero mapped
+#      items) dominates; v27/v28 fixed section-level collapse only. R2 =
+#      CATEGORY-LEVEL COMPLETENESS (the 32 canonical categories as a
+#      post-extraction checklist, additive only).
+#  (c) GT alignment — the master GT stores the clause's OWN sentence text; the
+#      9.2%-verbatim vs 42.7%->=0.7 gap is a paraphrase penalty. R3 = quote
+#      word-for-word at the GT span grain (v17 discipline kept: cut preamble
+#      and riders, never reword the remainder).
+# Unchanged: v33 RETAG (canonical category tags in the reasoning trace),
+# v32 effective_date convention, v31 compression, v30 chunk-mode scalar
+# quoting, v27-v29 multi-item/definitional rules, v24 reasoning trace + formats.
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V34 = CONTRACTS_SPECIALIST_PROMPT_V33.replace(
+    """   - VERBATIM COMPLETENESS: quote each operative span in full, verbatim — never
+     ellipses, never a skipped middle, never a truncated quote (a truncated item
+     scores as a miss). For long clauses, quote the operative core at the
+     10-25-word grain. NEVER include titles, recitals, or definitions.
+     (key_obligations only; termination_clauses keep full-provision quoting.)""",
+    """   - VERBATIM COMPLETENESS: quote each operative span WORD-FOR-WORD from the
+     document — the ground-truth label is the clause's OWN text (the annotator
+     stored the clause's sentence), so a paraphrase, restatement, or condensed
+     rephrase scores as a miss even when semantically identical. Copy the
+     clause's wording exactly — never ellipses, never a skipped middle, never a
+     truncated quote, never a paraphrase. For long clauses, trim to the
+     operative core at the 10-25-word span grain by CUTTING the preamble and
+     riders only — never by rewording what remains. NEVER include titles,
+     recitals, or definitions. (key_obligations only; termination_clauses keep
+     full-provision quoting.)""",
+).replace(
+    """   Covenant Not To Sue, Third Party Beneficiary.
+   The reasoning is produced FIRST and describes HOW each value was found —""",
+    """   Covenant Not To Sue, Third Party Beneficiary.
+   CATEGORY-LEVEL COMPLETENESS: a category is NEVER collapsed. Before
+   finalizing, run the checklist over ALL canonical categories above: for each
+   category whose clause(s) are present in the document, the list must hold at
+   least one item AND at least one reasoning entry tagged with that exact
+   canonical name. A category present in the text but with ZERO tagged entries
+   is INCOMPLETE — scan back (both sides of any truncation marker) and emit
+   each present clause as its own verbatim item with its canonical tag,
+   ADDING to the list only; never remove or replace an item already on it.
+   Categories with no clause in the text get nothing — never fabricate.
+   Several clauses under one category keep one entry each (the RETAG RULE
+   above). Measured baseline (v32@510, ContractEval mapping rubric): only
+   42.7% of positive (document, category) pairs were covered at >=0.7 token
+   containment and 67% of present categories produced no mapped item at all —
+   category-level omission, not section-level, is the dominant collapse.
+   The reasoning is produced FIRST and describes HOW each value was found —""",
+).replace(
+    """A field whose section IS visible in either portion must never be left null; for
+   anything genuinely omitted in the middle, use null (never guess).
+
+Return a JSON object with these fields:""",
+    """A field whose section IS visible in either portion must never be left null; for
+   anything genuinely omitted in the middle, use null (never guess).
+10. FIELD-PRESENCE SELF-CHECK: EVERY schema field below must be populated
+   whenever its value is visible in the text — a field is null ONLY when the
+   document genuinely does not state it. Before finalizing, check each field
+   against the text: `contract_value` is the consideration/price clause —
+   quote it verbatim (currency symbol + amount as stated, e.g. "in
+   consideration of Ten Million Dollars ($10,000,000)"), never null when a
+   consideration, price, or payment-amount phrase is visible (a "CONSIDERATION"
+   or "Purchase Price" header, a "$" amount, or a "for the sum of" phrase all
+   count); `renewal_terms` is the automatic-renewal provision — quote its
+   operative sentence verbatim when a renewal/extension clause is visible;
+   `term_length` and `effective_date` follow their own rules above with the
+   same never-null-when-visible duty; `termination_clauses` and
+   `governing_law` likewise. The self-check ADDS values only — it never
+   removes or edits an extracted value. Measured baseline (v32@510 full
+   corpus): contract_value presence 0.39, renewal_terms 0.37, effective_date
+   0.88, term_length 0.83 — these fields were left null despite visible
+   clauses.
+
+Return a JSON object with these fields:""",
+)
+
+# =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2872,6 +2962,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v31": CONTRACTS_SPECIALIST_PROMPT_V31,
     "contracts_specialist_v32": CONTRACTS_SPECIALIST_PROMPT_V32,
     "contracts_specialist_v33": CONTRACTS_SPECIALIST_PROMPT_V33,
+    "contracts_specialist_v34": CONTRACTS_SPECIALIST_PROMPT_V34,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

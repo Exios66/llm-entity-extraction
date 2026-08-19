@@ -21,6 +21,7 @@ from src.contracteval import (
     load_master_gt,
     map_span_to_categories,
     normalize_filename,
+    run_kpis,
 )
 
 
@@ -172,3 +173,59 @@ def test_coverage_bands():
     assert bands["n_pos"] == 1
     assert bands["verbatim"] == pytest.approx(1.0)
     assert bands["ge0_7"] == pytest.approx(1.0)
+
+
+def test_run_kpis_block():
+    """run_kpis assembles the per-run ContractEval-rubric KPI block
+    (KANBAN-054): the pooled confusion F1/F2/Jaccard/false-nr + the semantic
+    coverage bands, in the compact shape stored as
+    ``scores.contracteval_kpis`` on extraction run records."""
+    record = {
+        "experiment_name": "synthetic_run",
+        "results": [
+            {
+                "filename": "Doc A.pdf",
+                "error": None,
+                "predicted": {
+                    "key_obligations": [
+                        "NEITHER PARTY SHALL ASSIGN THIS AGREEMENT; "
+                        "the Company shall keep accurate records of sales."
+                    ],
+                    "termination_clauses": [],
+                    "reasoning": {"entries": []},
+                },
+            },
+        ],
+    }
+    gt = {normalize_filename("Doc A.pdf"): {
+        "Anti-Assignment": ["NEITHER PARTY SHALL ASSIGN THIS AGREEMENT"],
+    }}
+    k = run_kpis(record, gt, categories=["Anti-Assignment"])
+    # Confusion block: 1 positive pair, TP via verbatim containment.
+    assert k["task"] == "contracteval_mapping"
+    assert k["n_pairs"] == 1
+    assert k["n_positive"] == 1
+    assert k["n_docs"] == 1
+    assert k["n_unjoined"] == 0
+    assert k["precision"] == pytest.approx(1.0)
+    assert k["recall"] == pytest.approx(1.0)
+    assert k["f1"] == pytest.approx(1.0)
+    assert k["f2"] == pytest.approx(1.0)
+    assert k["jaccard_mean"] > 0.0
+    assert k["false_no_related_rate"] == pytest.approx(0.0)
+    # Semantic lens companion.
+    assert k["semantic"]["n_pos"] == 1
+    assert k["semantic"]["verbatim"] == pytest.approx(1.0)
+    assert k["semantic"]["ge0_7"] == pytest.approx(1.0)
+
+
+def test_run_kpis_empty_record_degrades():
+    """A record with no joinable rows produces a zero-pair KPI block (the
+    runner drops the block when ``n_pairs`` is 0 — the block is best-effort)."""
+    record = {"results": [{"filename": "Doc Z.pdf", "predicted": {}}]}
+    gt = {normalize_filename("Doc A.pdf"): {"Anti-Assignment": ["x"]}}
+    k = run_kpis(record, gt, categories=["Anti-Assignment"])
+    assert k["n_pairs"] == 0
+    assert k["n_positive"] == 0
+    assert k["f1"] == 0.0
+    assert k["jaccard_mean"] == 0.0

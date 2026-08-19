@@ -887,6 +887,19 @@ def build_trends(records: list[dict], summaries: list[dict]) -> dict:
                 "failure_insights", {}).get("mode_counts")
         elif task == "chained_sorter_extractor":
             entry["ablation"] = scores.get("ablation")
+        elif task == "contract_entity_extraction":
+            # ContractEval-rubric KPIs (KANBAN-054): F1/F2/Jaccard/false-nr +
+            # the semantic coverage bands, charted over time per run.
+            kpis = scores.get("contracteval_kpis") or {}
+            semantic = kpis.get("semantic") or {}
+            entry["f1"] = kpis.get("f1")
+            entry["f2"] = kpis.get("f2")
+            entry["jaccard_mean"] = kpis.get("jaccard_mean")
+            entry["false_no_related_rate"] = kpis.get("false_no_related_rate")
+            entry["recall"] = kpis.get("recall")
+            entry["semantic_ge0_7"] = semantic.get("ge0_7")
+            entry["semantic_verbatim"] = semantic.get("verbatim")
+            entry["kpi_n_pairs"] = kpis.get("n_pairs")
         by_task.setdefault(task, []).append(entry)
     return {"tasks": by_task}
 

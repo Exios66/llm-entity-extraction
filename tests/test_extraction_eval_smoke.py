@@ -222,6 +222,64 @@ def test_extraction_loop_wiring(fake_extraction_eval, monkeypatch, tmp_path):
     assert "master_labels" in record["data_source"]
 
 
+def test_extraction_kpis_land_in_record(fake_extraction_eval, monkeypatch, tmp_path):
+    """The ContractEval-rubric KPI block (KANBAN-054) lands on the logged
+    record as ``scores.contracteval_kpis`` when the master GT joins the run's
+    rows — offline, deterministic, no LLM spend."""
+    import json as _json
+    from pathlib import Path
+
+    import scripts.eval.run_extraction_eval as runner
+
+    # Hermetic master GT: the fake row's filename joins, one YES category.
+    master_csv = tmp_path / "master.csv"
+    master_csv.write_text(
+        'Filename,Anti-Assignment,Anti-Assignment-Answer\n'
+        '"cuad_doc_01.txt","[\'NEITHER PARTY SHALL ASSIGN THIS AGREEMENT\']","Yes"\n'
+    )
+    dataset = {
+        "input": {
+            "doc_text": "text", "filename": "cuad_doc_01.txt", "expected": "contract",
+            "expected_fields": {},
+        },
+        "expected": "contract",
+        "filename": "cuad_doc_01.txt",
+        "expected_output": {"doc_type": "contract", "clause_labels": CUAD_LABELS},
+        "doc_text": "text",
+        "metadata": {},
+    }
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    monkeypatch.setattr("scripts.eval.run_extraction_eval.load_braintrust_dataset",
+                        lambda *a, **k: [dict(dataset)])
+
+    rc = runner.main_with_args([
+        "--dataset", "mailroom-cuad-contracts",
+        "--prompt-version", "contracts_specialist_v2",
+        "--master-labels", str(master_csv),
+        "--experiment-name", "smoke_extraction_kpis",
+        "--project-id", "proj-test-0000",
+    ])
+    assert rc == 0
+
+    log_path = Path(runner.default_jsonl_path())
+    record = _json.loads(log_path.read_text().splitlines()[-1])
+    kpis = record["scores"]["contracteval_kpis"]
+    # One joined doc x the 32 obligation categories; the fake extractor emits
+    # no key_obligations items, so the present Anti-Assignment category is a
+    # FN — but the termination clause maps onto it at best-match (>=0.5
+    # containment), so the answer is non-empty: recall 0, false-nr 0.
+    assert kpis["n_pairs"] == 32
+    assert kpis["n_positive"] == 1
+    assert kpis["n_docs"] == 1
+    assert kpis["recall"] == 0.0
+    assert kpis["f1"] == 0.0
+    assert kpis["false_no_related_rate"] == 0.0
+    assert kpis["semantic"]["n_pos"] == 1
+    assert kpis["semantic"]["verbatim"] == 0.0
+    assert kpis["semantic"]["ge0_5"] == 1.0
+    assert "master_labels" in record["data_source"]
+
+
 def test_extraction_eval_bt_scores_full(fake_extraction_eval, monkeypatch, tmp_path):
     """--bt-scores full registers the whole per-field set (opt-in burn)."""
     import scripts.eval.run_extraction_eval as runner

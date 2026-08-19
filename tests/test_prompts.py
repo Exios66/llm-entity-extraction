@@ -1381,6 +1381,47 @@ def test_contracts_v33_reasoning_trace_retag():
     assert "RETAG RULE" not in CONTRACTS_SPECIALIST_PROMPT_V32
 
 
+def test_contracts_v34_anti_collapse_rules():
+    """v34 (KANBAN-054) adds the three anti-collapse rules to v33 without
+    touching the retag schema or any earlier rule: R1 field-presence
+    self-check, R2 category-level completeness over the 32 canonical CUAD
+    categories, R3 verbatim quoting at the GT span grain."""
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V33,
+        CONTRACTS_SPECIALIST_PROMPT_V34,
+    )
+
+    # v34 is a strict derivation of v33: base untouched, rules added on top.
+    assert "contracts_specialist_v34" in PROMPT_VERSIONS
+    assert CONTRACTS_SPECIALIST_PROMPT_V34 != CONTRACTS_SPECIALIST_PROMPT_V33
+    assert CONTRACTS_SPECIALIST_PROMPT_V34.startswith(CONTRACTS_SPECIALIST_PROMPT_V33[:300])
+
+    v34 = CONTRACTS_SPECIALIST_PROMPT_V34
+    # R1 — field-presence self-check: no field may be null when visible.
+    assert "FIELD-PRESENCE SELF-CHECK" in v34
+    assert "contract_value" in v34 and "renewal_terms" in v34
+    assert "never null when a" in v34
+    assert "The self-check ADDS values only" in v34
+    # R2 — category-level completeness: the checklist over the canonical list.
+    assert "CATEGORY-LEVEL COMPLETENESS" in v34
+    assert "a category is NEVER collapsed" in v34
+    assert "ZERO tagged entries" in v34 and "ADDING to the list only" in v34
+    assert "never fabricate" in v34
+    # The v33 canonical vocabulary stays intact inside the checklist rule.
+    assert '"Anti-Assignment"' in v34
+    assert "Third Party Beneficiary" in v34
+    # R3 — verbatim fidelity at the GT span grain.
+    assert "WORD-FOR-WORD" in v34
+    assert "a paraphrase, restatement, or condensed" in v34
+    assert "never by rewording what remains" in v34
+    # The retag schema description survives v34 unchanged.
+    assert "obligation entries' `field` is the canonical CUAD category name" in v34
+    # Predecessor stays untouched: none of the v34 rules exist in v33.
+    for rule in ("FIELD-PRESENCE SELF-CHECK", "CATEGORY-LEVEL COMPLETENESS",
+                 "WORD-FOR-WORD", "a category is NEVER collapsed"):
+        assert rule not in CONTRACTS_SPECIALIST_PROMPT_V33
+
+
 def test_contracteval_v0_registered_and_verbatim():
     """contracteval_v0 (KANBAN-052) = the paper's system prompt VERBATIM and
     registered as a versioned prompt (the experiment identity for the GEPA

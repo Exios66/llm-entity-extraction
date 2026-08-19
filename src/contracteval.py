@@ -339,6 +339,52 @@ def coverage_bands(record: dict, master_gt: dict[str, dict[str, list[str]]],
     }
 
 
+def run_kpis(record: dict, master_gt: dict[str, dict[str, list[str]]],
+             categories: list[str] | None = None) -> dict[str, Any]:
+    """ContractEval-rubric KPI block for ONE stored extraction record.
+
+    The per-run core metrics for the extraction task (KANBAN-054): combines
+    ``evaluate_record`` (the pooled ContractEval confusion — accuracy,
+    precision/recall, F1, recall-weighted F2, token-set Jaccard over positive
+    pairs, "no related clause" / false-"no related clause" rates) with
+    ``coverage_bands`` (the semantic containment lens that separates
+    paraphrase penalty from missing extraction). Stored as
+    ``scores.contracteval_kpis`` on every extraction run record; computed
+    offline from the run's own rows + the committed master GT, so it needs no
+    LLM spend and is deterministic per run.
+
+    Discriminating axes for a one-pass extractor: recall, F2, Jaccard,
+    false-"no related clause", and the semantic bands (precision is
+    structurally 1.0 — see the module docstring).
+    """
+    metrics = evaluate_record(record, master_gt, categories=categories)
+    bands = coverage_bands(record, master_gt, categories=categories)
+    return {
+        "task": "contracteval_mapping",
+        "n_pairs": metrics["n_pairs"],
+        "n_positive": metrics["n_positive"],
+        "n_docs": metrics["n_docs"],
+        "n_unjoined": metrics["n_unjoined"],
+        "n_parse_errors": metrics["n_parse_errors"],
+        "accuracy": metrics["accuracy"],
+        "precision": metrics["precision"],
+        "recall": metrics["recall"],
+        "f1": metrics["f1"],
+        "f2": metrics["f2"],
+        "jaccard_mean": metrics["jaccard_mean"],
+        "jaccard_median": metrics["jaccard_median"],
+        "no_related_rate": metrics["no_related_rate"],
+        "false_no_related_rate": metrics["false_no_related_rate"],
+        "semantic": {
+            "n_pos": bands["n_pos"],
+            "verbatim": bands["verbatim"],
+            "ge0_7": bands["ge0_7"],
+            "ge0_5": bands["ge0_5"],
+            "ge0_3": bands["ge0_3"],
+        },
+    }
+
+
 def format_report(results: dict[str, dict[str, Any]],
                   include_reference: bool = True) -> str:
     """Render a pooled comparison table: our runs vs ContractEval Table III."""
