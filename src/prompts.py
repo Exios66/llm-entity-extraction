@@ -2679,6 +2679,63 @@ CONTRACTS_SPECIALIST_PROMPT_V37 = CONTRACTS_SPECIALIST_PROMPT_V36.replace(
     "23. Liquidated Damages: liquidated damages; termination payment penalties;\n         forfeiture of guarantees on early termination. Add the amount shapes:\n         \"a late fee of\", \"liquidated damages in the amount of\", and per-day\n         delay penalties.",
 )
 
+# -----------------------------------------------------------------------------
+# contracts_specialist_v38 (KANBAN-057 — next F1 mutation on v36's WIN; v36 base
+# byte-identical, surgical .replace() edits only). ONE change: sparse-family
+# shape completion + named re-scan for the under-quoted obligation families.
+# Motivation (255-doc half-corpus, v36 record + master GT CSV, KPI-level fn
+# decomposition over 1686 positive pairs):
+#   - v36 FN = 1319: 493 whitespace-artifact (GT-side, scorer fix — separate
+#     card, NOT a prompt lever), 242 `<omitted>`-placeholder GT labels
+#     (unfixable by any model), 48 genuine near-misses, 536 ABSENT (no span
+#     with >=0.7 token coverage of the GT clause).
+#   - The absent mass is concentrated in families whose clauses the model
+#     never quotes: Post-Termination Services 55, Anti-Assignment 43, Cap On
+#     Liability 43, Minimum Commitment 37, License Grant 33, Warranty Duration
+#     32 (NOT in the prompt at all), Competitive Restriction Exception 29 (name
+#     in the guard list but NO shape entry), Volume Restriction 29 (same),
+#     Revenue/Profit Sharing 31, Covenant Not To Sue 25, Change Of Control 23,
+#     Liquidated Damages 22, Non-Transferable License 20.
+#   - Shape-complete entries exist for Covenant/Post-Termination/Liquidated yet
+#     they stay absent-heavy: the generic R2 checklist self-check does not
+#     fire; the fix is a NAMED re-scan duty.
+# Rule: 3 new enumeration entries (27-29: Warranty Duration, Competitive
+# Restriction Exception, Volume Restriction — shapes drawn from real GT
+# clauses) + an UNDER-QUOTED FAMILY RE-SCAN sentence in the R2 completeness
+# block naming the absent-heavy families. Precision risk ~zero: the target
+# families carry 0-6 fp across the surface (distinctive clause shapes; the
+# "never fabricate" guard stays adjacent).
+# -----------------------------------------------------------------------------
+CONTRACTS_SPECIALIST_PROMPT_V38 = CONTRACTS_SPECIALIST_PROMPT_V36.replace(
+    """inure to any third party").
+   - WORKED SPAN EXAMPLES""",
+    """inure to any third party").
+     27. Warranty Duration: warranty-period clauses and their commencement —
+         "The warranty period for each Product is specified in the Price List
+         that is in effect on the date NETGEAR receives Distributor's order";
+         "any 'bug' will be fixed by Developer for free up to 3 months after
+         final acceptance" (measured on the 255-doc half-corpus: 32 of 32
+         present Warranty Duration clauses were never quoted — the family is
+         absent from the prompt entirely).
+     28. Competitive Restriction Exception: carve-outs or exceptions to
+         non-compete, exclusivity, or solicitation restrictions —
+         "Notwithstanding the foregoing, this provision shall not prevent any
+         party from soliciting or otherwise contacting any Client";
+         "For the avoidance of doubt, subject to ... the exclusivity
+         restrictions and confidentiality obligations set forth in Section 6.1";
+         "shall not apply to" qualifiers on restricted activities (measured:
+         39 of 39 present clauses never quoted despite the guard-list name).
+     29. Volume Restriction: quantity, volume, or amount ceilings on products,
+         services, or returns — "The total value of the returned Products
+         shall not exceed [*] of the Net Shipments"; "limited to a maximum of
+         twenty (20) hours"; "not more than X units" (measured: 35 of 39
+         present clauses never quoted despite the guard-list name).
+   - WORKED SPAN EXAMPLES""",
+).replace(
+    "ADDING to the list only; never remove or replace an item already on it.",
+    "ADDING to the list only; never remove or replace an item already on it.\n   UNDER-QUOTED FAMILY RE-SCAN (measured on the 255-doc half-corpus, v36\n   record: 536 of 1686 positive pairs have no quoted span with >=0.7 token\n   coverage of the clause — the families below are the absent-heavy ones,\n   present in many documents yet routinely skipped): before finalizing,\n   specifically re-check for these families and quote their clause\n   sentence(s) if present — Warranty Duration; Competitive Restriction\n   Exception; Volume Restriction; Covenant Not To Sue; Post-Termination\n   Services (sell-off, inventory-exhaustion, wind-down, transition, and\n   return-of-materials duties after termination); Liquidated Damages and\n   termination payment penalties; license variants (Non-Transferable,\n   Affiliate License-Licensor, Affiliate License-Licensee, Irrevocable Or\n   Perpetual, Unlimited/All-You-Can-Eat); ROFR/ROFO/ROFN; Joint Ip\n   Ownership. Scan back across both sides of any truncation marker for\n   these; each present clause becomes its own verbatim full-sentence item\n   with its exact canonical tag, ADDING to the list only.",
+)
+
 # =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
@@ -3156,6 +3213,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v35": CONTRACTS_SPECIALIST_PROMPT_V35,
     "contracts_specialist_v36": CONTRACTS_SPECIALIST_PROMPT_V36,
     "contracts_specialist_v37": CONTRACTS_SPECIALIST_PROMPT_V37,
+    "contracts_specialist_v38": CONTRACTS_SPECIALIST_PROMPT_V38,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

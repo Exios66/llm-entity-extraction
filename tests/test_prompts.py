@@ -1590,6 +1590,74 @@ def test_contracts_v37_payment_monetary_capture():
         assert relic not in v36
 
 
+def test_contracts_v38_sparse_family_shapes():
+    """v38 (KANBAN-057 — next F1 mutation on v36's WIN, v36 base byte-identical)
+    completes the sparse-family shapes + adds a named re-scan duty. Measured on
+    the 255-doc half-corpus (v36 record + master GT CSV, KPI-level fn
+    decomposition over 1686 positive pairs): v36 FN = 1319 of which 536 are
+    ABSENT (no quoted span with >=0.7 token coverage of the GT clause) — 44% of
+    all misses; the absent mass sits in families the model never quotes:
+    Post-Termination Services 55, Anti-Assignment 43, Cap On Liability 43,
+    Minimum Commitment 37, License Grant 33, Warranty Duration 32 (absent from
+    the prompt entirely), Competitive Restriction Exception 29 + Volume
+    Restriction 29 (guard-list names but NO shape entries), Revenue/Profit
+    Sharing 31, Covenant Not To Sue 25, Liquidated Damages 22, Non-Transferable
+    License 20. The generic R2 checklist does not fire for the shape-complete
+    families (Covenant/Post-Termination/Liquidated stay absent-heavy), so the
+    fix is a NAMED re-scan. v38 = v36 + 2 surgical .replace() edits: entries
+    27-29 (Warranty Duration, Competitive Restriction Exception, Volume
+    Restriction — shapes drawn from real GT clauses) + the UNDER-QUOTED FAMILY
+    RE-SCAN sentence in the R2 completeness block."""
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V36,
+        CONTRACTS_SPECIALIST_PROMPT_V38,
+    )
+
+    # v38 is a strict derivation of v36 (base untouched), registered.
+    assert "contracts_specialist_v38" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracts_specialist_v38"] is CONTRACTS_SPECIALIST_PROMPT_V38
+    assert CONTRACTS_SPECIALIST_PROMPT_V38 != CONTRACTS_SPECIALIST_PROMPT_V36
+    assert CONTRACTS_SPECIALIST_PROMPT_V38.startswith(CONTRACTS_SPECIALIST_PROMPT_V36[:300])
+
+    v38 = CONTRACTS_SPECIALIST_PROMPT_V38
+    # (1) The 3 new enumeration entries with their shape language.
+    assert "27. Warranty Duration:" in v38
+    assert "warranty-period clauses and their commencement" in v38
+    assert "The warranty period for each Product is specified in the Price List" in v38
+    assert "32 of 32" in v38 and "present Warranty Duration clauses were never quoted" in v38
+    assert "28. Competitive Restriction Exception:" in v38
+    assert "carve-outs or exceptions to" in v38
+    assert "Notwithstanding the foregoing, this provision shall not prevent" in v38
+    assert "39 of 39 present clauses never quoted despite the guard-list name" in v38
+    assert "29. Volume Restriction:" in v38
+    assert "quantity, volume, or amount ceilings" in v38
+    assert "The total value of the returned Products" in v38
+    assert "35 of 39" in v38 and "present clauses never quoted" in v38
+    # (2) The named re-scan duty in the R2 completeness block.
+    assert "UNDER-QUOTED FAMILY RE-SCAN" in v38
+    assert "536 of 1686 positive pairs" in v38
+    for fam in ("Warranty Duration", "Competitive Restriction", "Volume Restriction",
+                "Covenant Not To Sue", "Post-Termination Services", "Liquidated Damages",
+                "license variants (Non-Transferable,",
+                "ROFR/ROFO/ROFN", "Joint Ip"):
+        assert fam in v38
+    # (3) The re-scan preserves the fabrication guard + ADDING-only discipline.
+    assert "never fabricate" in v38
+    assert "ADDING to the list only" in v38
+    # (4) v36 base preserved byte-for-byte (grain language intact inside v38).
+    assert "FULL CLAUSE SENTENCES, quoted verbatim and in" in v38
+    assert "full-sentence span grain" in v38
+    assert "A quote consisting of ONLY the duration phrase" in v38
+    assert "CATEGORY-LEVEL COMPLETENESS" in v38
+    assert "FIELD-PRESENCE SELF-CHECK" in v38
+    # v36 does NOT contain the v38 additions (they are new, not inherited).
+    v36 = CONTRACTS_SPECIALIST_PROMPT_V36
+    for relic in ("27. Warranty Duration:", "28. Competitive Restriction Exception:",
+                  "29. Volume Restriction:", "UNDER-QUOTED FAMILY RE-SCAN",
+                  "536 of 1686 positive pairs"):
+        assert relic not in v36
+
+
 def test_contracteval_v0_registered_and_verbatim():
     """contracteval_v0 (KANBAN-052) = the paper's system prompt VERBATIM and
     registered as a versioned prompt (the experiment identity for the GEPA

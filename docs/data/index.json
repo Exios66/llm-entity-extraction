@@ -130,5 +130,137 @@
   },
   "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
   "data_source_n_samples": 255
+ },
+ {
+  "id": 3,
+  "experiment_name": "qwen3.7-flash_contracts_specialist_v36_extraction_chunked_half",
+  "task": "contract_entity_extraction",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracts_specialist_v36",
+  "headline": {
+   "label": "extraction",
+   "value": 0.8698
+  },
+  "ci95": {
+   "lo": 0.8536,
+   "hi": 0.8847,
+   "half": 0.0156,
+   "n": 254,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "overall_extraction_score": 0.8698,
+   "field_presence": 0.9575,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 0.9892,
+    "effective_date": 0.8841,
+    "governing_law": 0.9232,
+    "key_obligations": 0.7886,
+    "parties": 0.8933,
+    "renewal_terms": 0.8212,
+    "term_length": 0.7072,
+    "termination_clauses": 0.9176
+   },
+   "field_exact_rate": 0.7607,
+   "list_f1": 0.5107,
+   "date_mae_days": 57.8381,
+   "date_r2": 0.9657,
+   "duration_mae_days": 582.3014,
+   "duration_r2": 0.0279
+  },
+  "n_rows": 255,
+  "n_ok": 254,
+  "n_error": 1,
+  "total_tokens": 6139058,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.26078,
+  "cost_estimated_per_doc_usd": 0.001023,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "6b3a46d892f8e9bbed9115768d1dedb0195c018da6622dc68b274543cd119bd0",
+  "seed": 42,
+  "sample_key": "6b3a46d892f8e9bbed9115768d1dedb0195c018da6622dc68b274543cd119bd0:42:255",
+  "global_best_pp": -0.40000000000000036,
+  "delta_best_pp": -0.40000000000000036,
+  "timestamp": "2026-08-20T04:32:30.720675+00:00",
+  "git": {
+   "commit": "e130339",
+   "dirty": false
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 255
+ },
+ {
+  "id": 4,
+  "experiment_name": "qwen3.7-flash_contracts_specialist_v37_extraction_chunked_half",
+  "task": "contract_entity_extraction",
+  "model": "qwen/qwen3.7-flash",
+  "prompts": "contracts_specialist_v37",
+  "headline": {
+   "label": "extraction",
+   "value": 0.8669
+  },
+  "ci95": {
+   "lo": 0.8506,
+   "hi": 0.8813,
+   "half": 0.0153,
+   "n": 254,
+   "seed": 42,
+   "n_boot": 2000,
+   "method": "percentile-bootstrap"
+  },
+  "breakdown": {
+   "overall_extraction_score": 0.8669,
+   "field_presence": 0.9644,
+   "schema_valid": 1.0,
+   "per_field": {
+    "document_name": 0.9891,
+    "effective_date": 0.8786,
+    "governing_law": 0.9326,
+    "key_obligations": 0.7856,
+    "parties": 0.8933,
+    "renewal_terms": 0.8735,
+    "term_length": 0.664,
+    "termination_clauses": 0.9176
+   },
+   "field_exact_rate": 0.7543,
+   "list_f1": 0.5172,
+   "date_mae_days": 27.919,
+   "date_r2": 0.9923,
+   "duration_mae_days": 287.7949,
+   "duration_r2": 0.8992
+  },
+  "n_rows": 255,
+  "n_ok": 254,
+  "n_error": 1,
+  "total_tokens": 6419940,
+  "cost_usd": 0.0,
+  "cost_total_usd": 0,
+  "cost_estimated_usd": 0.267674,
+  "cost_estimated_per_doc_usd": 0.00105,
+  "cost_price_source": {
+   "model": "qwen/qwen3.7-flash",
+   "in_per_1m": 0.03,
+   "out_per_1m": 0.13
+  },
+  "fingerprint": "6b3a46d892f8e9bbed9115768d1dedb0195c018da6622dc68b274543cd119bd0",
+  "seed": 42,
+  "sample_key": "6b3a46d892f8e9bbed9115768d1dedb0195c018da6622dc68b274543cd119bd0:42:255",
+  "global_best_pp": -0.6900000000000017,
+  "delta_best_pp": -0.6900000000000017,
+  "timestamp": "2026-08-20T04:55:07.903843+00:00",
+  "git": {
+   "commit": "a355e98",
+   "dirty": true
+  },
+  "data_source_project": "llm-mailroom/mailroom-cuad-contracts-full",
+  "data_source_n_samples": 255
  }
 ]
