@@ -2490,6 +2490,48 @@ Return a JSON object with these fields:""",
 )
 
 # =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v35 (item-level category split,
+# the missing third anti-collapse lever, KANBAN-055)
+# -----------------------------------------------------------------------------
+# v35 = v34 + ONE surgical append. opencode's v34 (KANBAN-054) added the two
+# structural collapse guards: R1 FIELD-PRESENCE SELF-CHECK (a field is never
+# null when its clause is visible) and R2 CATEGORY-LEVEL COMPLETENESS (every
+# present canonical category has >=1 item + >=1 tagged reasoning entry). v35
+# closes the THIRD collapse mode — the ITEM-LEVEL split that neither targets:
+#   (3) ITEM-LEVEL CATEGORY COLLAPSE — a single key_obligations item holds
+#       duties from TWO DIFFERENT canonical categories (e.g. "Neither Party
+#       shall assign this Agreement nor use its trademarks, whether ..."
+#       folded Anti-Assignment INTO Non-Disparagement / IP Ownership), so the
+#       item routes to ONE category and scores 0 on the other. This is distinct
+#       from R1/R2: those guarantee a category is POPULATED, not that a
+#       multi-category item is SPLIT so each duty routes to its own bucket.
+#       Measured on the stored v31/v32 reasoning corpus that drove KANBAN-051:
+#       ~15,516/33,312 umbrella-tagged entries contained mixed-category clauses.
+# v35 adds the RULE: one key_obligations ENTRY per DISTINCT CATEGORY's duty –
+# a clause carrying two categories' duties emits one entry per duty, each
+# tagged with its own canonical name; and category tags are EXACT-ONLY (a duty
+# is tagged with its own category name, never a family/group label and never a
+# sibling category). Append-style .replace() on v34; v0-v34 stay byte-identical.
+# A/B vs v33/v34 on the full-corpus surface (KANBAN-055).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V35 = CONTRACTS_SPECIALIST_PROMPT_V34.replace(
+    "   Covenant Not To Sue, Third Party Beneficiary.\n",
+    "   Covenant Not To Sue, Third Party Beneficiary.\n"
+    "   - ITEM-LEVEL CATEGORY GUARD (v35): one key_obligations entry per DISTINCT\n"
+    "     CATEGORY's duty. A clause that carries duties from two different\n"
+    "     canonical categories is NEVER emitted as a single merged item: emit\n"
+    "     ONE entry per duty, each tagged with its OWN canonical category name,\n"
+    "     and quote the operative words of that duty in its own item. (Example:\n"
+    "     'Neither Party shall assign this Agreement nor use its trademarks'\n"
+    "     yields one Anti-Assignment entry AND one Non-Disparagement entry, not\n"
+    "     a single merged item.) Tag every obligation with its EXACT canonical\n"
+    "     category - 'No-Solicit Of Customers' is not 'No-Solicit' nor\n"
+    "     'No-Solicit Of Employees', 'Cap On Liability' is not 'Uncapped\n"
+    "     Liability', a license grant is not generic 'IP'.\n",
+)
+
+# =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -2963,6 +3005,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v32": CONTRACTS_SPECIALIST_PROMPT_V32,
     "contracts_specialist_v33": CONTRACTS_SPECIALIST_PROMPT_V33,
     "contracts_specialist_v34": CONTRACTS_SPECIALIST_PROMPT_V34,
+    "contracts_specialist_v35": CONTRACTS_SPECIALIST_PROMPT_V35,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

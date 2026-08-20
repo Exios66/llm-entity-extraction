@@ -1416,10 +1416,48 @@ def test_contracts_v34_anti_collapse_rules():
     assert "never by rewording what remains" in v34
     # The retag schema description survives v34 unchanged.
     assert "obligation entries' `field` is the canonical CUAD category name" in v34
-    # Predecessor stays untouched: none of the v34 rules exist in v33.
     for rule in ("FIELD-PRESENCE SELF-CHECK", "CATEGORY-LEVEL COMPLETENESS",
                  "WORD-FOR-WORD", "a category is NEVER collapsed"):
         assert rule not in CONTRACTS_SPECIALIST_PROMPT_V33
+
+
+def test_contracts_v35_item_level_category_split():
+    """v35 (KANBAN-055) closes the third anti-collapse mode: the ITEM-LEVEL
+    category split that v34's R1 (field presence) and R2 (category completeness)
+    do not cover. A single key_obligations item holding TWO different
+    canonical categories' duties must be split into one entry per duty, each
+    tagged with its exact category (never a sibling / family / generic label)."""
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V34,
+        CONTRACTS_SPECIALIST_PROMPT_V35,
+    )
+
+    # v35 is a strict append-style derivation of v34 (base untouched), registered.
+    assert "contracts_specialist_v35" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracts_specialist_v35"] is CONTRACTS_SPECIALIST_PROMPT_V35
+    assert CONTRACTS_SPECIALIST_PROMPT_V35 != CONTRACTS_SPECIALIST_PROMPT_V34
+    assert CONTRACTS_SPECIALIST_PROMPT_V35.startswith(CONTRACTS_SPECIALIST_PROMPT_V34[:300])
+
+    v35 = CONTRACTS_SPECIALIST_PROMPT_V35
+    # The item-level split: one entry per distinct category's duty.
+    assert "ITEM-LEVEL CATEGORY GUARD" in v35
+    assert "one key_obligations entry per DISTINCT" in v35
+    assert "CATEGORY's duty" in v35
+    assert "two different" in v35 and "canonical" in v35
+    assert "single merged item" in v35
+    # Exact-category tagging: no sibling / no family-group collapse.
+    assert "'No-Solicit Of Customers' is not" in v35
+    assert "'No-Solicit Of Employees'" in v35
+    assert "'Cap On Liability' is not" in v35
+    assert "a license grant is not generic 'IP'" in v35
+    # The example grounds the split (Anti-Assignment / Non-Disparagement).
+    assert "Anti-Assignment" in v35 and "Non-Disparagement" in v35
+    # opencode's v34 anti-collapse rules are preserved inside v35 (R1/R2/R3).
+    assert "FIELD-PRESENCE SELF-CHECK" in v35
+    assert "CATEGORY-LEVEL COMPLETENESS" in v35
+    assert "WORD-FOR-WORD" in v35
+    # Predecessor stays intact: no item-level guard in v34.
+    assert "ITEM-LEVEL CATEGORY GUARD" not in CONTRACTS_SPECIALIST_PROMPT_V34
 
 
 def test_contracteval_v0_registered_and_verbatim():
