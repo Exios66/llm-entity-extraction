@@ -13,6 +13,7 @@ import pytest
 
 from src.contracteval import (
     BEST_MATCH_FLOOR,
+    _clean_span,
     build_category_output,
     contracteval_metrics,
     coverage_bands,
@@ -57,6 +58,51 @@ def test_load_master_gt_real_csv_is_joinable():
     assert len(gt) == 510
     some = rows[0]["Filename"]
     assert normalize_filename(some) in gt
+
+
+def test_clean_span_collapses_whitespace_and_strips_omitted():
+    assert _clean_span("MA may not\nassign  any  rights") == "MA may not assign any rights"
+    assert _clean_span("For the term,<omitted>distribute the content") == \
+        "For the term, distribute the content"
+    assert _clean_span("  both\nsides <omitted> and [omitted]  ") == "both sides and"
+    assert _clean_span("plain clause text.") == "plain clause text."
+
+
+def test_load_master_gt_normalizes_artifact_spans(tmp_path):
+    csv_path = tmp_path / "master.csv"
+    csv_path.write_text(
+        'Filename,Anti-Assignment,License Grant\n'
+        '"Doc A .PDF","[\'MA may not\\nassign  any rights\']","[\'For the term,<omitted>distribute\']"\n'
+    )
+    gt = load_master_gt(csv_path)
+    doc = gt[normalize_filename("Doc A.pdf")]
+    assert doc["Anti-Assignment"] == ["MA may not assign any rights"]
+    assert doc["License Grant"] == ["For the term, distribute"]
+
+
+def test_load_master_gt_literal_newline_cell_degrades_to_empty(tmp_path):
+    """18 real cells contain LITERAL newlines (unparseable literals): the
+    whole cell degrades to an empty GT (pre-existing behavior, not a crash)."""
+    csv_path = tmp_path / "master.csv"
+    csv_path.write_text(
+        'Filename,Anti-Assignment\n'
+        '"Doc A .PDF","[\'MA may not\nassign any rights\']"\n'
+    )
+    gt = load_master_gt(csv_path)
+    assert "Anti-Assignment" not in gt[normalize_filename("Doc A.pdf")]
+
+
+def test_cleaned_gt_span_matches_model_output_verbatim():
+    """KANBAN-058: the whitespace/`<omitted>` GT artifacts must no longer
+    break the ContractEval TP predicate for a faithful verbatim quote."""
+    from src.contracteval import contracteval_metrics
+    gt_label = "For the License Term and within the Licensed Territory,<omitted>Producer grants a right"
+    model = "For the License Term and within the Licensed Territory, Producer grants a right to ConvergTV"
+    pairs = [([_clean_span(gt_label)], model)]
+    metrics = contracteval_metrics(pairs)
+    assert metrics["recall"] == 1.0
+    assert metrics["precision"] == 1.0
+    assert metrics["f1"] == 1.0
 
 
 def test_get_jaccard_mirrors_contracteval():

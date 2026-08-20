@@ -112,6 +112,13 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--chunk-overlap", type=int, default=8_000,
                         help="Overlap carried between chunks for --chunked "
                              "(default: 8000 chars — re-quotes boundary clauses)")
+    parser.add_argument("--audit", action="store_true",
+                        help="Runner-level audit pass (KANBAN-060): after the "
+                             "extraction, a SECOND structured call per window "
+                             "feeds the already-quoted clauses back and returns "
+                             "missed obligation sentences (verbatim, ADDING-only) "
+                             "for the absent-family recall mass; merged as a "
+                             "union with normalized dedupe")
     parser.add_argument("--max-concurrency", type=int, default=None,
                         help="Concurrent API calls (default: AUTO — scales with the "
                              "sample size, 8..32 workers, until diminishing returns / "
@@ -181,6 +188,8 @@ def main_with_args(argv: list[str]) -> int:
         print(f"  prompt_version={args.prompt_version} model={args.model}")
         if args.chunked:
             print(f"  mode=chunked windows={args.chunk_chars} overlap={args.chunk_overlap}")
+        if args.audit:
+            print("  audit=ON (runner-level missed-category audit pass, second call per window)")
         print(f"  fields scored: {scored_fields}")
         print(f"  tracing=langfuse session={experiment_name} trace_name={args.lf_trace_name}")
         return 0
@@ -301,6 +310,9 @@ def main_with_args(argv: list[str]) -> int:
                             doc_text, args.chunk_chars, args.chunk_overlap)
                     else:
                         predicted = specialist.extract(doc_text)
+                    if args.audit and not predicted.get("_parse_error"):
+                        predicted = specialist.audit_extraction(
+                            doc_text, predicted, args.chunk_chars, args.chunk_overlap)
                 except Exception as exc:  # noqa: BLE001 - one bad row must not abort
                     print(f"ERROR {filename}: {type(exc).__name__}: {exc}", file=sys.stderr)
                     composite = {"predicted": {}, "error": str(exc), "schema_valid": 0.0,
@@ -356,6 +368,7 @@ def main_with_args(argv: list[str]) -> int:
                     "ambiguous_fields": result.ambiguous_fields,
                     "truncated": bool(specialist._last_truncated),
                     "chunked": bool(args.chunked),
+                    "audit": bool(args.audit),
                     "n_chunks": int(getattr(specialist, "_last_n_chunks", 0) or 0),
                 }
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import structlog
 from agents.base_agent import BaseAgent, build_structured_schema
-from src.prompts import get_prompt
+from src.prompts import CONTRACTS_AUDIT_PROMPT_V0, get_prompt
 
 logger = structlog.get_logger(__name__)
 
@@ -84,6 +84,27 @@ def normalize_extraction(result: dict, schema: dict) -> dict:
 # =============================================================================
 # Extraction schemas (single source of truth for specialists + judges)
 # =============================================================================
+
+# =============================================================================
+# Audit schema (KANBAN-060 runner-level audit pass output)
+# =============================================================================
+
+AUDIT_SCHEMA = build_structured_schema({
+    "missing_obligations": {
+        "type": "array",
+        "description": "Obligation clause sentences present in the window but "
+                       "NOT already quoted by the extraction — one entry per "
+                       "distinct clause sentence, quoted verbatim, tagged with "
+                       "its EXACT canonical CUAD category name.",
+        "items": build_structured_schema({
+            "category": {"type": "string", "description": "Exact canonical CUAD "
+                          "category name (one of the 32 obligation categories)."},
+            "clause": {"type": "string", "description": "The complete clause "
+                        "sentence, quoted VERBATIM from the window text."},
+        }, required=["category", "clause"], title="MissingObligation"),
+    },
+}, required=["missing_obligations"], title="AuditOutput")
+
 
 CONTRACTS_SCHEMA = build_structured_schema({
     "reasoning": {
@@ -444,6 +465,152 @@ class ContractsSpecialist(_SpecialistBase):
 
     def system_prompt(self) -> str:
         return get_prompt(self.prompt_version)
+
+    # ------------------------------------------------------------------
+    # Audit pass (KANBAN-060): a SECOND structured call with missed-category
+    # feedback. The measured mechanism behind the ~645 absent (doc, category)
+    # pairs (551 of 645 labels verbatim-in-text, model emits ZERO for the
+    # category) is emission-stage category-selective omission — a single
+    # forward generation cannot re-read, so no prompt lever moved it. The
+    # audit re-reads each extraction window, feeds back the already-quoted
+    # clauses, and returns the categories' missing clause sentences (verbatim,
+    # ADDING-only, never-fabricate). The merge is a union with normalized
+    # dedupe — nothing is removed.
+    # ------------------------------------------------------------------
+
+    def audit_extraction(self, doc_text: str, extraction: dict,
+                         chunk_chars: int = 90_000,
+                         overlap_chars: int = 8_000) -> dict:
+        """Run the missed-category audit pass over the extraction.
+
+        Uses the SAME windows as ``extract_chunked`` (single-window documents
+        get one whole-text audit call; longer documents one call per window).
+        Returns the extraction with any missing obligation clauses merged in
+        (``key_obligations`` union with normalized dedupe + canonical-tagged
+        reasoning entries). A failing/parse-error audit call is skipped, never
+        fatal. ``_last_usage`` holds the summed extract + audit usage.
+        """
+        windows = self._split_chunks(doc_text, chunk_chars, overlap_chars)
+        self._last_n_chunks = max(len(windows), getattr(self, "_last_n_chunks", 0) or 0)
+        audit_usage: dict | None = self._last_usage
+        missing: list[tuple[str, str]] = []
+
+        already = self._audit_already_quoted(extraction)
+        audit_block = (
+            f"\n\n{CONTRACTS_AUDIT_PROMPT_V0}\n\n"
+            f"ALREADY-EXTRACTED OBLIGATION CLAUSES (verbatim quotes, grouped "
+            f"by canonical category):\n{already}"
+        )
+        for index, window in enumerate(windows, start=1):
+            # Prefix-cache consolidation: the audit user message replicates the
+            # extraction call's EXACT layout (extract / extract_chunked) and
+            # the audit call reuses the extraction's system prompt, so the
+            # shared prefix (system + layout + window text) is byte-identical
+            # and the re-read hits the provider's automatic context cache.
+            if len(windows) == 1:
+                user_message = (
+                    f"Extract fields from this {self._doc_label} document:\n\n"
+                    f"{window}"
+                )
+            else:
+                header = (f"EXTRACTION CHUNK {index} OF {len(windows)} — this is "
+                          f"one window of the agreement; extract every family "
+                          f"occurrence present in THIS chunk (see the system "
+                          f"prompt's chunk duty).\n")
+                user_message = (
+                    f"{header}Extract fields from this {self._doc_label} "
+                    f"document (chunk {index} of {len(windows)}):\n\n{window}"
+                )
+            if self.handoff_context:
+                user_message = f"{self.handoff_context}\n\n{user_message}"
+            user_message += audit_block
+            try:
+                result = self._call_structured(
+                    user_message,
+                    json_schema=AUDIT_SCHEMA,
+                    temperature=0.1,
+                )
+            except Exception as exc:  # noqa: BLE001 - one bad window must not abort
+                logger.warning("audit_call_failed", agent=self.agent_name,
+                               window=index, total=len(windows), error=str(exc)[:200])
+                continue
+            if self._last_usage:
+                audit_usage = self._sum_usage(audit_usage, self._last_usage)
+            if result.get("_parse_error"):
+                continue
+            for entry in (result.get("missing_obligations") or []):
+                if not isinstance(entry, dict):
+                    continue
+                category = str(entry.get("category") or "").strip()
+                clause = str(entry.get("clause") or "").strip()
+                if category and clause:
+                    missing.append((category, clause))
+
+        if missing:
+            extraction = self._merge_audit(extraction, missing)
+
+        self._last_usage = audit_usage
+        self._last_truncated = False
+        return extraction
+
+    @staticmethod
+    def _audit_already_quoted(extraction: dict) -> str:
+        """Render the extraction's quoted obligation clauses for the audit
+        input, grouped by canonical category (reasoning entries are the
+        canonical-tagged trace; the clause lists are the verbatim quotes)."""
+        lines: list[str] = []
+        reasoning = (extraction.get("reasoning") or {})
+        entries = reasoning.get("entries") or [] if isinstance(reasoning, dict) else []
+        seen: set[str] = set()
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            field = str(entry.get("field") or "").strip()
+            evidence = str(entry.get("evidence") or "").strip()
+            if field and evidence and _norm(evidence) not in seen:
+                seen.add(_norm(evidence))
+                lines.append(f"- {field}: {evidence}")
+        for field in ("key_obligations", "termination_clauses"):
+            for item in extraction.get(field) or []:
+                text = str(item).strip()
+                if text and _norm(text) not in seen:
+                    seen.add(_norm(text))
+                    lines.append(f"- {field}: {text}")
+        return "\n".join(lines) if lines else "(none)"
+
+    @staticmethod
+    def _merge_audit(extraction: dict, missing: list[tuple[str, str]]) -> dict:
+        """Union the audit's missing clauses into the extraction.
+
+        Clause strings append to ``key_obligations`` with normalized dedupe
+        (a clause the extraction already quoted — or the audit re-quoted
+        across windows — is a no-op); a canonical-tagged reasoning entry is
+        added per clause so the KPI mapper routes it to its category.
+        """
+        merged = dict(extraction)
+        merged.setdefault("key_obligations", [])
+        seen = {_norm(item) for item in merged["key_obligations"]}
+        entries = list(((extraction.get("reasoning") or {}).get("entries") or [])
+                       if isinstance(extraction.get("reasoning"), dict) else [])
+        added = 0
+        for category, clause in missing:
+            if _norm(clause) in seen:
+                continue
+            merged["key_obligations"].append(clause)
+            seen.add(_norm(clause))
+            entries.append({
+                "field": category,
+                "evidence": clause,
+                "section_ref": "audit-pass",
+            })
+            added += 1
+        if added:
+            reasoning = extraction.get("reasoning") if isinstance(extraction.get("reasoning"), dict) else {}
+            merged["reasoning"] = {
+                "summary": reasoning.get("summary") or "",
+                "entries": entries,
+            }
+        return merged
 
 
 class CorporateRecordsSpecialist(_SpecialistBase):

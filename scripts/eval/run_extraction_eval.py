@@ -857,6 +857,7 @@ def log_experiment_to_repo(result, scored_fields: list[str], dataset: list[dict]
             "chunked": bool(getattr(args, "chunked", False)),
             "chunk_chars": getattr(args, "chunk_chars", None),
             "chunk_overlap": getattr(args, "chunk_overlap", None),
+            "audit": bool(getattr(args, "audit", False)),
             "manifest": str(args.manifest) if args.manifest else None,
             "tracing_backend": tracing_backend,
             **({"tracing": tracing_meta} if tracing_meta else {}),

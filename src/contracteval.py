@@ -89,6 +89,29 @@ def normalize_filename(name: Any) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+_OMITTED_PATTERNS = (
+    re.compile(r"<omitted>", re.IGNORECASE),
+    re.compile(r"\[omitted\]", re.IGNORECASE),
+)
+
+
+def _clean_span(text: str) -> str:
+    """Normalize a GT clause span for the verbatim containment scorer.
+
+    Two GT-storage artifacts break the exact-match containment check even when
+    the model quotes the clause correctly (measured on the 255-doc half-corpus:
+    493/1686 false-negatives from whitespace runs, 242 from ``<omitted>``
+    placeholders): (1) cells store ``\\n``/multi-space runs that never appear
+    in model output, and (2) ``<omitted>``/``[omitted]`` redaction markers
+    that no model output reproduces. Collapse whitespace to single spaces and
+    strip the redaction markers so the comparison is whitespace- and
+    placeholder-insensitive (KANBAN-058)."""
+    s = " ".join(str(text or "").split())
+    for pattern in _OMITTED_PATTERNS:
+        s = pattern.sub(" ", s)
+    return " ".join(s.split()).strip()
+
+
 def _parse_spans(value: Any) -> list[str]:
     """Parse a master-clauses category cell (a Python-list literal of clause
     spans) into a list of spans; ``[]``/blank cells become an empty list."""
@@ -102,7 +125,8 @@ def _parse_spans(value: Any) -> list[str]:
         return []
     if not isinstance(parsed, list):
         return []
-    return [str(item) for item in parsed if str(item).strip()]
+    cleaned = [_clean_span(item) for item in parsed if str(item).strip()]
+    return [span for span in cleaned if span]
 
 
 def load_master_gt(path: str | Path) -> dict[str, dict[str, list[str]]]:

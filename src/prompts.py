@@ -3189,6 +3189,76 @@ If the PDF contains clean, selectable text (not scanned images), simply return t
 # Prompt Version Manager
 # =============================================================================
 
+# contracts_audit_v0 (KANBAN-060 — the runner-level audit pass for the
+# absent-family recall mass; a SECOND structured call with missed-category
+# feedback).
+# Motivation (255-doc half-corpus, CORRECTED scorer, Braintrust in-text
+# verification): 645 absent (doc, category) pairs — the model never quotes the
+# clause for that category at all. Of those, 551/645 labels are VERBATIM in
+# the source text and visible in the extraction window; the model emits ZERO
+# output for the category (Covenant Not To Sue 21/21, Competitive Restriction
+# Exception 32/33, Volume Restriction 27/28, Post-Termination 58/62).
+# Mechanism: EMISSION-STAGE CATEGORY-SELECTIVE OMISSION — a single forward
+# generation cannot re-read; every prompt lever measured flat (v37 scan
+# family, v38 named re-scan, v39 within-category completion: absent 636->645).
+# The fitting method is a second structured call per window that feeds the
+# current extraction back and asks for the categories' missing clause
+# sentences. Never-fabricate + verbatim discipline preserved (ADDING-only).
+#
+# COST DESIGN (prefix-cache friendly — the human's consolidation directive
+# 2026-08-20: "we have already input the whole contract text once"): this
+# constant is the AUDIT INSTRUCTIONS BLOCK appended AFTER the window text in
+# the user message; the audit call reuses the EXTRACTION call's system prompt
+# and EXACT user-message prefix (agent-side replication of the extract /
+# extract_chunked layouts). The shared prefix (system + extraction layout +
+# window text) therefore hits the provider's automatic context cache and the
+# text re-read is billed at the cached-token rate (~1/4-1/10 of fresh input)
+# instead of full price. The versioned identity rule holds: the audit
+# instructions are versioned under this key; the system reuse is an
+# implementation detail for cache hits.
+# -----------------------------------------------------------------------------
+CONTRACTS_AUDIT_PROMPT_V0 = """AUDIT PASS — the extraction above may have MISSED obligation clauses. Your
+job: find obligation clauses the extraction did not quote, and quote them
+verbatim.
+
+For EACH of the 32 canonical obligation categories below, check the window
+text: if a clause sentence for that category is PRESENT in the window but is
+NOT already quoted above (or is only PARTIALLY quoted), quote the COMPLETE
+clause sentence VERBATIM, from its first word through its final period.
+
+THE 32 CANONICAL OBLIGATION CATEGORIES (use EXACTLY these names):
+Most Favored Nation, Non-Compete, Exclusivity, No-Solicit Of Customers,
+Competitive Restriction Exception, No-Solicit Of Employees, Non-Disparagement,
+Termination For Convenience, Rofr/Rofo/Rofn, Change Of Control,
+Anti-Assignment, Revenue/Profit Sharing, Price Restrictions, Minimum
+Commitment, Volume Restriction, Ip Ownership Assignment, Joint Ip Ownership,
+License Grant, Non-Transferable License, Affiliate License-Licensor,
+Affiliate License-Licensee, Unlimited/All-You-Can-Eat-License,
+Irrevocable Or Perpetual License, Source Code Escrow, Post-Termination
+Services, Audit Rights, Uncapped Liability, Cap On Liability, Liquidated
+Damages, Insurance, Covenant Not To Sue, Third Party Beneficiary
+
+STRICT RULES:
+1. QUOTE VERBATIM — the clause sentence must appear in the window text
+   word-for-word. Never paraphrase, never summarize, never expand.
+2. NEVER FABRICATE — if a category has no clause sentence in the window, emit
+   nothing for it. A quote must be a real, verbatim sentence from the window.
+3. NEVER RE-QUOTE — if the extraction already quoted a clause fully, do not
+   quote it again. But if its quote is only a FRAGMENT of a longer clause
+   sentence, quote the COMPLETE sentence.
+4. ADDING-ONLY — you only ADD missed clauses; you never remove, edit, or
+   re-tag anything the extraction produced.
+5. ONE ENTRY PER DISTINCT CLAUSE SENTENCE — a category with several distinct
+   clause sentences in the window gets one entry per sentence.
+6. EXACT CATEGORY NAMES — tag each entry with the exact canonical name above;
+   never a sibling or a generic label.
+
+Respond ONLY with the JSON object: {"missing_obligations": [{"category":
+"<exact canonical name>", "clause": "<complete verbatim clause sentence>"}]}
+An empty list is a valid, honest answer when nothing is missing."""
+
+
+
 PROMPT_VERSIONS = {
     # Sorter
     "sorter_v0": SORTER_PROMPT_V0,
@@ -3304,6 +3374,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v37": CONTRACTS_SPECIALIST_PROMPT_V37,
     "contracts_specialist_v38": CONTRACTS_SPECIALIST_PROMPT_V38,
     "contracts_specialist_v39": CONTRACTS_SPECIALIST_PROMPT_V39,
+    "contracts_audit_v0": CONTRACTS_AUDIT_PROMPT_V0,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

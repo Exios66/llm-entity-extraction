@@ -106,6 +106,79 @@ def test_langfuse_extraction_loop_wiring(fake_langfuse_extraction, monkeypatch, 
         assert record["scores"]["per_field"]
 
 
+def test_langfuse_extraction_audit_pass_wiring(fake_langfuse_extraction, monkeypatch, tmp_path):
+    """The --audit flag runs the runner-level missed-category audit pass after
+    the extraction (KANBAN-060): audit_extraction receives the doc text, the
+    predicted extraction, and the chunk window params; the merged output
+    flows into the composite; the record's parameters carry audit=True."""
+    import scripts.eval.run_langfuse_extraction_eval as runner
+
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    monkeypatch.setattr("scripts.eval.run_langfuse_extraction_eval.load_braintrust_dataset",
+                        lambda *a, **k: [_dataset_row()])
+    for name in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL",
+                 "LANGFUSE_PROJECT", "LANGFUSE_ENVIRONMENT"):
+        monkeypatch.setenv(name, f"fake-{name}")
+    audit_calls = []
+
+    def fake_audit(self, doc_text, extraction, chunk_chars, overlap_chars):
+        audit_calls.append((doc_text, extraction, chunk_chars, overlap_chars))
+        merged = dict(extraction)
+        merged["key_obligations"] = list(extraction.get("key_obligations") or []) + [
+            "Neither party shall sue the other under this Agreement.",
+        ]
+        merged["reasoning"] = {"summary": "audited",
+                               "entries": [{"field": "Covenant Not To Sue",
+                                            "evidence": "Neither party shall sue the other under this Agreement.",
+                                            "section_ref": "audit-pass"}]}
+        return merged
+
+    monkeypatch.setattr("agents.specialist_agents.ContractsSpecialist.audit_extraction",
+                        fake_audit)
+    rc = runner.main_with_args([
+        "--dataset", "mailroom-cuad-contracts",
+        "--prompt-version", "contracts_specialist_v4",
+        "--audit",
+        "--chunked",
+        "--chunk-chars", "90000",
+        "--chunk-overlap", "8000",
+        "--experiment-name", "smoke_langfuse_audit",
+        "--experiment-log", str(tmp_path / "exp.jsonl"),
+        "--manifest", str(tmp_path / "manifest.jsonl"),
+    ])
+    assert rc == 0
+    assert len(audit_calls) == 1
+    doc_text, extraction, chunk_chars, overlap_chars = audit_calls[0]
+    assert "This Agreement between Acme and Beta" in doc_text
+    assert extraction["parties"] == ["Acme Technologies, Inc.", "Beta Holdings Corp."]
+    assert chunk_chars == 90000 and overlap_chars == 8000
+
+    record = json.loads(open(tmp_path / "exp.jsonl").read().splitlines()[-1])
+    assert record["parameters"]["audit"] is True
+    obligations = record["results"][0]["predicted"]["key_obligations"]
+    assert any("shall sue the other" in o for o in obligations)
+
+
+def test_langfuse_extraction_no_audit_by_default(fake_langfuse_extraction, monkeypatch, tmp_path):
+    """Without --audit the audit pass never runs."""
+    import scripts.eval.run_langfuse_extraction_eval as runner
+
+    monkeypatch.setattr(runner, "require_env", lambda *names: tuple("fake-key" for _ in names))
+    monkeypatch.setattr("scripts.eval.run_langfuse_extraction_eval.load_braintrust_dataset",
+                        lambda *a, **k: [_dataset_row()])
+    for name in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL",
+                 "LANGFUSE_PROJECT", "LANGFUSE_ENVIRONMENT"):
+        monkeypatch.setenv(name, f"fake-{name}")
+    monkeypatch.setattr("agents.specialist_agents.ContractsSpecialist.audit_extraction",
+                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("audit ran")))
+    rc = runner.main_with_args(["--dataset", "mailroom-cuad-contracts",
+                                "--experiment-name", "smoke_langfuse_no_audit",
+                                "--experiment-log", str(tmp_path / "exp.jsonl")])
+    assert rc == 0
+    record = json.loads(open(tmp_path / "exp.jsonl").read().splitlines()[-1])
+    assert record["parameters"]["audit"] is False
+
+
 def test_langfuse_extraction_dry_run(fake_langfuse_extraction, monkeypatch, tmp_path):
     import scripts.eval.run_langfuse_extraction_eval as runner
 

@@ -41,6 +41,9 @@ def main_with_args(argv: list[str]) -> int:
                         help="master GT CSV (default: data/cuad/master_clauses.csv)")
     parser.add_argument("--dry-run", action="store_true",
                         help="report what would change without writing")
+    parser.add_argument("--refresh", action="store_true",
+                        help="recompute the KPI block even when present "
+                             "(KANBAN-058 scorer/GT fix re-scoring pass)")
     args = parser.parse_args(argv)
 
     log_path = args.log or default_jsonl_path()
@@ -71,7 +74,7 @@ def main_with_args(argv: list[str]) -> int:
             new_lines.append(line)
             continue
         existing_kpis = (record.get("scores") or {}).get("contracteval_kpis")
-        if existing_kpis and "laziness" in existing_kpis:
+        if existing_kpis and "laziness" in existing_kpis and not args.refresh:
             already += 1
             new_lines.append(line)
             continue
