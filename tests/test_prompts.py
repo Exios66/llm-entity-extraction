@@ -1658,6 +1658,87 @@ def test_contracts_v38_sparse_family_shapes():
         assert relic not in v36
 
 
+def test_contracts_v39_payment_fold_precision_and_completion():
+    """contracts_specialist_v39 (KANBAN-059) = the maximize-everything
+    crossover: derivation chain v36 -> v37 -> v39 (v37 embeds the payment
+    fold; v39 = v37 + precision guard + within-category completion), each
+    part ONE lesson, base constants byte-identical.
+
+    Motivation (255-doc half-corpus, CORRECTED scorer — whitespace-collapse +
+    <omitted>-stripping landed in load_master_gt, all records re-scored):
+    v37 leads every recall-side metric (F1 0.4170 / F2 0.3382 / R 0.3004 /
+    P 0.6820 / J 0.4981 / false-nr 0.3260 vs v36 F1 0.4073 / F2 0.3243 /
+    R 0.2855 / P 0.7107) but the per-doc paired gate is inside the band
+    (v37: +25 TP at +40 FP). FP audit: Termination For Convenience = 53 fp
+    (largest fp category — term-of-agreement clauses and for-cause/default/
+    discontinuation terminations tagged as convenience; the category has NO
+    enumeration entry, only a guard-list name); Uncapped Liability +5 fp
+    (fee/royalty "CAPs" tagged as liability caps); Revenue/Profit Sharing
+    +6 fp (service fees, cost-sharing). Recall decomposition: 35% of positive
+    pairs carry MULTIPLE GT clause sentences and 556 of 1,678 positives fail
+    the verbatim predicate with one or more of the category's sentences never
+    quoted (NETGEAR Insurance 3 clauses/2 quoted, Cap On Liability 9/3;
+    63 more fail by dropping the sentence's leading phrase)."""
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V36,
+        CONTRACTS_SPECIALIST_PROMPT_V37,
+        CONTRACTS_SPECIALIST_PROMPT_V39,
+    )
+
+    # Registration + derivation chain (v37 under v39 byte-identical; v36 under v37).
+    assert "contracts_specialist_v39" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracts_specialist_v39"] is CONTRACTS_SPECIALIST_PROMPT_V39
+    assert CONTRACTS_SPECIALIST_PROMPT_V39 != CONTRACTS_SPECIALIST_PROMPT_V37
+    assert CONTRACTS_SPECIALIST_PROMPT_V39.startswith(CONTRACTS_SPECIALIST_PROMPT_V37[:300])
+    assert CONTRACTS_SPECIALIST_PROMPT_V37.startswith(CONTRACTS_SPECIALIST_PROMPT_V36[:300])
+
+    v39 = CONTRACTS_SPECIALIST_PROMPT_V39
+    v37 = CONTRACTS_SPECIALIST_PROMPT_V37
+    # (1) Part (a) — the payment fold is inherited from v37.
+    assert "PAYMENT TERMS & MONETARY CLAUSES" in v39
+    assert "never a field-level `key_obligations` entry" in v39
+    assert "a royalty is Revenue/Profit Sharing, NOT License Grant" in v39
+    assert 'a "for the sum of" phrase' in v39
+    assert "A payment SCHEDULE" in v39
+    assert "the un-limited shapes" in v39
+    assert "the amount shapes" in v39
+    # (2) Part (b) — precision guard: the new enumeration entry 27 with the
+    #     termination boundary shape (53 of 71 TFC outputs were fp).
+    assert "27. Termination For Convenience:" in v39
+    assert "termination by either party WITHOUT\n         CAUSE" in v39
+    assert "may be terminated at any time without cause" in v39
+    assert "NEVER these: term-of-agreement or" in v39
+    assert "termination for\n         default, breach, insolvency, or cause" in v39
+    assert "53 of 71 Termination For Convenience outputs are\n         false positives" in v39
+    # (2b) Part (b) — the money-family boundary clarifications in the R2 block.
+    assert "a CAP on fees, royalties,\n   or prices is NOT a liability cap" in v39
+    assert "fees for services, cost reimbursements, and expense sharing are\n   NOT Revenue/Profit Sharing" in v39
+    assert "price-change NOTICE duty" in v39
+    assert "is not a Price Restriction unless it caps amounts or\n   frequency" in v39
+    # (3) Part (c) — within-category completion: grain-rule append + R2 strengthen.
+    assert "WITHIN-CATEGORY\n     COMPLETION" in v39
+    assert "35% of\n     positive pairs carry MULTIPLE clause sentences" in v39
+    assert "556 of\n     1,678 positives failed" in v39
+    assert "EVERY distinct clause sentence is quoted as\n     its own item" in v39
+    assert "Quote each sentence from its FIRST WORD" in v39
+    assert "never\n     drop a leading phrase" in v39
+    assert "ONE item AND ONE reasoning entry PER DISTINCT CLAUSE\n   SENTENCE" in v39
+    assert "INCOMPLETE until every sentence is quoted as its own item" in v39
+    # (4) Guards preserved: fabrication guard, ADDING-only, verbatim grain.
+    assert "never fabricate" in v39
+    assert "ADDING to the list only" in v39
+    assert "FULL CLAUSE SENTENCES, quoted verbatim" in v39
+    assert "CATEGORY-LEVEL COMPLETENESS" in v39
+    # (5) v37/v36 do NOT contain the v39 additions; v38 is NOT in the chain.
+    for relic in ("27. Termination For Convenience:", "WITHIN-CATEGORY\n     COMPLETION",
+                  "PER DISTINCT CLAUSE\n   SENTENCE", "a CAP on fees, royalties,\n   or prices is NOT a liability cap"):
+        assert relic not in v37
+        assert relic not in CONTRACTS_SPECIALIST_PROMPT_V36
+    assert "27. Warranty Duration:" not in v39
+    assert "UNDER-QUOTED FAMILY RE-SCAN" not in v39
+    assert "28. Competitive Restriction Exception:" not in v39
+
+
 def test_contracteval_v0_registered_and_verbatim():
     """contracteval_v0 (KANBAN-052) = the paper's system prompt VERBATIM and
     registered as a versioned prompt (the experiment identity for the GEPA

@@ -2736,6 +2736,95 @@ CONTRACTS_SPECIALIST_PROMPT_V38 = CONTRACTS_SPECIALIST_PROMPT_V36.replace(
     "ADDING to the list only; never remove or replace an item already on it.\n   UNDER-QUOTED FAMILY RE-SCAN (measured on the 255-doc half-corpus, v36\n   record: 536 of 1686 positive pairs have no quoted span with >=0.7 token\n   coverage of the clause — the families below are the absent-heavy ones,\n   present in many documents yet routinely skipped): before finalizing,\n   specifically re-check for these families and quote their clause\n   sentence(s) if present — Warranty Duration; Competitive Restriction\n   Exception; Volume Restriction; Covenant Not To Sue; Post-Termination\n   Services (sell-off, inventory-exhaustion, wind-down, transition, and\n   return-of-materials duties after termination); Liquidated Damages and\n   termination payment penalties; license variants (Non-Transferable,\n   Affiliate License-Licensor, Affiliate License-Licensee, Irrevocable Or\n   Perpetual, Unlimited/All-You-Can-Eat); ROFR/ROFO/ROFN; Joint Ip\n   Ownership. Scan back across both sides of any truncation marker for\n   these; each present clause becomes its own verbatim full-sentence item\n   with its exact canonical tag, ADDING to the list only.",
 )
 
+# -----------------------------------------------------------------------------
+# contracts_specialist_v39 (KANBAN-059 — maximize-everything crossover;
+# derivation chain v36 -> v37 -> v39: v37 embeds the payment fold + canonical
+# tag discipline + contract_value trigger (v36 byte-identical under it, asserted
+# in tests); v39 = v37 + precision guard + within-category completion. v37 base
+# byte-identical; surgical .replace() edits only.
+# Motivation (255-doc half-corpus, CORRECTED scorer — whitespace-collapse +
+# <omitted>-stripping landed in load_master_gt, all records re-scored):
+#   - v37 run-level: F1 0.4170 / F2 0.3382 / R 0.3004 / P 0.6820 / J 0.4981 /
+#     false-nr 0.3260 — BEST on every recall-side metric vs v36 (F1 0.4073 /
+#     F2 0.3243 / R 0.2855 / P 0.7107); per-doc paired gate inside band
+#     (v37 gains 25 TP at +40 FP).
+#   - FP audit (v37, corrected): Termination For Convenience = 53 fp (largest
+#     fp category, up +6 from v37's fold) — genuine model errors (term-of-
+#     agreement clauses, for-cause/default/product-discontinuation terminations
+#     tagged as convenience; the category has NO enumeration entry, only a guard-
+#     list name); Uncapped Liability +5 fp (a "CAP" on fees/royalties tagged as
+#     a liability cap; hold-harmless tagged as uncapped liability); Revenue/
+#     Profit Sharing +6 fp (service fees, cost-sharing tagged as revenue
+#     sharing); Price Restrictions fp only 13->14 under the corrected scorer
+#     (NOT the 24-fp inflation) — Third Party Beneficiary fp 31 is GT-label
+#     noise (disclaimer clauses ARE in-category per CUAD), NOT suppressed.
+#   - Within-category completion (the residual recall lever): 35% of positive
+#     pairs carry MULTIPLE GT clause sentences; 556 of 1,678 positives fail the
+#     verbatim predicate with one or more of the category's sentences never
+#     quoted (NETGEAR Insurance: 3 clauses, the certificate sentence missing;
+#     NETGEAR Cap On Liability: 9 clauses, 6 unquoted; 63 more fail by dropping
+#     the sentence's leading phrase). The v36 grain rule quotes the sentences
+#     the model finds; it does not force EVERY distinct clause sentence.
+# Rule (three disjoint parts, each ONE lesson):
+#   (a) payment fold (inherited from v37: PAYMENT TERMS & MONETARY CLAUSES scan
+#       family + canonical tag discipline + contract_value trigger extension +
+#       Uncapped/Liquidated appends);
+#   (b) precision guard: enumeration entry 27 = Termination For Convenience
+#       boundary shape (without-cause/at-will ONLY; never term clauses,
+#       for-cause/default, product-discontinuation) + R2 boundary clarifications
+#       (a fee/royalty/price CAP is not a liability cap; service fees and cost
+#       sharing are not Revenue/Profit Sharing; a price-change notice duty is
+#       not a Price Restriction);
+#   (c) within-category completion: grain rule append (every distinct clause
+#       sentence of a present category gets its own full item, quoted from its
+#       first word through its final period) + R2 checklist strengthen (one item
+#       AND one reasoning entry PER DISTINCT CLAUSE SENTENCE).
+# Precision risk of (c) ~zero (extra quotes land inside already-present
+# categories; fp is defined on GT-absent categories). One-pass preserved;
+# never-fabricate preserved.
+# -----------------------------------------------------------------------------
+CONTRACTS_SPECIALIST_PROMPT_V39 = CONTRACTS_SPECIALIST_PROMPT_V37.replace(
+    """inure to any third party").
+   - WORKED SPAN EXAMPLES""",
+    """inure to any third party").
+     27. Termination For Convenience: termination by either party WITHOUT
+         CAUSE — "may be terminated at any time without cause", "may be
+         canceled at any time by either party", "for any reason or no
+         reason", at-will termination. NEVER these: term-of-agreement or
+         expiration clauses ("shall remain in full force and effect ...
+         ending on the date that is the earliest of"); termination for
+         default, breach, insolvency, or cause ("upon the occurrence of an
+         Event of Default", "ceases commercializing the Product for
+         efficacy or safety reasons"); termination upon regulatory or
+         discontinuation events (measured on the 255-doc half-corpus,
+         corrected scorer: 53 of 71 Termination For Convenience outputs are
+         false positives — the largest fp category; the boundary below is
+         the fix).
+   - WORKED SPAN EXAMPLES""",
+).replace(
+    "A fee or payment amount alone is NOT a price restriction.",
+    "A fee or payment amount alone is NOT a price restriction. Boundary\n   clarifications for the money families (measured on the 255-doc half-corpus,\n   corrected scorer — the v39 precision guard): (1) a CAP on fees, royalties,\n   or prices is NOT a liability cap — Cap On Liability / Uncapped Liability\n   cover liability-limitation language only, never a royalty or fee schedule\n   cap; (2) fees for services, cost reimbursements, and expense sharing are\n   NOT Revenue/Profit Sharing — only revenue/profit/royalty sharing\n   percentages and per-unit royalties on licensed products count; (3) a\n   price-change NOTICE duty (\"written notice thirty days in advance of any\n   price increase\") is not a Price Restriction unless it caps amounts or\n   frequency.",
+).replace(
+    """Never quote
+     mid-obligation or stop at a sentence's first clause.""",
+    """Never quote
+     mid-obligation or stop at a sentence's first clause. WITHIN-CATEGORY
+     COMPLETION (measured on the 255-doc half-corpus, corrected scorer: 35% of
+     positive pairs carry MULTIPLE clause sentences per category, and 556 of
+     1,678 positives failed because one or more of the category's sentences
+     was never quoted — e.g. an Insurance category with three clauses where
+     only two were quoted; a Cap On Liability with nine where six were
+     missing): when a category's clause appears in several sentences, the
+     category is INCOMPLETE until EVERY distinct clause sentence is quoted as
+     its own item — quoting the strongest sentence alone leaves the other
+     sentences unmatched. Quote each sentence from its FIRST WORD — never
+     drop a leading phrase, however preamble-like it looks — and never stop
+     short of its final period.""",
+).replace(
+    "the list must hold at\n   least one item AND at least one reasoning entry tagged with that exact\n   canonical name.",
+    "the list must hold ONE item AND ONE reasoning entry PER DISTINCT CLAUSE\n   SENTENCE of that category (a category whose clause appears in several\n   sentences is INCOMPLETE until every sentence is quoted as its own item),\n   each tagged with that exact canonical name.",
+)
+
 # =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
@@ -3214,6 +3303,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v36": CONTRACTS_SPECIALIST_PROMPT_V36,
     "contracts_specialist_v37": CONTRACTS_SPECIALIST_PROMPT_V37,
     "contracts_specialist_v38": CONTRACTS_SPECIALIST_PROMPT_V38,
+    "contracts_specialist_v39": CONTRACTS_SPECIALIST_PROMPT_V39,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
