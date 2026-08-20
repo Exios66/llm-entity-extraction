@@ -213,6 +213,11 @@ def test_run_kpis_block():
     assert k["f2"] == pytest.approx(1.0)
     assert k["jaccard_mean"] > 0.0
     assert k["false_no_related_rate"] == pytest.approx(0.0)
+    # Laziness score (ContractEval §III-D): share of ALL pairs answered
+    # "no related clause" — the TP pair here answers with a clause, so 0.0.
+    assert k["no_related_rate"] == pytest.approx(0.0)
+    assert k["laziness"] == pytest.approx(0.0)
+    assert k["laziness"] == k["no_related_rate"]
     # Semantic lens companion.
     assert k["semantic"]["n_pos"] == 1
     assert k["semantic"]["verbatim"] == pytest.approx(1.0)

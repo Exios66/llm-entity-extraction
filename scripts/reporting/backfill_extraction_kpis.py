@@ -70,7 +70,8 @@ def main_with_args(argv: list[str]) -> int:
         if record.get("task") != "contract_entity_extraction":
             new_lines.append(line)
             continue
-        if (record.get("scores") or {}).get("contracteval_kpis"):
+        existing_kpis = (record.get("scores") or {}).get("contracteval_kpis")
+        if existing_kpis and "laziness" in existing_kpis:
             already += 1
             new_lines.append(line)
             continue

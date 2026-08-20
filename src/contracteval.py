@@ -348,7 +348,10 @@ def run_kpis(record: dict, master_gt: dict[str, dict[str, list[str]]],
     precision/recall, F1, recall-weighted F2, token-set Jaccard over positive
     pairs, "no related clause" / false-"no related clause" rates) with
     ``coverage_bands`` (the semantic containment lens that separates
-    paraphrase penalty from missing extraction). Stored as
+    paraphrase penalty from missing extraction). ``laziness`` is the model
+    laziness score (ContractEval §III-D): the share of ALL pairs answered
+    "no related clause" — the explicit per-run track of how often the model
+    dodges extraction (alias of ``no_related_rate``). Stored as
     ``scores.contracteval_kpis`` on every extraction run record; computed
     offline from the run's own rows + the committed master GT, so it needs no
     LLM spend and is deterministic per run.
@@ -374,6 +377,7 @@ def run_kpis(record: dict, master_gt: dict[str, dict[str, list[str]]],
         "jaccard_mean": metrics["jaccard_mean"],
         "jaccard_median": metrics["jaccard_median"],
         "no_related_rate": metrics["no_related_rate"],
+        "laziness": metrics["no_related_rate"],
         "false_no_related_rate": metrics["false_no_related_rate"],
         "semantic": {
             "n_pos": bands["n_pos"],
