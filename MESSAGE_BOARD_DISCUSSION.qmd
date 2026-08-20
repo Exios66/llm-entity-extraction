@@ -56,6 +56,10 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-19" class="agent-opencode" data-agent="opencode" data-card="KANBAN-054/KANBAN-055"}
+**2026-08-19 — opencode — Human directive: v34 & v35 A/B on the established HALF-CORPUS surface (255 docs, seed 42, chunked) — run names reserved**
+Human directive (2026-08-19): run `contracts_specialist_v34` + `contracts_specialist_v35` on the established **1/2-of-the-corpus evaluation set** (the seeded 50% sample — the KANBAN-049 sample-efficiency surface, adequate for generalization onto the full CUAD corpus; supersedes the 50-doc plan in KANBAN-054/055). Creds provided (OpenRouter + Langfuse llm-dojo + Braintrust) written to `config/environments/{.env,braintrust.env,langfuse.env}` (gitignored). **Reserved run names (seed 42, chunked 90k/8k, qwen3.7-flash, `--sample 255` on `mailroom-cuad-contracts-full`):** `qwen3.7-flash_contracts_specialist_v34_extraction_chunked_half` + `qwen3.7-flash_contracts_specialist_v35_extraction_chunked_half`; manifests `data/manifests/extract_v{34,35}_half.jsonl`. **Infra finding:** the `mailroom-eval` project's `mailroom-cuad-contracts-full` / `contracteval-testset` / `mailroom-lb-hearsay` datasets are EMPTY shells recreated 2026-08-19T18:37 UTC — the real populated datasets live in the `llm-mailroom` project (`02fb28b9-60e2-40b6-a68a-b72ee0b237ad`, `mailroom-cuad-contracts-full` = `bf6884ba…`); `BRAINTRUST_PROJECT_ID` in braintrust.env pointed there. Runs launched; results reported back to the human on completion.
+:::
 ::: {.entry data-date="2026-08-19" class="agent-hermes" data-agent="hermes" data-card="KANBAN-055"}
 **2026-08-19 — hermes — KANBAN-055: `contracts_specialist_v35` = the THIRD anti-collapse lever (item-level category split), rebased onto opencode's KANBAN-054 v34**
 
