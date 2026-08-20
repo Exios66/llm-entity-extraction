@@ -1460,6 +1460,64 @@ def test_contracts_v35_item_level_category_split():
     assert "ITEM-LEVEL CATEGORY GUARD" not in CONTRACTS_SPECIALIST_PROMPT_V34
 
 
+def test_contracts_v36_full_sentence_grain():
+    """v36 (KANBAN-056) reconciles the span-grain rule_contradiction that
+    v34/v35 inherited from the v10-era fragment rules: the prompt told the
+    model to quote 10-25-word ATOMIC FRAGMENTS while R3 demanded verbatim
+    full-span quotes. Measured on the 255-doc half-corpus (v34/v35 A/B):
+    146 of 448 near-miss key_obligations labels were PURE TRUNCATIONS (the
+    predicted item was a head-prefix of the GT sentence) and 16/208
+    term_length expectations were duration-only quotes — the model followed
+    the concrete fragment instruction. v36 replaces every fragment-grain
+    instruction with full-clause-sentence grain, guards term_length against
+    duration-only output, and adds the effective_date blank-placeholder
+    carve-out (a fabricated fill of "April __, 2005" scores 0 while null
+    satisfies the blank expectation)."""
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V34,
+        CONTRACTS_SPECIALIST_PROMPT_V35,
+        CONTRACTS_SPECIALIST_PROMPT_V36,
+    )
+
+    # v36 is a strict append-style derivation of v35 (base untouched), registered.
+    assert "contracts_specialist_v36" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracts_specialist_v36"] is CONTRACTS_SPECIALIST_PROMPT_V36
+    assert CONTRACTS_SPECIALIST_PROMPT_V36 != CONTRACTS_SPECIALIST_PROMPT_V35
+    assert CONTRACTS_SPECIALIST_PROMPT_V36.startswith(CONTRACTS_SPECIALIST_PROMPT_V35[:300])
+
+    v36 = CONTRACTS_SPECIALIST_PROMPT_V36
+    # (1) The grain reconciliation: full-clause-sentence grain replaces every
+    # fragment-grain relic (the rule_contradiction is gone, not just softened).
+    assert "FULL CLAUSE SENTENCES, quoted verbatim and in" in v36
+    assert "the ground-truth labels are the annotator's stored clause" in v36
+    assert "Matching is by token" in v36 and "containment" in v36
+    assert "Never emit a truncated sentence" in v36
+    for relic in ("ATOMIC FRAGMENTS", "10-25-word", "as its OWN fragment",
+                  "STRIP sentence preamble", "Quote each fragment"):
+        assert relic not in v36
+        assert relic in CONTRACTS_SPECIALIST_PROMPT_V35  # v35 base untouched
+    assert "signals\n     missed spans: split them" in CONTRACTS_SPECIALIST_PROMPT_V35
+    assert "signals missed spans" not in v36
+    assert "full-sentence span grain" in v36
+    assert "split MERGED MULTI-SENTENCE items" in v36
+    # (2) The v35 item-level guard survives but is re-cast at full-sentence
+    # grain (its old fragment-quoting phrase is gone — no contradiction).
+    assert "ITEM-LEVEL CATEGORY GUARD" in v36
+    assert "FULL clause sentence(s) verbatim in its own item" in v36
+    assert "quote the operative words of that duty" not in v36
+    # (3) term_length duration-only guard.
+    assert "A quote consisting of ONLY the duration phrase" in v36
+    assert "The full term" in v36 and "ALWAYS follow the prefix" in v36
+    # (4) effective_date blank-placeholder carve-out.
+    assert "BLANK PLACEHOLDER" in v36
+    assert "never a fabricated fill" in v36
+    assert "null satisfies the blank expectation" in v36
+    # (5) v34's anti-collapse rules survive inside v36.
+    assert "FIELD-PRESENCE SELF-CHECK" in v36
+    assert "CATEGORY-LEVEL COMPLETENESS" in v36
+    assert "WORD-FOR-WORD" in v36
+
+
 def test_contracteval_v0_registered_and_verbatim():
     """contracteval_v0 (KANBAN-052) = the paper's system prompt VERBATIM and
     registered as a versioned prompt (the experiment identity for the GEPA

@@ -2532,6 +2532,110 @@ CONTRACTS_SPECIALIST_PROMPT_V35 = CONTRACTS_SPECIALIST_PROMPT_V34.replace(
 )
 
 # =============================================================================
+# CONTRACTS SPECIALIST — Contract Extraction, v36 (full-sentence span grain —
+# the fragment-grain rule_contradiction repair, KANBAN-056)
+# -----------------------------------------------------------------------------
+# v36 = v35 + the span-grain reconciliation, driven by the v34/v35 half-corpus
+# A/B (255 docs, seed 42, chunked 90k/8k, qwen3.7-flash, Langfuse llm-dojo,
+# 2026-08-19; paired compare CI [-0.0034, +0.0169] — v35 a LOGIC REPAIR):
+#   (1) SPAN-GRAIN CONTRADICTION (dominant cluster): v34/v35 kept the v10-era
+#       fragment-grain rules ("ATOMIC FRAGMENTS ... typically 10-25 words",
+#       "STRIP sentence preamble and riders", "a list of a few long merged
+#       sentences signals missed spans: split them") ALONGSIDE v34's R3
+#       verbatim-completeness rule. The measured consequence (sim-matrix over
+#       the 255 docs, expected-vs-predicted containment classification):
+#       key_obligations 1600 labels -> MATCH 572 / NEAR 448 / MISS 580; of the
+#       448 NEAR, 146 are PURE TRUNCATIONS (predicted item is a head-prefix of
+#       the GT sentence: 88-93% of predicted tokens inside GT) and 265 more
+#       are ellipsis-condensed partial overlaps — the model follows the
+#       concrete fragment instruction and quotes the sentence's opening words,
+#       dropping the continuation. Under expected-within-predicted containment
+#       scoring the GT label IS the annotator's stored clause SENTENCE: a
+#       full-sentence quote covers it, a fragment cannot. ContractEval KPIs
+#       measured the same wall: verbatim 8.2% / ge0.7 38.8% / recall 0.0813 /
+#       laziness 0.8632. v36 REPLACES every fragment-grain instruction with
+#       full-clause-sentence grain (one item per DISTINCT sentence, quoted in
+#       full, never split per-right, never ellipsized).
+#   (2) TERM_LENGTH DURATION-ONLY GUARD: 16/208 term_length expectations were
+#       MISS with the model emitting ONLY the duration phrase ("two (2)
+#       years") and no clause (e.g. AllisonTransmission, Webmd, BerkshireHills
+#       on the v34 run) — the same condensing habit; v35's paired term_length
+#       was 0.7580 vs v34 0.8006 (CI [0.004, 0.102]).
+#   (3) EFFECTIVE_DATE BLANK-PLACEHOLDER CARVE-OUT: 5 of the 16 effective_date
+#       miss rows were FABRICATED FILLS of blank template dates (GT "April __,
+#       2005" -> PRED "2005-04-01"): the scorer satisfies a blank-template
+#       expectation with null (score 1.0) while a guessed fill scores 0.0 —
+#       a pure scorer-contract alignment, null-on-blank.
+#   (4) v35's ITEM-LEVEL CATEGORY GUARD is KEPT (its KPI direction measured
+#       positive: recall 0.0866 vs 0.0813, laziness 0.8554 vs 0.8632) but its
+#       quoting phrase "quote the operative words of that duty" is re-cast to
+#       full-sentence grain so the two rules no longer contradict.
+# Append-style .replace() chain on v35; v0-v35 stay byte-identical.
+# A/B vs v34/v35 on the 255-doc half-corpus surface (KANBAN-056).
+# =============================================================================
+
+CONTRACTS_SPECIALIST_PROMPT_V36 = CONTRACTS_SPECIALIST_PROMPT_V35.replace(
+    """key_obligations items are ATOMIC FRAGMENTS, not sentences: emit the
+     smallest verbatim span that states the operative restriction or covenant —
+     typically 10-25 words — the SAME length as the ground-truth spans (target
+     ~15-20 words: subject + operative verb + object/qualifiers). The ground
+     truth stores exactly this grain, and each item is matched against a
+     ground-truth span by token overlap: an item much longer than the span
+     dilutes the similarity below the match threshold, and an item much
+     shorter than the span cannot reach it either — mirror the span's length. STRIP sentence preamble and riders — "During the Term of this Agreement,",
+     "Except as otherwise set forth herein,", "Subject to Section N,", and
+     cross-references are NOT part of the fragment. When one sentence states
+     several obligations, emit each operative right as its OWN fragment (a
+     "shall not assign, sublicense, or transfer" clause yields one per right;
+     an exclusivity clause yields one per distinct limitation). EXAMPLE — the
+     ground truth holds "Licensee shall not sublicense, sell, or otherwise
+     transfer the Software to any third party without the prior written
+     consent of Licensor" (15 words): keep the obligation core at the span's
+     length — neither the 60-word sentence with its preamble nor the 5-word
+     sliver "shall not sublicense". Quote each fragmentQuote each fragment
+     verbatim and keep it complete — never truncate mid-obligation.""",
+    """key_obligations items are FULL CLAUSE SENTENCES, quoted verbatim and in
+     full: the ground-truth labels are the annotator's stored clause
+     SENTENCES — the sentence's first word through its final period, including
+     mid-sentence continuations and trailing riders ("It is agreed that only
+     Bunker One will be marketing this JSMA and the JSMA Output towards
+     various customers, but if a Party receives a Nomination ..." is ONE item,
+     not a fragment ending at the first clause). Matching is by token
+     containment of the label inside the item: an item that quotes the WHOLE
+     sentence matches; a fragment, paraphrase, or head-only quote cannot
+     contain the label and scores as a miss. Never emit a truncated sentence
+     head — measured on the 255-doc half-corpus (v34/v35 A/B), 146 of 448
+     near-miss labels failed exactly this way: the item quoted the sentence's
+     opening words and dropped the continuation. NEVER use ellipses ("...")
+     to condense a clause. When a sentence states several obligations, keep
+     the sentence as ONE item — the label is the sentence, and a full-sentence
+     item covers every label inside it. EXAMPLE — the ground truth holds
+     "Licensee shall not sublicense, sell, or otherwise transfer the Software
+     to any third party without the prior written consent of Licensor": quote
+     that complete sentence — neither a 60-word passage padded with other
+     sentences nor a 5-word sliver "shall not sublicense". Never quote
+     mid-obligation or stop at a sentence's first clause.""",
+).replace(
+    "The list is complete when every present\n           family occurrence appears exactly once at the 10-25-word span grain.",
+    "The list is complete when every present\n           family occurrence appears exactly once at the full-sentence span grain.",
+).replace(
+    "For long clauses, trim to the\n     operative core at the 10-25-word span grain by CUTTING the preamble and\n     riders only — never by rewording what remains.",
+    "For long clauses, quote the\n     COMPLETE clause sentence(s) — never trim to a core fragment: the label\n     is the sentence, and a quote cut below the full sentence cannot contain\n     it.",
+).replace(
+    "Use this only as a sanity check that items are at span\n     granularity — never as a quota; a list of a few long merged sentences signals\n     missed spans: split them.",
+    "Use this only as a sanity check that items are at full-sentence\n     granularity — never as a quota; a list holding fewer items than the\n     document's distinct requirement sentences signals missed sentences:\n     split MERGED MULTI-SENTENCE items at sentence boundaries, never a\n     sentence itself.",
+).replace(
+    "and quote the operative words of that duty in its own item.",
+    "and quote that duty's FULL clause sentence(s) verbatim in its own item —\n     a duty is a complete clause sentence, never a fragment of one; when one\n     sentence carries two categories' duties, the sentence may appear once\n     per category tag (dedupe applies only within the same category).",
+).replace(
+    "must appear in full.\n     The ground-truth span is often the clause's OPENING fragment,",
+    "must appear in full. A quote consisting of ONLY the duration phrase\n     (\"two (2) years\" with no clause after it) is a MISS — measured on the\n     255-doc half-corpus, 16 of 208 term_length expectations failed exactly\n     this way: the duration phrase alone, no clause. The full term\n     sentence(s) ALWAYS follow the prefix.\n     The ground-truth span is often the clause's OPENING fragment,",
+).replace(
+    "NEVER output null when a stated date appears in the visible text (the preamble, the signature block, or a \"dated\"/\"as of\" line all count).",
+    "NEVER output null when a stated date appears in the visible text (the preamble, the signature block, or a \"dated\"/\"as of\" line all count). A date line whose day or month is a BLANK PLACEHOLDER (\"April __, 2005\", \"this ____ day of March, 2018\", an empty day or month field) is NOT a stated date — output null, never a fabricated fill: a guessed date for a blank line scores as a miss while null satisfies the blank expectation (measured: 5 of 16 effective_date misses on the 255-doc half-corpus were fabricated fills of blank date lines).",
+)
+
+# =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
 Extract the following fields from the document:
@@ -3006,6 +3110,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v33": CONTRACTS_SPECIALIST_PROMPT_V33,
     "contracts_specialist_v34": CONTRACTS_SPECIALIST_PROMPT_V34,
     "contracts_specialist_v35": CONTRACTS_SPECIALIST_PROMPT_V35,
+    "contracts_specialist_v36": CONTRACTS_SPECIALIST_PROMPT_V36,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,
