@@ -22,8 +22,8 @@ import argparse
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BOARD_MD = REPO_ROOT / "MESSAGE_BOARD.md"
-OUT_QMD = REPO_ROOT / "MESSAGE_BOARD.qmd"
+BOARD_MD = REPO_ROOT / "board" / "MESSAGE_BOARD.md"
+OUT_QMD = REPO_ROOT / "board" / "MESSAGE_BOARD.qmd"
 
 # Status pill + card border accent colors (kept in sync with the discussion log).
 STATUS_LABEL = {

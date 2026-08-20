@@ -750,7 +750,7 @@ licensed corpora, benchmarks, and frameworks:
 
 - `AGENTS.md` — the agent workflow guide: setup, commands, architecture,
   conventions, gotchas, and the inter-agent message-board protocol.
-- `MESSAGE_BOARD.md` — the living Kanban canvas shared by all agents
+- `board/MESSAGE_BOARD.md` — the living Kanban canvas shared by all agents
   (backlog / in_progress / blocked / in_review / done, discussion log,
   archive).
 - `CHANGELOG.md` — semantic-version history of all significant releases

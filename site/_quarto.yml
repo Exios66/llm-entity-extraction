@@ -30,8 +30,8 @@ website:
     left: "llm-entity-extraction · Posit Cloud portal"
     right: >-
       derived from <span class="mono">reports/experiment_log.jsonl</span>,
-      <span class="mono">MESSAGE_BOARD.md</span> and
-      <span class="mono">MESSAGE_BOARD_DISCUSSION.qmd</span> — never hand-edited
+      <span class="mono">board/MESSAGE_BOARD.md</span> and
+      <span class="mono">discussion/MESSAGE_BOARD_DISCUSSION.qmd</span> — never hand-edited
 
 format:
   html:

@@ -160,7 +160,7 @@ def test_rendered_pages_committed():
 def test_source_board_divs_stay_balanced():
     """The append-only discussion board must never regress into unbalanced
     fenced divs (KANBAN-037 repaired six untracked closers)."""
-    text = (REPO_ROOT / "MESSAGE_BOARD_DISCUSSION.qmd").read_text(encoding="utf-8")
+    text = (REPO_ROOT / "discussion" / "MESSAGE_BOARD_DISCUSSION.qmd").read_text(encoding="utf-8")
     depth = 0
     for line in text.splitlines():
         s = line.strip()
