@@ -2635,6 +2635,50 @@ CONTRACTS_SPECIALIST_PROMPT_V36 = CONTRACTS_SPECIALIST_PROMPT_V35.replace(
     "NEVER output null when a stated date appears in the visible text (the preamble, the signature block, or a \"dated\"/\"as of\" line all count). A date line whose day or month is a BLANK PLACEHOLDER (\"April __, 2005\", \"this ____ day of March, 2018\", an empty day or month field) is NOT a stated date — output null, never a fabricated fill: a guessed date for a blank line scores as a miss while null satisfies the blank expectation (measured: 5 of 16 effective_date misses on the 255-doc half-corpus were fabricated fills of blank date lines).",
 )
 
+# -----------------------------------------------------------------------------
+# contracts_specialist_v37 (KANBAN-056 — GEPA crossover on v36's WIN; frozen
+# design in memos/contracts_specialist_v37_design.md): payment/monetary capture
+# + canonical tag discipline.
+# Motivation (255-doc half-corpus, v34 record + master GT CSV):
+#   - v36 A/B verdict: CHAMPION CHANGE v34 -> v36 — per-doc F1 bootstrap
+#     0.1372 -> 0.3063 (CI [0.1398, 0.2016], P(v36 beats) 1.000), aggregate
+#     overall inside the noise band (no regression), key_obligations 0.7627 ->
+#     0.7886.
+#   - Payment families = 297 of 801 (37%) present-but-untagged (doc, category)
+#     pairs: Price Restrictions 0/9 tagged (+24 fp), Uncapped Liability 1/46,
+#     Volume Restriction 3/35, Most Favored Nation 3/11, Post-Termination
+#     Services 43 fn, Minimum Commitment 40 fn, Revenue/Profit Sharing 31 fn.
+#   - 78/255 docs collapse ALL key_obligations items under one field-level
+#     reasoning tag (115 of the 297 payment misses; 50/78 of those docs contain
+#     money-shaped items emitted-but-untagged); 182/297 are genuine scan gaps
+#     on properly-tagged docs.
+#   - contract_value: NEVER GT on this surface (0/255 expected — money_n_pairs
+#     = 0 by design), predicted on 101/255, null on 113/255 docs that carry
+#     payment-category GT.
+# Rule (ONE change, two inseparable parts): PAYMENT TERMS & MONETARY CLAUSES
+# mandatory scan family (10 money-clause shapes at v36's full-sentence grain,
+# each quoted fully + tagged with its EXACT canonical category; never a
+# field-level `key_obligations` entry, never a sibling tag) + contract_value
+# trigger extension (payment schedule / per-unit fee or royalty / minimum
+# commitment = visible consideration). Section targets: R2 completeness block,
+# enumeration entries 21/23 appends (entries 10-13 already carried the shapes),
+# rule-10 triggers — disjoint from v36's grain/term_length/effective_date
+# edits. v36 base byte-identical; surgical .replace() edits only.
+# -----------------------------------------------------------------------------
+CONTRACTS_SPECIALIST_PROMPT_V37 = CONTRACTS_SPECIALIST_PROMPT_V36.replace(
+    "keep one entry each (the RETAG RULE\n   above). Measured baseline",
+    "keep one entry each (the RETAG RULE\n   above). PAYMENT TERMS & MONETARY CLAUSES — a mandatory scan family. Measured on the 255-doc half-corpus: 297 of 801 present-but-untagged (document, category) pairs are payment/monetary families — Price Restrictions 0/9, Uncapped Liability 1/46, Volume Restriction 3/35 tagged — and 113 of 255 docs carried payment clauses with contract_value null. Every money-clause family below, when present, gets its OWN fully-quoted item (FULL CLAUSE SENTENCES, verbatim — the grain rule) AND its own exact canonical tag in the reasoning entries; never a field-level `key_obligations` entry, never a sibling/generic tag (a royalty is Revenue/Profit Sharing, NOT License Grant; an insurance limit is Insurance, not Cap On Liability):\n   - Revenue/Profit Sharing: per-unit royalties, percentage-of-revenue or percentage-of-profit sharing, commission entitlements, revenue remittance obligations — e.g. \"a royalty equal to the Specified Royalty Percentage of all revenues received\"; \"thirty percent (30%) of the Net Sales in excess of Eleven Thousand Dollars ($11,000) per calendar month\".\n   - Minimum Commitment: minimum guarantees and purchase/order/royalty requirements (dollars, units, or acreage), minimum coverage percentages — e.g. \"shall purchase at least\", \"minimum annual\" commitments.\n   - Volume Restriction: unit/output/inventory ceilings — e.g. \"not more than X units\", \"cease fulfilling Orders ... until inventory returns to an acceptable level\".\n   - Price Restrictions: price floors/caps and resale-price rules — e.g. \"sell at prices no lower than\", \"may not increase ... more than once in any period of twelve consecutive months\". A fee or payment amount alone is NOT a price restriction.\n   - Liquidated Damages: liquidated damages amounts, late fees, termination payment penalties, forfeiture of guarantees on early termination.\n   - Cap On Liability: aggregate liability caps and damage exclusions — e.g. \"in no event shall either party be liable for any special, indirect, incidental, consequential, punitive, or exemplary damages\"; sole-and-exclusive-remedy clauses.\n   - Uncapped Liability: un-limited liability — e.g. \"nothing in this Agreement shall limit either party's liability\", \"liability shall not be subject to any cap\" (the absence of a cap inside an indemnification section still counts).\n   - Insurance: required coverages and minimum policy limits — e.g. \"not less than $1 million per occurrence\"; additional-insured naming.\n   - Most Favored Nation: pricing parity — e.g. \"as favorable as\", \"no less favorable than the terms offered to any third party\".\n   - Post-Termination Services: transition/continuation duties and fees after termination — e.g. \"for a period of X after termination\", \"transition services\".\n   Scan these families explicitly before finalizing: a present money clause with ZERO tagged entries is INCOMPLETE — same duty as the checklist above. Tag discipline: every emitted item carries its EXACT canonical category tag; never collapse the list under one field-level entry — measured: 78 of 255 documents fell back to a single field-level tag, hiding every category on the document.\n   Measured baseline",
+).replace(
+    'a "for the sum of" phrase all\n   count); `renewal_terms`',
+    'a "for the sum of" phrase all\n   count); A payment SCHEDULE ("$55,000 for First Contract Year, $70,000 for Second Contract Year"), a per-unit fee or royalty, a minimum commitment amount, or an aggregate consideration phrase ALL count as visible consideration — never null when any of these appear (measured on the 255-doc half-corpus: 113 of 255 docs carried payment clauses with contract_value null). `renewal_terms`',
+).replace(
+    "21. Uncapped Liability: clauses stating that a party's liability is unlimited or\n         that a cap does not apply to it.",
+    "21. Uncapped Liability: clauses stating that a party's liability is unlimited or\n         that a cap does not apply to it. Add the un-limited shapes: \"nothing in\n         this Agreement shall limit either party's liability\", \"liability shall\n         not be subject to any cap\", and an indemnification carve-out for a\n         party's own gross negligence or willful misconduct (measured: only 1 of\n         46 present Uncapped Liability clauses was tagged on the 255-doc\n         half-corpus).",
+).replace(
+    "23. Liquidated Damages: liquidated damages; termination payment penalties;\n         forfeiture of guarantees on early termination.",
+    "23. Liquidated Damages: liquidated damages; termination payment penalties;\n         forfeiture of guarantees on early termination. Add the amount shapes:\n         \"a late fee of\", \"liquidated damages in the amount of\", and per-day\n         delay penalties.",
+)
+
 # =============================================================================
 CORPORATE_RECORDS_SPECIALIST_PROMPT = """You are a legal extraction specialist focused on corporate records. Your job is to extract key fields from corporate governance documents.
 
@@ -3111,6 +3155,7 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v34": CONTRACTS_SPECIALIST_PROMPT_V34,
     "contracts_specialist_v35": CONTRACTS_SPECIALIST_PROMPT_V35,
     "contracts_specialist_v36": CONTRACTS_SPECIALIST_PROMPT_V36,
+    "contracts_specialist_v37": CONTRACTS_SPECIALIST_PROMPT_V37,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,
     "corporate_records_specialist": CORPORATE_RECORDS_SPECIALIST_PROMPT,
     "due_diligence_specialist": DUE_DILIGENCE_SPECIALIST_PROMPT,

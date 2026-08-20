@@ -1518,6 +1518,78 @@ def test_contracts_v36_full_sentence_grain():
     assert "WORD-FOR-WORD" in v36
 
 
+def test_contracts_v37_payment_monetary_capture():
+    """v37 (KANBAN-056 — GEPA crossover built on v36's WIN, frozen design in
+    memos/contracts_specialist_v37_design.md) adds the payment/monetary capture
+    + canonical tag discipline rule. Measured on the 255-doc half-corpus (v34
+    record + master GT CSV): payment families are 297 of 801 (37%) of the
+    present-but-untagged (doc, category) pairs — Price Restrictions 0/9 tagged
+    (+24 fp), Uncapped Liability 1/46, Volume Restriction 3/35; 78/255 docs
+    collapse all key_obligations items under one field-level reasoning tag
+    (115 of the 297 misses; 50/78 of those docs contain emitted-but-untagged
+    money items); contract_value is never GT (0/255 expected) but null on
+    113/255 docs that carry payment GT. v37 = v36 + 4 surgical .replace()
+    edits (base byte-identical, registered): the PAYMENT TERMS & MONETARY
+    CLAUSES scan family (10 money-clause shapes at v36's full-sentence grain),
+    the canonical tag discipline (never a field-level `key_obligations`
+    entry), the contract_value trigger extension (payment schedule / per-unit
+    fee or royalty / minimum commitment = visible consideration), and the
+    Uncapped/Liquidated enumeration appends."""
+    from src.prompts import (
+        CONTRACTS_SPECIALIST_PROMPT_V36,
+        CONTRACTS_SPECIALIST_PROMPT_V37,
+    )
+
+    # v37 is a strict derivation of v36 (base untouched), registered.
+    assert "contracts_specialist_v37" in PROMPT_VERSIONS
+    assert PROMPT_VERSIONS["contracts_specialist_v37"] is CONTRACTS_SPECIALIST_PROMPT_V37
+    assert CONTRACTS_SPECIALIST_PROMPT_V37 != CONTRACTS_SPECIALIST_PROMPT_V36
+    assert CONTRACTS_SPECIALIST_PROMPT_V37.startswith(CONTRACTS_SPECIALIST_PROMPT_V36[:300])
+
+    v37 = CONTRACTS_SPECIALIST_PROMPT_V37
+    # (1) The payment scan family — all 10 money-clause shapes + measured examples.
+    assert "PAYMENT TERMS & MONETARY CLAUSES" in v37
+    assert "mandatory scan family" in v37
+    for shape in ("Revenue/Profit Sharing:", "Minimum Commitment:", "Volume Restriction:",
+                  "Price Restrictions:", "Liquidated Damages:", "Cap On Liability:",
+                  "Uncapped Liability:", "Insurance:", "Most Favored Nation:",
+                  "Post-Termination Services:"):
+        assert shape in v37
+    assert "Specified Royalty Percentage of all revenues received" in v37
+    assert "thirty percent (30%) of the Net Sales in excess of Eleven" in v37
+    assert "not less than $1 million per occurrence" in v37
+    assert "nothing in this Agreement shall limit" in v37
+    assert "A fee or payment amount alone is NOT a price restriction" in v37
+    # (2) Canonical tag discipline: no field-level fallback, no sibling tags.
+    assert "never a field-level `key_obligations` entry" in v37
+    assert "a royalty is Revenue/Profit Sharing, NOT License Grant" in v37
+    assert "an insurance limit is Insurance, not Cap On Liability" in v37
+    assert "EXACT canonical category tag" in v37
+    assert "78 of 255 documents fell back to a single field-level tag" in v37
+    assert "ZERO tagged entries is INCOMPLETE" in v37
+    # (3) contract_value trigger extension (rule 10).
+    assert "A payment SCHEDULE" in v37 and "First Contract Year" in v37
+    assert "a per-unit fee or royalty" in v37
+    assert "113 of 255 docs carried payment clauses with contract_value null" in v37
+    # (4) Uncapped + Liquidated enumeration appends.
+    assert "Add the un-limited shapes" in v37
+    assert "only 1 of" in v37 and "46 present Uncapped Liability" in v37
+    assert "Add the amount shapes" in v37
+    # (5) v36 base preserved byte-for-byte (grain language intact inside v37).
+    assert "FULL CLAUSE SENTENCES, quoted verbatim and in" in v37
+    assert "full-sentence span grain" in v37
+    assert "A quote consisting of ONLY the duration phrase" in v37
+    assert "BLANK PLACEHOLDER" in v37
+    assert "CATEGORY-LEVEL COMPLETENESS" in v37
+    assert "FIELD-PRESENCE SELF-CHECK" in v37
+    # v36 does NOT contain the v37 additions (they are new, not inherited).
+    v36 = CONTRACTS_SPECIALIST_PROMPT_V36
+    for relic in ("PAYMENT TERMS & MONETARY CLAUSES", "never a field-level `key_obligations` entry",
+                  "A payment SCHEDULE", "Add the un-limited shapes", "Add the amount shapes",
+                  "A fee or payment amount alone is NOT a price restriction"):
+        assert relic not in v36
+
+
 def test_contracteval_v0_registered_and_verbatim():
     """contracteval_v0 (KANBAN-052) = the paper's system prompt VERBATIM and
     registered as a versioned prompt (the experiment identity for the GEPA
