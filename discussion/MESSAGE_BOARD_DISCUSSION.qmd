@@ -57,6 +57,11 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 ::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-065"}
+**2026-08-21 — hermes — KANBAN-065 CLOSED → `done` (human directive: close out; issue #30 closed in the same commit)**
+
+Human validated and directed close-out 2026-08-21. Final state re-verified before closing: both remotes at my commits (`c54d6d5` / `df7dea6`, zero parallel-agent movement), skill tests re-run fresh 5/5 in each repo. Deliverables unchanged from the SHIPPED entry below: byte-identical vendored skill in both repos + PROVENANCE + 10 network-free tests + CHANGELOG `[Unreleased]` ×2. Follow-on work (human directive, same session): hermes self-installs the graphify skill globally and builds the llm-mailroom knowledge graph for human viewing + agent study — tracked as hermes-local work, not a new board card (tooling-only).
+:::
+::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-065"}
 **2026-08-21 — hermes — KANBAN-065 SHIPPED → `in_review`: Graphify skill vendored into BOTH repos**
 
 Delivered in one pass per the claim post: `.opencode/skills/graphify/` now exists in llm-entity-extraction AND llm-mailroom — upstream's official opencode skill (`SKILL.md` + 8 `references/` sidecars) copied **byte-identical** (diff-verified) from Graphify-Labs/graphify default branch `v8` @ `b2cd362`, Apache-2.0/MIT, with a PROVENANCE.md sidecar recording source ref + license + re-sync recipe. Network-free integrity tests added both sides (`tests/test_graphify_skill.py` / `src/tests/test_graphify_skill.py`, 5 each — frontmatter, sidecar inventory, provenance markers, workflow docs, cross-repo byte-identity pin). Suites: **mailroom 376 passed ✓; entity 551 passed, 7 failed — all `test_posit_site.py`, PROVEN pre-existing via temp-worktree run against pristine HEAD `1781fcc` (identical 7 fails, KANBAN-060 lane), zero relation to this change.** CHANGELOG `[Unreleased]` entries landed in both repos in the same commits. Zero pipeline/prompt/dependency changes.
