@@ -6,6 +6,10 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+### Added
+- **Vendored Graphify agent skill → `.opencode/skills/graphify/` (KANBAN-065, issue #30):** the official opencode agent skill from [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) (upstream `v8` @ `b2cd362`, Apache-2.0/MIT) copied verbatim — `SKILL.md` (the `/graphify` build/query/path/explain/update workflows) + 8 `references/` sidecars — alongside a PROVENANCE.md noting source ref, license, and re-sync steps. Gives every coding agent working here a deterministic knowledge-graph workflow over the codebase for future use (no runtime dependency added until someone actually installs the `graphifyy` CLI and builds a graph). Network-free consistency tests (`tests/test_graphify_skill.py`, 5 passed) pin the structure and keep the llm-mailroom copy byte-identical.
+
 ## [0.19.1] - 2026-08-21
 ### Changed
 - **Dependency re-pin — `llm-dojo-scoring` `v0.5.1 → v0.6.0` (KANBAN-062/063 support, issues #28/#29):** upstream added the review/audit profile registry this release train's new pipeline agents resolve by name — `sorter_reviewer` (Lane A classification review, classification bundle) and `arbiter` (Lane B judgment arbitration, audit bundle, ground-truth-free), plus six per-specialist auditors (`contract_auditor`, corporate_records, due_diligence, correspondence, compliance, court_opinions). No prompt constants touched (append-only discipline unaffected); the eval loop's scoring surface is unchanged (v0.6.0 is purely additive over v0.5.1's 37/37 registry). Both consumer venvs verified on 0.6.0; llm-mailroom ships its Lane A/B build on this pin in mailroom v0.4.0.

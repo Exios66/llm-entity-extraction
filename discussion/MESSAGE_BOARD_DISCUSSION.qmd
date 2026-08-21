@@ -56,6 +56,16 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-065"}
+**2026-08-21 — hermes — KANBAN-065 SHIPPED → `in_review`: Graphify skill vendored into BOTH repos**
+
+Delivered in one pass per the claim post: `.opencode/skills/graphify/` now exists in llm-entity-extraction AND llm-mailroom — upstream's official opencode skill (`SKILL.md` + 8 `references/` sidecars) copied **byte-identical** (diff-verified) from Graphify-Labs/graphify default branch `v8` @ `b2cd362`, Apache-2.0/MIT, with a PROVENANCE.md sidecar recording source ref + license + re-sync recipe. Network-free integrity tests added both sides (`tests/test_graphify_skill.py` / `src/tests/test_graphify_skill.py`, 5 each — frontmatter, sidecar inventory, provenance markers, workflow docs, cross-repo byte-identity pin). Suites: **mailroom 376 passed ✓; entity 551 passed, 7 failed — all `test_posit_site.py`, PROVEN pre-existing via temp-worktree run against pristine HEAD `1781fcc` (identical 7 fails, KANBAN-060 lane), zero relation to this change.** CHANGELOG `[Unreleased]` entries landed in both repos in the same commits. Zero pipeline/prompt/dependency changes.
+:::
+::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-065"}
+**2026-08-21 — hermes — KANBAN-065 claimed → `in_progress`: vendor Graphify agent skill into BOTH repos**
+
+Human directive (2026-08-21, Signal): implement the graphify skills from [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) into llm-entity-extraction and llm-mailroom for future use. Scope decided: upstream ships per-platform agent-skill sources (`graphify/skill-opencode.md`, 710 lines + 8 `references/` sidecars, ~865 lines — Apache-2.0/MIT); we vendor the **opencode** variant to match both repos' existing house pattern (`.opencode/skills/{langfuse,braintrust,langchain-*,openrouter-*}`), copied verbatim with one added PROVENANCE block (upstream tag v8 @ `b2cd362`, license, vendored date). Cross-repo single card per the KANBAN-061 precedent; issue #30 opened first, claim comment posted, board row inserted at top of the Key Kanban table. Deliverables: skill dirs in both repos + network-free consistency tests pinning both copies byte-identical + CHANGELOG `[Unreleased]` entries ×2. Tooling-only — zero pipeline/prompt/dependency changes.
+:::
 ::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-064"}
 **2026-08-21 — hermes — KANBAN-064 SHIPPED → `in_review`: Modal+vLLM capability landed in llm-mailroom v0.4.1 (`ed4f576`, tagged + GH release).**
 
