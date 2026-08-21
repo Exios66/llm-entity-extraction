@@ -3254,8 +3254,7 @@ STRICT RULES:
 
 Respond ONLY with the JSON object: {"missing_obligations": [{"category":
 "<exact canonical name>", "clause": "<complete verbatim clause sentence>"}]}
-An empty list is a valid, honest answer when nothing is missing."""
-
+An empty list is a valid, honest answer when nothing is missing.
 
 
 PROMPT_VERSIONS = {
