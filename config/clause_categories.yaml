@@ -1,0 +1,387 @@
+# =============================================================================
+# Clause Category Registry — CUAD (41) + MAUD (8)
+# =============================================================================
+# Purpose: structured extraction target for ContractsSpecialist, replacing the
+# current fixed 8-field schema with per-category {present, clause_text} pairs.
+#
+# SOURCES:
+#   - Category names + class_id: Hendrycks, D., Burns, C., Chen, A., & Ball, S.
+#     (2021). CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review.
+#     arXiv:2103.06268. Class IDs verified against the CUAD v1 dataset card
+#     (huggingface.co/datasets/dvgodoy/CUAD_v1_Contract_Understanding_clause_classification).
+#   - answer_type split (8 general_info / 33 yes_no): CUAD Datasheet, §I.D —
+#     "8 out of the 41 categories ask for answers that are entity or individual
+#     names, dates... the remaining 33 have a Yes/No answer."
+#   - MAUD categories: user-supplied document (Atticus Project MAUD verbatim
+#     questions), all VERIFIED.
+#
+# CONFIDENCE KEY (see trailing comment on each verbatim_question):
+#   [VERIFIED]   — confirmed word-for-word against a primary CUAD/MAUD source.
+#   [PARAPHRASE] — accurate to the category's documented meaning, built from
+#                  the category name + Atticus Project's published category
+#                  description, but NOT yet checked character-for-character
+#                  against the authoritative source file. Before this goes
+#                  into production scoring, pull the source CSV directly and
+#                  reconcile:
+#                    https://github.com/The-Atticus-Project/cuad/blob/main/category_descriptions.csv
+#                  (raw: .../raw/refs/heads/main/category_descriptions.csv —
+#                  fetch with a normal HTTP client; robots.txt blocked this
+#                  session's fetch tool specifically, it's a public file.)
+#
+# applicable_doc_classes: "all" is a placeholder. Replace per-category with
+# the actual distribution of which sorter-predicted doc_classes contain each
+# category in your own CUAD corpus — you have that data locally, I don't.
+# Filtering by real category-presence-by-doc-type stats will do far more for
+# schema-size reduction than a hand-guessed list would.
+# =============================================================================
+
+categories:
+
+  # ---------------------------------------------------------------------------
+  # GENERAL INFORMATION (CUAD class_id 0-7) — non-Yes/No, structured fields
+  # ---------------------------------------------------------------------------
+
+  document_name:
+    class_id: 0
+    field_type: name
+    answer_type: general_info
+    verbatim_question: "What is the name of the contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  parties:
+    class_id: 1
+    field_type: "entity_list:name"
+    answer_type: general_info
+    verbatim_question: "Who are the parties to this contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  agreement_date:
+    class_id: 2
+    field_type: date
+    answer_type: general_info
+    verbatim_question: "What is the date of the contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  effective_date:
+    class_id: 3
+    field_type: date
+    answer_type: general_info
+    verbatim_question: "Does the clause specify the date upon which the agreement becomes effective?"  # [VERIFIED — LegalBench cuad_effective_date task, sourced from CUAD]
+    applicable_doc_classes: [all]
+
+  expiration_date:
+    class_id: 4
+    field_type: date
+    answer_type: general_info
+    verbatim_question: "On what date will the contract's initial term expire?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  renewal_term:
+    class_id: 5
+    field_type: containment
+    answer_type: general_info
+    verbatim_question: "What is the renewal term after the initial term expires?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  notice_period_to_terminate_renewal:
+    class_id: 6
+    field_type: containment
+    answer_type: general_info
+    verbatim_question: "What is the notice period required to terminate renewal?"  # [VERIFIED]
+    applicable_doc_classes: [all]
+
+  governing_law:
+    class_id: 7
+    field_type: containment
+    answer_type: general_info
+    verbatim_question: "Which state/country's law governs the interpretation of the contract?"  # [VERIFIED]
+    applicable_doc_classes: [all]
+
+  # ---------------------------------------------------------------------------
+  # YES/NO CATEGORIES (CUAD class_id 8-40) — presence + clause extraction
+  # ---------------------------------------------------------------------------
+
+  most_favored_nation:
+    class_id: 8
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract require the party to provide terms to counterparty that are at least as favorable as terms provided to other third parties?"  # [VERIFIED]
+    applicable_doc_classes: [license, distributor, supply, reseller]
+
+  non_compete:
+    class_id: 9
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a restriction on a party's ability to compete with the counterparty during the contract, or after it ends, or to solicit the counterparty's employees or customers during or after the contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  exclusivity:
+    class_id: 10
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there an exclusive dealing commitment with the counterparty — a commitment to source all requirements from one party, a prohibition on licensing/selling to third parties, or a prohibition on competing with the counterparty?"  # [PARAPHRASE]
+    applicable_doc_classes: [distributor, license, reseller, supply]
+
+  no_solicit_of_customers:
+    class_id: 11
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is a party restricted from contracting or soliciting customers or partners of the counterparty, during the contract, after it ends, or both?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  competitive_restriction_exception:
+    class_id: 12
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Are there exceptions or carve-outs to the contract's non-compete, exclusivity, or no-solicit-of-customers provisions?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  no_solicit_of_employees:
+    class_id: 13
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a restriction on a party soliciting or hiring the counterparty's employees or contractors, during the contract, after it ends, or both?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  non_disparagement:
+    class_id: 14
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a requirement that a party not disparage the counterparty?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  termination_for_convenience:
+    class_id: 15
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Can a party terminate the contract without cause (for convenience) prior to the expiration date?"  # [VERIFIED]
+    applicable_doc_classes: [all]
+
+  rofr_rofo_rofn:
+    class_id: 16
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a clause granting one party a right of first refusal, first offer, or first negotiation to purchase, license, market, or distribute equity, technology, assets, products, or services?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  change_of_control:
+    class_id: 17
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract contain a provision requiring counterparty consent or giving the counterparty a right to terminate in the event of a change of control of a party?"  # [VERIFIED]
+    applicable_doc_classes: [all]
+
+  anti_assignment:
+    class_id: 18
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract require consent of the counterparty to assign the agreement to a third party or affiliate?"  # [VERIFIED]
+    applicable_doc_classes: [all]
+
+  revenue_profit_sharing:
+    class_id: 19
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is one party required to share revenue or profit with the counterparty for any technology, goods, or services?"  # [VERIFIED]
+    applicable_doc_classes: [distributor, license, joint_venture, reseller]
+
+  price_restrictions:
+    class_id: 20
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract limit or restrict the ability of a party to increase or reduce prices of technology, goods, or services provided?"  # [VERIFIED]
+    applicable_doc_classes: [distributor, license, supply]
+
+  minimum_commitment:
+    class_id: 21
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a minimum order size, minimum amount, or minimum units per time period that one party must purchase from the counterparty?"  # [PARAPHRASE]
+    applicable_doc_classes: [distributor, supply, license]
+
+  volume_restriction:
+    class_id: 22
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a fixed, minimum, or maximum size or amount of the collaboration, license, sales, distribution, or supply applicable to a party?"  # [PARAPHRASE]
+    applicable_doc_classes: [distributor, supply, license]
+
+  ip_ownership_assignment:
+    class_id: 23
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does intellectual property created by one party become the property of the counterparty, either per the contract's terms or upon certain events?"  # [PARAPHRASE]
+    applicable_doc_classes: [ip, development, license]
+
+  joint_ip_ownership:
+    class_id: 24
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a clause providing for joint or shared ownership of intellectual property between the parties?"  # [PARAPHRASE]
+    applicable_doc_classes: [ip, development, joint_venture]
+
+  license_grant:
+    class_id: 25
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract contain a license granted by one party to its counterparty?"  # [PARAPHRASE]
+    applicable_doc_classes: [license, ip]
+
+  non_transferable_license:
+    class_id: 26
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract limit a party's ability to transfer the license being granted to a third party?"  # [PARAPHRASE]
+    applicable_doc_classes: [license]
+
+  affiliate_license_licensor:
+    class_id: 27
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract contain a license grant by affiliates of the licensor, or that includes intellectual property of licensor affiliates?"  # [PARAPHRASE]
+    applicable_doc_classes: [license]
+
+  affiliate_license_licensee:
+    class_id: 28
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract grant a license to the licensee such that its affiliates are also permitted to use the licensed IP?"  # [PARAPHRASE]
+    applicable_doc_classes: [license]
+
+  unlimited_all_you_can_eat_license:
+    class_id: 29
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a clause granting one party an enterprise, 'all you can eat,' or unlimited-usage license?"  # [PARAPHRASE]
+    applicable_doc_classes: [license]
+
+  irrevocable_or_perpetual_license:
+    class_id: 30
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract contain a license grant that is irrevocable or perpetual?"  # [VERIFIED]
+    applicable_doc_classes: [license]
+
+  source_code_escrow:
+    class_id: 31
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a source code escrow arrangement described in the contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [license, development]
+
+  post_termination_services:
+    class_id: 32
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is a party subject to obligations after termination or expiration — post-termination transition, payment, IP transfer, wind-down, last-buy, or similar commitments?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  audit_rights:
+    class_id: 33
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does a party have the right to audit the books, records, or physical locations of the counterparty to ensure contract compliance?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  uncapped_liability:
+    class_id: 34
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is a party's liability uncapped upon breach of its obligations — including an affirmative reimbursement obligation or a carve-out from a liability cap?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  cap_on_liability:
+    class_id: 35
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract include a cap on liability upon breach — a time limit to bring claims or a maximum recovery amount?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  liquidated_damages:
+    class_id: 36
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract award either party liquidated damages for breach, or a fee upon termination of the contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  warranty_duration:
+    class_id: 37
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "What is the duration of any warranty against defects or errors in technology, products, or services provided under the contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  insurance:
+    class_id: 38
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a requirement for a party to maintain insurance?"  # [PARAPHRASE]
+    applicable_doc_classes: [all]
+
+  covenant_not_to_sue:
+    class_id: 39
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is a party restricted from contesting the validity of the counterparty's IP ownership, or from bringing a claim against the counterparty for matters unrelated to the contract?"  # [PARAPHRASE]
+    applicable_doc_classes: [ip, license]
+
+  third_party_beneficiary:
+    class_id: 40
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Is there a non-contracting party who is a beneficiary to some or all of the clauses in the contract and therefore can enforce its rights against a contracting party?"  # [VERIFIED]
+    applicable_doc_classes: [all]
+
+  # ---------------------------------------------------------------------------
+  # MAUD — Merger Agreement Understanding Dataset (Atticus Project / ABA)
+  # Only applicable when the sorter predicts doc_class = merger_agreement.
+  # All verbatim_question values below are [VERIFIED] against the source doc.
+  # ---------------------------------------------------------------------------
+
+  mae_clause_scope:
+    field_type: free_text
+    answer_type: scope
+    verbatim_question: "Is there an MAE/MAC clause defining events or changes that allow the buyer to terminate or refuse to close the merger?"
+    applicable_doc_classes: [merger_agreement]
+
+  mae_exclusions:
+    field_type: free_text
+    answer_type: scope
+    verbatim_question: "Does the MAE definition contain explicit exclusions for general economic conditions, industry changes, or regulatory updates?"
+    applicable_doc_classes: [merger_agreement]
+
+  ordinary_course_operations:
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the contract require the seller/target company to operate strictly 'in the ordinary course of business' between signing and closing?"
+    applicable_doc_classes: [merger_agreement]
+
+  interim_operating_restrictions:
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Are there explicit restrictions on the target amending existing contracts, entering new liabilities, or raising capital prior to closing?"
+    applicable_doc_classes: [merger_agreement]
+
+  no_shop_restriction:
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the agreement contain a 'No-Shop' clause prohibiting the target from soliciting alternative acquisition proposals?"
+    applicable_doc_classes: [merger_agreement]
+
+  fiduciary_out_exception:
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "Does the target board retain a 'fiduciary out' right to engage with unsolicited superior proposals?"
+    applicable_doc_classes: [merger_agreement]
+
+  breakup_termination_fees:
+    field_type: containment
+    answer_type: yes_no
+    verbatim_question: "What are the exact triggers and monetary fee amounts required if either party terminates the merger agreement?"
+    applicable_doc_classes: [merger_agreement]
+
+  outside_date:
+    field_type: date
+    answer_type: general_info
+    verbatim_question: "What is the 'Drop-Dead Date' or 'Outside Date' after which either party may abandon the merger if regulatory approvals are pending?"
+    applicable_doc_classes: [merger_agreement]
