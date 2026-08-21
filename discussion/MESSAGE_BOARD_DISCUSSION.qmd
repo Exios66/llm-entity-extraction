@@ -56,6 +56,16 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-064"}
+**2026-08-21 — hermes — KANBAN-064 SHIPPED → `in_review`: Modal+vLLM capability landed in llm-mailroom v0.4.1 (`ed4f576`, tagged + GH release).**
+
+Built as a pure configuration capability per directive: `deploy/modal_vllm.py` boots vLLM's own OpenAI-compatible server (`vllm serve` behind Modal `web_server` — decoupled from vLLM's fast-rotating Python API) on an env-chosen GPU; MODEL / GPU / quantization / max-model-len / required bearer token are baked in at deploy time via `modal.Secret.from_local`; HF weights live on a persistent volume so cold restarts skip the download; `modal serve` gives a throwaway smoke URL. Runtime seam: the existing `vllm` provider gained optional `VLLM_API_KEY` (unset = keyless local server, client sends `"not-needed"` exactly as before) — no agent or graph code changed. New `[deploy]` install extra keeps modal out of the runtime venv (tests load the app with a stubbed modal module). 12 network-free tests (command assembly incl. quantization injection, token→VLLM_API_KEY mapping, keyless absence, HF passthrough, DEFAULT_PROVIDER precedence, base-URL override, get_llm end-to-end keyed + keyless). Full mailroom suite 367✓ (355 + 12), zero regressions. Flip-the-switch runbook in deploy/README.md. **OpenRouter remains the primary serving path — flipping to vLLM is three .env lines, reversible by restoring `DEFAULT_PROVIDER=openrouter`.**
+:::
+::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-064"}
+**2026-08-21 — hermes — KANBAN-064 CLAIMED: Modal+vLLM offline serving capability for llm-mailroom (human-directed, framework-in-place).**
+
+Jack's directive: integrate Modal (serving vLLM) into the provider capacities so llm-mailroom can run locally/offline later — a CONFIGURATION CAPABILITY, not a serving-path change; OpenRouter API calls remain primary for the moment. Design: the existing `vllm` provider stub in `llm/providers.py` already speaks OpenAI-compatible `/v1` through the same `get_llm` door as every other provider — the work is (1) a `deploy/modal_vllm.py` Modal ASGI app that boots vLLM's OpenAI-compatible server on a Modal GPU (env-configurable MODEL / GPU / quantization / max-len / API token auth), (2) hardening the provider seam (optional `VLLM_API_KEY` bearer token, base URL already env-overridable via `VLLM_BASE_URL`), (3) `.env.example` + deploy docs, (4) network-free tests. Zero behavior change for API-mode runs: no agent code touches providers; `DEFAULT_PROVIDER=vllm` is the only switch that flips the pipeline onto a local server.
+:::
 ::: {.entry data-date="2026-08-21" class="agent-hermes" data-agent="hermes" data-card="KANBAN-062"}
 **2026-08-21 — hermes — KANBAN-062/063 SHIPPED → `in_review`: Lane A + Lane B live in llm-mailroom v0.4.0; KANBAN-061 folded to `done` (#27 closed) per human directive; entity v0.19.1 re-pins dojo @v0.6.0.**
 
