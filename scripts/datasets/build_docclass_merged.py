@@ -8,14 +8,17 @@ and the Langfuse mirror (``sync_langfuse_datasets.py --docclass``) consume:
 
     mailroom-cuad-contracts-full  -> 509 contract rows            (Braintrust)
     data/maud/contracts.jsonl     -> 152 merger_agreement rows    (local dump)
-    data/s1_corporate_records/    ->  15 corporate_record rows    (local dump)
-                                   = 676 rows total
+    data/s1_corporate_records/    ->  39 corporate_record rows    (local dump)
+                                   = 700 rows total
 
 Every row carries the flat streamer-dump shape the docclass eval runner reads:
 ``{filename, doc_text, prompt, expected, expected_subclass, metadata}`` where
 ``expected`` is the doc_type key and ``expected_subclass`` the second-level
-key (None for contract — CUAD subtype scoring is the shared subtype surface's
-job). ``metadata`` keeps each corpus' original fields plus ``source_dataset``.
+key (KANBAN-073 schema v2: every row carries a non-empty string for both —
+contracts use CUAD's own contract grouping, ``metadata.category``). The
+builder REFUSES to write if any row lacks either field: a partial-null
+schema is what crashed the Hub viewer (JSON loader infers null-typed columns
+from all-null batches, then fails casting later string batches).
 
 The merged dump is deterministically ordered (by corpus, then filename) so
 its dataset fingerprint is reproducible across rebuilds. Use it as the single
@@ -48,8 +51,9 @@ MAUD_DUMP = Path("data/maud/contracts.jsonl")
 S1_DUMP = Path("data/s1_corporate_records/corporate-records.jsonl")
 CUAD_DATASET = "mailroom-cuad-contracts-full"
 CUAD_SUBCLASS_NOTE = (
-    "CUAD contract rows carry no expected_subclass on the docclass surface: "
-    "contract subtype scoring is the shared 509-doc subtype surface's job."
+    "Contract rows carry expected_subclass = CUAD's own contract grouping "
+    "(metadata.category, 28 groups) and filename = the source PDF basename "
+    "(KANBAN-073 schema v2)."
 )
 
 
@@ -75,13 +79,19 @@ def load_cuad_rows_local(staging_jsonl: Path | None = None) -> list[dict]:
             metadata = dict(bt_row.get("metadata") or {})
             metadata["source_dataset"] = CUAD_DATASET
             metadata["source_provenance"] = "local-staging-export"
+            # KANBAN-073 schema v2: contracts carry their subclass (CUAD's own
+            # grouping, metadata.category) and the source file name (pdf_path
+            # basename). Both are 100% covered in the staging export — rows
+            # missing either are refused below, never silently nulled.
+            pdf_path = str(metadata.get("pdf_path") or "")
             rows.append({
-                "filename": str(inp.get("filename") or ""),
+                "filename": pdf_path.rsplit("/", 1)[-1] if pdf_path
+                            else str(inp.get("filename") or ""),
                 "doc_text": str(inp.get("doc_text") or inp.get("text") or ""),
                 "prompt": str(inp.get("prompt") or ""),
                 "expected": str(exp.get("doc_type") if isinstance(exp, dict)
                                 else exp or "").strip(),
-                "expected_subclass": None,  # contract rows: scored on the subtype surface
+                "expected_subclass": str(metadata.get("category") or "").strip() or None,
                 "metadata": metadata,
             })
     return [r for r in rows if r["doc_text"].strip() and r["expected"]]
@@ -99,12 +109,16 @@ def load_cuad_rows(project: str, project_id: str) -> list[dict]:
     for d in dataset:
         metadata = dict(d.get("metadata") or {})
         metadata["source_dataset"] = CUAD_DATASET
+        # KANBAN-073 schema v2 (same contract-subclass/filename fill as the
+        # local-staging path above).
+        pdf_path = str(metadata.get("pdf_path") or "")
         rows.append({
-            "filename": str(d.get("filename") or ""),
+            "filename": pdf_path.rsplit("/", 1)[-1] if pdf_path
+                        else str(d.get("filename") or ""),
             "doc_text": str(d.get("doc_text") or ""),
             "prompt": str(d.get("prompt") or ""),
             "expected": str(d.get("expected") or "").strip(),
-            "expected_subclass": None,  # contract rows: subclass scored on the subtype surface
+            "expected_subclass": str(metadata.get("category") or "").strip() or None,
             "metadata": metadata,
         })
     return [r for r in rows if r["doc_text"].strip() and r["expected"]]
@@ -183,6 +197,18 @@ def main_with_args(argv: list[str]) -> int:
     merged = build_merged(cuad, maud, s1)
     if not merged:
         parser.error("No rows loaded — check the Braintrust keys and local dumps.")
+    # KANBAN-073 schema guard: every row must carry non-empty string filename
+    # AND expected_subclass. A single null would poison the Hub viewer's
+    # schema inference (string→null cast crash) — refuse to write, loudly.
+    bad = [r["metadata"].get("source_dataset", "?") for r in merged
+           if not (isinstance(r.get("filename"), str) and r["filename"].strip())
+           or not (isinstance(r.get("expected_subclass"), str)
+                   and r["expected_subclass"].strip())]
+    if bad:
+        parser.error(
+            f"{len(bad)} rows lack filename/expected_subclass — refusing to "
+            f"write a partial-null schema (Hub viewer crashes on it). "
+            f"Offending source_datasets: {sorted(set(bad))[:5]}")
     if len(merged) < 600:
         print(f"WARNING: expected ~700 rows (509 CUAD + 152 MAUD + 39 S-1), got "
               f"{len(merged)} — a source corpus may be missing or empty.",

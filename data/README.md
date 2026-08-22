@@ -91,8 +91,10 @@ Braintrust involvement):
   `scripts/datasets/publish_kanban071.py`.
 - [docclass-merged](https://huggingface.co/datasets/Lucius-Morningstar/docclass-merged) —
   the merged docclass surface: 700 rows = CUAD 509 + MAUD 152 + S-1 39,
-  with `expected_subclass` ground truth for MAUD consideration types and
-  S-1 record subclasses. Built by `scripts/datasets/build_docclass_merged.py`
+  with `expected_subclass` + `filename` as non-null strings on EVERY row
+  (schema v2, KANBAN-073 — contracts use CUAD's own contract grouping,
+  28 groups; filenames are the source PDF basenames). Built by
+  `scripts/datasets/build_docclass_merged.py`
   (local-first; `--bt-cuad` falls back to read-only Braintrust).
 
 ```bash

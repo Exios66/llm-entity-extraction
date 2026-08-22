@@ -58,6 +58,9 @@ shape is superseded.
 
 Verification record 2026-08-22, GREEN twice: legalbench-full 379/379 local
 files matched the Hub tree's git blob OIDs (0 missing, aggregates
-round-trip-hash clean); docclass-merged LFS sha256 local == hub
-(`c8faf0ab6ed8…`). Honest enrichment gaps live in `ENRICHMENT_REPORT.json`
+round-trip-hash clean); docclass-merged republished as **schema v2**
+(KANBAN-073 — non-null `expected_subclass` + `filename` on every row,
+28 CUAD contract groups; fixes the Hub viewer's string→null cast crash)
+with LFS sha256 local == hub (`3bd9d74de9f1…`, fingerprint `cd652e77…`).
+Honest enrichment gaps live in `ENRICHMENT_REPORT.json`
 (20 span-unmatched, 8 unknown-contract, 8 audit-SUSPECT — flagged on-row).

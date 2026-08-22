@@ -139,10 +139,15 @@ three corpora, one row per document:
 
 ## Row shape
 
-One JSON object per line: `filename`, `doc_text` (full document text),
+One JSON object per line: `filename` (the source FILE name — CUAD PDF
+basename, MAUD/S-1 dump filenames), `doc_text` (full document text),
 `prompt`, `expected` (the gold `doc_type`), `expected_subclass` (second-level
-gold where the data carries it — MAUD consideration type, S-1 record subclass;
-`null` for contracts), `metadata` (per-corpus provenance fields).
+gold on EVERY row — CUAD's own contract grouping for contracts,
+{contract_groups} groups; MAUD consideration type; S-1 record subclass),
+`metadata` (per-corpus provenance fields). Schema v2 (KANBAN-073): both label
+columns are non-null strings on every row — partial-null schemas crash the
+Hub viewer's JSON→parquet conversion (`Couldn't cast array of type string to
+null`).
 
 Deterministically ordered (corpus, then filename) — rebuilds are
 byte-identical; dataset fingerprint `{fp_short}…`.
@@ -260,7 +265,22 @@ def publish_pack(api) -> dict:
 
 
 def publish_docclass(api) -> dict:
-    rows_n = sum(1 for _ in DOCCLASS_JSONL.open(encoding="utf-8"))
+    rows = [json.loads(l) for l in DOCCLASS_JSONL.open(encoding="utf-8") if l.strip()]
+    rows_n = len(rows)
+    # KANBAN-073 pre-upload schema guard: every row must carry non-empty
+    # string filename AND expected_subclass. All-null batches make the Hub's
+    # JSON loader infer null-typed columns; later string batches then die in
+    # parquet conversion ("Couldn't cast array of type string to null").
+    # Never upload a partial-null schema.
+    bad = [i for i, r in enumerate(rows)
+           if not (isinstance(r.get("filename"), str) and r["filename"].strip())
+           or not (isinstance(r.get("expected_subclass"), str)
+                   and r["expected_subclass"].strip())]
+    if bad:
+        raise SystemExit(
+            f"docclass schema guard: {len(bad)} rows lack filename/"
+            f"expected_subclass (first: row {bad[0]}) — refusing to upload a "
+            f"partial-null schema; rebuild with build_docclass_merged.py")
     import subprocess
 
     fp = subprocess.run(
@@ -271,11 +291,21 @@ def publish_docclass(api) -> dict:
          "print(dataset_fingerprint(rows))"],
         cwd=str(REPO_ROOT), capture_output=True, text=True).stdout.strip()
     counts = {"cuad": 509, "maud": 152, "s1": 39}
+    contract_groups = sorted({r["expected_subclass"] for r in rows
+                              if r.get("expected") == "contract"})
     manifest = {
         "name": "docclass-merged",
+        "schema_version": 2,
         "rows": rows_n,
         "dataset_fingerprint": fp,
         "corpora": counts,
+        "subclass_coverage": {
+            "rows_with_nonempty_filename": sum(1 for r in rows
+                                               if str(r.get("filename") or "").strip()),
+            "rows_with_nonempty_subclass": sum(1 for r in rows
+                                               if str(r.get("expected_subclass") or "").strip()),
+            "contract_groups": len(contract_groups),
+        },
         "sources": {
             "cuad": "local staging export of mailroom-cuad-contracts-full "
                     "(byte-verified vs Braintrust + Hub, KANBAN-069)",
@@ -304,13 +334,15 @@ def publish_docclass(api) -> dict:
         (tmpdir / "README.md").write_text(DOCCLASS_CARD.format(
             rows=rows_n, cuad_rows=counts["cuad"], maud_rows=counts["maud"],
             s1_rows=counts["s1"], fingerprint=fp, fp_short=fp[:16],
+            contract_groups=len(contract_groups),
             built_utc=manifest["built_utc"]), encoding="utf-8")
         (tmpdir / "docclass_merged.jsonl").write_bytes(DOCCLASS_JSONL.read_bytes())
         (tmpdir / "manifest.json").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8")
-        print(f"uploading docclass ({DOCCLASS_JSONL.stat().st_size >> 20} MB) ...")
+        print(f"uploading docclass ({DOCCLASS_JSONL.stat().st_size >> 20} MB, "
+              f"schema v2: subclass+filename on all {rows_n} rows) ...")
         api.upload_folder(folder_path=str(tmpdir), repo_id=repo_id, repo_type="dataset",
-                          commit_message=f"Docclass merged corpus (KANBAN-071, {rows_n} rows, fp {fp[:12]})")
+                          commit_message=f"Docclass merged corpus schema v2 — subclasses + filenames on every row (KANBAN-073, {rows_n} rows, fp {fp[:12]})")
 
     # --- verify: LFS sha256 vs local ---
     tree = list(api.list_repo_tree(repo_id, repo_type="dataset", recursive=True))

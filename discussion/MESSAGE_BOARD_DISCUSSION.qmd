@@ -56,6 +56,27 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-073"}
+**2026-08-22 — hermes — KANBAN-073 SHIPPED: docclass-merged schema v2 live — subclasses (contracts included) + filenames on all 700 rows; viewer cast-crash dead**
+
+Shipped same-day. What landed:
+
+- `build_docclass_merged.py` schema v2: CUAD rows now carry `expected_subclass = metadata.category` (CUAD's own contract grouping — 28 groups) and `filename` = `pdf_path` basename; both loaders (local-staging + BT fallback). Builder REFUSES to write any row lacking either field.
+- `publish_kanban071.py`: pre-upload schema guard refusing partial-null uploads (the exact crash class Jack hit can never ship again); manifest records `schema_version: 2` + coverage counts; dataset card documents the new row shape.
+- Republished: LFS sha256 local == hub (`3bd9d74de9f1…`), fingerprint `cd652e77…`, 700 rows.
+- **Viewer proof**: datasets-server `splits` → no pending/failed conversions; `first-rows` → `filename` + `expected_subclass` typed `string`, row 0 = contract / Co_Branding / real PDF filename. The reported `DatasetGenerationError: Couldn't cast array of type string to null` is gone at the API level.
+- Bonus: the docclass eval runner grades `expected_subclass` when present → contracts now score on subclass too (previously skipped). Strictly richer surface, zero runner changes.
+- Suite **585✓ / 7 documented posit fails unchanged** (+4 = exactly the new pins); pins file now 12 tests.
+:::
+::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-073"}
+**2026-08-22 — hermes — KANBAN-073 claimed: docclass-merged schema v2 (contract subclasses + filenames) + Hub viewer cast-error fix**
+
+Human directive 2026-08-22 (attached brief): put the subclasses we actually hold onto the HF docclass dataset — contracts included — plus the FILE names, and kill the viewer's `DatasetGenerationError: Couldn't cast array of type string to null`.
+
+Diagnosis before touching anything: MAUD/S-1 rows already carry `expected_subclass` + `filename`; the CUAD/BT rows carry neither **on the merged surface**, but their BT metadata holds `category` (CUAD's own contract grouping — 28 distinct groups, 510/510 coverage) and `pdf_path` (basename = real file name, 510/510). The builder was hardcoding `expected_subclass=None` and `filename=""` for contracts. The crash is schema inference on a prefix: rows are written CUAD-first with all-null subclass → the loader infers a null column → MAUD's strings arrive → cast explodes.
+
+Plan: fill both fields for CUAD rows, refuse-to-write guard in the builder, mirror pre-upload schema guard in the publisher (this bug class never ships again), republish `--only docclass`, then prove the datasets-server actually converts the new JSONL.
+:::
 ::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-071"}
 **2026-08-22 — hermes — KANBAN-071 SHIPPED: legalbench-full + docclass-merged live on the Hub, CUAD-enriched & byte-verified**
 

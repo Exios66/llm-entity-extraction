@@ -126,3 +126,59 @@ def test_enrichment_report_totals_are_complete_and_honest():
                   ("train_audit_agree", "train_audit_suspect", "train_audit_mismatch"))
     located = totals.get("train_exact", 0) + totals.get("train_fuzzy", 0)
     assert audited <= located
+
+
+# --- KANBAN-073: docclass schema v2 (subclasses + filenames on every row) --
+
+BUILDER_DOCCLASS = REPO_ROOT / "scripts" / "datasets" / "build_docclass_merged.py"
+DOCCLASS_DUMP = REPO_ROOT / "data" / "datasets" / "docclass_merged.jsonl"
+
+
+def test_docclass_builder_refuses_partial_null_schema():
+    src = _src(BUILDER_DOCCLASS)
+    # contracts get their subclass from CUAD's own grouping + real file names
+    assert 'metadata.get("category")' in src
+    assert 'pdf_path' in src and 'rsplit("/", 1)' in src
+    # refuse-to-write guard: a single null would crash the Hub viewer
+    assert "refusing to" in src and "expected_subclass" in src
+
+
+def test_publisher_docclass_guard_blocks_partial_null_uploads():
+    src = _src(PUBLISHER)
+    # pre-upload mirror of the builder guard — this bug class never ships
+    assert "refusing to upload a" in src
+    assert 'r.get("expected_subclass")' in src and 'r.get("filename")' in src
+
+
+def test_docclass_dump_schema_v2_no_null_label_columns():
+    import pytest
+
+    if not DOCCLASS_DUMP.exists():
+        pytest.skip("data/datasets/docclass_merged.jsonl absent (gitignored)")
+    rows = [json.loads(l) for l in DOCCLASS_DUMP.open(encoding="utf-8") if l.strip()]
+    assert len(rows) == 700
+    # the Hub-viewer killer: every row carries non-empty string labels
+    for i, r in enumerate(rows):
+        assert str(r.get("filename") or "").strip(), f"row {i}: empty filename"
+        assert str(r.get("expected_subclass") or "").strip(), \
+            f"row {i}: empty expected_subclass"
+    # prefix-inference pin: the FIRST batch must already be fully typed
+    assert all(r["expected_subclass"] for r in rows[:20])
+    # contract rows carry CUAD's own grouping as their subclass
+    contracts = [r for r in rows if r["expected"] == "contract"]
+    assert contracts and all(r["expected_subclass"] for r in contracts)
+    assert len({r["expected_subclass"] for r in contracts}) >= 25
+
+
+def test_docclass_manifest_records_schema_v2_coverage():
+    import pytest
+
+    p = DOCCLASS_DUMP.parent / "docclass_merged.manifest.json"
+    if not p.exists():
+        pytest.skip("docclass manifest absent (gitignored)")
+    m = json.loads(p.read_text())
+    assert m.get("schema_version") == 2
+    cov = m.get("subclass_coverage") or {}
+    assert cov.get("rows_with_nonempty_filename") == m.get("rows") == 700
+    assert cov.get("rows_with_nonempty_subclass") == 700
+    assert cov.get("contract_groups", 0) >= 25
