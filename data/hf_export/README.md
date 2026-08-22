@@ -61,6 +61,22 @@ files matched the Hub tree's git blob OIDs (0 missing, aggregates
 round-trip-hash clean); docclass-merged republished as **schema v2**
 (KANBAN-073 — non-null `expected_subclass` + `filename` on every row,
 28 CUAD contract groups; fixes the Hub viewer's string→null cast crash)
-with LFS sha256 local == hub (`3bd9d74de9f1…`, fingerprint `cd652e77…`).
-Honest enrichment gaps live in `ENRICHMENT_REPORT.json`
+with LFS sha256 local == hub (`3bd9d74de9f1…`, fingerprint `cd652e77…`),
+then as **schema v3** (KANBAN-074 — adds per-row `split`; sha
+`af7705368c83…`, manifest split_coverage 628/72). Honest enrichment gaps
+live in `ENRICHMENT_REPORT.json`
 (20 span-unmatched, 8 unknown-contract, 8 audit-SUSPECT — flagged on-row).
+
+## KANBAN-074 Enron staging (added 2026-08-22)
+
+| Path | What it holds | Published to |
+|---|---|---|
+| `enron_correspondence.jsonl` (+ `enron_correspondence.manifest.json`) | FULL cleaned CMU corpus: 517,390 rows / 150 custodians, 10-key GT + evidence + splits | [enron-correspondence](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence) |
+| `KANBAN074_PUBLISH_SUMMARY.json` | enron verification record (rows, splits, subclass counts, LFS sha verdict) | — (evidence only) |
+
+Enron verification GREEN: LFS sha256 local == hub (`0554a5973935…`);
+splits 465,570 train / 51,820 test; datasets-server `pending [] failed []`,
+all columns string-typed. Regenerate via
+`.venv/bin/python scripts/datasets/publish_enron_correspondence.py`
+(requires the sibling repo's `data/enron/index.jsonl` — build with its
+`scripts/build_corpus_index.py`).

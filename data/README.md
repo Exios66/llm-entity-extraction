@@ -46,6 +46,12 @@ python scripts/datasets/build_docclass_merged.py
 python scripts/eval/run_langfuse_docclass_eval.py \
     --local-dumps data/maud/contracts.jsonl,data/s1_corporate_records/corporate-records.jsonl \
     --stratified 120 --seed 42
+
+# Cleaned Enron correspondence corpus (KANBAN-074): needs the sibling repo's
+# full-corpus index first (git clone https://github.com/Exios66/Enron-Evaluation-Environment
+# && python scripts/build_corpus_index.py), then label + publish from here:
+python scripts/datasets/publish_enron_correspondence.py --dry-run
+python scripts/datasets/publish_enron_correspondence.py
 ```
 
 ## Related docs
@@ -93,9 +99,21 @@ Braintrust involvement):
   the merged docclass surface: 700 rows = CUAD 509 + MAUD 152 + S-1 39,
   with `expected_subclass` + `filename` as non-null strings on EVERY row
   (schema v2, KANBAN-073 — contracts use CUAD's own contract grouping,
-  28 groups; filenames are the source PDF basenames). Built by
+  28 groups; filenames are the source PDF basenames) plus a deterministic
+  per-row `split` (schema v3, KANBAN-074: md5(filename) % 10 == 0 → test,
+  ~10%, 628 train / 72 test). Built by
   `scripts/datasets/build_docclass_merged.py`
   (local-first; `--bt-cuad` falls back to read-only Braintrust).
+- [enron-correspondence](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence) —
+  the FULL cleaned CMU Enron corpus, published KANBAN-074:
+  **517,390 parsed messages / 150 custodians / zero dropped** from
+  Enron-Evaluation-Environment's full-corpus index. Ground truth =
+  the shared 10-key correspondence labeler applied per row with an on-row
+  `label_evidence` audit trail; per-row `split` by the same family rule
+  (465,570 train / 51,820 test); labels are HEURISTIC GT — honest gaps are
+  documented on the dataset card. Built by
+  `scripts/datasets/publish_enron_correspondence.py`
+  (imports `assign_split()` — one split rule for the whole family).
 
 ```bash
 # rebuild staging for both
