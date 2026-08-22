@@ -35,9 +35,9 @@ numpy>=1.26.0
 matplotlib>=3.9.0
 pyarrow>=15.0.0
 
-# Scoring / error-analysis / visualization / report library (pinned v0.1.2;
+# Scoring / error-analysis / visualization / report library (pinned v0.7.0;
 # the single source of scoring definitions shared with llm-mailroom)
-llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.4.0
+llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.7.0
 
 # Dev / test
 pytest>=8.0
