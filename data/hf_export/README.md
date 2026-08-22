@@ -31,10 +31,13 @@ never written by any of this — reads only.
 
 All three verified post-upload (LFS sha256 or round-trip download hash; the
 cuad-contracts repo's 596 row→`images/…` references were checked against the
-Hub file list — zero missing). Honest gaps (live BT catalog): 
-`mailroom-maud-contracts` + `mailroom-s1-corporate-records` exist in
-Braintrust but hold zero rows; the other streamer-default names were never
-created upstream. Populate upstream first, then re-run export + publish.
+Hub file list — zero missing). Honest gaps (live BT catalog):
+`mailroom-maud-contracts` + `mailroom-s1-corporate-records` +
+`mailroom-lb-hearsay-test` exist in Braintrust but hold zero rows; the other
+streamer-default names (`mailroom-legalbench-contracts`,
+`mailroom-legalbench-maud-classification`, `mailroom-maud-classification`)
+were never created upstream. Populate upstream first, then re-run export +
+publish.
 
 Note on row shape: cuad-contracts rows carry downloaded payloads —
 `input.image` / `input.pages[]` are `{type: image_file, file: …,
