@@ -43,6 +43,9 @@ data/s1_corporate_records/*
 # post-hoc LLM-judge calibration records — written by judge_experiment.py
 data/judgments/*
 !data/judgments/README.md
+# KANBAN-069: BT→HF mirror staging (exports + images) — uploaded to the Hub, never committed
+/data/hf_export/*
+!/data/hf_export/README.md
 reports/*.png
 reports/*.csv
 # Experiment log — the jsonl exceeded GitHub's 100 MB hard limit (GH001,

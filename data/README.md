@@ -17,6 +17,7 @@ are regenerated locally (see each subdirectory's README). Nothing under
 | [`legalbench_local/`](legalbench_local/README.md) | gitignored | LegalBench task train/test JSONL mirrors (`--local-dump`) |
 | [`contracteval/`](contracteval/README.md) | mixed | ContractEval CUAD test split (KANBAN-052): pairs + full contracts gitignored, `questions.json`/`testset_summary.json` tracked |
 | [`manifests/`](manifests/README.md) | gitignored | Resumable eval-run checkpoints (JSONL) |
+| [`hf_export/`](hf_export/README.md) | gitignored (README tracked) | KANBAN-069 Braintrust → Hugging Face staging; the Hub is the distribution point |
 | [`judgments/`](judgments/README.md) | gitignored | Post-hoc LLM-judge calibration records |
 | [`samples/`](samples/README.md) | gitignored | Ad-hoc pilot slices and one-off fixtures |
 
@@ -46,3 +47,25 @@ python scripts/eval/run_langfuse_docclass_eval.py \
 - Root [`README.md`](../README.md) — sync commands and eval loop
 - [`scripts/README.md`](../scripts/README.md) — streamers and eval runners
 - [`reports/README.md`](../reports/README.md) — experiment log vs runtime artifacts
+
+## Hugging Face mirror (universal dataset access, KANBAN-069)
+
+The Braintrust-hosted eval ground truth is mirrored to the Hub for
+platform-independent agent/eval-runner access. Braintrust stays READ-ONLY
+(`BRAINTRUST_LOGGING=disabled` preserved); the mirror is export-only.
+
+```bash
+# refresh staging from Braintrust (read-only BTQL reads)
+python scripts/datasets/export_bt_to_hf.py
+
+# publish to https://huggingface.co/datasets/Lucius-Morningstar/<dataset>
+python scripts/datasets/publish_hf_mirror.py
+
+# consume from anywhere — no Braintrust seat required
+hf download Lucius-Morningstar/mailroom-cuad-contracts-full --repo-type dataset --local-dir data/cuad_mirror
+```
+
+Both live repos carry a full provenance card (source corpus + license + BT ids
++ export sha256); `mailroom-cuad-contracts-full` was verified byte-identical
+post-upload via LFS sha256. See [`hf_export/README.md`](hf_export/README.md)
+for the current mirror table incl. known-empty upstream datasets.
