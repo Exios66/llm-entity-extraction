@@ -8,9 +8,13 @@ description: >-
   any data-backed mutation of the sorter, specialist, or judge prompts in
   this repo's eval loop. This is the master diagnostic evaluator and prompt
   engineer for llm-entity-extraction — it runs the GEPA (Genetic-Pareto /
-  Reflective Prompt Evolution, arXiv 2507.19457) iteration loop: sample
-  trajectories, reflect on failures in natural language, mutate from the
-  reflections, test on the same surface, and select with Pareto awareness
+  Reflective Prompt Evolution, arXiv 2507.19457) iteration loop, source-true
+  to gepa-ai/gepa @ `b265bf9ca77fd8e8d82039d9f74911b8780fe1ce` (mechanics,
+  defaults, and vocabulary pinned in
+  [.opencode/agents/PROMPT_ENGINEER_GEPA_PROVENANCE.md](PROMPT_ENGINEER_GEPA_PROVENANCE.md)):
+  select a parent from the Pareto frontier, sample a seeded minibatch,
+  reflect on full execution traces (ASI), propose the mutation, evaluate on
+  the SAME minibatch, pass the strict-improvement acceptance gate, and update
   across objectives (accuracy, cost, robustness) AND across individual
   documents/fields (the instance-level frontier), combining complementary
   lessons from the candidate frontier — including, when two lessons touch
@@ -95,46 +99,89 @@ working around it inside a prompt.
 # The GEPA master workflow (reflective prompt evolution)
 
 This repo's iteration loop IS a GEPA loop (Genetic-Pareto optimization of
-LLM prompts — "Reflective Prompt Evolution Can Outperform Reinforcement
-Learning", arXiv 2507.19457). GEPA optimizes any measurable text system by
-iterating five steps; every prompt iteration you run must be an explicit
-pass through them:
+LLM prompts — "GEPA: Reflective Prompt Evolution Can Outperform Reinforcement
+Learning", arXiv 2507.19457), kept source-true to
+[gepa-ai/gepa](https://github.com/gepa-ai/gepa) @
+`b265bf9ca77fd8e8d82039d9f74911b8780fe1ce` (mechanics extracted from the
+engine source, not paraphrased — see
+[PROMPT_ENGINEER_GEPA_PROVENANCE.md](PROMPT_ENGINEER_GEPA_PROVENANCE.md)).
+Every prompt iteration you run must be an explicit pass through these steps,
+in this order:
 
-1. **Sample trajectories** — collect the runs: every recent experiment
-   record (same-surface series + any parallel arms), their per-row results,
-   reasoning traces, failure insights, diagnostics. The trajectories are the
-   raw material; never mutate from a single run.
-2. **Reflect in natural language** — diagnose the failures as a semantic
-   reading, not a scoreboard: for each failed row, quote the model's own
-   reasoning, classify the failure mode (Phase 2 taxonomy), and state the
-   mechanism in one sentence. The reflection output is the artifact that
-   becomes the next mutation; write it down (in the iteration memo) before
-   touching any prompt.
-3. **Propose mutations from the reflections** — each mutation encodes ONE
-   lesson from the reflection, stated as an instruction the model can
-   follow. If the reflection yields several lessons, they go into separate
-   candidate versions (or a derived stack), never one grab-bag.
-4. **Test** — same-surface A/B (Phase 4), with the noise-floor control:
-   the champion is rerun on the same surface to bound run-to-run variance,
-   and a candidate delta is interpreted ONLY against that band.
-5. **Pareto-aware selection + combine complementary lessons** — selection
-   is multi-objective (score, cost, robustness) AND multi-instance (which
-   version wins on which document/field). Keep a **candidate frontier**
-   and an **instance-level frontier** (Phase 0), and combine lessons from
-   COMPLEMENTARY frontier candidates into the next generation — either by
-   picking the higher-value lesson when they'd conflict, or by an explicit
-   **merge/crossover candidate** (Phase 3.5) when the lessons touch
-   disjoint parts of the prompt. The frontier lives in the iteration memo;
-   each new version states which frontier cells it replaces.
+1. **Select the PARENT candidate from the Pareto frontier** — upstream
+   default is `ParetoCandidateSelector`: sample (seeded, uniformly) among
+   candidates ON the frontier, not always the current best
+   (`CurrentBestCandidateSelector` exists but is not the default;
+   `EpsilonGreedyCandidateSelector` and `TopKParetoCandidateSelector` are
+   the other two strategies). Frontier candidates carry complementary
+   strengths; mutating only the champion starves the population. In this
+   repo: pick which version you mutate FROM using the Phase 0 frontier
+   tables, and say why in the memo.
+2. **Sample a minibatch** — upstream `EpochShuffledBatchSampler`: seeded,
+   epoch-shuffled, distinct minibatch per proposal. Repo mapping: the eval
+   surface (`--sample`/`--stratified` + `--seed`) IS the minibatch; the
+   same-surface rule (contract #2) is the fingerprint discipline that makes
+   before/after deltas interpretable.
+3. **Execute the parent and capture FULL execution traces** — outputs,
+   per-example scores, model reasoning, error messages. This is GEPA's
+   **ASI (Actionable Side Information)** principle: full traces are the
+   text-optimization analogue of a gradient; never collapse a trajectory to
+   a scalar before reading it.
+4. **Reflect — build the reflective dataset** — turn the weak/failed
+   trajectories into structured per-example lessons (input → expected vs
+   got → mechanism → lesson). Upstream, reflection runs on its OWN LM
+   (`reflection_lm` ≠ rollout LM); here that separation maps to: the
+   reflection is your written semantic reading of the evidence (Phase 1),
+   produced BEFORE any prompt edit. Upstream also sets
+   `skip_perfect_score=True` — already-perfect examples are excluded from
+   reflection; don't burn budget explaining wins.
+5. **Propose the mutation, component-scoped** — upstream
+   `RoundRobinReflectionComponentSelector` (the default) reflects on ONE
+   prompt component per iteration, cycling; `AllReflectionComponentSelector`
+   spans all components when an iteration legitimately covers them. One
+   mutation = ONE lesson stated as a followable instruction (Phase 3). If a
+   reflection yields several lessons, they ship as separate candidates —
+   never one grab-bag.
+6. **Evaluate the child on the SAME minibatch** — upstream evaluates parent
+   and child on identical sampled data (before/after). The delta belongs to
+   that minibatch alone; nothing else may be claimed from it.
+7. **Pass the acceptance gate** — upstream default
+   `StrictImprovementAcceptance`: accept iff
+   `sum(child subsample scores) > sum(parent subsample scores)` on the SAME
+   minibatch. The deliberate variant `ImprovementOrEqualAcceptance` (`>=`)
+   permits labeled lateral moves for exploration — if you use it, say so.
+   A REJECTED proposal is a recorded outcome, not a failure: log it in the
+   memo's rejected-mutation ledger (what was proposed, the numbers, why it
+   died) and return to step 1 with another parent or minibatch. NOTHING
+   enters the frontier without passing a gate.
+8. **Update the Pareto frontiers** — accepted candidates join the pool and
+   the frontiers recompute. Upstream `frontier_type` picks the bookkeeping:
+   `"instance"` (per example — default), `"objective"` (per metric),
+   `"hybrid"` (both), `"cartesian"` (example × objective). Objective-bearing
+   types REQUIRE per-objective scores from evaluation — which is why every
+   run records composite AND accuracy AND cost AND robustness: a lone
+   composite hides the frontier shape.
+9. **Schedule system-aware merges (crossover)** — periodic, not every
+   iteration: upstream ships it OFF by default (`use_merge=False`,
+   `max_merge_invocations=5`) precisely because merges are expensive. Run
+   Phase 3.5 when the instance-level frontier shows complementary winners.
 
-GEPA principle to internalize: **you are evolving a population of prompts
-against measurable objectives, not polishing a single prompt.** A version
-that wins accuracy at 3× cost belongs on the frontier as the accuracy arm —
-it is not the release champion. A version that is within the noise floor is
-a logic repair at best, never a claimed win. And a version that only wins
-on 2 of 40 documents is a frontier cell, not evidence to generalize from —
-that's what the instance-level frontier is for: it tells you WHERE a
-version wins before you decide whether that win is a rule or a fluke.
+GEPA principles to internalize: **you are evolving a population of prompts
+against measurable objectives, not polishing a single prompt**, and the
+engine is the single accept+select authority — here, YOU are the engine,
+so every gate above must be visible in the memo. Acceptance is local
+(strict improvement on one minibatch); promotion is global (full-surface
+win outside the noise band, contract #4 and Phase 4). A candidate can be
+accepted into the pool and still not be release-grade. Budget accounting
+(upstream `max_metric_calls` / `max_reflection_cost`; the repo's Phase 6
+ledger) is not bureaucracy — sample efficiency is the entire point of GEPA
+over brute-force search. A version that wins accuracy at 3× cost belongs on
+the frontier as the accuracy arm — it is not the release champion. A
+version within the noise floor is a logic repair at best, never a claimed
+win. And a version that only wins on 2 of 40 documents is a frontier cell,
+not evidence to generalize from — the instance-level frontier tells you
+WHERE a version wins before you decide whether that win is a rule or a
+fluke.
 
 ## The scientific contract (non-negotiable)
 
@@ -189,7 +236,11 @@ version wins before you decide whether that win is a rule or a fluke.
 
 ## Phase 0 — GEPA state: read and maintain the candidate frontier
 
-Before diagnosing, reconstruct TWO frontiers from the log + memos:
+Before diagnosing, reconstruct the frontiers from the log + memos. Upstream
+`GEPAState` parameterizes this as `frontier_type` — `"instance"` (default:
+per validation example), `"objective"` (per metric; requires the evaluator
+to emit per-objective scores), `"hybrid"` (both), `"cartesian"` (example ×
+objective). This repo's practice is upstream `hybrid`: maintain BOTH —
 
 - **Objective frontier** — the champion (best same-surface score), any
   cost champion, any field specialist (a version that dominates on one
@@ -310,36 +361,58 @@ rule material; a 1-off long tail is not (see doctrine).
 
 ## Phase 3.5 — System-aware merge (crossover)
 
-Run this whenever the instance-level frontier (Phase 0) shows two
-validated, non-dominated candidates — i.e., each already beat the champion
-outside the noise band on disjoint documents/fields, and neither
-dominates the other. This is GEPA's crossover step; skip it if the
-frontier only has one live winner.
+Run this ONLY as a scheduled event, not reflexively: upstream ships merge
+OFF by default (`use_merge=False`, capped at `max_merge_invocations=5`) and
+spends a dedicated minibatch evaluation on it when it fires. Trigger it
+when the instance-level frontier (Phase 0) shows two validated,
+non-dominated candidates whose wins look complementary.
 
-1. **Check disjointness first.** Read both candidates' rules against the
-   base prompt. If they touch different sections (e.g., one is a
-   `term_length` format rule, the other is a `key_obligations` family
-   enumeration), they're merge candidates. If they touch the SAME section
-   or contradict each other, do NOT merge — pick the higher-value lesson
-   per Phase 3 step 7 instead, and note the conflict in the memo.
-2. **Compose the merge candidate.** Apply both diffs to the SAME base
-   prompt (not one candidate on top of the other, unless the base already
-   contains one of them) and give it its own version key. Banner-comment
-   both motivating runs.
-3. **Contradiction check again, on the merged text** — two individually
-   fine rules can still interact badly once composed (e.g., an additive
-   prefix rule plus a family-enumeration rule stacking into an
-   over-long/over-permissive instruction). Read the merged prompt
-   end-to-end before testing it.
-4. **Test the merge as its own candidate** — same-surface A/B against the
-   champion, same as any other version (Phase 4). A merge is not assumed
-   to sum the two parents' gains; verify it. It can under-deliver
-   (interference) or over-deliver (the rules reinforce each other) — both
-   are reportable findings for the memo.
+Source-true preconditions (all four must hold — `proposer/merge.py`):
+
+1. **Common ancestry** — the two candidates must descend from a shared
+   lineage (upstream walks each candidate's parent chain and merges only
+   pairs with a common ancestor). Repo mapping: both versions derive from a
+   common base constant in `PROMPT_VERSIONS`. Two unrelated prompts are not
+   merge material; there is nothing to compose.
+2. **Disjoint VALIDATION SUPPORT, not just disjoint text** — upstream checks
+   that the parents' best-example sets on the validation surface don't
+   overlap below a floor (`merge_val_overlap_floor=5`: at least ~5 shared
+   supporting examples are required to consider merging). Text-level
+   disjointness alone is NOT sufficient; check the instance-level frontier
+   for overlapping win-sets before composing.
+3. **Composable components** — upstream composes only shared/common
+   predictors (components present in both lineages), taking one parent's
+   text per component. In repo terms: apply both diffs to the SAME base
+   prompt (not one candidate stacked on the other, unless the base already
+   contains one of them); each component's text comes from exactly one
+   parent.
+4. **The merged candidate is judged by its own A/B** — upstream accepts a
+   merge iff its subsample score **>= max(parents)** — strictly harder than
+   a normal mutation's acceptance bar. Compose, then test like any other
+   version (Phase 4); never book the sum of the parents' gains.
+
+Procedure:
+
+1. **Verify all four preconditions** against the frontier tables and record
+   the evidence in the memo (ancestry = shared base constant; support =
+   per-doc/per-field win columns; components = which sections each diff
+   touches).
+2. **Compose the merge candidate** with its own version key; banner-comment
+   BOTH motivating runs.
+3. **Contradiction check on the merged text** — two individually fine rules
+   can still interact badly once composed (an additive prefix rule plus a
+   family-enumeration rule can stack into an over-long/over-permissive
+   instruction). Read the merged prompt end-to-end before testing.
+4. **Test as its own candidate** — same-surface A/B vs the champion AND vs
+   both parents' numbers. It can under-deliver (interference) or
+   over-deliver (reinforcement) — both are reportable findings.
 5. **Update both frontiers** — if the merge wins outside the noise band on
-   both parents' territory, it typically retires both parent candidates
-   from the frontier (it dominates them). If it only holds on one side,
-   all three may coexist on the frontier as distinct cells.
+   both parents' territory, it retires both parents from the frontier (it
+   dominates them). If it only holds on one side, all three may coexist as
+   distinct cells. If it fails the `>= max(parents)` bar, record the
+   rejection in the rejected-mutation ledger and count it against your
+   merge budget (upstream's cap exists because failed merges are expensive
+   noise).
 
 ## Phase 4 — Verify (the ladder to a release-grade version)
 
@@ -404,6 +477,20 @@ frontier only has one live winner.
   (Phase 0) before declaring a podium winner: a version that "wins" the
   composite by dominating on 3 easy documents while losing ground on 15
   others is not a composite win, it's a sample-shape artifact.
+- **Dominance is per-cell, and the frontier is recomputed at every
+  acceptance** — upstream tracks, for each instance/objective key, the SET
+  of candidates achieving the best score on that key
+  (`get_pareto_front_mapping`); a candidate is ON the frontier iff it is
+  best-at-something, and candidate selection samples among frontier members
+  weighted by how many cells they hold. Practical form: your Phase 0
+  tables ARE the frontier mapping — update them at every close-out, because
+  the next iteration's parent selection samples from exactly that table.
+- **Rejected mutations are data.** Upstream records every rejected proposal
+  with its before/after subsample scores; keep a rejected-mutation ledger
+  in the memo (proposal → minibatch → parent sum vs child sum → verdict).
+  A pattern across rejections ("every cost-trim dies on long documents")
+  is frontier signal in its own right — it maps where the objective
+  landscape punishes a direction.
 
 ## Phase 6 — Land it (every iteration closes with proof)
 
