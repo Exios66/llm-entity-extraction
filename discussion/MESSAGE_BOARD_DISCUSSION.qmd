@@ -56,6 +56,27 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-052"}
+**2026-08-22 — hermes — Sweep part 2: KANBAN-052 zombied run diagnosed → `blocked`; GEPA cluster reconciled; #25/#26 triaged**
+
+Continuation of the "finish ALL unfinished tasks" sweep:
+
+- **KANBAN-052 (#22) — ZOMBIE FOUND & HONESTLY LANDED AS `blocked`.** The board said "RUNNING: qwen3.7-flash × contracteval_v5" since 2026-08-18 — manifest audit proves it died that day ~15:54 UTC at **3,917/4,182 unique completed (265 missing)**; 831 error rows = 564 retryable 429s + **265 fatal `403 Key limit exceeded (weekly limit)` on the REGULAR key** (+2 transient disk-full). Regular key re-tested today: STILL weekly-capped. Card moved `in_progress` → `blocked` with the full diagnosis on the card. Unblock = resume the same runner command once the weekly limit resets OR the human authorizes the research-funding key (~$0.70 remaining). No experiment-log record exists for v5 until completion.
+- **GEPA cluster reconciled to reality:** KANBAN-054/056/057 moved to `done` (all three carried completed A/B verdicts in their evidence cells: v34 half-corpus landed; v36 = F1 champion via paired bootstrap P 1.000; v37 logic repair; v38 measured regression feeding v39's design). KANBAN-058's duplicate row (one `in_review`, one stale `backlog`) reconciled to a single `done` — the fix shipped under the human directive "ensure this fix is applied", effect re-scores recorded. KANBAN-055 already closed in part 1.
+- **Issue #26 CLOSED** — registry YAML landed verbatim as `config/clause_categories.yaml` (`dbbe0f2`, KANBAN-061 lane), validated 49 categories. Issue #25 stays OPEN, triaged with a comment and carded as new **KANBAN-072** (`backlog`): wire verbatim CUAD/MAUD question texts + agent inquiry templates into prompt surfaces and measure through the governed GEPA lineage — deliberately NOT started in this sweep (prompt-engineering build with paid A/B runs attached).
+- Board now truthful: every SHIPPED-but-unclosed card closed; every "in flight" claim matches an actually-running process (currently zero); remaining open work = KANBAN-072 (new build), KANBAN-052 (key-gated resume), backlog cards 005/006/011/038 (deferred/gated with owners released).
+:::
+::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-062"}
+**2026-08-22 — hermes — Governance sweep: KANBAN-062/063/064 closed; board reconciled**
+
+Human directive: "finish ALL unfinished or in progress tasks." Sweep found three SHIPPED-but-unclosed cards whose work landed in prior trains but whose issues/board rows were never closed:
+
+- **KANBAN-062 / #28** (`done`): Lane A shipped 2026-08-21 (dojo v0.6.0 `a585c13` + mailroom v0.4.0 `9ac99fe`, 33 lane tests, suite 355✓ + entity v0.19.1 re-pin 546✓). Evidence comment posted; issue closed.
+- **KANBAN-063 / #29** (`done`): Lane B same train (gated judge_verify 0.70–0.85 band, arbiter enum-bounded, kill-switch preserved). Evidence comment posted; issue closed.
+- **KANBAN-064** (`done`): Modal+vLLM framework-in-place shipped as mailroom v0.4.1 (`ed4f576`, tagged + GH release; 12 network-free tests, suite 367✓). Board-only card — row flipped with existing evidence.
+
+Also reconciled: **KANBAN-055** (hermes, `contracts_specialist_v35`) — its half-corpus A/B verdict was already recorded (paired bootstrap n=2000 seed 42: Δ +0.0068 v34−v35, CI [−0.0034,+0.0169], P(win) 0.909 → inside noise band; LOGIC REPAIR, no champion change; v34 stays half-corpus leader; v35's item-split lever improved semantic bands verbatim 8.2→9.0%, false-nr 0.478→0.444 without aggregate win) — card moved to `done` with that outcome as the result; the lever remains available for recombination in future GEPA mutations.
+:::
 ::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-069"}
 **2026-08-22 — hermes — KANBAN-069 CLOSED (#34): Braintrust eval datasets mirrored to Hugging Face Hub, verified**
 
