@@ -177,8 +177,61 @@ def test_docclass_manifest_records_schema_v2_coverage():
     if not p.exists():
         pytest.skip("docclass manifest absent (gitignored)")
     m = json.loads(p.read_text())
-    assert m.get("schema_version") == 2
+    assert m.get("schema_version") == 3
     cov = m.get("subclass_coverage") or {}
     assert cov.get("rows_with_nonempty_filename") == m.get("rows") == 700
     assert cov.get("rows_with_nonempty_subclass") == 700
     assert cov.get("contract_groups", 0) >= 25
+    sc = m.get("split_coverage") or {}
+    assert sc.get("train", 0) + sc.get("test", 0) == 700
+    assert sc.get("test", 0) > 0
+
+
+# --- KANBAN-074: family-wide deterministic splits + enron-correspondence ---
+
+
+def test_split_rule_is_deterministic_family_single_source():
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT))
+    from scripts.datasets.build_docclass_merged import assign_split
+
+    # deterministic + order-independent: same filename, same split, always
+    assert assign_split("Foo Contract.PDF") == assign_split("Foo Contract.PDF")
+    # the family rule: md5 % 10 == 0 -> test
+    import hashlib
+
+    probe = [f"file_{i}.txt" for i in range(1000)]
+    test_rate = sum(assign_split(f) == "test" for f in probe) / len(probe)
+    expected = sum(int(hashlib.md5(f.encode()).hexdigest(), 16) % 10 == 0
+                   for f in probe) / len(probe)
+    assert test_rate == expected and 0.05 < test_rate < 0.15
+    # the enron publisher imports THE SAME function (no forked rule)
+    enron_src = _src(REPO_ROOT / "scripts" / "datasets"
+                     / "publish_enron_correspondence.py")
+    assert "from scripts.datasets.build_docclass_merged import assign_split" \
+        in enron_src
+
+
+def test_docclass_dump_schema_v3_splits_on_every_row():
+    import pytest
+
+    if not DOCCLASS_DUMP.exists():
+        pytest.skip("data/datasets/docclass_merged.jsonl absent (gitignored)")
+    rows = [json.loads(l) for l in DOCCLASS_DUMP.open(encoding="utf-8") if l.strip()]
+    assert len(rows) == 700
+    assert all(r.get("split") in ("train", "test") for r in rows)
+    # both splits populated and test ≈ 10%
+    test_n = sum(1 for r in rows if r["split"] == "test")
+    assert 0 < test_n < 700 and 0.03 < test_n / len(rows) < 0.20
+
+
+def test_enron_publisher_guards_and_labeler_source():
+    src = _src(REPO_ROOT / "scripts" / "datasets"
+               / "publish_enron_correspondence.py")
+    # GT comes from the SHARED labeler, not a reimplementation
+    assert "correspondence_subclasses" in src
+    assert "label_correspondence" in src
+    # same partial-null refusal discipline as the docclass pair
+    assert "refusing to publish" in src
+    assert "SUBCLASS_KEYS" in src

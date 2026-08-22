@@ -39,6 +39,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -53,8 +54,22 @@ CUAD_DATASET = "mailroom-cuad-contracts-full"
 CUAD_SUBCLASS_NOTE = (
     "Contract rows carry expected_subclass = CUAD's own contract grouping "
     "(metadata.category, 28 groups) and filename = the source PDF basename "
-    "(KANBAN-073 schema v2)."
+    "(KANBAN-073 schema v2). Schema v3 adds a deterministic per-row "
+    "`split` (md5-of-filename 90/10 train/test — rebuild-stable, "
+    "KANBAN-074)."
 )
+
+
+def assign_split(filename: str) -> str:
+    """Deterministic 90/10 train/test split keyed on the row's filename.
+
+    md5 hex digest mod 10 == 0 -> test (10%), else train (90%). Stable
+    across rebuilds and machines, independent of row order — the same
+    document always lands in the same split, and the SAME rule is used by
+    every dataset in the Lucius-Morningstar family (KANBAN-074).
+    """
+    digest = int(hashlib.md5(filename.strip().encode("utf-8")).hexdigest(), 16)
+    return "test" if digest % 10 == 0 else "train"
 
 
 def load_cuad_rows_local(staging_jsonl: Path | None = None) -> list[dict]:
@@ -84,14 +99,16 @@ def load_cuad_rows_local(staging_jsonl: Path | None = None) -> list[dict]:
             # basename). Both are 100% covered in the staging export — rows
             # missing either are refused below, never silently nulled.
             pdf_path = str(metadata.get("pdf_path") or "")
+            fn = pdf_path.rsplit("/", 1)[-1] if pdf_path \
+                else str(inp.get("filename") or "")
             rows.append({
-                "filename": pdf_path.rsplit("/", 1)[-1] if pdf_path
-                            else str(inp.get("filename") or ""),
+                "filename": fn,
                 "doc_text": str(inp.get("doc_text") or inp.get("text") or ""),
                 "prompt": str(inp.get("prompt") or ""),
                 "expected": str(exp.get("doc_type") if isinstance(exp, dict)
                                 else exp or "").strip(),
                 "expected_subclass": str(metadata.get("category") or "").strip() or None,
+                "split": assign_split(fn),
                 "metadata": metadata,
             })
     return [r for r in rows if r["doc_text"].strip() and r["expected"]]
@@ -112,13 +129,14 @@ def load_cuad_rows(project: str, project_id: str) -> list[dict]:
         # KANBAN-073 schema v2 (same contract-subclass/filename fill as the
         # local-staging path above).
         pdf_path = str(metadata.get("pdf_path") or "")
+        fn = pdf_path.rsplit("/", 1)[-1] if pdf_path else str(d.get("filename") or "")
         rows.append({
-            "filename": pdf_path.rsplit("/", 1)[-1] if pdf_path
-                        else str(d.get("filename") or ""),
+            "filename": fn,
             "doc_text": str(d.get("doc_text") or ""),
             "prompt": str(d.get("prompt") or ""),
             "expected": str(d.get("expected") or "").strip(),
             "expected_subclass": str(metadata.get("category") or "").strip() or None,
+            "split": assign_split(fn),
             "metadata": metadata,
         })
     return [r for r in rows if r["doc_text"].strip() and r["expected"]]
@@ -138,13 +156,15 @@ def load_dump_rows(path: Path) -> list[dict]:
             row = json.loads(line)
             metadata = dict(row.get("metadata") or {})
             metadata["source_dataset"] = str(path)
+            fn = str(row.get("filename") or "")
             rows.append({
-                "filename": str(row.get("filename") or ""),
+                "filename": fn,
                 "doc_text": str(row.get("doc_text") or ""),
                 "prompt": str(row.get("prompt") or ""),
                 "expected": str(row.get("expected") or "").strip(),
                 "expected_subclass": row.get("expected_subclass")
                                      or metadata.get("expected_subclass"),
+                "split": assign_split(fn),
                 "metadata": metadata,
             })
     return [r for r in rows if r["doc_text"].strip() and r["expected"]]
@@ -197,13 +217,15 @@ def main_with_args(argv: list[str]) -> int:
     merged = build_merged(cuad, maud, s1)
     if not merged:
         parser.error("No rows loaded — check the Braintrust keys and local dumps.")
-    # KANBAN-073 schema guard: every row must carry non-empty string filename
-    # AND expected_subclass. A single null would poison the Hub viewer's
-    # schema inference (string→null cast crash) — refuse to write, loudly.
+    # KANBAN-073/074 schema guard: every row must carry non-empty string
+    # filename, expected_subclass AND a train/test split. A single null
+    # would poison the Hub viewer's schema inference (string→null cast
+    # crash) — refuse to write, loudly.
     bad = [r["metadata"].get("source_dataset", "?") for r in merged
            if not (isinstance(r.get("filename"), str) and r["filename"].strip())
            or not (isinstance(r.get("expected_subclass"), str)
-                   and r["expected_subclass"].strip())]
+                   and r["expected_subclass"].strip())
+           or r.get("split") not in ("train", "test")]
     if bad:
         parser.error(
             f"{len(bad)} rows lack filename/expected_subclass — refusing to "

@@ -144,13 +144,24 @@ basename, MAUD/S-1 dump filenames), `doc_text` (full document text),
 `prompt`, `expected` (the gold `doc_type`), `expected_subclass` (second-level
 gold on EVERY row — CUAD's own contract grouping for contracts,
 {contract_groups} groups; MAUD consideration type; S-1 record subclass),
-`metadata` (per-corpus provenance fields). Schema v2 (KANBAN-073): both label
-columns are non-null strings on every row — partial-null schemas crash the
-Hub viewer's JSON→parquet conversion (`Couldn't cast array of type string to
-null`).
+`split` (deterministic train/test: md5(filename) mod 10 == 0 → test, ~10%;
+stable across rebuilds — use it for reproducible evaluation),
+`metadata` (per-corpus provenance fields). Schema v3 (KANBAN-074; v2 added
+subclass+filename in KANBAN-073): all three label columns are non-null
+strings on every row — partial-null schemas crash the Hub viewer's JSON→
+parquet conversion (`Couldn't cast array of type string to null`).
 
 Deterministically ordered (corpus, then filename) — rebuilds are
 byte-identical; dataset fingerprint `{fp_short}…`.
+
+## Splits
+
+Per-row `split` column (schema v3): `train` / `test` assigned by
+`md5(filename) mod 10 == 0 → test` (~10% test). The rule is deterministic
+and order-independent, so any consumer recomputes or extends the same split
+without shipping separate files; stratification by doc_type/subclass is not
+forced (hash-based), but class balance is stable because assignment is
+uniform at this scale.
 
 ## Provenance
 
@@ -267,15 +278,16 @@ def publish_pack(api) -> dict:
 def publish_docclass(api) -> dict:
     rows = [json.loads(l) for l in DOCCLASS_JSONL.open(encoding="utf-8") if l.strip()]
     rows_n = len(rows)
-    # KANBAN-073 pre-upload schema guard: every row must carry non-empty
-    # string filename AND expected_subclass. All-null batches make the Hub's
-    # JSON loader infer null-typed columns; later string batches then die in
-    # parquet conversion ("Couldn't cast array of type string to null").
-    # Never upload a partial-null schema.
+    # KANBAN-073/074 pre-upload schema guard: every row must carry non-empty
+    # string filename, expected_subclass, and a train/test split. All-null
+    # batches make the Hub's JSON loader infer null-typed columns; later
+    # string batches then die in parquet conversion ("Couldn't cast array of
+    # type string to null"). Never upload a partial-null schema.
     bad = [i for i, r in enumerate(rows)
            if not (isinstance(r.get("filename"), str) and r["filename"].strip())
            or not (isinstance(r.get("expected_subclass"), str)
-                   and r["expected_subclass"].strip())]
+                   and r["expected_subclass"].strip())
+           or r.get("split") not in ("train", "test")]
     if bad:
         raise SystemExit(
             f"docclass schema guard: {len(bad)} rows lack filename/"
@@ -295,7 +307,7 @@ def publish_docclass(api) -> dict:
                               if r.get("expected") == "contract"})
     manifest = {
         "name": "docclass-merged",
-        "schema_version": 2,
+        "schema_version": 3,
         "rows": rows_n,
         "dataset_fingerprint": fp,
         "corpora": counts,
@@ -305,6 +317,11 @@ def publish_docclass(api) -> dict:
             "rows_with_nonempty_subclass": sum(1 for r in rows
                                                if str(r.get("expected_subclass") or "").strip()),
             "contract_groups": len(contract_groups),
+        },
+        "split_coverage": {
+            "train": sum(1 for r in rows if r.get("split") == "train"),
+            "test": sum(1 for r in rows if r.get("split") == "test"),
+            "rule": "md5(filename) % 10 == 0 -> test (10%), else train; deterministic across rebuilds",
         },
         "sources": {
             "cuad": "local staging export of mailroom-cuad-contracts-full "
@@ -340,9 +357,9 @@ def publish_docclass(api) -> dict:
         (tmpdir / "manifest.json").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8")
         print(f"uploading docclass ({DOCCLASS_JSONL.stat().st_size >> 20} MB, "
-              f"schema v2: subclass+filename on all {rows_n} rows) ...")
+              f"schema v3: subclass+filename+split on all {rows_n} rows) ...")
         api.upload_folder(folder_path=str(tmpdir), repo_id=repo_id, repo_type="dataset",
-                          commit_message=f"Docclass merged corpus schema v2 — subclasses + filenames on every row (KANBAN-073, {rows_n} rows, fp {fp[:12]})")
+                          commit_message=f"Docclass merged corpus schema v3 — deterministic train/test split column (KANBAN-074, {rows_n} rows, fp {fp[:12]})")
 
     # --- verify: LFS sha256 vs local ---
     tree = list(api.list_repo_tree(repo_id, repo_type="dataset", recursive=True))
