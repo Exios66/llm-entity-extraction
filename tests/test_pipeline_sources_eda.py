@@ -80,8 +80,15 @@ def _figure_footer_overlaps(fig, ax=None):
     as an overlap. Returns the offending texts' content."""
     import matplotlib
 
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
+    # Figures created outside pyplot management carry a bare FigureCanvasBase
+    # (no get_renderer); attach an Agg canvas so the collision scan can render.
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+    canvas = fig.canvas
+    if not hasattr(canvas, "get_renderer"):
+        canvas = FigureCanvasAgg(fig)
+    canvas.draw()
+    renderer = canvas.get_renderer()
     if ax is None:
         ax = fig.axes[0]
     ax_bottom = ax.get_window_extent(renderer=renderer).y0

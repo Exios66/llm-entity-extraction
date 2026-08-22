@@ -1,9 +1,12 @@
-# data/hf_export — KANBAN-069 staging
+# data/hf_export — KANBAN-069 staging + KANBAN-071 upstream-source staging
 
-Gitignored staging area for the Braintrust → Hugging Face Hub dataset mirror.
+Gitignored staging area for the Braintrust → Hugging Face Hub dataset mirror
+(KANBAN-069) and the upstream-source dataset packs (KANBAN-071).
 Contents here are EPHEMERAL — regenerate anytime with:
 
-    .venv/bin/python scripts/datasets/export_bt_to_hf.py
+    .venv/bin/python scripts/datasets/export_bt_to_hf.py        # KANBAN-069
+    .venv/bin/python scripts/datasets/build_legalbench_full_pack.py   # 071 pack
+    .venv/bin/python scripts/datasets/build_docclass_merged.py        # 071 docclass
 
 Per dataset `<name>` you get:
 
@@ -44,3 +47,17 @@ Note on row shape: cuad-contracts rows carry downloaded payloads —
 source_ref: {key, content_type}}` dicts pointing at the repo's `images/`
 folder. An earlier export serialized raw `braintrust_attachment` refs; that
 shape is superseded.
+
+## KANBAN-071 upstream-source staging (added 2026-08-22)
+
+| Path | What it holds | Published to |
+|---|---|---|
+| `legalbench_full/` | 162 task dirs (verbatim TSVs/prompts/READMEs + `*.enriched.jsonl` for cuad_*), `index.jsonl`, `ENRICHMENT_REPORT.json`, generated card | [legalbench-full](https://huggingface.co/datasets/Lucius-Morningstar/legalbench-full) |
+| `docclass_merged.jsonl` (+ `docclass_merged.manifest.json`) | 700-row merged docclass corpus (CUAD 509 + MAUD 152 + S-1 39) | [docclass-merged](https://huggingface.co/datasets/Lucius-Morningstar/docclass-merged) |
+| `KANBAN071_PUBLISH_SUMMARY.json` | per-repo verification record (blob-OID counts, LFS sha256, round-trip verdicts) | — (evidence only) |
+
+Verification record 2026-08-22, GREEN twice: legalbench-full 379/379 local
+files matched the Hub tree's git blob OIDs (0 missing, aggregates
+round-trip-hash clean); docclass-merged LFS sha256 local == hub
+(`c8faf0ab6ed8…`). Honest enrichment gaps live in `ENRICHMENT_REPORT.json`
+(20 span-unmatched, 8 unknown-contract, 8 audit-SUSPECT — flagged on-row).

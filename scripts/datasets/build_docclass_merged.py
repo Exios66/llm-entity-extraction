@@ -42,6 +42,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT = Path("data/datasets/docclass_merged.jsonl")
 MAUD_DUMP = Path("data/maud/contracts.jsonl")
 S1_DUMP = Path("data/s1_corporate_records/corporate-records.jsonl")
@@ -50,6 +51,40 @@ CUAD_SUBCLASS_NOTE = (
     "CUAD contract rows carry no expected_subclass on the docclass surface: "
     "contract subtype scoring is the shared 509-doc subtype surface's job."
 )
+
+
+def load_cuad_rows_local(staging_jsonl: Path | None = None) -> list[dict]:
+    """Load CUAD contract rows from the local staging export (BT-free path).
+
+    The staging JSONL is the sha-verified KANBAN-069 export of
+    ``mailroom-cuad-contracts-full`` (byte-identical to the Hub copy). With
+    BT write quota exhausted, this keeps the docclass build reproducible
+    without touching Braintrust at all.
+    """
+    path = staging_jsonl or (REPO_ROOT / "data" / "hf_export"
+                             / f"{CUAD_DATASET}.jsonl")
+    rows = []
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            bt_row = json.loads(line)
+            inp = bt_row.get("input") or {}
+            exp = bt_row.get("expected") or {}
+            metadata = dict(bt_row.get("metadata") or {})
+            metadata["source_dataset"] = CUAD_DATASET
+            metadata["source_provenance"] = "local-staging-export"
+            rows.append({
+                "filename": str(inp.get("filename") or ""),
+                "doc_text": str(inp.get("doc_text") or inp.get("text") or ""),
+                "prompt": str(inp.get("prompt") or ""),
+                "expected": str(exp.get("doc_type") if isinstance(exp, dict)
+                                else exp or "").strip(),
+                "expected_subclass": None,  # contract rows: scored on the subtype surface
+                "metadata": metadata,
+            })
+    return [r for r in rows if r["doc_text"].strip() and r["expected"]]
 
 
 def load_cuad_rows(project: str, project_id: str) -> list[dict]:
@@ -127,10 +162,18 @@ def main_with_args(argv: list[str]) -> int:
                         help=f"S-1 corporate-record dump (default: {S1_DUMP})")
     parser.add_argument("--dry-run", action="store_true",
                         help="Load + count the sources and print the plan without writing")
+    parser.add_argument("--bt-cuad", action="store_true",
+                        help="Load CUAD rows from Braintrust instead of the local "
+                             "staging export (fallback path; BT reads only)")
     args = parser.parse_args(argv)
 
-    print(f"Loading CUAD rows from Braintrust dataset {CUAD_DATASET} ...")
-    cuad = load_cuad_rows(args.project, args.project_id)
+    staging = REPO_ROOT / "data" / "hf_export" / f"{CUAD_DATASET}.jsonl"
+    if args.bt_cuad or not staging.exists():
+        print(f"Loading CUAD rows from Braintrust dataset {CUAD_DATASET} ...")
+        cuad = load_cuad_rows(args.project, args.project_id)
+    else:
+        print(f"Loading CUAD rows from local staging export ({staging.name}) ...")
+        cuad = load_cuad_rows_local(staging)
     maud = load_dump_rows(args.maud_dump)
     s1 = load_dump_rows(args.s1_dump)
     print(f"  CUAD contract rows: {len(cuad)}")
@@ -141,8 +184,9 @@ def main_with_args(argv: list[str]) -> int:
     if not merged:
         parser.error("No rows loaded — check the Braintrust keys and local dumps.")
     if len(merged) < 600:
-        print(f"WARNING: expected ~676 rows, got {len(merged)} — the CUAD dataset "
-              f"may be org-capped (0 rows when capped).", file=sys.stderr)
+        print(f"WARNING: expected ~700 rows (509 CUAD + 152 MAUD + 39 S-1), got "
+              f"{len(merged)} — a source corpus may be missing or empty.",
+              file=sys.stderr)
 
     from collections import Counter
 

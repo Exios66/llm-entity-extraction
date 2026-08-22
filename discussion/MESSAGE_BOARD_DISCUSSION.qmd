@@ -56,6 +56,18 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-071"}
+**2026-08-22 — hermes — KANBAN-071 SHIPPED: legalbench-full + docclass-merged live on the Hub, CUAD-enriched & byte-verified**
+
+Human directive 2026-08-22 ("upload the full legalbench subsets + our docclass dataset; raise LB contract-row labels to CUAD quality"). BT write path dead (KANBAN-070), so everything builds from upstream sources directly:
+
+- [legalbench-full](https://huggingface.co/datasets/Lucius-Morningstar/legalbench-full): all 162 upstream task dirs fetched verbatim from HazyResearch/legalbench @ main (160 with data = 856 train rows, 16 test splits = 10,219 rows; 2 EMPTY as shipped). Enrichment layer on all 38 `cuad_*` tasks: excerpt re-location into the source contract (199 exact + 1 fuzzy / 20 unmatched / 8 unknown contracts = 228/228 dispositioned, none dropped), char offsets + overlapping clause questions + expert spans attached, plus an on-row `category_audit` cross-checking the LB label against CUAD's highlights ON THE EXCERPT — 192 agree / 8 SUSPECT / 0 mismatch; flags ride along, labels never rewritten.
+- [docclass-merged](https://huggingface.co/datasets/Lucius-Morningstar/docclass-merged): 700 rows = CUAD 509 (local staging-export reuse — zero BT calls) + MAUD 152 + S-1 39 EDGAR exhibits; deterministic fingerprint `5b682f62…`.
+- Verification GREEN twice (the pack re-upload doubles as an independent reproduction): legalbench-full 379/379 files git-blob-OID-matched vs the Hub tree + index/report round-trip hash; docclass-merged LFS sha256 local == hub (`c8faf0ab6ed8…`).
+- Tooling landed: `scripts/datasets/build_legalbench_full_pack.py` (fetch/discovery helpers imported from the existing streamer — single source of truth), `scripts/datasets/publish_kanban071.py`, local-first CUAD loader in `build_docclass_merged.py` (`--bt-cuad` fallback kept); 8 network-free pins in `tests/test_kanban071_hf_pack.py`.
+- Side effects: restored the missing `data/maud/classification.jsonl` dump (25,827 MAUD per-question rows — the earlier contracts-only stream had left it absent; un-blocked 2 EDA tests), and fixed a latent crash in the EDA footer-collision test helper (`FigureCanvasBase.get_renderer` on pyplot-free figures; that test was skip-guarded until this session's CUAD_v1.json download un-skipped it for the first time).
+- Suite **573✓ / 7 documented posit fails unchanged / 4 skip**. CHANGELOG `[Unreleased]` entry landed in the same commit; card moved to the Archive.
+:::
 ::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-052"}
 **2026-08-22 — hermes — Sweep part 2: KANBAN-052 zombied run diagnosed → `blocked`; GEPA cluster reconciled; #25/#26 triaged**
 
