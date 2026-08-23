@@ -354,7 +354,11 @@ def publish_docclass(api) -> dict:
             contract_groups=len(contract_groups),
             built_utc=manifest["built_utc"]), encoding="utf-8")
         (tmpdir / "docclass_merged.jsonl").write_bytes(DOCCLASS_JSONL.read_bytes())
-        (tmpdir / "manifest.json").write_text(
+        # KANBAN-074 hotfix lesson, CORRECTED by KANBAN-076 canaries: ANY
+        # filename containing ".json" (.json, .json.txt, any subdir) gets
+        # ingested as data rows by the Hub's JSON loader (CastError,
+        # "column names don't match") — only manifest.txt is invisible.
+        (tmpdir / "manifest.txt").write_text(
             json.dumps(manifest, indent=2), encoding="utf-8")
         print(f"uploading docclass ({DOCCLASS_JSONL.stat().st_size >> 20} MB, "
               f"schema v3: subclass+filename+split on all {rows_n} rows) ...")

@@ -289,8 +289,12 @@ def main_with_args(argv: list[str]) -> int:
         tmpdir = Path(tmp)
         (tmpdir / "README.md").write_text(CARD.format(**card_ctx),
                                           encoding="utf-8")
-        (tmpdir / "manifest.json").write_text(json.dumps(manifest, indent=2),
-                                              encoding="utf-8")
+        # KANBAN-074 hotfix lesson, CORRECTED by KANBAN-076 canaries: ANY
+        # filename containing ".json" (.json, .json.txt, any subdir) gets
+        # ingested as data rows by the Hub's JSON loader (CastError,
+        # "column names don't match") — only manifest.txt is invisible.
+        (tmpdir / "manifest.txt").write_text(
+            json.dumps(manifest, indent=2), encoding="utf-8")
         (tmpdir / STAGED_NAME).write_bytes(args.out.read_bytes())
         print(f"uploading enron-correspondence "
               f"({args.out.stat().st_size >> 20} MB, {len(rows)} rows) ...")
