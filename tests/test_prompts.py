@@ -1520,7 +1520,7 @@ def test_contracts_v36_full_sentence_grain():
 
 def test_contracts_v37_payment_monetary_capture():
     """v37 (KANBAN-056 — GEPA crossover built on v36's WIN, frozen design in
-    memos/contracts_specialist_v37_design.md) adds the payment/monetary capture
+    docs/memos/contracts_specialist_v37_design.md) adds the payment/monetary capture
     + canonical tag discipline rule. Measured on the 255-doc half-corpus (v34
     record + master GT CSV): payment families are 297 of 801 (37%) of the
     present-but-untagged (doc, category) pairs — Price Restrictions 0/9 tagged

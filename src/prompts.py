@@ -1876,7 +1876,7 @@ CONTRACTS_SPECIALIST_PROMPT_V19 = CONTRACTS_SPECIALIST_PROMPT_V18.replace(
 # 50 docs, seed 42, chunked). Scorer-side (v20-record): unparseable-GT date
 # templates are null expectations, parties labels instantiate by token
 # containment, and name fields score full-token containment — see
-# SCORING.md §3; historical records keep their stored scores.
+# docs/SCORING.md §3; historical records keep their stored scores.
 # =============================================================================
 
 CONTRACTS_SPECIALIST_PROMPT_V20 = CONTRACTS_SPECIALIST_PROMPT_V19.replace(
@@ -2637,7 +2637,7 @@ CONTRACTS_SPECIALIST_PROMPT_V36 = CONTRACTS_SPECIALIST_PROMPT_V35.replace(
 
 # -----------------------------------------------------------------------------
 # contracts_specialist_v37 (KANBAN-056 — GEPA crossover on v36's WIN; frozen
-# design in memos/contracts_specialist_v37_design.md): payment/monetary capture
+# design in docs/memos/contracts_specialist_v37_design.md): payment/monetary capture
 # + canonical tag discipline.
 # Motivation (255-doc half-corpus, v34 record + master GT CSV):
 #   - v36 A/B verdict: CHAMPION CHANGE v34 -> v36 — per-doc F1 bootstrap

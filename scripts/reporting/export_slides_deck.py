@@ -635,7 +635,7 @@ def slide_codebook_fields(wb: openpyxl.Workbook, fields: dict[str, str]) -> None
 def slide_codebook_scoring(wb: openpyxl.Workbook, fs: dict[str, Any]) -> None:
     ws, row = new_slide(
         wb, "CODEBOOK · EXTRACTION", "Scoring rubric & thresholds", 10,
-        kicker="field-type-aware deterministic scoring (SCORING.md §3; config/taxonomy.yaml field_scoring)",
+        kicker="field-type-aware deterministic scoring (docs/SCORING.md §3; config/taxonomy.yaml field_scoring)",
     )
     row = table(ws, row, 2,
                 ["Rule", "Setting"],

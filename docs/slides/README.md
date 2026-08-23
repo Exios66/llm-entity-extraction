@@ -64,7 +64,7 @@ Everything is reproducible offline:
 
 ```bash
 # All metrics in one place (formulas + definitions)
-less SCORING.md
+less ../SCORING.md
 
 # Unit tests for every metric (network-free)
 python -m pytest tests/test_metrics.py -q
