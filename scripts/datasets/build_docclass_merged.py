@@ -170,17 +170,54 @@ def load_dump_rows(path: Path) -> list[dict]:
     return [r for r in rows if r["doc_text"].strip() and r["expected"]]
 
 
+def normalize_metadata_rows(rows: list[dict]) -> list[dict]:
+    """KANBAN-076: make the ``metadata`` column cast-safe for the Hub loader.
+
+    The datasets-server JSON loader infers ONE arrow struct schema for the
+    metadata column from the first row-group, then casts every later group
+    to it. A key present only in later rows — e.g. MAUD's nested
+    ``maud_categories`` dict, absent from the leading CUAD block — crashes
+    the conversion (``TypeError: Couldn't cast array of type struct<…>``):
+    the KANBAN-073 partial-schema failure, one level deeper. Normalize so
+    every row carries the SAME key set with uniform scalar types:
+
+    - union of all metadata keys on EVERY row (missing -> empty string,
+      never null — null-typed columns are the 073 crash)
+    - nested dicts AND lists -> compact sorted-key JSON strings (a key that
+      is list-typed on some rows MUST be string-typed on all rows: the
+      loader casts later row-groups against the first group's inferred
+      schema, and string != list<string> is a hard cast error)
+    - scalars -> strings
+    """
+    if not rows:
+        return rows
+    union = sorted({k for r in rows for k in (r.get("metadata") or {})})
+    for r in rows:
+        md = r.get("metadata") or {}
+        flat = {}
+        for k in union:
+            v = md.get(k, "")
+            if isinstance(v, (dict, list)):
+                v = json.dumps(v, sort_keys=True, ensure_ascii=False)
+            else:
+                v = "" if v is None else str(v)
+            flat[k] = v
+        r["metadata"] = flat
+    return rows
+
+
 def build_merged(cuad: list[dict], maud: list[dict], s1: list[dict]) -> list[dict]:
     """Merge the three corpora into one deterministic row list.
 
     Corpus order: contract (CUAD), merger_agreement (MAUD), corporate_record
     (S-1); within each corpus rows are filename-sorted so rebuilds produce a
     byte-identical dump and therefore the same dataset fingerprint.
+    Metadata is normalized cast-safe (see ``normalize_metadata_rows``).
     """
     merged = []
     for corpus in (cuad, maud, s1):
         merged.extend(sorted(corpus, key=lambda r: r["filename"]))
-    return merged
+    return normalize_metadata_rows(merged)
 
 
 def main_with_args(argv: list[str]) -> int:

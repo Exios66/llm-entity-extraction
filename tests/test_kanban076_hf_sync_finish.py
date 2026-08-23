@@ -30,7 +30,7 @@ def _src(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-# --- THE landmine rule: manifests ship as manifest.json.txt, never bare --
+# --- THE landmine rule: manifests ship as manifest.txt ONLY (no ".json" ---
 
 
 def _assert_no_bare_manifest_staging(src: str, name: str):
@@ -67,6 +67,68 @@ def test_docclass_builder_manifest_is_loader_invisible():
     src = _src(DOCCLASS_BUILDER)
     # whatever it names its manifest artifact, no bare "manifest.json" literal
     assert '("manifest.json")' not in src.replace('("manifest.json.txt")', "")
+
+
+# --- round 3: the metadata struct-cast landmine --------------------------
+
+
+def _load_builder_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "build_docclass_merged", DOCCLASS_BUILDER)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_normalize_metadata_rows_union_and_scalarization():
+    mod = _load_builder_module()
+    rows = [
+        {"metadata": {"a": "x", "n": {"k": [1, 2]}, "l": ["p", "q"]}},
+        {"metadata": {"b": None, "a": "y"}},
+        {},
+    ]
+    out = mod.normalize_metadata_rows([dict(r) for r in rows])
+    keys = {frozenset(r["metadata"].keys()) for r in out}
+    assert keys == {frozenset({"a", "b", "n", "l"})}, keys
+    for r in out:
+        for k, v in r["metadata"].items():
+            # containers: JSON strings on carrying rows, "" on absent rows —
+            # a key typed list/dict on ANY row must be string-typed on ALL
+            if k in ("l", "n"):
+                if r is out[0]:
+                    assert isinstance(v, str), (k, type(v))
+                    if k == "n":
+                        assert v.startswith("{") and '"k"' in v
+                    else:
+                        assert v.startswith("[") and '"p"' in v
+                else:
+                    # missing keys become "" — never null, never a foreign type
+                    assert v == ""
+            else:
+                assert isinstance(v, str), (k, type(v))
+    # missing values become "" — never null
+    assert out[2]["metadata"]["a"] == ""
+    assert out[1]["metadata"]["b"] == ""
+
+
+def test_normalize_metadata_rows_deterministic():
+    import json as _json
+    mod = _load_builder_module()
+    rows = [{"metadata": {"z": 1, "n": {"b": 1, "a": 2}}}]
+    outs = [mod.normalize_metadata_rows([dict(rows[0])])[0]["metadata"]["n"]
+            for _ in range(2)]
+    assert outs[0] == outs[1]
+    assert outs[0].index('"a"') < outs[0].index('"b"')
+
+
+def test_publisher_guard_rejects_heterogeneous_metadata():
+    src = _src(KANBAN071_PUBLISHER)
+    assert "md_keys" in src and "normalize_metadata_rows" in src, (
+        "publish_kanban071 docclass path lost its KANBAN-076 metadata guard"
+    )
+    assert "len(md_keys) != 1" in src
 
 
 # --- single-source contracts in the dedup publisher ----------------------

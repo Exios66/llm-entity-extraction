@@ -293,6 +293,27 @@ def publish_docclass(api) -> dict:
             f"docclass schema guard: {len(bad)} rows lack filename/"
             f"expected_subclass (first: row {bad[0]}) — refusing to upload a "
             f"partial-null schema; rebuild with build_docclass_merged.py")
+    # KANBAN-076 guard: the loader infers ONE struct schema for `metadata`
+    # from the first row-group — any key present only in later rows, or any
+    # nested dict value (e.g. MAUD's maud_categories), crashes parquet
+    # conversion ("Couldn't cast array of type struct<…>"). Require the
+    # builder's normalize_metadata_rows() contract: uniform scalar metadata.
+    md_keys = {frozenset((r.get("metadata") or {}).keys()) for r in rows}
+    if len(md_keys) != 1:
+        raise SystemExit(
+            "docclass metadata guard: rows carry DIFFERENT metadata key sets "
+            f"({len(md_keys)} variants) — partial-schema crash on conversion; "
+            "rebuild with build_docclass_merged.py (normalize_metadata_rows)")
+    nested = [i for i, r in enumerate(rows)
+              if any(isinstance(v, (dict, list))
+                     for v in (r.get("metadata") or {}).values())]
+    if nested:
+        raise SystemExit(
+            f"docclass metadata guard: {len(nested)} rows carry nested-dict "
+            f"or list metadata values (first: row {nested[0]}) — every "
+            "metadata value must be a plain string across ALL rows or the "
+            "struct/list cast fails on conversion; rebuild with "
+            "build_docclass_merged.py")
     import subprocess
 
     fp = subprocess.run(
