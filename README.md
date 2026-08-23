@@ -115,7 +115,7 @@ field_scoring:`). The scoring definitions are **outsourced to the
 the local `src/field_scoring.py` / `metrics.py` / `scorers.py` /
 `bootstrap.py` / `cost_models.py` are thin re-export shims, and
 `src/dojo_config.py` wires the taxonomy into the package `Settings` at import
-(see `SCORING.md` §0 for the full map):
+(see [`docs/SCORING.md`](docs/SCORING.md) §0 for the full map):
 
 - `id` — normalize + exact match (docket/reference numbers)
 - `date` — canonical ISO parse, then exact match ("March 3, 2024" == "03/03/2024")
@@ -181,7 +181,7 @@ per-family tables and failure-mode insights; and the **Monte Carlo robustness
 suite** (`src/monte_carlo.py`) adds zero-spend committee-voting / escalation /
 paired-bootstrap-ablation / failure-pipeline / exemplar metrics over the joint
 reasoning corpus. Every metric (with formulas and reading) is in
-`SCORING.md`; the worked examples are in `docs/slides/`.
+[`docs/SCORING.md`](docs/SCORING.md); the worked examples are in `docs/slides/`.
 
 ## Layout
 
@@ -755,13 +755,13 @@ licensed corpora, benchmarks, and frameworks:
   archive).
 - `CHANGELOG.md` — semantic-version history of all significant releases
   (each tagged `vX.Y.Z`).
-- `SCORING.md` — every scorer and metric: where scoring lives (the
+- [`docs/SCORING.md`](docs/SCORING.md) — every scorer and metric: where scoring lives (the
   `llm-dojo-scoring` package), classification, binary, multiclass, subtype,
   docclass hierarchical, task-aware (MAUD / LegalBench / court opinions /
   chained), field-type-aware content scoring, factuality audit, judge
   calibration, chained stage trackers + ablation, A/B deltas, cost
   accounting, Monte Carlo robustness, bootstrap CIs.
-- `V16_PROPOSITION.md` — the historical research proposition behind the
+- `reports/V16_PROPOSITION.md` — the historical research proposition behind the
   v16+ prompt iterations (champion lineage, model sweeps).
 
 **Per-area maps** — one README per top-level area, kept current with the
@@ -769,9 +769,11 @@ layout: [`agents/README.md`](agents/README.md) ·
 [`config/README.md`](config/README.md) · [`src/README.md`](src/README.md) ·
 [`scripts/README.md`](scripts/README.md) · [`tests/README.md`](tests/README.md) ·
 [`reports/README.md`](reports/README.md) · [`docs/README.md`](docs/README.md) ·
-[`docs/slides/README.md`](docs/slides/README.md) · [`memos/README.md`](memos/README.md).
+[`docs/slides/README.md`](docs/slides/README.md) · [`docs/memos/README.md`](docs/memos/README.md).
 
 **Working surfaces** — [`reports/experiment_log.md`](reports/experiment_log.md)
 (rendered experiment log) · the [GH Pages site](https://exios66.github.io/llm-entity-extraction/)
-(scoring decks, run viewer, board, memos) · the public [wiki](https://github.com/Exios66/llm-entity-extraction/wiki)
+(scoring decks, run viewer, board, memos) · the [graphify knowledge graph](https://exios66.github.io/llm-entity-extraction-graph/)
+(interactive code-structure map of this repo; build artifact — see
+[`docs/sister-repos.md`](docs/sister-repos.md)) · the public [wiki](https://github.com/Exios66/llm-entity-extraction/wiki)
 (`wiki/`, pushed with `./wiki/sync-wiki.sh`).

@@ -534,13 +534,31 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
+<td>KANBAN-080</td>
+<td><a href="https://github.com/Exios66/llm-entity-extraction/issues/38">#38</a></td>
+<td><code>in_progress</code></td>
+<td><strong>Repo housekeeping: docs currency + root de-clutter/nesting + graphify graph &amp; links + v0.20.0 proof wrap-up</strong> — human directive 2026-08-23: (1) fresh-install archive proof re-run on pushed tag <code>v0.20.0</code> (forensics 2026-08-23: <code>langchain-core</code> 1.x IS live on default PyPI 1.0.0→1.6.0 — the interrupted train’s “unresolvable floor” was a stale index view); (2) nest loose root files with ALL references updated in lockstep (<code>SCORING.md</code>→<code>docs/SCORING.md</code>, <code>deploy_phoenix.sh</code>→<code>scripts/deploy/</code>, root <code>memos/</code> merged into <code>docs/memos/</code> w/ <code>build_site.py</code> reader updated, legacy root board symlinks removed — all programmatic readers already canonical); (3) graphify knowledge graph for THIS repo (skill vendored since KANBAN-065, no build existed) + derived-artifact Pages site mirroring <a href="https://exios66.github.io/llm-mailroom-graph/">llm-mailroom-graph</a> + links wired into README/docs/wiki both directions; (4) docs currency sweep to post-v0.20.0 code truth per mailroom doc conventions. Immovable-at-root documented: pyproject/requirements/CHANGELOG/README/AGENTS/dotfiles.</td>
+<td>hermes 2026-08-23</td>
+<td>changelog-only</td>
+<td>pending</td>
+</tr>
+<tr class="even">
+<td>KANBAN-079</td>
+<td><a href="https://github.com/Exios66/llm-entity-extraction/issues/37">#37</a></td>
+<td><code>done</code></td>
+<td><strong>Enron dedup GT enrichment — content-topic + sentiment labels, two-config GT separation</strong> — human directive 2026-08-23: add <code>content_topic</code> (+ evidence) and <code>sentiment_score</code>/<code>sentiment_label</code> GT to <code>Lucius-Morningstar/enron-correspondence-dedup</code>; split the repo into TWO card-declared configs — <code>default</code> = blind rows (filename/text/subject/split/metadata), <code>ground_truth</code> = answer keys joined on filename — so mailroom agents load blind by default and the viewer keeps both for human auditing; monolithic all-columns jsonl leaves the repo root; labeler lives in Enron-Evaluation-Environment beside the shared subclass module;</td>
+<td>hermes 2026-08-23</td>
+<td>v0.20.1</td>
+<td>SHIPPED 2026-08-23 — entity-extraction commit <a href="https://github.com/Exios66/llm-entity-extraction/commit/bd8b2c7"><code>bd8b2c7</code></a> pushed: publisher v2 rewrite (enrichment stage importing Enron-Evaluation-Environment labelers <code>content_topics.py</code> + <code>sentiment_scorer.py</code> @ <a href="https://github.com/Exios66/Enron-Evaluation-Environment/commit/c3bb908"><code>c3bb908</code></a>, never forked; two card-declared configs; legacy monolithic jsonl DELETED from the Hub root; per-file sha verify LFS ≥10MB + round-trip below); determinism proven (two independent builds byte-identical across ALL FOUR data files); Hub <a href="https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup"><code>Lucius-Morningstar/enron-correspondence-dedup</code></a> republished 247,523 rows / 222,572+24,951 per config — all four files sha-verified GREEN; datasets-server conversion GREEN (4 splits, pending 0 / failed 0) and first-rows proof: <code>default/train</code> exposes ZERO GT keys, <code>ground_truth/train</code> serves all nine, both lead <code>allen-p/_sent_mail/1.</code> (join integrity live); distributions: topics general_business 74.2% / energy_market 8.7% / …all 11 keys populated, sentiment 167,964 neutral / 51,668 positive / 27,891 negative; honest gaps on card+manifest (lexicon sentiment = weak labels, single-topic ~2000-char head window, exact-hash dedup only); pins 3 deliberate re-pins + 10 new <code>test_kanban079_gt_separation.py</code>; suite <strong>621 passed</strong> (+19 vs pristine HEAD 602), failure set byte-identical (8 chronic posit renders)</td>
+</tr>
+<tr class="odd">
 <td>KANBAN-078</td>
 <td>— (board-only)</td>
-<td><code>in_progress</code></td>
+<td><code>done</code></td>
 <td><strong>Mailroom dataset browser notebook</strong> — human directive 2026-08-23: implement a Docile-style dataset browser in llm-mailroom under a dedicated notebooks folder (<a href="https://github.com/rossumai/docile/blob/main/docile/tools/dataset_browser.ipynb">docile/tools/dataset_browser.ipynb</a> pattern: thin notebook + real tool module). Plan: <code>notebooks/dataset_browser.ipynb</code> + reusable loader module; browses the pilot sample set via <code>docs/examples/samples/manifest.csv</code> (30 rows: provenance CUAD/external/synthetic, expected class/stage/fields) joined with pipeline catalog state (<code>data/mailroom.db</code>) when present.</td>
 <td>hermes 2026-08-23</td>
 <td>— (changelog-only)</td>
-<td>claimed 2026-08-23 — work starting</td>
+<td>SHIPPED 2026-08-23 — mailroom commit <a href="https://github.com/Exios66/llm-mailroom"><code>c9ea57a</code></a> pushed: <code>notebooks/dataset_browser.ipynb</code> (thin, Docile-pattern) + reusable <code>notebooks/dataset_browser.py</code> + folder README; ground truth = <code>docs/examples/samples/manifest.csv</code> (30 rows, provenance rule CUAD</td>
 </tr>
 <tr class="even">
 <td>KANBAN-077</td>

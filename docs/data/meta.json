@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-21T18:24:09.003931+00:00",
+ "built_at": "2026-08-23T22:16:45.358050+00:00",
  "surfaces": [
   "0068f5b961776cd63ef8d83d943d83e5b9a5b2e3152d0cebe21d13782b0221c1:42:6",
   "05b3b17b9ce344b98dd246693ff4b9683db239b4f6b0c8f5ffb0be78b4b2b7c9:42:6",
@@ -444,7 +444,7 @@
    }
   },
   "references": {
-   "scoring_md": "https://github.com/Exios66/llm-entity-extraction/blob/main/SCORING.md",
+   "scoring_md": "https://github.com/Exios66/llm-entity-extraction/blob/main/docs/SCORING.md",
    "agents_md": "https://github.com/Exios66/llm-entity-extraction/blob/main/AGENTS.md"
   }
  }

@@ -23,7 +23,7 @@ python scripts/release.py --check
 # 2) convert [Unreleased] -> [vX.Y.Z], bump pyproject.toml, add the release link
 python scripts/release.py --bump minor --note "<summary>"     # --dry-run to preview
 
-# 3) update docs the change touches (README.md, docs/README.md, SCORING.md, AGENTS.md)
+# 3) update docs the change touches (README.md, docs/README.md, docs/SCORING.md, AGENTS.md)
 # 4) regenerate derived artifacts (render_experiment_log.py + build_site.py + audit)
 # 5) commit everything as one release commit
 git add -A

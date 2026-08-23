@@ -114,4 +114,4 @@ PY
 
 ## End of decks
 
-Back to [index](README.md) · Full formulas: `SCORING.md`
+Back to [index](README.md) · Full formulas: [`../SCORING.md`](../SCORING.md)

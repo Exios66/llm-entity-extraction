@@ -507,9 +507,9 @@ def summarize(record: dict, run_id: int, best_by_task: dict[str, float],
 
 
 # ---------------------------------------------------------------------------
-# Scoring guide — canonical explanations mirrored from SCORING.md (repo root).
+# Scoring guide — canonical explanations mirrored from docs/SCORING.md.
 # Rendered verbatim as the reference card on the site index. Keep in sync with
-# SCORING.md; the live repo file remains the source of truth.
+# docs/SCORING.md; the live repo file remains the source of truth.
 # ---------------------------------------------------------------------------
 
 BANDS = [
@@ -670,7 +670,7 @@ SCORING_GUIDE = {
         },
     },
     "references": {
-        "scoring_md": f"{REPO_URL}/blob/main/SCORING.md",
+        "scoring_md": f"{REPO_URL}/blob/main/docs/SCORING.md",
         "agents_md": f"{REPO_URL}/blob/main/AGENTS.md",
     },
 }
@@ -922,7 +922,7 @@ def build_board() -> dict:
 
 
 def build_memos() -> dict:
-    """Research memos (memos/*.md) shipped to the site's memos tab — the
+    """Research memos (docs/memos/*.md) shipped to the site's memos tab — the
     archive of findings for collaborators and presentation."""
     import re as _re
 

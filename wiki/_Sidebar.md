@@ -19,5 +19,6 @@
 **External**
 
 - [Experiment-log site](https://exios66.github.io/llm-entity-extraction/)
+- [Knowledge graph (graphify)](https://exios66.github.io/llm-entity-extraction-graph/)
 - [Repository](https://github.com/Exios66/llm-entity-extraction)
 - [llm-mailroom](https://github.com/Exios66/llm-mailroom)

@@ -509,7 +509,7 @@ label distribution). Primitives: `normalize_dist` / `shannon_entropy` /
 | Failure pipeline | retry/fallback event simulation from the observed 0.2374% failure rate | max_tries=1 + fallback → 0.004% vs 0.202% without; ~0 failures at 320K |
 | Exemplar mining | near-miss detection + token-budget subset selection | 6 subtype + 4 docclass exemplar appendices (development→license first, +25.0 expected flips) |
 
-Full results + interpretation: `memos/monte_carlo_robustness.md`; the
+Full results + interpretation: `docs/memos/monte_carlo_robustness.md`; the
 GEPA loop folds the paired-bootstrap ablation + committee-voting robustness
 in as a champion-contender selection step (KANBAN-049).
 

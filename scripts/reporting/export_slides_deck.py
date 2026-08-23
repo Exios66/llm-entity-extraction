@@ -403,7 +403,7 @@ def slide_cover(wb: openpyxl.Workbook) -> None:
         ws.row_dimensions[row].height = 22.0
         row += 1
     row += 2
-    c = ws.cell(row=row, column=3, value="Sources: reports/experiment_log.jsonl · config/taxonomy.yaml · agents/sorter_agent.py · SCORING.md")
+    c = ws.cell(row=row, column=3, value="Sources: reports/experiment_log.jsonl · config/taxonomy.yaml · agents/sorter_agent.py · docs/SCORING.md")
     c.font = Font(size=9, italic=True, color=_GRAY)
 
 
@@ -1006,9 +1006,9 @@ def slide_docclass_and_sources(wb: openpyxl.Workbook, r: dict, records: dict[str
                     ["Docclass run record", f"{RUN_NAMES['docclass']} · git {records[RUN_NAMES['docclass']].get('git', {}).get('commit')}"],
                     ["Prompts", "src/prompts.py (contracts_specialist_v32, SORTER_PROMPT_V14, sorter_docclass_v5)"],
                     ["Taxonomy / thresholds", "config/taxonomy.yaml"],
-                    ["Scoring model (formula-level reference)", "SCORING.md"],
+                    ["Scoring model (formula-level reference)", "docs/SCORING.md"],
                     ["Sorter subtypes / equivalences", "agents/sorter_agent.py"],
-                    ["Memos", "memos/contracts_specialist_v32.md · memos/sorter_v14.md · memos/docclass_v3_merged_benchmark.md"],
+                    ["Memos", "docs/memos/contracts_specialist_v32.md · docs/memos/sorter_v14.md · docs/memos/docclass_v3_merged_benchmark.md"],
                 ],
                 widths=[2, 40, 60, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 2])
     note(ws, row, 2, "Docclass context: sorter_docclass_v3 = completed prompt (doc_type 0.9926 / subclass 0.5808 / exact 0.8905 on the merged 676); v5 is the diagnostic iteration — small n, wide CIs, read as signal only.")

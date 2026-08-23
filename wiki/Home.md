@@ -30,6 +30,13 @@ GitHub Pages:
 | [Taxonomy](Taxonomy.yml) | `config/taxonomy.yaml` reference |
 | [FAQ](FAQ) | common questions |
 
+**Knowledge graph** — an interactive graphify map of this codebase (agents,
+prompts, scripts, tests as queryable nodes) lives at
+[llm-entity-extraction-graph](https://exios66.github.io/llm-entity-extraction-graph/)
+— build artifact, never committed here; rebuild with `graphify . --code-only`.
+Sister-repo relationships are mapped in
+[`docs/sister-repos.md`](https://github.com/Exios66/llm-entity-extraction/blob/main/docs/sister-repos.md).
+
 ## The core idea
 
 1. **Sync corpora** (CUAD, LegalBench) into Braintrust datasets.

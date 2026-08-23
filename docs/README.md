@@ -33,7 +33,7 @@ board, and the discussion board under one themed URL.
   samples are never presented as beating or losing to large ones.
 - **Scoring reference card** — display bands (≥85% Strong · 60–85% Moderate ·
   <60% Weak), per-task headline formulas, each metric's calculation +
-  meaning, a "sample sizes matter" explainer, and links to `SCORING.md`.
+  meaning, a "sample sizes matter" explainer, and links to [`SCORING.md`](SCORING.md).
 - **Group views** — `#/task/{slug}`, `#/prompt/{version}`, `#/model/{model}`:
   aggregates (runs / documents / tokens / best / median / worst), a
   grouped-by table (tasks → prompts, prompts → tasks), and the filtered run
@@ -48,7 +48,7 @@ board, and the discussion board under one themed URL.
   failure insights, a **Run-level diagnostics** card for extraction runs
   (raw list precision/recall/F1, date/duration/money MAE + R² vs ground
   truth, span-count drift, field-level error decomposition —
-  `scores.diagnostics`, see `SCORING.md` §4), and a per-document results
+  `scores.diagnostics`, see [`SCORING.md`](SCORING.md) §4), and a per-document results
   table.
 - **Trace view** — `#/run/{n}/doc/{i}` shows the full record: classification
   verdicts + reasoning, and — where applicable — **interpreted extraction
@@ -60,7 +60,7 @@ board, and the discussion board under one themed URL.
   (the cross-repo agent work-progress board: kanban lanes, GitHub-issue
   links, discussion log, archive) read-only for visual inspection
   (`build_site.py` emits `docs/data/board.json`).
-- **Research memos** — a dedicated `#/memos` tab rendering `memos/*.md`
+- **Research memos** — a dedicated `#/memos` tab rendering `docs/memos/*.md`
   (the archived research memoranda: subtype-classification improvements,
   entity-extraction v2→v15, contracts-specialist v17→v18) with a memo
   selector and cross-memo companion links (`build_site.py` emits

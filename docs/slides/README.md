@@ -3,7 +3,7 @@
 Example inputs, outputs, and concise scientific explanations of every method
 used to score the entity-extraction runs in this project — written for
 research scientists working in parallel who do **not** have time to read the
-full documentation set (`SCORING.md`, README, AGENTS.md).
+full documentation set (`SCORING.md` → now [`docs/SCORING.md`](../SCORING.md), README, AGENTS.md).
 
 Each deck is standalone: a ~5–8 slide markdown file with the method, a
 worked example (input → output → calculation), interpretation, and common

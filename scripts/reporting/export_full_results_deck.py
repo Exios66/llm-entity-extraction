@@ -254,7 +254,7 @@ def slide_cover(wb: openpyxl.Workbook) -> None:
         ws.row_dimensions[row].height = 22.0
         row += 1
     row += 2
-    c = ws.cell(row=row, column=3, value="Sources: reports/experiment_log.jsonl · config/taxonomy.yaml · agents/sorter_agent.py · SCORING.md")
+    c = ws.cell(row=row, column=3, value="Sources: reports/experiment_log.jsonl · config/taxonomy.yaml · agents/sorter_agent.py · docs/SCORING.md")
     c.font = Font(size=9, italic=True, color=_GRAY)
 
 
@@ -358,7 +358,7 @@ def slide_extract_champion_metadata(wb: openpyxl.Workbook, r: dict, n: int) -> N
           _pct(s.get("overall_verified_precision")), _num(_get(s, "per_field.effective_date"))]],
         widths=[30, 12, 12, 12, 12, 16],
     )
-    note(ws, row, 1, "v32 510-full-clean vs v31 510-full: Δ = +0.0070 overall (inside the ±0.011 chunked noise band — logic repair, not a claimed win; see memos/contracts_specialist_v32…).")
+    note(ws, row, 1, "v32 510-full-clean vs v31 510-full: Δ = +0.0070 overall (inside the ±0.011 chunked noise band — logic repair, not a claimed win; see docs/memos/contracts_specialist_v32…).")
 
 
 def _mtok_full(r: dict) -> str:
@@ -601,7 +601,7 @@ def slide_codebook_sorter_rules(wb: openpyxl.Workbook, fs: dict[str, Any], n: in
     ws, row = new_slide(
         wb, "PART B · SORTER SWEEP", "Codebook — equivalences, failure modes & scoring rules",
         n,
-        kicker="agents/sorter_agent.py → SUBTYPE_EQUIVALENCES · SCORING.md.",
+        kicker="agents/sorter_agent.py → SUBTYPE_EQUIVALENCES · docs/SCORING.md.",
         widths=[2, 30, 60, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 2],
     )
     row = section_row(ws, row, "Equivalence families (subtype_accuracy_equiv)")

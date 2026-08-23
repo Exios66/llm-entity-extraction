@@ -142,7 +142,7 @@ def main_with_args(argv: list[str]) -> int:
                              "measurements: unchunked extraction head+tail-truncates long "
                              "docs, which drops the mid-document restriction/covenant "
                              "families and collapses term_length (the Phasebio confound, "
-                             "memos/contracts_specialist_v28.md).")
+                             "docs/memos/contracts_specialist_v28.md).")
     parser.add_argument("--chunk-chars", type=int, default=90_000,
                         help="Chunk window size for --chunked (default: 90000 chars)")
     parser.add_argument("--chunk-overlap", type=int, default=8_000,
@@ -250,7 +250,7 @@ def main_with_args(argv: list[str]) -> int:
         else:
             print("  WARNING: --chunked off — key_obligations/term_length measurements are "
                   "truncation-confounded on long documents (the Phasebio confound: 0.125 "
-                  "unchunked vs 0.94 chunked; see memos/contracts_specialist_v28.md). Use "
+                  "unchunked vs 0.94 chunked; see docs/memos/contracts_specialist_v28.md). Use "
                   "--chunked for production-representative extraction A/Bs.")
         return 0
 

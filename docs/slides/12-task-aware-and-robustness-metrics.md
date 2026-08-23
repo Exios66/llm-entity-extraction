@@ -121,7 +121,7 @@ metrics (`scripts/reporting/monte_carlo_*.py` → `reports/monte_carlo/`):
 The GEPA prompt-iteration loop folds the paired-bootstrap ablation +
 committee-voting robustness in as a **champion-contender selection step**
 (KANBAN-049). Full results + interpretation:
-`memos/monte_carlo_robustness.md`.
+`docs/memos/monte_carlo_robustness.md`.
 
 ---
 
