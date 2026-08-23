@@ -4,17 +4,24 @@
 
 - Python 3.10+ (tested on 3.13)
 - An [OpenRouter](https://openrouter.ai) API key (the eval LLM gateway)
-- Optional but recommended: `pip install sentence-transformers` for the local
-  embedding rescue (free, offline)
+- Optional but recommended: the `embeddings` batch (`pip install -r
+  requirements/embeddings.txt`) for the local embedding rescue (free, offline)
 
 ## Setup
+
+Dependencies are purpose-scoped batches (KANBAN-081): `requirements.txt` is
+the CORE floor only (agent → prompt → scoring chain). Add task batches as
+needed — `tracing` (Langfuse/Phoenix), `evals` (Braintrust), `datasets`
+(HF publishers + vision), `reporting` (decks/plots/xlsx), `embeddings`,
+`dev` (tests), or everything via `all` — see README §Setup for the full table.
 
 ```bash
 git clone https://github.com/Exios66/llm-entity-extraction
 cd llm-entity-extraction
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .            # agents/src/config importable from any codebase
+pip install -r requirements.txt            # core only
+pip install -r requirements/all.txt        # + every non-dev batch for eval work
+pip install -e .                           # agents/src/config importable from any codebase
 cp config/environments/braintrust.env.example config/environments/braintrust.env   # Braintrust org/project keys
 cp config/environments/.env.example config/environments/.env                       # OPENROUTER_API_KEY (+ Langfuse keys for mirrors)
 ```

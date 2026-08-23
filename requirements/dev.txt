@@ -1,0 +1,9 @@
+# Dev / test batch (KANBAN-081).
+# The network-free pytest suite needs core + the tracing modules' tests +
+# xlsx-parsing exporter tests. Install AFTER core (and after any batch whose
+# surfaces you touch):
+#     pip install -r requirements.txt -r requirements/dev.txt
+
+-r tracing.txt
+pytest>=8.0
+pytest-mock>=3.14

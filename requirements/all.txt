@@ -1,0 +1,8 @@
+# Convenience batch (KANBAN-081): everything non-dev in one flag.
+# Mirrors the [all] extra in pyproject.toml.
+
+-r tracing.txt
+-r evals.txt
+-r datasets.txt
+-r reporting.txt
+-r embeddings.txt

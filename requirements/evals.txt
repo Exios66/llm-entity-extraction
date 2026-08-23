@@ -1,0 +1,7 @@
+# Evals batch (KANBAN-081).
+# Imported by src/braintrust_utils.py, src/braintrust_config.py and every
+# scripts/eval/run_*_eval.py runner (Braintrust dataset streaming +
+# experiment logging). Braintrust stays read-only for dataset hosting by
+# default (BRAINTRUST_LOGGING=disabled).
+
+braintrust>=0.31

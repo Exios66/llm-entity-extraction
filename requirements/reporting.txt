@@ -1,0 +1,10 @@
+# Reporting batch (KANBAN-081).
+# Decks, EDA plots, xlsx exports:
+#   - numpy + matplotlib: scripts/eda/*, scripts/reporting/confusion_matrix.py,
+#     src/monte_carlo.py
+#   - openpyxl: scripts/reporting/export_*_deck.py (previously UNDECLARED —
+#     worked only in venvs that carried it transitively)
+
+numpy>=1.26.0
+matplotlib>=3.9.0
+openpyxl>=3.1

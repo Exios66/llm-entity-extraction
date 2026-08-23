@@ -1,0 +1,10 @@
+# Datasets batch (KANBAN-081).
+# Corpus publishers + PDF/vision ingestion:
+#   - huggingface_hub: scripts/datasets/publish_*.py (HF dataset family)
+#   - Pillow + pdf2image: src/image_utils.py vision path and
+#     scripts/datasets/stream_cuad_to_bt.py page rendering (pdf2image
+#     additionally needs the poppler system binary at runtime)
+
+huggingface_hub>=0.24
+Pillow>=10.4.0
+pdf2image>=1.17

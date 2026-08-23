@@ -1,0 +1,12 @@
+# Tracing batch (KANBAN-081).
+# Observability for the eval runners — the DEFAULT sink is Arize Phoenix
+# (local, OpenTelemetry-native) with Langfuse as the configured primary when
+# keys exist; src/tracing.py::resolve_tracer() picks per run and the record's
+# tracing_backend field reports which fired.
+# NOTE: these were missing from pyproject.toml entirely before KANBAN-081 —
+# a bare `pip install -e .` could not import src/tracing.py.
+
+arize-phoenix>=4.0
+opentelemetry-sdk>=1.20
+opentelemetry-exporter-otlp-proto-http>=1.20
+langfuse>=3.0

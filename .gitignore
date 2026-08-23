@@ -147,3 +147,6 @@ renv/staging/
 
 # Graphify build artifacts (graphs live in the sibling -graph Pages repos)
 graphify-out/
+
+# setuptools/quarto transient build output (never commit)
+/build/

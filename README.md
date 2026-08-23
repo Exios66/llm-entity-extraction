@@ -387,14 +387,36 @@ served by GitHub Pages — **no Actions runners**:
 
 ## Setup
 
+Dependencies ship as purpose-scoped batches (KANBAN-081): install only what
+your operative task needs. The core floor is deliberately small — exactly the
+agent → prompt → scoring chain (all llm-mailroom imports):
+
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # recommended; .venv/ is gitignored
-pip install -r requirements.txt
-# vision pipeline needs poppler for PDF -> PNG rendering:
-brew install poppler   (or apt install poppler-utils)
+pip install -r requirements.txt                      # CORE only
 cp config/environments/braintrust.env.example config/environments/braintrust.env   # fill in creds (org/project/API key)
 cp config/environments/.env.example config/environments/.env                       # fill in OPENROUTER_API_KEY
 ```
+
+Add task-specific batches on top (each mirrors a pyproject extra; membership
+pinned by `tests/test_dependency_manifests.py`):
+
+| Batch | Install | Unlocks |
+|---|---|---|
+| `tracing` | `pip install -r requirements/tracing.txt` | Langfuse + Arize Phoenix observability (default eval-runner sink) |
+| `evals` | `pip install -r requirements/evals.txt` | Braintrust dataset streaming / experiment logging |
+| `datasets` | `pip install -r requirements/datasets.txt` | HF Hub publishers + PDF/vision page rendering |
+| `reporting` | `pip install -r requirements/reporting.txt` | Decks, EDA plots, xlsx exports |
+| `embeddings` | `pip install -r requirements/embeddings.txt` | Local semantic embedding rescue (pulls torch ~2–3 GB) |
+| `dev` | `pip install -r requirements/dev.txt` | Test suite (includes the tracing modules' deps) |
+| `all` | `pip install -r requirements/all.txt` | Every non-dev batch in one flag |
+
+Equivalent package extras: `pip install -e ".[tracing]"`, `-e ".[evals]"`,
+`-e ".[datasets]"`, `-e ".[reporting]"`, `-e ".[embeddings]"`,
+`-e ".[dev]"`, `-e ".[all]"`.
+
+The vision pipeline additionally needs the poppler system binary for PDF → PNG
+rendering: `brew install poppler` (or `apt install poppler-utils`).
 
 The repo is also pip-installable so the LangChain agents can be imported and
 called from OTHER codebases (e.g. the llm-mailroom LangGraph architecture):
@@ -407,12 +429,12 @@ from agents.judge_agent import JudgeAgent
 from agents.specialist_agents import ContractsSpecialist
 ```
 
-Optional — local semantic embedding rescue (recommended): install
-`sentence-transformers` to embed with the local `all-MiniLM-L6-v2` model
+Optional — local semantic embedding rescue (recommended): install the
+`embeddings` batch to embed with the local `all-MiniLM-L6-v2` model
 (free, fast, offline, reproducible) instead of paid OpenRouter embedding calls:
 
 ```bash
-pip install sentence-transformers   # pulls torch (~2-3 GB)
+pip install -r requirements/embeddings.txt   # or: pip install -e ".[embeddings]"  (pulls torch ~2-3 GB)
 ```
 
 Both routes are verified and interchangeable: the scorer uses the local model

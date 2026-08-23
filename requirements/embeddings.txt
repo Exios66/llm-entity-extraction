@@ -1,0 +1,6 @@
+# Embeddings batch (KANBAN-081, unchanged from the legacy [embeddings] extra).
+# Local embedding rescue for extraction scoring: sentence-transformers embeds
+# with all-MiniLM-L6-v2; when absent the rescue falls back to OpenRouter
+# embeddings automatically. Lazy + graceful degradation — core never imports it.
+
+sentence-transformers>=3.0

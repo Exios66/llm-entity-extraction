@@ -1,44 +1,34 @@
-# Mailroom prompt experiment loop — runtime dependencies.
+# llm-entity-extraction — CORE runtime dependencies only (KANBAN-081).
 # Python 3.10+ (tested on 3.13).
+#
+# This is the minimal floor for the agent -> prompt -> scoring chain
+# (llm-mailroom imports exactly this surface). Install task-specific
+# batches SEPARATELY so you never pull more than your operative needs:
+#
+#     pip install -r requirements/tracing.txt     # Langfuse + Arize Phoenix observability
+#     pip install -r requirements/evals.txt       # Braintrust dataset streaming / eval harness
+#     pip install -r requirements/datasets.txt    # HF Hub publishers + PDF/vision ingestion
+#     pip install -r requirements/reporting.txt   # decks, EDA plots, xlsx exports
+#     pip install -r requirements/embeddings.txt  # local embedding rescue (pulls torch ~2-3 GB)
+#     pip install -r requirements/all.txt         # everything non-dev
+#     pip install -r requirements/dev.txt         # test suite
+#
+# Equivalently via package extras: pip install -e ".[tracing]" etc.
+# Membership is pinned by tests/test_dependency_manifests.py.
 
 # LLM framework
 langchain-core>=1.0
 langchain-openai>=0.3
-langchain>=1.0
 openai>=1.60
 
-# LLM provider calls
+# Provider calls + config
 requests>=2.32.0
 python-dotenv>=1.0.0
-
-# Braintrust evaluation + LangChain tracing integration
-braintrust>=0.31
-
-# Langfuse tracing (mirror eval environment — separate project/keys)
-langfuse>=3.0
-
-# Arize Phoenix tracing — local OpenTelemetry-native tracing (default)
-arize-phoenix>=4.0
-opentelemetry-sdk>=1.20
-opentelemetry-exporter-otlp-proto-http>=1.20
 
 # Config / logging
 PyYAML>=6.0
 structlog>=24.0
 
-# Document image processing (vision classification path)
-Pillow>=10.4.0
-
-# Data / reporting
-pandas>=2.0.0
-numpy>=1.26.0
-matplotlib>=3.9.0
-pyarrow>=15.0.0
-
-# Scoring / error-analysis / visualization / report library (pinned v0.7.0;
-# the single source of scoring definitions shared with llm-mailroom)
+# Scoring library shared with llm-mailroom (pinned v0.7.0 — single source of
+# scoring definitions across both repos)
 llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.7.0
-
-# Dev / test
-pytest>=8.0
-pytest-mock>=3.14
