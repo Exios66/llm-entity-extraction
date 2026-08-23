@@ -144,3 +144,6 @@ renv/staging/
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Graphify build artifacts (graphs live in the sibling -graph Pages repos)
+graphify-out/
