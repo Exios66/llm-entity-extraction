@@ -283,7 +283,7 @@ def main_with_args(argv: list[str]) -> int:
         "built_utc": manifest["built_utc"],
         "parseable": total - unparseable,
         "total": total,
-        "labeler_tests": "36",
+        "labeler_tests": "40",
     }
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
