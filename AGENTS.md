@@ -135,7 +135,7 @@ carries task state lives in private channels. Channel hierarchy:
 | GitHub issues (label `kanban`) | mirror of a synced card's status + externally verifiable completion | synced cards' status (must never disagree with the board) |
 | Commit messages | card references (`MESSAGE BOARD: KANBAN-00N ...` / `KANBAN-00N (vX): ...`) | which commit landed which card |
 | `CHANGELOG.md` | release-level history | what shipped in which version |
-| `memos/*.md` | research findings worth archiving for collaborators | documented results |
+| `docs/memos/*.md` | research findings worth archiving for collaborators | documented results |
 | `reports/experiment_log.{jsonl,md}` | run data (scores, tokens, outputs) | experiment records |
 
 What to post, and when — every entry is dated (`YYYY-MM-DD`), card-referenced
@@ -470,7 +470,7 @@ Key modules:
 ## Scoring model (read before touching scorers)
 
 The canonical, formula-level reference for every scorer and metric is
-**`SCORING.md`** — where scoring lives (the **`llm-dojo-scoring` package**,
+**`docs/SCORING.md`** — where scoring lives (the **`llm-dojo-scoring` package**,
 pinned `@v0.7.0` and shared with llm-mailroom; the local `src/` modules are
 thin re-export shims), classification, binary, multiclass, subtype, docclass
 hierarchical, task-aware (MAUD / LegalBench / court opinions / chained), the
@@ -636,7 +636,7 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
    enforces it).
 3. **Update repository documentation when the change touches it** —
    `README.md` (layout tree, command examples, prompt tables, the Website
-   section), `docs/README.md` (the site's own doc), `SCORING.md` (formula/
+   section), `docs/README.md` (the site's own doc), `docs/SCORING.md` (formula/
    metric changes), and this `AGENTS.md` itself (workflow/architecture
    changes). Never skip docs that describe the thing that changed.
    Sweep `board/MESSAGE_BOARD.md`: move shipped cards to the Archive under this
@@ -857,7 +857,7 @@ judgment.
   prints a dry-run warning when off. Noise floor on the 50-doc chunked
   surface at temp 0.1: ±0.03 overall (identical-prompt rerun) — a candidate
   delta inside that band is a logic repair, not a win (see
-  `memos/contracts_specialist_v30.md`).
+  `docs/memos/contracts_specialist_v30.md`).
 - **Extractor scope (v10/v11)**: `key_obligations` is scoped to the CUAD
   restriction/covenant families (the GT spans — mean 7.4, max 22 items);
   general operative duties are NOT expected items. Output cleanliness
@@ -955,7 +955,7 @@ body becomes the agent's prompt):
 
 ## Research memos
 
-`memos/*.md` are the archived research memoranda — key findings from
+`docs/memos/*.md` are the archived research memoranda — key findings from
 experimental runs and prompt iterations, written for collaborators and
 presentation. Format: **Research question** opener, **Companions** links,
 `## Answer, Response, + Summary of Results` with a **Short answer**, data
