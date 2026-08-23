@@ -11,7 +11,7 @@ that generalizes scoring to MAUD / LegalBench / multiclass / court opinions /
 chained runs, and the **Monte Carlo robustness** suite that simulates what-if
 pipelines over the stored reasoning corpus — all without spending LLM budget.
 
-All of it lives in the shared `llm-dojo-scoring` package (`@v0.2.0`), reached
+All of it lives in the shared `llm-dojo-scoring` package (`@v0.7.0`), reached
 through the repo's thin `src/*.py` shims.
 
 ---

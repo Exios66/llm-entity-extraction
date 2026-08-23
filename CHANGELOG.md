@@ -6,6 +6,11 @@ tagged `vX.Y.Z`; each version maps to a single commit, so the changelog is a
 history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+### Changed
+
+- **Scoring-documentation currency pass — every `llm-dojo-scoring` reference brought up to the live `@v0.7.0` pin:** five doc surfaces still described the outsourcing era's `@v0.2.0` pin (or a one-off `v0.4.0` task-kind ref) even though the dependency has been re-pinned three times since (v0.5.1 KANBAN-061, v0.6.0 KANBAN-062/063, v0.7.0 KANBAN-067): `SCORING.md` §0 + the "Scoring model" preamble in `AGENTS.md` + `README.md` §Scoring now all read `@v0.7.0`, and the ContractEval runner row no longer cites a stale upstream version. `SCORING.md` gains **§0.1 "The unified scoring layer & the score-emitter bridge"** documenting what v0.19.0 adopted but never documented on this page: the package-side `registry` (T0 HEADLINE/T1 CORE/T2 DEEP/T3 LOG tiers, built-in default covering both consumers' emission surfaces incl. all 37 mailroom SCORE_CONFIGS names), nine `bundles` task bundles, all 23 agent `profiles` (incl. the Lane A/B review set: `sorter_reviewer`, six per-specialist auditors, `arbiter` — ground-truth-free), the eight document-type-aware `doc_bundles` with the honest-gap mandate and `resolve_doc_bundle()`'s explicit `used_fallback` marker (KANBAN-067), the unified `emitter` (registry-validated emit → JSONL/Langfuse sinks, `get_scorecard(min_tier=...)`, `compare_headlines`), and `pruning` dashboard views — plus this repo's third adapter `src/score_emitter.py` (`build_emitter` / `emit_run_scores` returning `(emitted, skipped)` so unknown names surface as registry work, never silently lost; `dashboard_names`/`headline_names`), which was also missing from the AGENTS.md key-modules table. The expanded package-surface sentence now lists all 25 modules. `wiki/Scoring.md` re-mirrored byte-identical to `SCORING.md` (it had drifted twice: missing the v0.3.0 category-presence routing note AND the entire KANBAN-052 ContractEval §8 block) and pushed to the GitHub wiki via `./wiki/sync-wiki.sh`. Docs-only; zero behavior change; memos/board history deliberately untouched (append-only record).
+
 ## [0.20.0] - 2026-08-23
 ### Added
 

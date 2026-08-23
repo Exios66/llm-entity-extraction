@@ -8,7 +8,7 @@ the run manifests, and `reports/experiment_log.jsonl` never disagree.
 ## 0. Where the scoring lives — the `llm-dojo-scoring` package
 
 The scoring definitions are **outsourced to the `llm-dojo-scoring` package**
-(KANBAN-044 / KANBAN-047, pinned `@v0.2.0` in `pyproject.toml` +
+(KANBAN-044 / KANBAN-047, pinned `@v0.7.0` in `pyproject.toml` +
 `requirements.txt`), the **single source shared with llm-mailroom**. The local
 `src/` modules are thin re-export shims so every import site (eval runners,
 reporting scripts, tests, and llm-mailroom's `pip install -e .` imports) keeps
@@ -37,15 +37,62 @@ Two adapter modules bridge the repo into the package:
   success) against the package's row-dict `classify_docclass_failure`.
 
 Package surface (importable as `llm_dojo_scoring.*`): `bootstrap`,
-`classification`, `config` (all thresholds/equivalence sets/subtype lists/cost
-tables/failure modes), `cost`, `diagnostics`, `equivalences`, `error_analysis`,
-`experiment`, `export`, `failure_modes`, `field_scoring`, `io`, `interpret`,
-`langfuse_sync`, `phoenix_sync`, `report`, `tasks` (§8), `visualize`. Settings
+`classification`, `bundles`, `config` (all thresholds/equivalence sets/subtype
+lists/cost tables/failure modes), `cost`, `diagnostics`, `doc_bundles`,
+`emitter`, `equivalences`, `error_analysis`, `experiment`, `export`,
+`failure_modes`, `field_scoring`, `io`, `interpret`, `langfuse_sync`,
+`phoenix_sync`, `profiles`, `pruning`, `registry`, `report`, `tasks` (§8),
+`visualize`. Settings
 are one `Settings` object (per-module ad-hoc accessors replaced): `configure()`
 for inline overrides, `load_settings()` for YAML files, `get_settings()` /
 `clear_settings_cache()` for the process-wide cached object. CLIs:
 `dojo-analyze` / `dojo-export` / `dojo-sync` (and `python -m
 llm_dojo_scoring.cli`).
+
+### 0.1 The unified scoring layer & the score-emitter bridge (v0.19.0+)
+
+Since KANBAN-061 the package also owns this repo's metric **infrastructure**
+(pinned `@v0.5.1` at adoption, current pin `@v0.7.0`); calculations are
+untouched — Hungarian matching, embedding rescue, bootstrap CI and CUAD
+equivalences all live upstream unchanged:
+
+- **`registry`** — every score name → tier (**T0 HEADLINE** / **T1 CORE** /
+  **T2 DEEP** / **T3 LOG**), units, aggregation, applicable agents. The
+  built-in default covers both consumers' full emission surfaces (incl. all 37
+  llm-mailroom `SCORE_CONFIGS` names, which mailroom validates against at
+  import). Override via `LLM_DOJO_SCORING_REGISTRY` YAML.
+- **`bundles`** — nine task bundles (`classification`, `extraction`,
+  `extraction_open`, `cost`, `factuality`, `laziness_detection`, `audit`,
+  `reporter`, `transcription`), registry-validated.
+- **`profiles`** — **23 agent profiles**, one per pipeline agent's scoring
+  identity: sorter, seven specialists (incl. `insurance_claims_specialist`),
+  judge/boss/reporter/transcribers/archivist/audit_agent, plus the Lane A/B
+  review set (`sorter_reviewer`, six per-specialist auditors, `arbiter`) that
+  never require ground truth. YAML overlay via `LLM_DOJO_SCORING_PROFILES`.
+- **`doc_bundles`** (KANBAN-067) — eight document-type-aware
+  `DOC_TYPE_BUNDLES` (`contract`, `merger_agreement`, `corporate_record`,
+  `due_diligence`, `correspondence`, `compliance_filing`, `court_opinion`,
+  `insurance_claim`). Honesty mandate: type-specific metrics ship only where
+  real scorers exist today; pending types declare the gap instead of inventing
+  numbers. `AgentProfile.resolve_doc_bundle()` falls back to a task bundle
+  with an EXPLICIT `used_fallback=True` marker.
+- **`emitter`** — unified fan-out: registry-validated `emit_score` → sinks
+  (`LocalManifestSink` JSONL; `LangfuseSink` inert unless credentials resolve);
+  aggregated `get_scorecard(agent, run_id, min_tier=...)` + T0-only
+  `compare_headlines`.
+- **`pruning`** — dashboard views: `dashboard_metrics(agent)` (profile bundle ∩
+  T0+T1), `headline_metrics(agent)` (strictly T0), `prune_records`.
+
+This repo consumes that layer through a third adapter module:
+
+- **`src/score_emitter.py`** — thin bridge over `emitter` + `pruning`:
+  `build_emitter(manifest_path=None, *, langfuse=False)` (local JSONL sink at
+  `reports/scores_manifest.jsonl`, optional Langfuse sink that stays inert
+  without credentials), `emit_run_scores(emitter, agent, run_id, metrics)` →
+  `(emitted, skipped)` (registry-unknown or `None` names are returned as
+  skipped — new KPIs surface as registry work, never silently lost), and
+  `dashboard_names(agent)` / `headline_names(agent)` tier-capped views.
+
 
 ## 1. Label normalization (`llm_dojo_scoring.classification`)
 
@@ -133,7 +180,7 @@ lookups on it:
 | `overall_extraction_score` | mean of per-field content scores over expected fields with a non-null expected value (`overall_score` in the composite). |
 | `field_presence` | binary conformance: share of expected fields the model populated (non-null/non-empty). |
 | `schema_valid` | `1.0` iff the model returned parseable, schema-conformant JSON. |
-| `category_presence` | CUAD YES/NO category conformance: share of the document's applicable presence-type categories (labeled clauses that must be covered) whose clause text is present in the extraction. Absent categories are satisfied unless fabricated (the factuality guard catches fabrication). |
+| `category_presence` | CUAD YES/NO category conformance: share of the document's applicable presence-type categories (labeled clauses that must be covered) whose clause text is present in the extraction. Absent categories are satisfied unless fabricated (the factuality guard catches fabrication). Since llm-dojo-scoring v0.3.0 (issue #21): the evaluator first routes each category to the reasoning-trace entry tagged with the canonical CUAD category name (v33 retag), else to the DISAGGREGATED spans of the category's mapped field, and a category is matched when any candidate span covers the labeled clause by token containment (≥ `verification_token_coverage` 0.7) or embedding similarity (≥ `presence_embedding_threshold` 0.7). |
 | `overall_verified_precision` | factuality guard: mean `verified_precision` over every audited field (list + scalar) the model populated — anchored to exactly the components that make it up. |
 | `{field}_score` (`--bt-scores full`) | the field's content score (same number that feeds `overall_extraction_score`). |
 | `{field}_f1` (`--bt-scores full`) | the SAME list score that feeds the per-field score (GT coverage for partial-GT fields, F1 otherwise) — tracker consistency rule. |
@@ -313,17 +360,41 @@ Per-row flags carried in the record: `doc_type_ok`, `subclass_ok`,
 The CUAD-focused suite generalized to every task kind the eval loop produces
 (KANBAN-047 / issue #19). `task_kind(task)` maps a task key to a scoring kind
 via `TASK_KINDS` (`subtype`, `doc_class`, `docclass`, `maud_docclass`,
-`maud_question`, `legalbench`, `multiclass`, `court_opinion`, `chained`;
-unknown keys fall back to the task name → plain label classification).
-`score_task(task, expected, predicted, *, valid=, expected_subclass=,
-predicted_subclass=, seed=42, n_boot=2000)` returns a task-appropriate score
-dict — exact match + per-class + confusion + bootstrap CIs for the
-label-classification kinds, plus binary metrics for LegalBench, plus the
-doc_type/subclass pair for the hierarchical kinds. All are deterministic pure
-functions over `(predicted, expected)` pairs so offline rescoring, manifest
-re-scoring, and live scoring never disagree; failed rows (`ERROR_PREFIX`) count
-as mismatches in the headline and are skipped by per-class/confusion
-breakdowns.
+`maud_question`, `legalbench`, `multiclass`, `court_opinion`, `chained`,
+`contracteval`; unknown keys fall back to the task name → plain label
+classification). `score_task(task, expected, predicted, *, valid=,
+expected_subclass=, predicted_subclass=, seed=42, n_boot=2000)` returns a
+task-appropriate score dict — exact match + per-class + confusion + bootstrap
+CIs for the label-classification kinds, plus binary metrics for LegalBench,
+plus the doc_type/subclass pair for the hierarchical kinds. All are
+deterministic pure functions over `(predicted, expected)` pairs so offline
+rescoring, manifest re-scoring, and live scoring never disagree; failed rows
+(`ERROR_PREFIX`) count as mismatches in the headline and are skipped by
+per-class/confusion breakdowns.
+
+**ContractEval** (KANBAN-052 / arXiv 2508.03080, `llm_dojo_scoring.tasks`
+v0.4.0, the `contracteval` task kind) — the directly-mirrored clause-level
+legal-risk benchmark: one (contract, question) call per row over the CUAD test
+split (4,182 pairs / 102 contracts / 41 categories; 1,244 positives). The
+rubric mirrors the paper's `Evaluation.py` + `open_source_model.py` EXACTLY:
+`score_task("contracteval", expected_spans, outputs, categories=...)` where
+`expected_spans` is a list of GT label-span lists (empty = absent category) and
+`outputs` the raw model answers. Confusion — TP = every GT span
+verbatim-contained in the output (`contracteval_classified`); TN = absent
+category + `No related clause.` (`said_no_related`); FP = absent category +
+non-empty clause; FN = present category + no-related or partial coverage —
+drives accuracy/precision/recall/F1/F2. Output effectiveness = mean/median
+token-set **Jaccard** (`get_jaccard`: strip `.,;:`, lowercase, `/`→space,
+|∩|/|∪|) over **positive** pairs. Laziness = `no_related_rate` (over all
+pairs) and `false_no_related_rate` — reported over BOTH the run's own positive
+count and the paper's hardcoded **1,244** denominator
+(`false_no_related_rate_paper`). Per-category metrics (`per_category`, the
+paper's Fig-4 analogue) when `categories` is supplied. Fidelity: faithful
+full-context (the paper feeds each contract whole, up to 301k chars; the
+`contracteval` runner disables the input cap), temperature 0, max_tokens 5000.
+The paper's reported 4,128 total is a 54-negative-row-smaller snapshot of the
+same `test.json`; the positive set is identical, so F1/F2/Jaccard/false-nr are
+directly comparable.
 
 **MAUD** — `maud_docclass_score(...)` (merger-agreement doc_type +
 consideration-type subclass with strict + `subclass_accuracy_equiv` scoring)
@@ -488,6 +559,31 @@ operates on the stored rows + the eval manifest's expected spans:
 4. **Recovery check** — re-run the same unmatched-span extraction against
    the candidate prompt's rows to quantify exactly which spans and which
    families a change recovered, before trusting the composite delta.
+
+## 17. ContractEval mapping scorer (`src/contracteval.py`, KANBAN-051)
+
+Benchmarks stored extraction runs against ContractEval (arXiv 2508.03080)
+with ContractEval's EXACT rubric, bridging the task-unit gap (they run one
+(contract, question) per category; we extract the obligation lists in one
+pass). Run via
+`python scripts/reporting/run_contracteval_mapping.py` (offline, free).
+
+- **GT**: `data/cuad/master_clauses.csv` — full per-category clause spans +
+  presence, joined to stored rows by aggressive filename normalization.
+- **Mapping**: each disaggregated predicted span is attributed to the CUAD
+  category it covers — reasoning-trace routing first (v33 retag), then
+  verbatim label containment, then every category with best expected-within-
+  predicted containment ≥ 0.5. The per-category answer is the union of its
+  mapped spans, else "no related clause".
+- **Metrics (ContractEval-verbatim)**: pooled correctness accuracy/P/R/F1/F2
+  with TP = *all* GT label spans verbatim-contained in the answer; token-set
+  Jaccard over positive-label pairs; false-"no related clause" rate over
+  positive-label pairs. `coverage_bands` adds the semantic lens (best-span
+  containment ≥ 0.7/0.5/0.3) to separate paraphrase penalty from missing
+  extraction.
+- **Caveat**: a one-pass extractor never claims a category the GT marks
+  absent, so precision is structurally 1.0 — the discriminating axes vs
+  ContractEval are recall / F2 / Jaccard / false-rate.
 
 ## Run sink & tracing (how scores reach a UI)
 

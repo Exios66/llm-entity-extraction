@@ -463,6 +463,7 @@ Key modules:
 | `src/experiment_log.py` | append-only JSONL + markdown renderer (tables, confusion matrices, scoring matrices, outputs, failure insights); `render_full_log()` for the rebuild; the append/git-snapshot/mean/tokens core re-exports `llm_dojo_scoring.experiment` + `.cost`. |
 | `src/evaluation.py` | dataset validation, fingerprints, `ManifestStore` (thread-safe JSONL resume checkpoints), adaptive `resolve_concurrency`, `call_with_rate_limit_retry`. |
 | `src/scorers.py` | re-export shim → `llm_dojo_scoring.classification` (deterministic scorers exact_match, failure, `normalize_label`) + the local `cost` scorer and name registry. |
+| `src/score_emitter.py` | bridge → `llm_dojo_scoring.emitter` + `.pruning` (KANBAN-061 unified layer): `build_emitter()` (JSONL manifest sink + inert-unless-configured Langfuse), `emit_run_scores()` (registry-validated; unknown/None names returned as skipped, never dropped), `dashboard_names()` / `headline_names()` tier-capped views. |
 | `src/braintrust_utils.py` | Braintrust HTTP: list/fetch experiments, load/upload datasets, attachment handling. |
 | `agents/` | LangChain agents: `BaseAgent` (structured output, vision, `_last_usage`, head+tail `truncate_input`), `SorterAgent` (doc_type + 25 contract subtypes, default `reasoning_effort="medium"`, `SUBTYPE_EQUIVALENCES`), specialists (per-class schemas), `JudgeAgent` (offline classification/completeness/correctness). |
 
@@ -470,7 +471,7 @@ Key modules:
 
 The canonical, formula-level reference for every scorer and metric is
 **`SCORING.md`** — where scoring lives (the **`llm-dojo-scoring` package**,
-pinned `@v0.2.0` and shared with llm-mailroom; the local `src/` modules are
+pinned `@v0.7.0` and shared with llm-mailroom; the local `src/` modules are
 thin re-export shims), classification, binary, multiclass, subtype, docclass
 hierarchical, task-aware (MAUD / LegalBench / court opinions / chained), the
 field-type-aware content scorer, factuality audit, judge calibration, chained

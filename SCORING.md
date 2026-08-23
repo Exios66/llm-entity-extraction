@@ -8,7 +8,7 @@ the run manifests, and `reports/experiment_log.jsonl` never disagree.
 ## 0. Where the scoring lives — the `llm-dojo-scoring` package
 
 The scoring definitions are **outsourced to the `llm-dojo-scoring` package**
-(KANBAN-044 / KANBAN-047, pinned `@v0.2.0` in `pyproject.toml` +
+(KANBAN-044 / KANBAN-047, pinned `@v0.7.0` in `pyproject.toml` +
 `requirements.txt`), the **single source shared with llm-mailroom**. The local
 `src/` modules are thin re-export shims so every import site (eval runners,
 reporting scripts, tests, and llm-mailroom's `pip install -e .` imports) keeps
@@ -37,15 +37,62 @@ Two adapter modules bridge the repo into the package:
   success) against the package's row-dict `classify_docclass_failure`.
 
 Package surface (importable as `llm_dojo_scoring.*`): `bootstrap`,
-`classification`, `config` (all thresholds/equivalence sets/subtype lists/cost
-tables/failure modes), `cost`, `diagnostics`, `equivalences`, `error_analysis`,
-`experiment`, `export`, `failure_modes`, `field_scoring`, `io`, `interpret`,
-`langfuse_sync`, `phoenix_sync`, `report`, `tasks` (§8), `visualize`. Settings
+`classification`, `bundles`, `config` (all thresholds/equivalence sets/subtype
+lists/cost tables/failure modes), `cost`, `diagnostics`, `doc_bundles`,
+`emitter`, `equivalences`, `error_analysis`, `experiment`, `export`,
+`failure_modes`, `field_scoring`, `io`, `interpret`, `langfuse_sync`,
+`phoenix_sync`, `profiles`, `pruning`, `registry`, `report`, `tasks` (§8),
+`visualize`. Settings
 are one `Settings` object (per-module ad-hoc accessors replaced): `configure()`
 for inline overrides, `load_settings()` for YAML files, `get_settings()` /
 `clear_settings_cache()` for the process-wide cached object. CLIs:
 `dojo-analyze` / `dojo-export` / `dojo-sync` (and `python -m
 llm_dojo_scoring.cli`).
+
+### 0.1 The unified scoring layer & the score-emitter bridge (v0.19.0+)
+
+Since KANBAN-061 the package also owns this repo's metric **infrastructure**
+(pinned `@v0.5.1` at adoption, current pin `@v0.7.0`); calculations are
+untouched — Hungarian matching, embedding rescue, bootstrap CI and CUAD
+equivalences all live upstream unchanged:
+
+- **`registry`** — every score name → tier (**T0 HEADLINE** / **T1 CORE** /
+  **T2 DEEP** / **T3 LOG**), units, aggregation, applicable agents. The
+  built-in default covers both consumers' full emission surfaces (incl. all 37
+  llm-mailroom `SCORE_CONFIGS` names, which mailroom validates against at
+  import). Override via `LLM_DOJO_SCORING_REGISTRY` YAML.
+- **`bundles`** — nine task bundles (`classification`, `extraction`,
+  `extraction_open`, `cost`, `factuality`, `laziness_detection`, `audit`,
+  `reporter`, `transcription`), registry-validated.
+- **`profiles`** — **23 agent profiles**, one per pipeline agent's scoring
+  identity: sorter, seven specialists (incl. `insurance_claims_specialist`),
+  judge/boss/reporter/transcribers/archivist/audit_agent, plus the Lane A/B
+  review set (`sorter_reviewer`, six per-specialist auditors, `arbiter`) that
+  never require ground truth. YAML overlay via `LLM_DOJO_SCORING_PROFILES`.
+- **`doc_bundles`** (KANBAN-067) — eight document-type-aware
+  `DOC_TYPE_BUNDLES` (`contract`, `merger_agreement`, `corporate_record`,
+  `due_diligence`, `correspondence`, `compliance_filing`, `court_opinion`,
+  `insurance_claim`). Honesty mandate: type-specific metrics ship only where
+  real scorers exist today; pending types declare the gap instead of inventing
+  numbers. `AgentProfile.resolve_doc_bundle()` falls back to a task bundle
+  with an EXPLICIT `used_fallback=True` marker.
+- **`emitter`** — unified fan-out: registry-validated `emit_score` → sinks
+  (`LocalManifestSink` JSONL; `LangfuseSink` inert unless credentials resolve);
+  aggregated `get_scorecard(agent, run_id, min_tier=...)` + T0-only
+  `compare_headlines`.
+- **`pruning`** — dashboard views: `dashboard_metrics(agent)` (profile bundle ∩
+  T0+T1), `headline_metrics(agent)` (strictly T0), `prune_records`.
+
+This repo consumes that layer through a third adapter module:
+
+- **`src/score_emitter.py`** — thin bridge over `emitter` + `pruning`:
+  `build_emitter(manifest_path=None, *, langfuse=False)` (local JSONL sink at
+  `reports/scores_manifest.jsonl`, optional Langfuse sink that stays inert
+  without credentials), `emit_run_scores(emitter, agent, run_id, metrics)` →
+  `(emitted, skipped)` (registry-unknown or `None` names are returned as
+  skipped — new KPIs surface as registry work, never silently lost), and
+  `dashboard_names(agent)` / `headline_names(agent)` tier-capped views.
+
 
 ## 1. Label normalization (`llm_dojo_scoring.classification`)
 
