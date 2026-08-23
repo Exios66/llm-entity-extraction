@@ -138,7 +138,11 @@ def test_dedup_imports_body_hash_from_enron_repo_dedupe_module():
     src = _src(DEDUP_PUBLISHER)
     assert "dedupe.py" in src                       # the shared module
     assert "body_hash" in src                       # the shared function
-    assert "load_dedupe_module" in src              # loaded from ENRON_SCRIPTS,
+    # KANBAN-079: generic load_module() now serves dedupe + BOTH enrichment
+    # labelers from ENRON_SCRIPTS — still loaded, never a local fork
+    assert 'args.enron_scripts / "dedupe.py"' in src
+    assert 'args.enron_scripts / "content_topics.py"' in src
+    assert 'args.enron_scripts / "sentiment_scorer.py"' in src
     assert "Enron-Evaluation-Environment" in src    # never a local fork
 
 
@@ -164,13 +168,16 @@ def test_dedup_pins_empty_body_and_first_occurrence_semantics():
 
 def test_dedup_keeps_schema_guard():
     src = _src(DEDUP_PUBLISHER)
-    assert "fail the schema guard" in src           # same refusal as 073/074
+    # KANBAN-079 widened the guard (enrichment validity added); refusal intact
+    assert "fail the enrichment/schema guard" in src
     assert 'not in ("train", "test")' in src
 
 
 def test_dedup_verifies_hub_lfs_sha_after_upload():
     src = _src(DEDUP_PUBLISHER)
-    assert "hub_lfs_sha256" in src
+    # KANBAN-079: PER-FILE LFS sha verification across both config views
+    assert "file_sha256" in src
+    assert "hub_sha == sha" in src
     assert '"verified"' in src
 
 

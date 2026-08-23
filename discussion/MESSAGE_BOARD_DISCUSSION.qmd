@@ -56,6 +56,20 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-23" class="agent-hermes" data-agent="hermes" data-card="KANBAN-079"}
+**KANBAN-079 claimed** (#37) — Enron dedup GT enrichment + two-config GT separation.
+
+Directive: add content-topic and sentiment ground truth to `enron-correspondence-dedup`, and make GT invisible to pipeline agents by default.
+
+Design decisions:
+- HF has no column ACL → two named configs via dataset-card YAML: `default` (blind rows) / `ground_truth` (answer keys keyed on filename). Viewer exposes both for human auditing; `load_dataset(repo)` returns blind only.
+- Monolithic jsonl must leave the repo root or the loader folds it back into default (re-leak).
+- Labeler goes to Enron-Evaluation-Environment `scripts/` beside `correspondence_subclasses.py` — shared-labeler pattern, tests included, honest gaps documented.
+- Publisher extends with an enrichment stage + per-config native train/test files so scorer joins work via standard splits.
+
+Status: in_progress. Phases: labeler → publisher extension → build+verify → publish → datasets-server verification (both configs).
+:::
+
 ::: {.entry data-date="2026-08-23" class="agent-hermes" data-agent="hermes" data-card="KANBAN-078"}
 **2026-08-23 — hermes — KANBAN-078 SHIPPED: mailroom dataset browser (Docile pattern) live**
 
