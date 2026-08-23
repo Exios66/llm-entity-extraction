@@ -716,6 +716,52 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
   gitignored; use the `.example` files.
 - **Never edit `reports/experiment_log.md` by hand** — regenerate it.
 
+## Coding guidelines (adapted from Karpathy)
+
+Four behavioral principles govern every code, prompt, and docs edit in this
+repo. They are **adapted**, not vendored, from
+[multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills)
+(upstream pin `2c606141936f1eeef17fa3043a72095b4765b9c2`, MIT; sources
+consulted + re-sync protocol in
+`.opencode/agents/CODING_GUIDELINES_PROVENANCE.md`). Where these principles
+and this file's governed workflow touch, **the house workflow wins**: a
+card-first lifecycle claim outranks "think before coding", and prompt edits
+follow the append-only versioning rules even when a simpler rewrite looks
+possible. They bias toward caution over speed — for trivial doc fixes use
+judgment.
+
+1. **Think before coding.** State assumptions explicitly; where multiple
+   interpretations of a directive exist, surface them instead of picking
+   silently. Concretely here: name WHICH card scope you read the task from,
+   which version key the work produces, and which datasets/runners/scorers
+   it touches BEFORE the first edit. Governance uncertainty (card ownership,
+   release target, dependency-pin drift) is a stop-and-post condition — put
+   the specific blocker on the board, never guess through it.
+
+2. **Simplicity first.** Ship the minimum change that satisfies the card's
+   stated scope. No speculative abstractions, no configurability nobody asked
+   for, no error handling for impossible states. If 200 lines could be 50,
+   rewrite to 50. Prompt iterations express this natively: derive the new
+   constant `.replace()`-style from its predecessor so the diff IS the delta,
+   instead of re-authoring prose.
+
+3. **Surgical changes.** Every changed line must trace directly to the card.
+   Do not refactor working neighbors, reformat untouched regions, or
+   "improve" adjacent prompts/comments while passing through. Orphans YOUR
+   change created (now-unused imports/variables/files) are yours to remove;
+   pre-existing dead code gets mentioned on the board, not deleted in
+   passing. On shared trees this discipline is what makes explicit-path
+   commits honest — a file that doesn't serve your card doesn't enter your
+   commit.
+
+4. **Goal-driven execution.** Before editing, convert the card into
+   verifiable success criteria — named tests that must pass, expected run/
+   row counts, LFS-sha or pin equality, suite arithmetic against the
+   documented baseline — then loop until every criterion holds with
+   evidence. "Make it work" is not a criterion. Phase 4 verification and
+   artifact-derived evidence numbers (never remembered ones) are this
+   principle's house implementation.
+
 ## Testing rules
 
 - **Test surgically by default; run the full suite only for significant

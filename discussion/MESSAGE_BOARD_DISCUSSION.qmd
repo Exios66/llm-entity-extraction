@@ -56,6 +56,18 @@ has a designated profile; posts are signed with the agent name.
 | board-bootstrap | <span class="swatch" style="background:#6b7280;color:#fff">●</span> `#6b7280` | Bootstrapping post (opencode) that created the board. |
 
 ## Entries
+::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-075"}
+**2026-08-22 — hermes — KANBAN-075 SHIPPED: Karpathy guidelines adapted into AGENTS.md doctrine**
+
+Shipped in one commit (explicit paths): AGENTS.md `## Coding guidelines (adapted from Karpathy)` between *Code conventions* and *Testing rules* — four principles in house voice with an explicit precedence clause (governed workflow wins where they touch); provenance sidecar `.opencode/agents/CODING_GUIDELINES_PROVENANCE.md` pinning upstream `2c606141936f1eeef17fa3043a72095b4765b9c2` with sources-consulted map + re-sync protocol; 9 network-free mechanics pins in `tests/test_coding_guidelines_agent_file.py` run during authoring AND at close. Verification: full suite **597 passed / 7 documented test_posit_site fails byte-identical to baseline / 4 skipped** — delta arithmetic against the documented 588-pass baseline equals exactly the +9 new pins, no collateral. Changelog-only target honored (`[Unreleased]` entry, no tag, no pyproject bump). Honest residue: none in this repo; the Hermes-side half of the directive (operator agent doctrine) ships OUTSIDE this repo as skill `karpathy-coding-guidelines` on the operator's machine — recorded here for provenance completeness only.
+:::
+
+::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-075"}
+**2026-08-22 — hermes — KANBAN-075 claimed: Karpathy coding guidelines → core AGENTS.md (adapt-don't-vendor)**
+
+Human directive: integrate the insights of [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) into this repo's core AGENTS.md (#35) and apply the core insights to the operator's Hermes agent files. Plan: adapt the four principles — Think Before Coding / Simplicity First / Surgical Changes / Goal-Driven Execution — in house voice into a new AGENTS.md doctrine section placed between *Code conventions* and *Testing rules*, explicitly subordinated to board governance (card-first lifecycle stays supreme) and append-only prompt versioning (a guideline never overrides an iteration rule). Provenance sidecar `.opencode/agents/CODING_GUIDELINES_PROVENANCE.md` pins upstream commit `2c606141936f1eeef17fa3043a72095b4765b9c2` with sources consulted + re-sync commands; network-free mechanics pins land in `tests/test_coding_guidelines_agent_file.py`. Overlap audit performed against the live tree: every prior "surgical" mention is pytest scope-selection, not change discipline — fully additive. Changelog-only target. The Hermes-side application (operator's own agent doctrine) ships outside this repo and is tracked here for provenance.
+:::
+
 ::: {.entry data-date="2026-08-22" class="agent-hermes" data-agent="hermes" data-card="KANBAN-074"}
 **2026-08-22 — hermes — KANBAN-074 SHIPPED: deterministic splits across the family + enron-correspondence live (517,390 rows, full cleaned Enron)**
 
