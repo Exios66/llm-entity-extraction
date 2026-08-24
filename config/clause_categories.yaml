@@ -4,384 +4,428 @@
 # Purpose: structured extraction target for ContractsSpecialist, replacing the
 # current fixed 8-field schema with per-category {present, clause_text} pairs.
 #
-# SOURCES:
-#   - Category names + class_id: Hendrycks, D., Burns, C., Chen, A., & Ball, S.
-#     (2021). CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review.
-#     arXiv:2103.06268. Class IDs verified against the CUAD v1 dataset card
-#     (huggingface.co/datasets/dvgodoy/CUAD_v1_Contract_Understanding_clause_classification).
-#   - answer_type split (8 general_info / 33 yes_no): CUAD Datasheet, §I.D —
-#     "8 out of the 41 categories ask for answers that are entity or individual
-#     names, dates... the remaining 33 have a Yes/No answer."
-#   - MAUD categories: user-supplied document (Atticus Project MAUD verbatim
-#     questions), all VERIFIED.
-#
-# CONFIDENCE KEY (see trailing comment on each verbatim_question):
-#   [VERIFIED]   — confirmed word-for-word against a primary CUAD/MAUD source.
-#   [PARAPHRASE] — accurate to the category's documented meaning, built from
-#                  the category name + Atticus Project's published category
-#                  description, but NOT yet checked character-for-character
-#                  against the authoritative source file. Before this goes
-#                  into production scoring, pull the source CSV directly and
-#                  reconcile:
-#                    https://github.com/The-Atticus-Project/cuad/blob/main/category_descriptions.csv
-#                  (raw: .../raw/refs/heads/main/category_descriptions.csv —
-#                  fetch with a normal HTTP client; robots.txt blocked this
-#                  session's fetch tool specifically, it's a public file.)
-#
-# applicable_doc_classes: "all" is a placeholder. Replace per-category with
-# the actual distribution of which sorter-predicted doc_classes contain each
-# category in your own CUAD corpus — you have that data locally, I don't.
-# Filtering by real category-presence-by-doc-type stats will do far more for
-# schema-size reduction than a hand-guessed list would.
+# PROVENANCE (KANBAN-072 reconciliation, 2026-08-24):
+#   - Every CUAD-category verbatim_question below is now CHARACTER-EXACT vs the
+#     primary source:
+#       https://github.com/The-Atticus-Project/cuad/blob/main/category_descriptions.csv
+#     fetched 2026-08-24, sha256 7499950ee04d2ed2841c0f8ec2ef96b91be039bc2ea3c4edcc36334a465b1f36.
+#     History: the previous texts (incl. those quoted in issue #25) were fluent
+#     paraphrases that deviated substantively from the canonical wording in ~30 of
+#     41 categories while carrying a "verbatim" label — e.g. volume_restriction's
+#     old text actually described price_increase_consent. All such drift is gone.
+#   - answer_type now follows the canonical per-category `Answer Format` column:
+#     Yes/No -> yes_no, anything else -> general_info (canonical file shows 9
+#     non-Yes/No CUAD formats; the datasheet prose rounds this to 8).
+#   - MAUD categories keep their #25-sourced question text, honestly tagged:
+#     not yet reconciled against the official MAUD v1 query files.
+#   - applicable_doc_classes remains "all" pending real category-presence stats.
 # =============================================================================
 
 categories:
 
-  # ---------------------------------------------------------------------------
-  # GENERAL INFORMATION (CUAD class_id 0-7) — non-Yes/No, structured fields
-  # ---------------------------------------------------------------------------
-
   document_name:
     class_id: 0
     field_type: name
-    answer_type: general_info
-    verbatim_question: "What is the name of the contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: general_info  # CUAD Answer Format: Contract Name
+    verbatim_question: 'The name of the contract'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   parties:
     class_id: 1
-    field_type: "entity_list:name"
-    answer_type: general_info
-    verbatim_question: "Who are the parties to this contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    field_type: entity_list:name
+    answer_type: general_info  # CUAD Answer Format: Entity or individual names
+    verbatim_question: 'The two or more parties who signed the contract'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   agreement_date:
     class_id: 2
     field_type: date
-    answer_type: general_info
-    verbatim_question: "What is the date of the contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: general_info  # CUAD Answer Format: Date (mm/dd/yyyy)
+    verbatim_question: 'The date of the contract'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   effective_date:
     class_id: 3
     field_type: date
-    answer_type: general_info
-    verbatim_question: "Does the clause specify the date upon which the agreement becomes effective?"  # [VERIFIED — LegalBench cuad_effective_date task, sourced from CUAD]
-    applicable_doc_classes: [all]
+    answer_type: general_info  # CUAD Answer Format: Date (mm/dd/yyyy)
+    verbatim_question: 'The date when the contract is effective'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   expiration_date:
     class_id: 4
     field_type: date
-    answer_type: general_info
-    verbatim_question: "On what date will the contract's initial term expire?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: general_info  # CUAD Answer Format: Date (mm/dd/yyyy) / Perpetual
+    verbatim_question: 'On what date will the contract''s initial term expire?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   renewal_term:
     class_id: 5
     field_type: containment
-    answer_type: general_info
-    verbatim_question: "What is the renewal term after the initial term expires?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: general_info  # CUAD Answer Format: [Successive] number of years/months / Perpetual
+    verbatim_question: 'What is the renewal term after the initial term expires? This includes automatic extensions and unilateral extensions with prior notice.'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   notice_period_to_terminate_renewal:
     class_id: 6
     field_type: containment
-    answer_type: general_info
-    verbatim_question: "What is the notice period required to terminate renewal?"  # [VERIFIED]
-    applicable_doc_classes: [all]
+    answer_type: general_info  # CUAD Answer Format: Number of days/months/year(s)
+    verbatim_question: 'What is the notice period required to terminate renewal?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   governing_law:
     class_id: 7
     field_type: containment
-    answer_type: general_info
-    verbatim_question: "Which state/country's law governs the interpretation of the contract?"  # [VERIFIED]
-    applicable_doc_classes: [all]
-
-  # ---------------------------------------------------------------------------
-  # YES/NO CATEGORIES (CUAD class_id 8-40) — presence + clause extraction
-  # ---------------------------------------------------------------------------
+    answer_type: general_info  # CUAD Answer Format: Name of a US State / non-US Province, Country
+    verbatim_question: 'Which state/country''s law governs the interpretation of the contract?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   most_favored_nation:
     class_id: 8
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract require the party to provide terms to counterparty that are at least as favorable as terms provided to other third parties?"  # [VERIFIED]
-    applicable_doc_classes: [license, distributor, supply, reseller]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a clause that if a third party gets better terms on the licensing or sale of technology/goods/services described in the contract, the buyer of such technology/goods/services under the contract shall be entitled to those better terms?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license", "distributor", "supply", "reseller"]
 
   non_compete:
     class_id: 9
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a restriction on a party's ability to compete with the counterparty during the contract, or after it ends, or to solicit the counterparty's employees or customers during or after the contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a restriction on the ability of a party to compete with the counterparty or operate in a certain geography or business or technology sector?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   exclusivity:
     class_id: 10
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there an exclusive dealing commitment with the counterparty — a commitment to source all requirements from one party, a prohibition on licensing/selling to third parties, or a prohibition on competing with the counterparty?"  # [PARAPHRASE]
-    applicable_doc_classes: [distributor, license, reseller, supply]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there an exclusive dealing  commitment with the counterparty? This includes a commitment to procure all “requirements” from one party of certain technology, goods, or services or a prohibition on licensing or selling technology, goods or services to third parties, or a prohibition on  collaborating or working with other parties), whether during the contract or  after the contract ends (or both).'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["distributor", "license", "reseller", "supply"]
 
   no_solicit_of_customers:
     class_id: 11
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is a party restricted from contracting or soliciting customers or partners of the counterparty, during the contract, after it ends, or both?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is a party restricted from contracting or soliciting customers or partners of the counterparty, whether during the contract or after the contract ends (or both)?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   competitive_restriction_exception:
     class_id: 12
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Are there exceptions or carve-outs to the contract's non-compete, exclusivity, or no-solicit-of-customers provisions?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'This category includes the exceptions or carveouts to Non-Compete, Exclusivity and No-Solicit of Customers above.'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   no_solicit_of_employees:
     class_id: 13
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a restriction on a party soliciting or hiring the counterparty's employees or contractors, during the contract, after it ends, or both?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a restriction on a party’s soliciting or hiring employees and/or contractors from the  counterparty, whether during the contract or after the contract ends (or both)?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   non_disparagement:
     class_id: 14
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a requirement that a party not disparage the counterparty?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a requirement on a party not to disparage the counterparty?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   termination_for_convenience:
     class_id: 15
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Can a party terminate the contract without cause (for convenience) prior to the expiration date?"  # [VERIFIED]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Can a party terminate this  contract without cause (solely by giving a notice and allowing a waiting  period to expire)?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   rofr_rofo_rofn:
     class_id: 16
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a clause granting one party a right of first refusal, first offer, or first negotiation to purchase, license, market, or distribute equity, technology, assets, products, or services?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a clause granting one party a right of first refusal, right of first offer or right of first negotiation to purchase, license, market, or distribute equity interest, technology, assets, products or services?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   change_of_control:
     class_id: 17
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract contain a provision requiring counterparty consent or giving the counterparty a right to terminate in the event of a change of control of a party?"  # [VERIFIED]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does one party have the right to terminate or is consent or notice required of the counterparty if such party undergoes a change of control, such as a merger, stock sale, transfer of all or substantially all of its assets or business, or assignment by operation of law?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   anti_assignment:
     class_id: 18
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract require consent of the counterparty to assign the agreement to a third party or affiliate?"  # [VERIFIED]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is consent or notice required of a party if the contract is assigned to a third party?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   revenue_profit_sharing:
     class_id: 19
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is one party required to share revenue or profit with the counterparty for any technology, goods, or services?"  # [VERIFIED]
-    applicable_doc_classes: [distributor, license, joint_venture, reseller]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is one party required to share revenue or profit with the counterparty for any technology, goods, or services?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["distributor", "license", "joint_venture", "reseller"]
 
   price_restrictions:
     class_id: 20
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract limit or restrict the ability of a party to increase or reduce prices of technology, goods, or services provided?"  # [VERIFIED]
-    applicable_doc_classes: [distributor, license, supply]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a restriction on the  ability of a party to raise or reduce prices of technology, goods, or  services provided?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["distributor", "license", "supply"]
 
   minimum_commitment:
     class_id: 21
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a minimum order size, minimum amount, or minimum units per time period that one party must purchase from the counterparty?"  # [PARAPHRASE]
-    applicable_doc_classes: [distributor, supply, license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a minimum order size or minimum amount or units per-time period that one party must buy from the counterparty under the contract?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["distributor", "supply", "license"]
 
   volume_restriction:
     class_id: 22
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a fixed, minimum, or maximum size or amount of the collaboration, license, sales, distribution, or supply applicable to a party?"  # [PARAPHRASE]
-    applicable_doc_classes: [distributor, supply, license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a fee increase or consent requirement, etc. if one party’s use of the product/services exceeds certain threshold?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["distributor", "supply", "license"]
 
   ip_ownership_assignment:
     class_id: 23
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does intellectual property created by one party become the property of the counterparty, either per the contract's terms or upon certain events?"  # [PARAPHRASE]
-    applicable_doc_classes: [ip, development, license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does intellectual property created  by one party become the property of the counterparty, either per the terms of the contract or upon the occurrence of certain events?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["ip", "development", "license"]
 
   joint_ip_ownership:
     class_id: 24
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a clause providing for joint or shared ownership of intellectual property between the parties?"  # [PARAPHRASE]
-    applicable_doc_classes: [ip, development, joint_venture]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there any clause providing for joint or shared ownership of intellectual property between the parties to the contract?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["ip", "development", "joint_venture"]
 
   license_grant:
     class_id: 25
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract contain a license granted by one party to its counterparty?"  # [PARAPHRASE]
-    applicable_doc_classes: [license, ip]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does the contract contain a license granted by one party to its counterparty?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license", "ip"]
 
   non_transferable_license:
     class_id: 26
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract limit a party's ability to transfer the license being granted to a third party?"  # [PARAPHRASE]
-    applicable_doc_classes: [license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does the contract limit the ability of a party to transfer the license being granted to a third party?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license"]
 
   affiliate_license_licensor:
     class_id: 27
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract contain a license grant by affiliates of the licensor, or that includes intellectual property of licensor affiliates?"  # [PARAPHRASE]
-    applicable_doc_classes: [license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does the contract contain a license grant by affiliates of the licensor or that includes intellectual property of affiliates of the licensor?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license"]
 
   affiliate_license_licensee:
     class_id: 28
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract grant a license to the licensee such that its affiliates are also permitted to use the licensed IP?"  # [PARAPHRASE]
-    applicable_doc_classes: [license]
+    answer_type: general_info  # CUAD Answer Format: 
+    verbatim_question: 'Does the contract contain a license grant to a licensee (incl. sublicensor) and the affiliates of such licensee/sublicensor?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license"]
 
   unlimited_all_you_can_eat_license:
     class_id: 29
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a clause granting one party an enterprise, 'all you can eat,' or unlimited-usage license?"  # [PARAPHRASE]
-    applicable_doc_classes: [license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a clause granting one party an “enterprise,” “all you can eat” or unlimited usage license?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license"]
 
   irrevocable_or_perpetual_license:
     class_id: 30
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract contain a license grant that is irrevocable or perpetual?"  # [VERIFIED]
-    applicable_doc_classes: [license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does the contract contain a  license grant that is irrevocable or perpetual?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license"]
 
   source_code_escrow:
     class_id: 31
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a source code escrow arrangement described in the contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [license, development]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is one party required to deposit its source code into escrow with a third party, which can be released to the counterparty upon the occurrence of certain events (bankruptcy,  insolvency, etc.)?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["license", "development"]
 
   post_termination_services:
     class_id: 32
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is a party subject to obligations after termination or expiration — post-termination transition, payment, IP transfer, wind-down, last-buy, or similar commitments?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is a party subject to obligations after the termination or expiration of a contract, including any post-termination transition, payment, transfer of IP, wind-down, last-buy, or similar commitments?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   audit_rights:
     class_id: 33
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does a party have the right to audit the books, records, or physical locations of the counterparty to ensure contract compliance?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does a party have the right to  audit the books, records, or physical locations of the counterparty to ensure compliance with the contract?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   uncapped_liability:
     class_id: 34
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is a party's liability uncapped upon breach of its obligations — including an affirmative reimbursement obligation or a carve-out from a liability cap?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is a party’s liability uncapped upon the breach of its obligation in the contract? This also includes uncap liability for a particular type of breach such as IP infringement or breach of confidentiality obligation.'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   cap_on_liability:
     class_id: 35
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract include a cap on liability upon breach — a time limit to bring claims or a maximum recovery amount?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does the contract include a cap on liability upon the breach of a party’s obligation? This includes time limitation for the counterparty to bring claims or maximum amount for recovery.'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   liquidated_damages:
     class_id: 36
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract award either party liquidated damages for breach, or a fee upon termination of the contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Does the contract contain a clause that would award either party liquidated damages for breach or a fee upon the termination of a contract (termination fee)?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   warranty_duration:
     class_id: 37
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "What is the duration of any warranty against defects or errors in technology, products, or services provided under the contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: general_info  # CUAD Answer Format: Number of months or years
+    verbatim_question: 'What is the duration of any  warranty against defects or errors in technology, products, or services  provided under the contract?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   insurance:
     class_id: 38
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a requirement for a party to maintain insurance?"  # [PARAPHRASE]
-    applicable_doc_classes: [all]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a requirement for insurance that must be maintained by one party for the benefit of the counterparty?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   covenant_not_to_sue:
     class_id: 39
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is a party restricted from contesting the validity of the counterparty's IP ownership, or from bringing a claim against the counterparty for matters unrelated to the contract?"  # [PARAPHRASE]
-    applicable_doc_classes: [ip, license]
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is a party restricted from contesting the validity of the counterparty’s ownership of intellectual property or otherwise bringing a claim against the counterparty for matters unrelated to the contract?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["ip", "license"]
 
   third_party_beneficiary:
     class_id: 40
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Is there a non-contracting party who is a beneficiary to some or all of the clauses in the contract and therefore can enforce its rights against a contracting party?"  # [VERIFIED]
-    applicable_doc_classes: [all]
-
-  # ---------------------------------------------------------------------------
-  # MAUD — Merger Agreement Understanding Dataset (Atticus Project / ABA)
-  # Only applicable when the sorter predicts doc_class = merger_agreement.
-  # All verbatim_question values below are [VERIFIED] against the source doc.
-  # ---------------------------------------------------------------------------
+    answer_type: yes_no  # CUAD Answer Format: Yes/No
+    verbatim_question: 'Is there a non-contracting party who is a beneficiary to some or all of the clauses in the contract and therefore can enforce its rights against a contracting party?'
+    # [VERIFIED 2026-08-24: char-exact vs The-Atticus-Project/cuad@main category_descriptions.csv sha256:7499950ee04d2ed2…]
+    applicable_doc_classes: ["all"]
 
   mae_clause_scope:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: free_text
-    answer_type: scope
-    verbatim_question: "Is there an MAE/MAC clause defining events or changes that allow the buyer to terminate or refuse to close the merger?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: scope  # MAUD
+    verbatim_question: 'Is there an MAE/MAC clause defining events or changes that allow the buyer to terminate or refuse to close the merger?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
 
   mae_exclusions:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: free_text
-    answer_type: scope
-    verbatim_question: "Does the MAE definition contain explicit exclusions for general economic conditions, industry changes, or regulatory updates?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: scope  # MAUD
+    verbatim_question: 'Does the MAE definition contain explicit exclusions for general economic conditions, industry changes, or regulatory updates?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
 
   ordinary_course_operations:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the contract require the seller/target company to operate strictly 'in the ordinary course of business' between signing and closing?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: yes_no  # MAUD
+    verbatim_question: 'Does the contract require the seller/target company to operate strictly ''in the ordinary course of business'' between signing and closing?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
 
   interim_operating_restrictions:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Are there explicit restrictions on the target amending existing contracts, entering new liabilities, or raising capital prior to closing?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: yes_no  # MAUD
+    verbatim_question: 'Are there explicit restrictions on the target amending existing contracts, entering new liabilities, or raising capital prior to closing?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
 
   no_shop_restriction:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the agreement contain a 'No-Shop' clause prohibiting the target from soliciting alternative acquisition proposals?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: yes_no  # MAUD
+    verbatim_question: 'Does the agreement contain a ''No-Shop'' clause prohibiting the target from soliciting alternative acquisition proposals?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
 
   fiduciary_out_exception:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "Does the target board retain a 'fiduciary out' right to engage with unsolicited superior proposals?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: yes_no  # MAUD
+    verbatim_question: 'Does the target board retain a ''fiduciary out'' right to engage with unsolicited superior proposals?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
 
   breakup_termination_fees:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: containment
-    answer_type: yes_no
-    verbatim_question: "What are the exact triggers and monetary fee amounts required if either party terminates the merger agreement?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: yes_no  # MAUD
+    verbatim_question: 'What are the exact triggers and monetary fee amounts required if either party terminates the merger agreement?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
 
   outside_date:
+    class_id: null  # MAUD deal point — no CUAD class id
     field_type: date
-    answer_type: general_info
-    verbatim_question: "What is the 'Drop-Dead Date' or 'Outside Date' after which either party may abandon the merger if regulatory approvals are pending?"
-    applicable_doc_classes: [merger_agreement]
+    answer_type: general_info  # MAUD
+    verbatim_question: 'What is the ''Drop-Dead Date'' or ''Outside Date'' after which either party may abandon the merger if regulatory approvals are pending?'
+    # [MAUD-SIDE 2026-08-24: question text carried over from the user-supplied Atticus Project MAUD material in issue #25; NOT yet checked character-for-character against the official MAUD v1 query files — reconcile before production scoring.]
+    applicable_doc_classes: ["merger_agreement"]
+
+# ---------------------------------------------------------------------------
+# Agent inquiry templates (issue #25, verbatim) — dynamic per-inquiry prompt
+# routing for the contracts specialist across both benchmarks.
+# ---------------------------------------------------------------------------
+agent_inquiry_templates:
+  change_of_control:
+    prompt: 'Extract all verbatim clauses specifying whether a merger, equity sale, or change of control requires counterparty consent or triggers termination rights. If absent, return ''no related clause''.'
+    target_dataset: "CUAD"
+  mae_clause_scope:
+    prompt: 'Analyze the Material Adverse Effect (MAE/MAC) clause. Extract the core definition, all standard exclusions (e.g., industry-wide shifts, macroeconomic updates), and any custom carve-outs.'
+    target_dataset: "MAUD"
+  contract_amendment_restrictions:
+    prompt: 'Identify all provisions governing contract modifications, written amendment requirements, price escalation caps, or interim operating covenants during a corporate transaction.'
+    target_dataset: "CUAD / MAUD"

@@ -1,0 +1,3 @@
+# Vendored 2026-08-24 (KANBAN-072) from https://github.com/The-Atticus-Project/cuad/blob/main/category_descriptions.csv
+# sha256 7499950ee04d2ed2841c0f8ec2ef96b91be039bc2ea3c4edcc36334a465b1f36 — CUAD (c) The Atticus Project, CC BY 4.0.
+# Test oracle: config/clause_categories.yaml verbatim_question fields must stay character-exact vs this file.
