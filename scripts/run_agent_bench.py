@@ -164,7 +164,7 @@ def run_edge(args) -> int:
         items = items[:args.limit]
 
     if args.agent in CLASSIFIER_ROLES:
-        return _run_edge_classifier(args, items)
+        return _run_edge_classifier(args, items, suite)
 
     from agents.specialist_agents import SPECIALIST_SCHEMAS  # noqa: F401
     import importlib
@@ -240,7 +240,7 @@ def run_edge(args) -> int:
             stats["ignore_overlay"][0] += int(ok_nf); stats["ignore_overlay"][1] += 1
         results.append(row)
 
-    out_path = Path(f"data/manifests/edge_{args.agent}_{args.model.replace('/','_')}.jsonl")
+    out_path = Path(f"data/manifests/edge_{args.agent}_{prompt_version}_{args.model.replace('/','_')}.jsonl")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
         for r in results:
@@ -258,7 +258,7 @@ def run_edge(args) -> int:
     return 0
 
 
-def _run_edge_classifier(args, items: list[dict]) -> int:
+def _run_edge_classifier(args, items: list[dict], suite: Path) -> int:
     """Blind doc_type classification bench — the sorter/reviewer eval task.
 
     Every item is an edge-suite document; the agent sees ONLY the document
@@ -300,7 +300,7 @@ def _run_edge_classifier(args, items: list[dict]) -> int:
                         "confidence": (out or {}).get("confidence"),
                         "reasoning": ((out or {}).get("reasoning") or "")[:600]})
 
-    out_path = Path(f"data/manifests/edge_{args.agent}_{args.model.replace('/','_')}.jsonl")
+    out_path = Path(f"data/manifests/edge_{args.agent}_{prompt_version}_{args.model.replace('/','_')}.jsonl")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
         for r in results:

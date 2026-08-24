@@ -52,6 +52,25 @@ def test_derived_pilot_variants_are_not_noops():
     assert v1.count("Output strict JSON only.") == 1
 
 
+def test_insurance_specialist_v1_mutation_is_real_and_derived():
+    """Mutation 1 (evidence-only visibility): differs from v0, keeps its head.
+
+    Same regression class as the judge pilot_v1 no-op: a broken anchor would
+    register identical bytes under a new key.
+    """
+    from src.prompts import PROMPT_VERSIONS
+
+    v0 = PROMPT_VERSIONS["insurance_claims_specialist_v0"]
+    v1 = PROMPT_VERSIONS["insurance_claims_specialist_v1"]
+    assert v1 != v0, "v1 registered but byte-identical to v0"
+    assert v1.startswith(v0[:400]), "head drift vs v0"
+    assert v1.count("EVIDENCE-ONLY VISIBILITY") == 1
+    assert "9a." in v1
+    # Rule numbering intact: original rules 10 and 11 still present exactly once.
+    assert v1.count("10. Return one complete JSON object") == 1
+    assert v1.count("11. The `confidence` score") == 1
+
+
 def test_all_bench_referenced_prompt_versions_registered():
     """Every default --prompt-version the bench can select MUST resolve."""
     from src.prompts import get_prompt
@@ -210,9 +229,15 @@ def test_pipeline_role_wrappers_defaults_registered():
         ArbiterAgent,
         BossAgent,
         ReviewerAgent,
+        _StructuredAgent,
     )
     from src.prompts import get_prompt
 
+    # BaseAgent's llm()/logging seam requires agent_name at CALL time —
+    # regression: constructing the bare wrapper crashed only mid-bench.
+    assert _StructuredAgent.agent_name
+    bare = _StructuredAgent(prompt_version="reviewer_docclass_pilot_v0")
+    assert bare.system_prompt() == get_prompt("reviewer_docclass_pilot_v0")
     assert get_prompt(ReviewerAgent().prompt_version)
     assert get_prompt(ArbiterAgent().prompt_version)
     assert get_prompt(BossAgent().prompt_version)

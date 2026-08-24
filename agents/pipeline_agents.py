@@ -17,6 +17,9 @@ from src.prompts import get_prompt
 class _StructuredAgent(BaseAgent):
     """run(user_message, schema) -> parsed dict via _call_structured."""
 
+    # BaseAgent's llm()/logging seam reads agent_name; subclasses override.
+    agent_name = "pipeline_role"
+
     prompt_version: str = ""
 
     def __init__(self, model: str | None = None, api_key: str | None = None,

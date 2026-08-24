@@ -174,12 +174,32 @@ def load_rows() -> dict[str, list[dict]]:
                                                "packet")},
                 })
         out[agent] = rows
-    # sorter consumes every class's texts with doc_type expectations
-    sorter = []
+    # sorter consumes every class's texts with doc_type expectations.
+    # Canonical taxonomy keys — NOT agent-key substrings ('contracts_specialist'
+    # strips to 'contracts', but the pilot/extended docclass key is 'contract';
+    # the mismatch made every blind-classification item unscoreable-as-labeled).
+    AGENT_TO_DOC_TYPE = {
+        "contracts_specialist": "contract",
+        "corporate_records_specialist": "corporate_record",
+        "correspondence_specialist": "correspondence",
+        "insurance_claims_specialist": "insurance_claim",
+    }
+    per_class: dict[str, list[dict]] = {}
     for agent, rows in out.items():
-        dt = agent.replace("_specialist", "")
-        for r in rows:
-            sorter.append({**r, "gt_fields": {"doc_type": dt}})
+        dt = AGENT_TO_DOC_TYPE.get(agent)
+        if dt:
+            per_class[dt] = rows
+    # Round-robin across classes so any prefix of the suite stays stratified
+    # (build_suite caps at max_items from the head).
+    sorter: list[dict] = []
+    classes = list(per_class)
+    idx = 0
+    while any(idx < len(per_class[c]) for c in classes):
+        for c in classes:
+            if idx < len(per_class[c]):
+                sorter.append({**per_class[c][idx],
+                               "gt_fields": {"doc_type": c}})
+        idx += 1
     out["sorter"] = sorter
     return out
 
