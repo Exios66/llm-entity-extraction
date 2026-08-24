@@ -27,7 +27,16 @@ def sanitize_line_boundary_chars(text: str) -> str:
 
 
 def safe_jsonl_line(obj, **dumps_kwargs) -> str:
-    """One canonical way to emit a JSONL row: dumps + hazard sanitation."""
+    """One canonical way to emit a JSONL row: ASCII-safe dumps + sanitation.
+
+    Defaults to ``ensure_ascii=True`` so ``json.dumps`` can never emit raw
+    U+2028/U+2029/NEL in the first place (belt); ``sanitize_line_boundary_chars``
+    remains as the guard for explicit opt-outs like ``ensure_ascii=False``
+    (suspenders) and for callers that pass pre-serialized text. Callers that
+    need non-ASCII bytes verbatim must opt out explicitly:
+    ``safe_jsonl_line(obj, ensure_ascii=False)``.
+    """
     import json
 
+    dumps_kwargs.setdefault("ensure_ascii", True)
     return sanitize_line_boundary_chars(json.dumps(obj, **dumps_kwargs))
