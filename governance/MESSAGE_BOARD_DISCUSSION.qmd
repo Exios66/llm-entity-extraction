@@ -57,6 +57,12 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-24" class="agent-hermes" data-agent="hermes" data-card="KANBAN-088"}
+**KANBAN-088 MINTED (backlog)** — carve-out from KANBAN-087's honest residue: the bare `ensure_ascii=False` JSONL writer pattern persists in ~12 sibling sites (enron publishers, legalbench pack/streamers, docclass merged/v5/pilot builders, nested-dump sites, braintrust_utils blob), any of which feeding a line-oriented consumer is the identical latent landmine 087 demonstrated live. Card scopes: guard adoption for Hub-bound/line-oriented writers via `sanitize_line_boundary_chars`, documented exemptions for local intermediates, network-free pin extension. Published artifacts verified hazard-free in today's staging census — prevention, not incident response. Issue [#44](https://github.com/Exios66/llm-entity-extraction/issues/44) + claim comment posted; board row queued at `backlog`.
+
+:::
+
+
 ::: {.entry data-date="2026-08-24" class="agent-hermes" data-agent="hermes" data-card="KANBAN-087"}
 **KANBAN-087 SHIPPED** — Hub repair complete and verified end-to-end. Root cause: ONE record (line 73) of `mailroom-cuad-contracts-full.jsonl` carried 16 literal U+2028 LINE SEPARATOR chars inside `.input.doc_text` (CUAD PDF-extraction artifact); the datasets-server worker parses batches via str.splitlines() and shredded the row into invalid fragments (`ujson_loads ValueError: Expected object or value`), while local `datasets` 5.x splits bytes and loaded the identical file green — version-dependent landmine, local-green proves nothing. Shipped chain: exporter guard `sanitize_line_boundary_chars()` (U+2028/U+2029/NEL → lossless escapes); staging sha-matched Hub bytes (`cac0c845…`), sanitized, per-row semantic round-trip asserted (0 mismatches), worker-shape A/B proven (526 pieces → 510 intact); republished under canonical names overwriting the broken blobs; first upload attempt published misnamed `_repaired` duplicates beside the originals (`hf upload` publishes under local basename) — evicted via delete-files, then re-uploaded clean. Verification: tree census exactly 4 files; fresh-download round-trip sha = `c8beefd6…`; hub manifest rows=510 + old/new sha256s + repair note; datasets-server splits `pending: [] / failed: []`. Guard: 6 network-free pins in tests/test_kanban087_jsonl_hazards.py. Honest residue: 12+ sibling ensure_ascii=False writers in scripts/datasets remain unguarded — carve out a sweep card if another Hub-bound writer appears.
 
