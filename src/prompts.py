@@ -3427,3 +3427,25 @@ def PROMPT_TEMPLATES() -> dict[str, str]:
     Single source of truth for sync_prompts.py and similar tools.
     """
     return dict(PROMPT_VERSIONS)
+
+
+# =============================================================================
+# DOCCLASS PROMPTS — KANBAN-090 (2026-08-23, human directive via Discord #hermes)
+# -----------------------------------------------------------------------------
+# The docclass arm (KANBAN-033 lineage -> docclass-merged schema v5 +
+# docclass-pilot) previously had specialized prompts ONLY at the sorter. This
+# tail-import merges the dedicated docclass variants for EVERY
+# classification-chain role (specialists / reviewer / judge trio / arbiter /
+# boss + the re-exported sorter docclass family) from src/prompts_docclass.py,
+# the same prompts_archive tail-import precedent: every registered key stays
+# resolvable through get_prompt()/PROMPT_VERSIONS, and the Langfuse sync
+# mirrors it like any other family (registration IS deployment). Nothing in
+# the runtime pipeline fetches a docclass key by default — eval runners and
+# pipeline configs opt in explicitly.
+# NEVER edit a docclass variant in place — a changed prompt string = a NEW
+# version key; add *_v1 in src/prompts_docclass.py instead.
+# =============================================================================
+from src.prompts_docclass import DOCCLASS_PROMPT_VERSIONS  # noqa: E402
+
+PROMPT_VERSIONS.update(DOCCLASS_PROMPT_VERSIONS)
+assert len(PROMPT_VERSIONS) == len(set(PROMPT_VERSIONS)), "prompt version key collision"
