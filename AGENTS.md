@@ -225,8 +225,12 @@ single-session, low-risk) do NOT need issues.
 
 ## Environment & setup
 
-- Python 3.10+ (tested on 3.13). Deps in `requirements.txt`; the repo is also
-  a Python package (`pyproject.toml` — packages `agents`, `src`, `config`).
+- Python 3.10+ (tested on 3.13). Deps ship as purpose-scoped batches:
+  `requirements.txt` is the CORE floor only; task batches live in
+  `requirements/<batch>.txt` mirroring pyproject extras (`tracing`, `evals`,
+  `datasets`, `reporting`, `embeddings`, `dev`, `all` — pinned by
+  `tests/test_dependency_manifests.py`). The repo is also a Python package
+  (`pyproject.toml` — packages `agents`, `src`, `config`).
 - Two dotenv files, both gitignored, both living under `config/environments/`
   (templates committed as `.example`, live files gitignored): `braintrust.env`
   (Braintrust org/project/keys — the source of truth for config, see
@@ -270,15 +274,17 @@ single-session, low-risk) do NOT need issues.
   `apt install poppler-utils`) for PDF→PNG rendering.
 - `OPENROUTER_BASE_URL` can point at any OpenAI-compatible endpoint (Ollama,
   vLLM) — used for testing without paying.
-- Optional but recommended: `pip install sentence-transformers` — the semantic
-  embedding rescue then runs the local `all-MiniLM-L6-v2` model (free,
-  offline, reproducible) instead of paid OpenRouter embedding calls. Both
+- Optional but recommended: the `embeddings` batch
+  (`pip install -r requirements/embeddings.txt`) — the semantic embedding
+  rescue then runs the local `all-MiniLM-L6-v2` model (free, offline,
+  reproducible) instead of paid OpenRouter embedding calls. Both
   routes are verified; the fallback triggers automatically when the local
   model is unavailable.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # recommended; .venv/ is gitignored
-pip install -r requirements.txt
+pip install -r requirements.txt        # CORE only — batches: README §Setup
+pip install -r requirements/all.txt    # + every non-dev batch (old full-install behavior)
 pip install -e .        # editable install: agents/src/config importable from ANY codebase
                         # (e.g. llm-mailroom's LangGraph) — new changes picked up instantly
 cp config/environments/braintrust.env.example config/environments/braintrust.env   # fill in creds
