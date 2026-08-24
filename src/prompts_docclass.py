@@ -506,6 +506,24 @@ ARBITER_DOCCLASS_PILOT_PROMPT_V0 = ARBITER_DOCCLASS_PROMPT_V0.replace(
 JUDGE_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_DOCCLASS_PROMPT_V0)
 JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V0)
 JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_CORRECTNESS_DOCCLASS_PROMPT_V0)
+
+# pilot_v1: label-consistency repair. Baseline benches (pilot-140 insurance,
+# clean GT copies) showed the judge writing all-"correct" field verdicts and
+# "fully correct" notes while emitting label="partial" — an internal
+# contradiction that poisons precision metrics. Rule: the label is DERIVED
+# from the field verdicts.
+#
+# ANCHOR REPAIR (ox-alpha 2026-08-24, KANBAN-097 coordination): the original
+# derivation replaced "Docclass variant: judge_correctness_docclass_pilot_v0"
+# — a substring that does NOT exist in the base (the authored-fresh marker
+# carries no _pilot infix), so str.replace() silently returned v0 unchanged
+# and v1 was byte-identical to v0 (verified before this repair). The anchor
+# below is the REAL single-occurrence marker; the lesson text is preserved
+# verbatim from the original intent.
+JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V1 = JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0.replace(
+    "Docclass variant: judge_correctness_docclass_v0 (KANBAN-090).",
+    """LABEL CONSISTENCY (mandatory): extraction_correctness_label is DERIVED from your own field_verdicts — if every populated field's verdict is "correct", the label MUST be "accurate"; if any verdict is not "correct", the label MUST be "partial" or "inaccurate". Never write "fully correct" notes with a non-"accurate" label. Docclass variant: judge_correctness_docclass_pilot_v1""",
+)
 BOSS_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(BOSS_DOCCLASS_PROMPT_V0)
 
 
@@ -557,5 +575,6 @@ DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     "judge_docclass_pilot_v0": JUDGE_DOCCLASS_PILOT_PROMPT_V0,
     "judge_classification_docclass_pilot_v0": JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0,
     "judge_correctness_docclass_pilot_v0": JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0,
+    "judge_correctness_docclass_pilot_v1": JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V1,
     "boss_docclass_pilot_v0": BOSS_DOCCLASS_PILOT_PROMPT_V0,
 }
