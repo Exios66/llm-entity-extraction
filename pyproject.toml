@@ -60,13 +60,19 @@ notebooks = [
     "nbclient>=0.10",
     "ipykernel>=6.29",
 ]
+# Modal-deployed vLLM serving (KANBAN-096, deploy/modal_vllm.py). Deploy-time
+# only — the runtime eval pipeline never imports modal. Install with:
+#   pip install -e ".[deploy]"
+deploy = [
+    "modal>=0.73",
+]
 dev = [
     "pytest>=8.0",
     "pytest-mock>=3.14",
     "llm-entity-extraction[tracing]",
 ]
 all = [
-    "llm-entity-extraction[tracing,evals,datasets,reporting,embeddings,notebooks]",
+    "llm-entity-extraction[tracing,evals,datasets,reporting,embeddings,notebooks,deploy]",
 ]
 pdf = ["llm-entity-extraction[datasets]"]  # legacy alias for [datasets]
 
