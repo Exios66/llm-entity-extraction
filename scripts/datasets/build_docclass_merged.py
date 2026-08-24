@@ -51,6 +51,26 @@ DEFAULT_OUT = Path("data/datasets/docclass_merged.jsonl")
 MAUD_DUMP = Path("data/maud/contracts.jsonl")
 S1_DUMP = Path("data/s1_corporate_records/corporate-records.jsonl")
 CUAD_DATASET = "mailroom-cuad-contracts-full"
+
+# KANBAN-084 subclass normalization: CUAD hosts near-duplicate grouping
+# folders (singular/plural drift) whose names leaked into expected_subclass
+# verbatim and skew the contract-subtype distribution. Canonical targets are
+# the dominant sibling forms. Keyed casefolded; applied by
+# ``normalize_contract_subclass`` (imported by the v5/pilot chain — never
+# forked). Deliberately NOT merged (upstream-distinct buckets):
+# Joint Venture vs 'Joint Venture _ Filing' (separate CUAD folders),
+# mixed_cash_stock_election (distinct MAUD class), attorney_demand vs demand.
+CONTRACT_SUBCLASS_CANON: dict[str, str] = {
+    "affiliate agreement": "Affiliate_Agreements",
+    "endorsement agreement": "Endorsement",
+}
+
+
+def normalize_contract_subclass(subclass: str) -> str:
+    """Canonicalize a docclass expected_subclass through the family map
+    (case- and whitespace-insensitive lookup; identity for canon forms)."""
+    key = " ".join(str(subclass).split()).casefold()
+    return CONTRACT_SUBCLASS_CANON.get(key, subclass)
 CUAD_SUBCLASS_NOTE = (
     "Contract rows carry expected_subclass = CUAD's own contract grouping "
     "(metadata.category, 28 groups) and filename = the source PDF basename "
