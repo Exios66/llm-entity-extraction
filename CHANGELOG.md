@@ -9,6 +9,8 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 ### Added
 
+- **Environment configuration guide + condensed `.env.example` (human directive 2026-08-24, no-card edit):** NEW `docs/configuration.md` — the full how-to for configuring both governed pipelines per provider (OpenRouter default / research-funding key / Modal-vLLM / Ollama / generic OpenAI-compatible, incl. five copy-paste flip recipes and the one-deployment-backs-both-repos contract) and per trace sink (Phoenix local-first default / Langfuse primary-when-configured / Braintrust read-only-by-design / LangSmith mirror / none), plus load-order semantics (`load_env()` + call-time seam resolution) and a zero-cost fully-local stack recipe. `config/environments/.env.example` reorganized into labeled sections with every LIVE knob preserved; dead decoration evicted after code-census verification (`DEFAULT_PROVIDER`, `OLLAMA_BASE_URL`, `GENERIC_*`, `OBSERVABILITY_PROVIDER` had no consumer in this repo — mailroom-only concepts that drifted in); all guard pins kept green (`test_env_utils.py` Phoenix pins + KANBAN-096 flip-documentation test, **36 passed**). `docs/README.md` layout table gains the new doc.
+
 - **Pilot-universe docclass variants + Prompt Engineer:** `sorter_docclass_pilot_v0..v3`
   and role `_pilot_v0` variants aligned to the docclass-merged GT (5-class
   primary list; NEW doc_subclass dimensions for correspondence and
