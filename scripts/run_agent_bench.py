@@ -51,6 +51,11 @@ sys.path.insert(0, str(REPO_ROOT))
 GT = REPO_ROOT / "data" / "gt"
 SUITES = GT / "edge_suites"
 
+DEFAULT_PROMPT_VERSIONS = {
+    "contracts_specialist": "contracts_specialist_v39",
+    "insurance_claims_specialist": "insurance_claims_specialist_v0",
+}
+
 SPECIALIST_CLASSES = {
     "contracts_specialist": "ContractsSpecialist",
     "corporate_records_specialist": "CorporateRecordsSpecialist",
@@ -170,9 +175,8 @@ def run_edge(args) -> int:
                          f"{sorted(CLASSIFIER_ROLES)} (got {args.agent})")
     mod = importlib.import_module("agents.specialist_agents")
     agent_cls = getattr(mod, cls_name)
-    prompt_version = args.prompt_version or (
-        "insurance_claims_specialist_v0" if args.agent == "insurance_claims_specialist"
-        else args.agent)
+    prompt_version = args.prompt_version or DEFAULT_PROMPT_VERSIONS.get(
+        args.agent, args.agent)
 
     def make():
         a = agent_cls(model=args.model, api_key=args.api_key,
@@ -320,18 +324,21 @@ def _run_edge_classifier(args, items: list[dict]) -> int:
 
 def _log_bench_run(args, *, prompt_version: str, n_scored: int, n_error: int,
                    scores: dict, data_source: str,
-                   per_transform: dict | None = None) -> None:
+                   per_transform: dict | None = None,
+                   served_model: str | None = None) -> None:
     """One compact append-only record per completed bench run."""
     try:
         from src.experiment_log import append_experiment, git_snapshot
+        model = served_model or args.model
         record = {
-            "experiment_name": (f"{args.model.replace('/', '_')}_{prompt_version}"
+            "experiment_name": (f"{model.replace('/', '_')}_{prompt_version}"
                                 f"_{args.mode}"
                                 + (f"_{getattr(args, 'agent', '') or getattr(args, 'role', '')}"
                                    if args.mode != "judge-mutation" else "")),
             "task": "agent_bench",
             "bench_mode": args.mode,
-            "model": args.model,
+            "model": model,
+            "requested_model": args.model,
             "prompt_versions": [prompt_version],
             "git_snapshot": git_snapshot(),
             "data_source": {"path": data_source},
@@ -363,6 +370,12 @@ def run_judge_mutation(args) -> int:
         rows = rows[:args.limit]
     judge = JudgeAgent(model=args.model, api_key=args.api_key,
                        prompt_version=args.prompt_version or "judge-correctness")
+    # JudgeAgent silently swaps the BaseAgent default model for the taxonomy's
+    # judge.model — record the SERVED model, never the requested one.
+    actual_model = judge.model
+    if actual_model != args.model:
+        print(f"  [note] judge model resolved to {actual_model} "
+              f"(requested {args.model}; taxonomy judge.model override)")
 
     FIELD_LIST = "\n".join(f"  - {k}" for k in
                            ("claim_number","policy_number","insurer","insured_party",
@@ -377,7 +390,10 @@ def run_judge_mutation(args) -> int:
               if k not in ("filename", "doc_text", "label_source")}
         scenarios = [("clean", dict(gt))]
         for d in DEFECTS[:args.defects]:
-            scenarios.append((d, inject_defect(gt, d, rng)))
+            mutated = inject_defect(gt, d, rng)
+            if json.dumps(mutated, sort_keys=True) == json.dumps(gt, sort_keys=True):
+                continue  # no-op defect: don't count what was never planted
+            scenarios.append((d, mutated))
         for kind, ext in scenarios:
             user = (f"Source document:\n\n{text[:20000]}\n\n"
                     f"Registered schema fields:\n{FIELD_LIST}\n\n"
@@ -402,10 +418,10 @@ def run_judge_mutation(args) -> int:
                                     "verdict": res})
     recall = tp / max(1, tp + fn)
     fpr = fp / max(1, clean_n)
-    print(f"judge-mutation [{judge.prompt_version}] model={args.model}")
+    print(f"judge-mutation [{judge.prompt_version}] model={actual_model}")
     print(f"  defective rows: {def_n} | caught(tp)={tp} missed(fn)={fn} -> recall={recall:.2f}")
     print(f"  clean rows: {clean_n} | false flags(fp)={fp} -> FPR={fpr:.2f}")
-    out = Path(f"data/manifests/judge_mutation_{args.model.replace('/','_')}.jsonl")
+    out = Path(f"data/manifests/judge_mutation_{actual_model.replace('/','_')}.jsonl")
     with out.open("w", encoding="utf-8") as f:
         for d in details:
             f.write(json.dumps(d, ensure_ascii=False) + "\n")
@@ -415,7 +431,7 @@ def run_judge_mutation(args) -> int:
                    scores={"defect_recall": round(recall, 4),
                            "clean_fpr": round(fpr, 4),
                            "tp": tp, "fn": fn, "fp": fp},
-                   data_source=str(src))
+                   data_source=str(src), served_model=actual_model)
     return 0
 
 

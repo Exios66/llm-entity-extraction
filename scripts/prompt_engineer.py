@@ -80,6 +80,13 @@ def load_manifest(path: Path) -> list[dict]:
         d = json.loads(line)
         if d.get("type"):
             continue
+        # Judge-mutation manifest shape: {filename, defect, verdict}
+        if "verdict" in d and d.get("defect") not in (None, "FALSE-FLAG"):
+            rows.append({"filename": d.get("filename",""), "doc_type": "judge",
+                         "gt": d["defect"], "pred_doc_type": None,
+                         "pred_subclass": None,
+                         "reasoning": json.dumps(d.get("verdict",{}))[:400]})
+            continue
         comp = (d.get("scores") or {}).get("composite", {}).get("sorter", {})
         if not d.get("expected_subclass"):
             continue
@@ -213,7 +220,25 @@ def validate(proposal: dict, base_text: str, existing_keys: set[str]) -> list[st
     return problems
 
 
-def apply_mutation(proposal: dict, base_key: str) -> None:
+def resolve_spec(spec_arg: str | None):
+    """Return (target_file, registry_dict, test_file) from a family spec."""
+    global TARGET_FILE, TESTS_FILE
+    if not spec_arg:
+        return
+    try:
+        import yaml
+    except ImportError:
+        raise SystemExit("PyYAML required for --spec")
+    fam = Path(spec_arg).name.replace(".yaml", "")
+    cfg_path = Path(spec_arg) if spec_arg.endswith((".yaml", ".yml")) \
+        else REPO_ROOT / "config" / "prompt_engineer" / f"{fam}.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))[fam]
+    TARGET_FILE = REPO_ROOT / cfg["target_file"]
+    TESTS_FILE = REPO_ROOT / cfg["test_file"]
+    return cfg
+
+
+def apply_mutation(proposal: dict, base_key: str, registry_dict: str = "DOCCLASS_PROMPT_VERSIONS") -> None:
     src = TARGET_FILE.read_text(encoding="utf-8")
     # Resolve the base CONSTANT name from its registry entry — key->constant
     # is not mechanical ("sorter_docclass_pilot_v1" lives in
@@ -242,9 +267,11 @@ def apply_mutation(proposal: dict, base_key: str) -> None:
     assert reg_anchor in src, f"registry entry for {base_key} not found"
     # insert constant right after the base constant's assignment chain ends:
     # simplest safe point = immediately BEFORE the registry dict definition.
-    reg_def = "DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {"
-    assert reg_def in src
-    src = src.replace(reg_def, block + "\n" + reg_def, 1)
+    reg_def_a = registry_dict + ": dict[str, Any] = {"
+    reg_def_b = registry_dict + " = {"
+    if reg_def_a not in src and reg_def_b not in src:
+        raise SystemExit(f"registry {registry_dict} not found")
+    reg_def = reg_def_a if reg_def_a in src else reg_def_b
     src = src.replace(
         reg_anchor,
         f'"{proposal["version_key"]}": {const_new},\n    ' + reg_anchor,
@@ -268,6 +295,9 @@ def main() -> int:
     ap.add_argument("--model", default="qwen/qwen3.7-flash")
     ap.add_argument("--focus", default=None,
                     help="doc_type or doc_type/subclass to target")
+    ap.add_argument("--spec", default=None,
+                    help="config/prompt_engineer/<family> or YAML path; supplies "
+                         "target/registry/test paths from the family block")
     ap.add_argument("--apply", action="store_true",
                     help="write the mutation into src/prompts_docclass.py")
     ap.add_argument("--dry-run", action="store_true")
@@ -316,8 +346,11 @@ def main() -> int:
             print("  -", p)
         return 1
 
+    spec_cfg = resolve_spec(args.spec) if args.spec else None
     if args.apply:
-        apply_mutation(proposal, args.base_version)
+        apply_mutation(proposal, args.base_version,
+                       (spec_cfg or {}).get("registry_dict",
+                                            "DOCCLASS_PROMPT_VERSIONS"))
         print(f"\nAPPLIED: {proposal['version_key']} written to {TARGET_FILE.name}")
         print("next step (one rule per iteration -> one A/B):\n"
               f"  python3 scripts/eval/run_langfuse_docclass_eval.py \\\n"

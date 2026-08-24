@@ -478,8 +478,19 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()
-        # Every schema key appears in the rule-33 text.
-        for key in DOC_SUBCLASS_KEYS:
+        # Schema-key presence is lineage-scoped: pilot variants teach ALL
+        # four dimensions; legacy v0..v6 were frozen before the
+        # correspondence/insurance dimensions existed and are never mutated
+        # after a run — they must carry the merger/corporate keys only.
+        if "pilot" in version:
+            expected_keys = DOC_SUBCLASS_KEYS
+        else:
+            legacy_excluded = {"demand", "attorney_demand", "meeting_request",
+                               "press_release", "memo", "email", "letter",
+                               "notice", "carrier", "pde", "outpatient",
+                               "inpatient"}
+            expected_keys = [k for k in DOC_SUBCLASS_KEYS if k not in legacy_excluded]
+        for key in expected_keys:
             assert key in prompt, f"{version}: doc_subclass key {key!r} missing from the prompt"
         # The output contract names the field.
         assert "- doc_subclass: EXACTLY ONE" in prompt

@@ -7,6 +7,28 @@ history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+## [Unreleased]
+
+### Added
+
+- **Durability program (full-roster agent evaluation):** hand-labeled GT sets
+  for contract (34)/corporate_record (11)/correspondence (27) validated by
+  scripts/gt_workbench.py (type conformance + verbatim grounding); insurance
+  real-GT assembled from docclass-merged ground_truth with date_filed artifact
+  stripping and a suspect-quarantine lane. scripts/gen_edge_cases.py emits the
+  durability matrix (8 deterministic transforms; per-doc rotation; reviewed-
+  synthetic queue). agents/pipeline_agents.py adds runnable Reviewer/Boss/
+  Arbiter/Reporter/PdfTranscriber wrappers; InsuranceClaimsSpecialist +
+  schema land in specialist_agents.py with the vendored base prompt
+  (insurance_claims_specialist_v0). scripts/run_agent_bench.py scores edge
+  expectations, judge planted-defect precision/recall, and arbiter/boss
+  conflict resolution. scripts/prompt_engineer.py is spec-driven
+  (config/prompt_engineer/agents.yaml) and reads judge-mutation manifests.
+  Baseline findings: contracts_specialist is vulnerable to instruction-
+  overlay injection; judge_correctness pilot v1 reaches recall 1.00 /
+  FPR 0.00 on verified GT after its label-consistency repair (v1) and HF
+  date_filed artifact stripping.
 ### Added
 
 - **Per-role eval tasks for the docclass roster — agent bench suite landed house-grade + silent no-op mutation repaired (KANBAN-097, [#51](https://github.com/Exios66/llm-entity-extraction/issues/51), human directive 2026-08-24):** every classification-chain role now has a deterministic, machine-scored eval surface — no LLM-as-judge anywhere. NEW/landed tooling: `scripts/run_agent_bench.py` gains **blind-classification edge mode for the sorter/reviewer roles** (exact doc_type match over the shared 60-item adversarial suite, per-transform breakdown as the mutation signal), a `--dry-run` plan gate on all three money-spending modes, testable `main_with_args`, and ONE compact append-only record per completed run in the canonical `reports/experiment_log.jsonl` (`task: agent_bench`); `scripts/gen_edge_cases.py` builds deterministic transform suites (truncate/redact/garble/dup/near-empty/injection) with machine-checkable expectations; `scripts/gt_workbench.py` validates hand-GT against specialist schemas incl. verbatim-grounding spot-checks; `agents/pipeline_agents.py` wraps the reviewer/boss/arbiter/reporter/transcriber prompts in runnable agents; the vendored `insurance_claims_specialist_v0` prompt + `InsuranceClaimsSpecialist` complete the 7-specialist roster upstream; `data/gt/` holds hand-GT (contract/corporate_record/correspondence) + curated insurance real-GT. **DEFECT REPAIR:** `judge_correctness_docclass_pilot_v1` had shipped byte-identical to v0 — its `.replace()` anchor named a substring that does not exist in the base (`_docclass_pilot_v0`; authored markers carry no `_pilot` infix), so the label-consistency lesson silently never landed; re-derived off the REAL single-occurrence marker with the lesson verbatim, plus a no-op-mutation guard pin. Guard suite `tests/test_kanban097_agent_benches.py` (11 network-free): no-op-mutation regression, bench-referenced prompt registration, insurance schema↔prompt wiring, classifier schema/message shape, defect-injection determinism, verdict semantics, dry-run plans, suite-generator determinism, GT grounding validation, wrapper defaults, experiment-log record emission.
