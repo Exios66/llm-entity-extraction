@@ -1,7 +1,7 @@
 # Sister repositories & the governed umbrella
 
 `llm-entity-extraction` does not fly alone: it shares ONE kanban board and
-discussion log (`board/MESSAGE_BOARD.md`) with its sister pipeline, consumes
+discussion log (`governance/MESSAGE_BOARD.md`) with its sister pipeline, consumes
 an upstream scoring package both repos pin, and publishes eval datasets the
 whole family loads. This page maps every repository under the
 llm-mailroom umbrella of influence and how this repo relates to each.

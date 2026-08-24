@@ -21,7 +21,7 @@ imports and calls them directly; prompt versions are the experiment identity.
 
 ## Agent message board & inter-agent workflow — READ THIS FIRST, EVERY SESSION
 
-`board/MESSAGE_BOARD.md` (repo root) is the living Kanban canvas shared by ALL
+`governance/MESSAGE_BOARD.md` is the living Kanban canvas shared by ALL
 agents working in this repository: backlog / in_progress / blocked /
 in_review / done lanes, a discussion log, and an audit archive. It is the
 ONLY place where cross-agent task state lives — the single source of truth
@@ -131,7 +131,7 @@ carries task state lives in private channels. Channel hierarchy:
 
 | Channel | Carries | Canonical for |
 |---|---|---|
-| `board/MESSAGE_BOARD.md` (table + archive) / `discussion/MESSAGE_BOARD_DISCUSSION.qmd` (log) | ALL task state: claims, lane moves, decisions, results, blockers, handoffs, reopenings — the Kanban table + Archive live in the markdown; the append-only discussion log lives as a color-coordinated Quarto doc (`.qmd`, newest at top; structured `::: {.entry data-date data-agent data-card}` blocks with inline links to issues/commits/memos) | EVERYTHING — the single source of truth |
+| `governance/MESSAGE_BOARD.md` (table + archive) / `governance/MESSAGE_BOARD_DISCUSSION.qmd` (log) | ALL task state: claims, lane moves, decisions, results, blockers, handoffs, reopenings — the Kanban table + Archive live in the markdown; the append-only discussion log lives as a color-coordinated Quarto doc (`.qmd`, newest at top; structured `::: {.entry data-date data-agent data-card}` blocks with inline links to issues/commits/memos) | EVERYTHING — the single source of truth |
 | GitHub issues (label `kanban`) | mirror of a synced card's status + externally verifiable completion | synced cards' status (must never disagree with the board) |
 | Commit messages | card references (`MESSAGE BOARD: KANBAN-00N ...` / `KANBAN-00N (vX): ...`) | which commit landed which card |
 | `CHANGELOG.md` | release-level history | what shipped in which version |
@@ -258,7 +258,7 @@ single-session, low-risk) do NOT need issues.
   the **resume / checkpoint / queue / cache** cost-efficiency configuration
   (manifest resume + header contract, append-only experiment-log checkpoint,
   HITL annotation queue, embedding-cache reuse, `--dry-run` /
-  `assert_production_run` cost gates) — lives in `wiki/Phoenix-Tracing.md`;
+  `assert_production_run` cost gates) — lives in `docs/wiki/Phoenix-Tracing.md`;
   env-var templates are in `config/environments/.env.example`.
 - **LangSmith tracing** (optional, off by default): set `LANGSMITH_TRACING=true`
   + `LANGSMITH_API_KEY` + `LANGSMITH_PROJECT` in `.env` (see `.env.example`) and
@@ -398,7 +398,7 @@ python scripts/eval/run_annotation_queue.py build --task subtype               #
 python scripts/eval/run_annotation_queue.py status [--task subtype]            # queue items + scores + trace URLs
 
 # Wiki (version-controlled here, pushed to the public GitHub wiki)
-./wiki/sync-wiki.sh                     # push wiki/ -> https://github.com/Exios66/llm-entity-extraction/wiki
+./docs/wiki/sync-wiki.sh                # push docs/wiki/ -> https://github.com/Exios66/llm-entity-extraction/wiki
 
 # Site data (derived from the experiment log; never hand-edit docs/data)
 python scripts/site/build_site.py          # regenerate docs/data/ (index, meta, runs/, trends.json, prompts.json, benchmarks.json)
@@ -580,7 +580,7 @@ git push origin main
 ```
 
 Before declaring the run finished: timestamped card update + discussion
-entry on `board/MESSAGE_BOARD.md` (see the message board section above).
+entry on `governance/MESSAGE_BOARD.md` (see the message board section above).
 
 **Mirror sync into llm-mailroom** (the synced copy at
 `docs/reports/experiments/experiment_log.md` + its own GH Pages sync):
@@ -645,7 +645,7 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
    section), `docs/README.md` (the site's own doc), `docs/SCORING.md` (formula/
    metric changes), and this `AGENTS.md` itself (workflow/architecture
    changes). Never skip docs that describe the thing that changed.
-   Sweep `board/MESSAGE_BOARD.md`: move shipped cards to the Archive under this
+   Sweep `governance/MESSAGE_BOARD.md`: move shipped cards to the Archive under this
    version, re-target open cards to the next release.
 4. **Regenerate derived artifacts** — `render_experiment_log.py` (new runs)
    + `scripts/site/build_site.py` (site data) + the headless render audit
@@ -951,12 +951,12 @@ body becomes the agent's prompt):
   `config/README.md`, `scripts/README.md`, `tests/README.md`,
   `reports/README.md`, `docs/README.md` (site), plus the root `README.md` —
   keep them current when the layout or a module's contract changes.
-  `board/MESSAGE_BOARD.md` is the shared agent task canvas — keep it current on
+  `governance/MESSAGE_BOARD.md` is the shared agent task canvas — keep it current on
   EVERY task, not just releases (see the message board section above).
-- The project **wiki** is version-controlled in `wiki/` (Home,
+- The project **wiki** is version-controlled in `docs/wiki/` (Home,
   Getting-Started, Architecture, Eval-Runners, Experiment-Log, Scoring, Site,
   Release-Process, Taxonomy, FAQ) and pushed to the public GitHub wiki with
-  `./wiki/sync-wiki.sh` — run it after wiki edits and after major releases.
+  `./docs/wiki/sync-wiki.sh` — run it after wiki edits and after major releases.
   The wiki is NOT a mirror of docs/; each lives its own life.
 
 ## Research memos

@@ -383,7 +383,7 @@ served by GitHub Pages — **no Actions runners**:
 - Enabling Pages is a one-time repo setting: **Settings → Pages → Deploy from
   a branch → `main` → `/docs`**.
 - The project **wiki** (https://github.com/Exios66/llm-entity-extraction/wiki)
-  is version-controlled in `wiki/` and pushed with `./wiki/sync-wiki.sh`.
+  is version-controlled in `docs/wiki/` and pushed with `./docs/wiki/sync-wiki.sh`.
 
 ## Setup
 
@@ -772,7 +772,7 @@ licensed corpora, benchmarks, and frameworks:
 
 - `AGENTS.md` — the agent workflow guide: setup, commands, architecture,
   conventions, gotchas, and the inter-agent message-board protocol.
-- `board/MESSAGE_BOARD.md` — the living Kanban canvas shared by all agents
+- `governance/MESSAGE_BOARD.md` — the living Kanban canvas shared by all agents
   (backlog / in_progress / blocked / in_review / done, discussion log,
   archive).
 - `CHANGELOG.md` — semantic-version history of all significant releases
@@ -798,4 +798,4 @@ layout: [`agents/README.md`](agents/README.md) ·
 (scoring decks, run viewer, board, memos) · the [graphify knowledge graph](https://exios66.github.io/llm-entity-extraction-graph/)
 (interactive code-structure map of this repo; build artifact — see
 [`docs/sister-repos.md`](docs/sister-repos.md)) · the public [wiki](https://github.com/Exios66/llm-entity-extraction/wiki)
-(`wiki/`, pushed with `./wiki/sync-wiki.sh`).
+(`docs/wiki/`, pushed with `./docs/wiki/sync-wiki.sh`).
