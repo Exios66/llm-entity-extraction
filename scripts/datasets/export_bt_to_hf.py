@@ -45,6 +45,29 @@ os.environ.setdefault("BRAINTRUST_LOGGING", "disabled")
 DATASETS_DIR = REPO_ROOT / "scripts" / "datasets"
 OUT_DIR = REPO_ROOT / "data" / "hf_export"
 
+# Line-boundary hazard characters: JSON-legal inside strings, but any loader
+# that parses line-by-line via str.splitlines() treats these as record breaks
+# INSIDE a row (bytes.splitlines() only knows \n/\r, so this is
+# version/platform-dependent). The Hub datasets-server worker shreds such rows
+# into invalid JSON fragments -> DatasetGenerationError "Expected object or
+# value" (KANBAN-087: 16 literal U+2028 chars in one CUAD doc_text). JSONL
+# writers must neutralize them; \\u2028 escapes round-trip losslessly.
+LINE_BOUNDARY_HAZARDS = {
+    "\u2028": "\\u2028",  # LINE SEPARATOR
+    "\u2029": "\\u2029",  # PARAGRAPH SEPARATOR
+    "\x85": "\\u0085",    # NEL (str.splitlines boundary on some platforms)
+}
+
+
+def sanitize_line_boundary_chars(text: str) -> str:
+    """Escape str.splitlines() hazard characters so one JSONL record can never
+    be split mid-row by a line-oriented parser. Lossless: json.loads decodes
+    the escapes back to the original characters."""
+    for ch, esc in LINE_BOUNDARY_HAZARDS.items():
+        text = text.replace(ch, esc)
+    return text
+
+
 LICENSE_NOTES = {
     "mailroom-cuad-contracts": "CUAD v1 (The Atticus Project), CC BY 4.0 — page-image rows are DERIVED artifacts; regenerate via scripts/datasets/stream_cuad_to_bt.py",
     "mailroom-cuad-contracts-full": "CUAD v1 (The Atticus Project), CC BY 4.0 — text rows derived from theatticusproject/cuad",
@@ -269,7 +292,9 @@ def main() -> None:
                 w, c = materialize_images(rec["input"], img_dir)
                 n_written += w
                 n_cached += c
-            rows_out.append(json.dumps(rec, default=str, ensure_ascii=False))
+            rows_out.append(
+                sanitize_line_boundary_chars(json.dumps(rec, default=str, ensure_ascii=False))
+            )
 
         jsonl_path = OUT_DIR / f"{name}.jsonl"
         payload = "\n".join(rows_out) + "\n"
