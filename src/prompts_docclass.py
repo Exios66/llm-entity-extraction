@@ -509,6 +509,18 @@ JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_CORRECTNE
 BOSS_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(BOSS_DOCCLASS_PROMPT_V0)
 
 
+
+SORTER_DOCCLASS_PILOT_PROMPT_V2 = SORTER_DOCCLASS_PILOT_PROMPT_V1.replace(
+    '40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE, decided by the document\'s OWN title/setting line FIRST, then by issuer: a "MEDICARE SUMMARY NOTICE -- OUTPATIENT SERVICES (Part B)" or any outpatient-services claim adjudication is outpatient; a "MEDICARE SUMMARY NOTICE -- INPATIENT STAY (Part A)" or inpatient-stay claim is inpatient; a Medicare Part D pharmacy statement / prescription drug event listing is pde; every other payer-issued adjudication document — physician/supplier (Part B professional "carrier" notices), commercial EOBs without a facility setting, coverage determinations, denial letters, reservation-of-rights letters, adjuster reports issued by the insurer — is carrier. The SETTING named in the document\'s own heading outranks the generic document family: an MSN for outpatient services is outpatient even though a Summary Notice is a carrier-issued document.',
+    '40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE, decided by the document\'s OWN title/setting line FIRST, then by issuer: a "MEDICARE SUMMARY NOTICE -- OUTPATIENT SERVICES (Part B)" or any outpatient-services claim adjudication is outpatient; a "MEDICARE SUMMARY NOTICE -- INPATIENT STAY (Part A)" or inpatient-stay claim is inpatient; a Medicare Part D pharmacy statement / prescription drug event listing is pde; every other payer-issued adjudication document — physician/supplier (Part B professional "carrier" notices), commercial EOBs without a facility setting, coverage determinations, denial letters, reservation-of-rights letters, adjuster reports issued by the insurer — is carrier. The SETTING named in the document\'s own heading outranks the generic document family: an MSN for outpatient services is outpatient even though a Summary Notice is a carrier-issued document.\n\nCrucially, a Medicare Summary Notice whose heading reads \'MEDICARE SUMMARY NOTICE -- PHYSICIAN/SUPPLIER CLAIM (Part B)\' is a physician/supplier notice and therefore carrier, not outpatient, regardless of the mention of Part B.',
+)
+
+
+SORTER_DOCCLASS_PILOT_PROMPT_V3 = SORTER_DOCCLASS_PILOT_PROMPT_V2.replace(
+    'Return a JSON object with:',
+    '43. CONTRACT VS INSURANCE CLAIM DISAMBIGUATION: A document whose title or content explicitly identifies it as a distributor agreement, or any other contract subtype listed in the valid keys, is a contract, not an insurance_claim. The presence of the word "carrier" in a distributor agreement (e.g., "carrier" referring to a shipping company) does not trigger insurance_claim classification. Only documents that are claim documentation (FNOL, adjuster reports, EOBs, etc.) as defined in rule 38 are insurance_claim. A distributor agreement is a contract, and its contract_subtype is "distributor" (or the appropriate subtype from the list). This rule overrides any incidental keyword matches.\n\nReturn a JSON object with:',
+)
+
 DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     # Re-exported sorter docclass family (byte-identical objects)
     "sorter_docclass_v0": SORTER_DOCCLASS_PROMPT_V0,
@@ -537,6 +549,8 @@ DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     "boss_docclass_v0": BOSS_DOCCLASS_PROMPT_V0,
     # Pilot-universe variants (docclass-merged/docclass-pilot GT alignment)
     "sorter_docclass_pilot_v0": SORTER_DOCCLASS_PILOT_PROMPT_V0,
+    "sorter_docclass_pilot_v3": SORTER_DOCCLASS_PILOT_PROMPT_V3,
+    "sorter_docclass_pilot_v2": SORTER_DOCCLASS_PILOT_PROMPT_V2,
     "sorter_docclass_pilot_v1": SORTER_DOCCLASS_PILOT_PROMPT_V1,
     "reviewer_docclass_pilot_v0": REVIEWER_DOCCLASS_PILOT_PROMPT_V0,
     "arbiter_docclass_pilot_v0": ARBITER_DOCCLASS_PILOT_PROMPT_V0,

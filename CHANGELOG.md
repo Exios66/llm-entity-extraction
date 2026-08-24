@@ -7,6 +7,19 @@ history of the repository's tags. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
+
+### Added
+
+- **Pilot-universe docclass variants + Prompt Engineer:** `sorter_docclass_pilot_v0..v3`
+  and role `_pilot_v0` variants aligned to the docclass-merged GT (5-class
+  primary list; NEW doc_subclass dimensions for correspondence and
+  insurance_claim; Medicare/payer mapping; function-over-transport rule;
+  ancillary-wrapper convention). `agents/sorter_agent.py`: insurance_claim
+  class, both subclass dimensions registered, DOCCLASS_PILOT_SCHEMA,
+  PILOT_CLASS_KEYS; docclass runner gained `--class-set pilot` and
+  canonicalized two-sided subclass scoring (contract subtype rows now score).
+- **scripts/prompt_engineer.py**: manifest-driven LLM mutation proposals with
+  mechanical validation gates and one-command apply (produced pilot_v2/v3).
 ### Changed
 
 - **Family-wide JSONL line-boundary hazard sweep — every remaining `ensure_ascii=False` writer classified, adopted, or explicitly exempted (KANBAN-088, [#44](https://github.com/Exios66/llm-entity-extraction/issues/44), the KANBAN-087 carve-out):** full census of the repo found **15 sites / 11 files**. NEW shared safety module `scripts/datasets/_jsonl_safety.py` now holds the canonical `sanitize_line_boundary_chars` + hazards map (extracted VERBATIM from the exporter) plus a one-call `safe_jsonl_line(obj, **dumps_kwargs)`; the KANBAN-087 exporter delegates to it with object-identical re-exports (its own 6 pins still pass unchanged). **9 row-writer sites across 7 files adopted** `safe_jsonl_line`: backfill_extraction_kpis (experiment-log rewrite), build_docclass_merged (merged-row writer), build_legalbench_full_pack (enriched + index writers), publish_enron_correspondence(+dedup) (publish writers), stream_legalbench_tasks_to_bt (BT staging + classes-manifest writers), build_docclass_v5 (`write_jsonl`). **5 sites exempted with inline justification markers**: three field-value dumps in build_docclass_* (nested JSON guarded downstream by the sanitizing row writer), two CSV-cell flattens in merged/pilot builders, and src/braintrust_utils record-id hash input (byte-stability beats split-safety; never persisted as rows). Guard suite `tests/test_kanban088_jsonl_safety_sweep.py` (5 network-free pins): lossless escape/round-trip, exporter re-export identity, per-file adoption, a repo-wide **no-unmarked-hazard-sites** scan (any future bare `ensure_ascii=False` fails CI until marked or adopted), and exemption-justification presence. Prevention over incident response: the U+2028 Hub-shredding failure mode is now structurally impossible for family writers.
