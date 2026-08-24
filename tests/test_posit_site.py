@@ -18,6 +18,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -38,7 +39,7 @@ CLOSE_DIV = re.compile(r"^:{3,}\s*$")
 def _write_include(outdir: Path) -> dict[str, Path]:
     """Run the pre-render hook into a tmp dir; return the generated files."""
     subprocess.run(
-        ["python3", str(PRE_RENDER), "--outdir", str(outdir)],
+        [sys.executable, str(PRE_RENDER), "--outdir", str(outdir)],
         check=True, capture_output=True, text=True, timeout=120,
     )
     inc = outdir / "_includes"
@@ -176,7 +177,7 @@ def test_source_board_divs_stay_balanced():
 def test_quarto_render_is_deterministic_and_clean():
     """Re-render with the local quarto must leave no diff under docs/ —
     proof the committed deployment is byte-identical to a fresh render."""
-    subprocess.run(["python3", str(PRE_RENDER)], check=True,
+    subprocess.run([sys.executable, str(PRE_RENDER)], check=True,
                    capture_output=True, text=True, timeout=120, cwd=str(SITE_DIR))
     subprocess.run(["quarto", "render"], check=True,
                    capture_output=True, text=True, timeout=600, cwd=str(SITE_DIR))
