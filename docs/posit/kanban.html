@@ -554,7 +554,7 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td>KANBAN-094</td>
 <td>— (board-only)</td>
-<td><code>in_review</code></td>
+<td><code>done</code></td>
 <td><strong>Single-source-of-truth repair: contracteval side-log merged into the canonical experiment log + derived-tree pruning (self-discovered defect 2026-08-24)</strong> — the Posit site pins (<code>test_rendered_pages_committed</code>, <code>test_quarto_render_is_deterministic_and_clean</code>) have been failing as ‘chronic baseline’ since the 2026-08-18 contracteval batch: 8 runs wrote per-run JSONs into <code>docs/data/runs/</code> but their log rows landed in an untracked side file <code>reports/experiment_log_contracteval.jsonl</code>, breaking the <code>reports/experiment_log.jsonl</code> ⇒ <code>build_site.py</code> ⇒ <code>docs/data/runs/{n:03d}.json</code> derivation chain (195 log rows vs 203 run files; deep-link count pin 203≠195). One more side row (<code>qwen3.7-flash_contracteval_v5</code>) never produced a run file at all (run aborted on key-limit exhaustion). Fix: merge all 9 side rows into the canonical append-only JSONL (hazard-sanitized, chronological), regenerate <code>experiment_log.md</code> + site data from THE single source, teach <code>build_site.py</code> to prune orphaned run files so the tree is always exactly <code>{001..N}</code>, add network-free pins for the single-log law. Side file removed after verified absorption; v5 stays honestly absent until its rerun.</td>
 <td>hermes (2026-08-24)</td>
 <td>—</td>
@@ -563,7 +563,7 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td>KANBAN-096</td>
 <td><a href="https://github.com/Exios66/llm-entity-extraction/issues/50">#50</a></td>
-<td><code>in_review</code></td>
+<td><code>done</code></td>
 <td><strong>Modal-hosted vLLM serving capability for llm-entity-extraction (cross-repo parity with mailroom KANBAN-064)</strong> — human directive 2026-08-24 (Discord): integrate + utilize Modal+vLLM across BOTH pipelines INCLUDING ALL CONFIG FILES + LOCAL INFRA. Mailroom side already ships complete (064 / v0.4.1: deploy/modal_vllm.py + [deploy] extra + runbook + 12 tests; this card verifies it under mailroom #16). Entity scope: <code>deploy/modal_vllm.py</code> sibling Modal app (same env-knob contract: MODEL/GPU/QUANTIZATION/MAX_MODEL_LEN/API_TOKEN/HF_TOKEN, persistent HF-cache volume); provider seam DOCUMENTED end-to-end through the existing env-overridable <code>OPENROUTER_BASE_URL</code> chokepoints (<code>agents/base_agent.py::llm()</code> LangChain eval path + <code>src/openrouter_utils.py</code> raw path incl.&nbsp;the vision classifier) — shared <code>VLLM_BASE_URL</code>/<code>VLLM_API_KEY</code> contract so ONE deployment backs BOTH repos; <code>[deploy]</code> extra + requirements/deploy.txt honoring the KANBAN-081 dependency-manifest law; config/environments/.env.example deploy blocks; <code>deploy/README.md</code> runbook (setup/deploy/smoke/flip/teardown/cost) + smoke script; network-free guard suite (stubbed-modal app load, pure argv builder, manifest parity, runtime-tree-stays-deploy-clean census, env-seam pins). Non-goals: switching any default serving path (OpenRouter stays primary), live GPU deploys from CI.</td>
 <td>hermes (2026-08-24)</td>
 <td>—</td>
