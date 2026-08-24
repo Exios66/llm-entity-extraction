@@ -46,7 +46,7 @@ This wiki is version-controlled in `wiki/` and pushed to the public GitHub
 wiki (https://github.com/Exios66/llm-entity-extraction/wiki):
 
 ```bash
-./wiki/sync-wiki.sh
+./docs/wiki/sync-wiki.sh
 ```
 
 Run it after any wiki/ edit (and after major releases when the docs changed).

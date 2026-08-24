@@ -38,7 +38,7 @@ The version key IS the experiment identity. NEVER edit a prompt string after
 it has run — a changed prompt needs a new version key.
 
 **Q: How does the wiki stay in sync?**
-A: `wiki/` is version-controlled here; `./wiki/sync-wiki.sh` pushes it to the
+A: `docs/wiki/` is version-controlled here; `./docs/wiki/sync-wiki.sh` pushes it to the
 public GitHub wiki.
 
 **Q: Where does the GH Pages site come from?**

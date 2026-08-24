@@ -235,13 +235,13 @@ scripts/                 ops + evals + reporting + site + releases (see scripts/
   site/                  build_site.py: rebuild docs/ (GH Pages) data from the JSONL
   release.py             semver release automation (--bump / --check / --dry-run)
 tests/                   network-free suite + headless site render audit (see tests/README.md)
+governance/              agent process state: MESSAGE_BOARD.md/.qmd kanban + the
+                         append-only discussion log .qmd (see AGENTS.md §board)
 reports/                 the experiment log: experiment_log.{jsonl,md} (see reports/README.md)
 docs/                    the GH Pages site: index.html + assets/ + slides/ + data/
-                         + posit/ (Posit Cloud Quarto portal; see docs/README.md)
-site/                    the Posit Cloud portal SOURCES (Quarto project -> docs/posit/)
-                         — theme, pages, _pre-render hook (see site/README.md)
-memos/                   archived research memoranda (see memos/README.md)
-wiki/                    this wiki's pages + wiki/sync-wiki.sh (pushes the GitHub wiki)
+                         + posit/ (rendered portal) + posit-src/ (its Quarto SOURCES,
+                         see docs/posit-src/README.md) + wiki/ (GitHub-wiki pages +
+                         sync-wiki.sh) + SCORING.md, memos/, sister-repos.md
 data/                    (gitignored run artifacts: manifests/, legalbench_local/, samples/)
                          + tracked data/eda/ (EDA report, findings, figures)
 .opencode/               agent prompts + skills (prompt-engineer, experiment-log-sync, eval-judge)

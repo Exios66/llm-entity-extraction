@@ -22,7 +22,7 @@ scripts/
 tests/                   network-free suite (see tests/README.md)
 reports/                 the experiment log (JSONL + rendered markdown)
 docs/                    the site (index.html, assets/, data/) — /docs on main
-wiki/                    this wiki (synced to the GitHub wiki by wiki/sync-wiki.sh)
+docs/wiki/              this wiki (synced to the GitHub wiki by docs/wiki/sync-wiki.sh)
 ```
 
 ## Data flow

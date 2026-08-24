@@ -1,4 +1,4 @@
-# Posit Cloud portal — `site/` → `docs/posit/`
+# Posit Cloud portal — sources (`docs/posit-src/`) → rendered output (`docs/posit/`)
 
 The **Quarto website** behind the Posit Cloud portal: a fully themed,
 integrated view of the three working records of this repo — the **experiment
@@ -36,12 +36,12 @@ Actions.
 ## Deploying from Posit Cloud
 
 1. Open this repo in Posit Cloud (New Project → *From Git Repository*).
-2. Terminal (or the Render button on `site/_quarto.yml` in RStudio/VS Code):
+2. Terminal (or the Render button on `docs/posit-src/_quarto.yml` in RStudio/VS Code):
    `quarto render site` — output lands in `docs/posit/`.
 3. Publish either way:
    - **GitHub Pages (zero extra setup)**: commit + push `docs/` — the portal
      is live at `https://exios66.github.io/llm-entity-extraction/posit/`.
-   - **Quarto Pub**: `quarto publish quarto-pub` from `site/`.
+   - **Quarto Pub**: `quarto publish quarto-pub` from `docs/posit-src/`.
    - **Posit Connect**: deploy `docs/` as a static site
      (`rsconnect::deployApp(appDir = "docs", appMode = "static")` or the
      Posit Cloud Publish button) — the whole tree, portal + explorer, goes
@@ -49,7 +49,7 @@ Actions.
 
 ## Hygiene notes
 
-- `site/_pre-render.py` writes `site/_includes/` + `site/_variables.yml`;
+- `_pre-render.py` writes `_includes/` + `_variables.yml` in this directory;
   both are gitignored (they carry generation stamps — see `.gitignore`).
   `docs/posit/` is committed; `site_libs/` and `search.json` are committed
   too — the served pages need them offline.

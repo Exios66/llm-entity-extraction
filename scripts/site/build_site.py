@@ -914,7 +914,7 @@ def build_board() -> dict:
     """The agent Kanban board (MESSAGE_BOARD.md at the repo root) shipped to
     the site's board tab — the live work-progress board for the cross-repo
     project, rendered read-only for visual inspection."""
-    path = REPO_ROOT / "board" / "MESSAGE_BOARD.md"
+    path = REPO_ROOT / "governance" / "MESSAGE_BOARD.md"
     if not path.is_file():
         return {"markdown": "", "built_at": None}
     return {"markdown": path.read_text(encoding="utf-8"),

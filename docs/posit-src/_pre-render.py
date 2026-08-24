@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 SITE_DIR = Path(__file__).resolve().parent
 
 sys.path.insert(0, str(ROOT / "src"))
@@ -169,7 +169,7 @@ def _recent_runs_include(records: list[dict]) -> str:
 
 def _kanban_include() -> str:
     """MESSAGE_BOARD.md with its h1 stripped (the page supplies its own title)."""
-    text = (ROOT / "board" / "MESSAGE_BOARD.md").read_text(encoding="utf-8").strip()
+    text = (ROOT / "governance" / "MESSAGE_BOARD.md").read_text(encoding="utf-8").strip()
     return re.sub(r"^# .*\n\n?", "", text, count=1) + "\n"
 
 
@@ -202,7 +202,7 @@ def _absolutize_links(markdown: str) -> str:
 
 def _discussion_include() -> str:
     """MESSAGE_BOARD_DISCUSSION.qmd without its YAML front matter."""
-    text = (ROOT / "discussion" / "MESSAGE_BOARD_DISCUSSION.qmd").read_text(encoding="utf-8")
+    text = (ROOT / "governance" / "MESSAGE_BOARD_DISCUSSION.qmd").read_text(encoding="utf-8")
     match = re.match(r"^---\n.*?\n---\n", text, flags=re.S)
     if match:
         text = text[match.end():]

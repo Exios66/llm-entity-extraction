@@ -24,7 +24,7 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SITE_DIR = REPO_ROOT / "site"
+SITE_DIR = REPO_ROOT / "docs" / "posit-src"
 DOCS_DIR = REPO_ROOT / "docs"
 POSIT_DIR = DOCS_DIR / "posit"
 QUARTO_YML = SITE_DIR / "_quarto.yml"
@@ -122,7 +122,7 @@ def test_pre_render_variables(tmp_path):
 def test_quarto_yml_contract(tmp_path):
     cfg = yaml.safe_load(QUARTO_YML.read_text(encoding="utf-8"))
     assert cfg["project"]["type"] == "website"
-    assert cfg["project"]["output-dir"] == "../docs/posit"
+    assert cfg["project"]["output-dir"] == "../../docs/posit"
     assert "pre-render" in cfg["project"]
     theme = cfg["format"]["html"]["theme"]
     assert isinstance(theme, dict) and "light" in theme and "dark" in theme
@@ -160,7 +160,7 @@ def test_rendered_pages_committed():
 def test_source_board_divs_stay_balanced():
     """The append-only discussion board must never regress into unbalanced
     fenced divs (KANBAN-037 repaired six untracked closers)."""
-    text = (REPO_ROOT / "discussion" / "MESSAGE_BOARD_DISCUSSION.qmd").read_text(encoding="utf-8")
+    text = (REPO_ROOT / "governance" / "MESSAGE_BOARD_DISCUSSION.qmd").read_text(encoding="utf-8")
     depth = 0
     for line in text.splitlines():
         s = line.strip()
@@ -181,7 +181,7 @@ def test_quarto_render_is_deterministic_and_clean():
     subprocess.run(["quarto", "render"], check=True,
                    capture_output=True, text=True, timeout=600, cwd=str(SITE_DIR))
     status = subprocess.run(
-        ["git", "status", "--porcelain", "--", "docs", "site"],
+        ["git", "status", "--porcelain", "--", "docs"],
         capture_output=True, text=True, check=True, cwd=str(REPO_ROOT),
     ).stdout.strip()
     assert status == "", f"render left tracked changes:\n{status}"

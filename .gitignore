@@ -75,7 +75,7 @@ data/contracteval/contracteval_contracts.jsonl
 # ────────────────────────────────────────────────────────────────────────────
 # Quarto / Posit Cloud — generated artifacts NOT tracked by git.
 #
-# The Posit Cloud portal sources live in `site/` and render into `docs/posit/`.
+# The Posit Cloud portal sources live in `docs/posit-src/` and render into `docs/posit/`.
 # Everything below is regenerated on every `quarto render site` (the
 # `_pre-render.py` hook recreates the includes + variables first), so tracking
 # it would only add churn — the rendered PAGES (`docs/posit/*.html`), the
@@ -100,18 +100,18 @@ _freeze/
 # COMMITTED copies under `docs/posit/site_libs/` stay tracked on purpose (GH
 # Pages serves /docs with no build step — see the header comment above); these
 # rules cover only the untracked source-tree copies Quarto leaves behind.
-site/site_libs/
-site/*_files/
-site/**/*_files/
-site/*.html
-site/search.json
+docs/posit-src/site_libs/
+docs/posit-src/*_files/
+docs/posit-src/**/*_files/
+docs/posit-src/*.html
+docs/posit-src/search.json
 
 # Pre-render build intermediates for the Posit portal — regenerated from
 # reports/experiment_log.jsonl, MESSAGE_BOARD.md and MESSAGE_BOARD_DISCUSSION.qmd
 # by site/_pre-render.py before EVERY render (they carry generation stamps, so
 # tracking them would dirty `git status` after every rebuild).
-site/_includes/
-site/_variables.yml
+docs/posit-src/_includes/
+docs/posit-src/_variables.yml
 
 # Vendored editable checkout of the llm-dojo-scoring dependency (KANBAN-044) —
 # a local dev clone used for the API audit and `pip install -e .`; the

@@ -534,6 +534,24 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
+<td>KANBAN-083</td>
+<td><a href="https://github.com/Exios66/llm-entity-extraction/issues/41">#41</a></td>
+<td><code>in_progress</code></td>
+<td><strong>Root folder consolidation — nest the content/governance dirs</strong> — human directive 2026-08-23: finish the KANBAN-080 job; 13 visible root dirs overwhelm newcomers. Census verdict: <code>reports/</code>+<code>data/</code>+package dirs are idiomatic (25–49 live refs / import coupling) and STAY; the odd ones out are agent-plumbing dirs. Three nesting moves, every live reader updated in lockstep: (1) <code>board/</code>+<code>discussion/</code> → <strong><code>governance/</code></strong> (one umbrella for inter-agent state); (2) <code>wiki/</code> → <strong><code>docs/wiki/</code></strong> (docs under docs); (3) <code>site/</code> → <strong><code>docs/posit-src/</code></strong> (portal SOURCES next to rendered <code>docs/posit/</code>; kills the two-sites ambiguity vs <code>scripts/site/</code>). Traps mapped: <code>_quarto.yml output-dir</code> must deepen (<code>../docs/posit</code>→<code>../../docs/posit</code>) or renders silently scatter; pathlib segment joins in <code>_pre-render.py</code>/<code>build_site.py</code>/<code>render_message_board_qmd.py</code>; <code>test_posit_site.py</code> SITE_DIR + div-balance read + git pathspec; README layout block (+ stale root-memos line from 080 riding along), docs/README posit section, wiki Site page, .gitignore derived-output rules. AGENTS.md path-doctrine rows PARKED pending consent. Suite delta-zero vs fresh baseline required.</td>
+<td>hermes 2026-08-23</td>
+<td>changelog-only</td>
+<td>claimed 2026-08-23, issue filed + census in body</td>
+</tr>
+<tr class="even">
+<td>KANBAN-082</td>
+<td><a href="https://github.com/Exios66/llm-entity-extraction/issues/40">#40</a></td>
+<td><code>in_progress</code></td>
+<td><strong>llm-mailroom modern README (docile-style) + docmd local doc-renderer integration</strong> — human directive 2026-08-23: clean, modern root README with badges, inline images, embedded links to associated repositories, and agent-organization/architecture maps (mermaid), design modeled on <a href="https://github.com/rossumai/docile">rossumai/docile</a>; plus <a href="https://github.com/docmd-io/docmd">docmd</a> integrated into llm-mailroom as the local markdown doc renderer over <code>docs/</code>. Docs/tooling-only; code ships in llm-mailroom.</td>
+<td>hermes 2026-08-23</td>
+<td>— (changelog-only)</td>
+<td>claimed 2026-08-23 — issue #40 created, claim comment posted, board row added; work starting</td>
+</tr>
+<tr class="odd">
 <td>KANBAN-081</td>
 <td><a href="https://github.com/Exios66/llm-entity-extraction/issues/39">#39</a></td>
 <td><code>done</code></td>

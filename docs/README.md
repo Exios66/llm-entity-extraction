@@ -18,7 +18,7 @@ board, and the discussion board under one themed URL.
 | Path | Contents |
 |---|---|
 | `index.html` | The interactive viewer (single page, hash-routed: `#/` index, `#/task/{slug}` / `#/prompt/{v}` / `#/model/{m}` group views, `#/run/{n}` detail, `#/run/{n}/doc/{i}` single-document trace) |
-| `posit/` | **Posit Cloud portal** (Quarto website — see [`site/README.md`](../site/README.md)): `index.html` landing, `experiment-log.html` (generated from the JSONL), `kanban.html`, `discussion.html`, `search.json`, `site_libs/`. Regenerate with `quarto render site`; rendered output is committed. |
+| `posit/` | **Posit Cloud portal** (rendered Quarto website — sources in [`posit-src/`](posit-src/README.md), see its README): `index.html` landing, `experiment-log.html` (generated from the JSONL), `kanban.html`, `discussion.html`, `search.json`, `site_libs/`. Regenerate with `quarto render docs/posit-src`; rendered output is committed. |
 | `assets/` | `site.css` + `site.js` — dependency-free, no CDN, no build step; dark "gradient night" theme via masthead toggle, `?theme=dark`, or system preference |
 | `data/` | **Generated** — `meta.json`, `index.json` (run summaries), `runs/{n}.json` (full records) |
 | `slides/` | **Scoring-method decks** (hand-written markdown) — worked example inputs/outputs + concise scientific explanations of every scoring method, written for parallel researchers who do not have time to read all the docs: field-type scoring, entity lists + bipartite matching, MAE/R² regression diagnostics, factuality audit, failure analysis, and how to read the experiment log |
@@ -113,17 +113,17 @@ so no CI is involved:
 
 ## Posit Cloud deployment (complementary, no Actions)
 
-The `posit/` portal is a Quarto website whose **sources live in `site/`**
+The `posit/` portal is a Quarto website whose **sources live in `posit-src/`**
 (theme, pages, `_pre-render.py` hook). Deploy from Posit Cloud:
 
 ```bash
-quarto render site        # regenerates site/_includes + _variables.yml,
+quarto render docs/posit-src  # regenerates posit-src/_includes + _variables.yml,
                           # renders docs/posit/ (gitignored includes)
 ```
 
 Then either push `docs/` (GH Pages serves it — the default path), run
-`quarto publish quarto-pub` from `site/`, or deploy `docs/` as a static
-site to Posit Connect. Full instructions: [`site/README.md`](../site/README.md).
+`quarto publish quarto-pub` from `docs/posit-src/`, or deploy `docs/` as a static
+site to Posit Connect. Full instructions: [`posit-src/README.md`](posit-src/README.md).
 
 ## Keeping the log and site in sync
 

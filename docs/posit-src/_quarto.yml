@@ -1,6 +1,6 @@
 project:
   type: website
-  output-dir: ../docs/posit
+  output-dir: ../../docs/posit
   pre-render: python3 _pre-render.py
 
 website:
