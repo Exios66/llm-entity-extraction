@@ -798,6 +798,13 @@ def main_with_args(argv: list[str]) -> int:
             print(f"Site data is stale: {len(current)} runs in site, "
                   f"{len(records)} in {args.jsonl}.")
             return 1
+        # KANBAN-094: index length alone misses orphaned run files (a tree
+        # built from a longer/merged view); compare file count too.
+        n_files = len(list((args.out / "runs").glob("*.json")))
+        if n_files != len(records):
+            print(f"Site data is stale: {n_files} run files on disk, "
+                  f"{len(records)} in {args.jsonl}.")
+            return 1
         print(f"Site data is current ({len(current)} runs).")
         return 0
 
@@ -829,6 +836,17 @@ def main_with_args(argv: list[str]) -> int:
         if costs:
             summary["cost"] = costs["per_run"].get(index, {"covered": False})
         summaries.append(summary)
+    # KANBAN-094: the derived tree must be exactly {001..N}. An append-only
+    # log only grows, but a RECONCILED log can shrink below a previously
+    # built tree — prune any run file the current source of truth doesn't
+    # claim, or stale SPA pages linger and break the deep-link invariant.
+    expected_names = {f"{i:03d}.json" for i in range(1, len(records) + 1)}
+    pruned = sorted(p.name for p in runs_dir.glob("*.json")
+                    if p.name not in expected_names)
+    for name in pruned:
+        (runs_dir / name).unlink()
+    if pruned:
+        print(f"Pruned {len(pruned)} stale run file(s): {', '.join(pruned)}")
     (args.out / "index.json").write_text(
         json.dumps(summaries, indent=1), encoding="utf-8")
     meta = build_meta(records, args.jsonl, args.out)
