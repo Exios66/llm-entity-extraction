@@ -26,6 +26,7 @@ llm-mailroom umbrella of influence and how this repo relates to each.
 
 derived artifact: llm-entity-extraction-graph (graphify knowledge-graph site)
 HF datasets:      Lucius-Morningstar/* (published eval/corpus surfaces)
+visualizer:       The-Mailroom (pixel-art UI over llm-mailroom's Langfuse traces)
 ```
 
 ## At a glance
@@ -37,6 +38,7 @@ HF datasets:      Lucius-Morningstar/* (published eval/corpus surfaces)
 | [Enron-Evaluation-Environment](https://github.com/Exios66/Enron-Evaluation-Environment) | EDA + pipeline-ready correspondence dataset from the CMU Enron corpus; owns the shared ground-truth labelers | **Corpus feed** — source of [`enron-correspondence(-dedup)`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup); its labeler modules are imported (never forked) by this repo's HF publishers |
 | [claims-data-eda](https://github.com/Exios66/claims-data-eda) | Insurance-claims candidate-corpus EDA (CMS DE-SynPUF direction) | **Corpus feed (candidate)** for future insurance-claim extraction surfaces — honest-gap benchmark source |
 | [atticus-investigation](https://github.com/Exios66/atticus-investigation) | LegalBench classification prompt-engineering pipeline | **Eval sibling**: same prompt-version × model methodology, LegalBench focus |
+| [The-Mailroom](https://github.com/Exios66/The-Mailroom) | Pixel-art visual engine for the sister pipeline — renders every run as an animated document conveyor (floor, review siding, inspector, metrics, TUI) driven SOLELY by llm-mailroom's Langfuse project | **Downstream of the sister repo** — reads its traces, mirrors its schema (`pipeline_schema.py` / `trace_interpreter.py`); dependency of no family repo |
 | [llm-entity-extraction-graph](https://exios66.github.io/llm-entity-extraction-graph/) | Interactive graphify knowledge graph of THIS codebase | **Derived site** — build artifact only (`graphify-out/` never committed here); companion to [llm-mailroom-graph](https://exios66.github.io/llm-mailroom-graph/) |
 
 ## The Hugging Face family

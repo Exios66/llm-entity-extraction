@@ -798,4 +798,7 @@ layout: [`agents/README.md`](agents/README.md) ·
 (scoring decks, run viewer, board, memos) · the [graphify knowledge graph](https://exios66.github.io/llm-entity-extraction-graph/)
 (interactive code-structure map of this repo; build artifact — see
 [`docs/sister-repos.md`](docs/sister-repos.md)) · the public [wiki](https://github.com/Exios66/llm-entity-extraction/wiki)
-(`docs/wiki/`, pushed with `./docs/wiki/sync-wiki.sh`).
+(`docs/wiki/`, pushed with `./docs/wiki/sync-wiki.sh`) ·
+[The-Mailroom](https://github.com/Exios66/The-Mailroom)
+(the sister pipeline's pixel-art visual engine — an animated document
+conveyor rendered purely from llm-mailroom's Langfuse traces).
