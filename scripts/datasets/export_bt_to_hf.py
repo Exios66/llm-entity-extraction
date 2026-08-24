@@ -52,21 +52,13 @@ OUT_DIR = REPO_ROOT / "data" / "hf_export"
 # into invalid JSON fragments -> DatasetGenerationError "Expected object or
 # value" (KANBAN-087: 16 literal U+2028 chars in one CUAD doc_text). JSONL
 # writers must neutralize them; \\u2028 escapes round-trip losslessly.
-LINE_BOUNDARY_HAZARDS = {
-    "\u2028": "\\u2028",  # LINE SEPARATOR
-    "\u2029": "\\u2029",  # PARAGRAPH SEPARATOR
-    "\x85": "\\u0085",    # NEL (str.splitlines boundary on some platforms)
-}
-
-
-def sanitize_line_boundary_chars(text: str) -> str:
-    """Escape str.splitlines() hazard characters so one JSONL record can never
-    be split mid-row by a line-oriented parser. Lossless: json.loads decodes
-    the escapes back to the original characters."""
-    for ch, esc in LINE_BOUNDARY_HAZARDS.items():
-        text = text.replace(ch, esc)
-    return text
-
+# KANBAN-088: the canonical definition lives in the shared safety module;
+# these names are re-exported for backward compatibility (KANBAN-087 pins
+# and external callers import them from THIS module).
+from scripts.datasets._jsonl_safety import (  # noqa: E402,F401
+    LINE_BOUNDARY_HAZARDS,
+    sanitize_line_boundary_chars,
+)
 
 LICENSE_NOTES = {
     "mailroom-cuad-contracts": "CUAD v1 (The Atticus Project), CC BY 4.0 — page-image rows are DERIVED artifacts; regenerate via scripts/datasets/stream_cuad_to_bt.py",

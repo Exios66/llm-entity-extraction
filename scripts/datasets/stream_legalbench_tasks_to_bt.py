@@ -60,6 +60,13 @@ import re
 import sys
 from pathlib import Path
 
+# KANBAN-088: shared JSONL line-boundary safety (Hub worker splits rows on
+# U+2028/U+2029/NEL; see scripts/datasets/_jsonl_safety.py).
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from scripts.datasets._jsonl_safety import safe_jsonl_line
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import requests
@@ -363,7 +370,7 @@ def write_local_jsonl(records: list[dict], path: Path) -> int:
                     **(record.get("metadata") or {}),
                 },
             }
-            fh.write(_json.dumps(row, ensure_ascii=False) + "\n")
+            fh.write(safe_jsonl_line(row) + "\n")
             written += 1
     return written
 
@@ -502,7 +509,7 @@ def main() -> int:
     if args.classes_manifest:
         with args.classes_manifest.open("w", encoding="utf-8") as fh:
             for row in manifest_rows:
-                fh.write(__import__("json").dumps(row, ensure_ascii=False) + "\n")
+                fh.write(safe_jsonl_line(row) + "\n")
         print(f"\nClasses manifest written to {args.classes_manifest}")
 
     print(f"\n{'Dry run: ' if args.dry_run else ''}Done: {total_synced} rows synced, {total_failed} failed")

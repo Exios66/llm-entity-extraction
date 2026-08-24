@@ -27,6 +27,13 @@ import json
 import sys
 from pathlib import Path
 
+# KANBAN-088: shared JSONL line-boundary safety (Hub worker splits rows on
+# U+2028/U+2029/NEL; see scripts/datasets/_jsonl_safety.py).
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from scripts.datasets._jsonl_safety import safe_jsonl_line
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.contracteval import load_master_gt, run_kpis  # noqa: E402
@@ -92,7 +99,7 @@ def main_with_args(argv: list[str]) -> int:
             new_lines.append(line)
             continue
         record.setdefault("scores", {})["contracteval_kpis"] = kpis
-        new_lines.append(json.dumps(record, ensure_ascii=False))
+        new_lines.append(safe_jsonl_line(record))
         updated += 1
         print(f"  {record['experiment_name']}: n_pairs {kpis['n_pairs']} / "
               f"n_pos {kpis['n_positive']} / F1 {kpis['f1']} / F2 {kpis['f2']} / "

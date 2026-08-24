@@ -20,6 +20,13 @@ builder REFUSES to write if any row lacks either field: a partial-null
 schema is what crashed the Hub viewer (JSON loader infers null-typed columns
 from all-null batches, then fails casting later string batches).
 
+# KANBAN-088: shared JSONL line-boundary safety (Hub worker splits rows on
+# U+2028/U+2029/NEL; see scripts/datasets/_jsonl_safety.py).
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from scripts.datasets._jsonl_safety import safe_jsonl_line
+
 The merged dump is deterministically ordered (by corpus, then filename) so
 its dataset fingerprint is reproducible across rebuilds. Use it as the single
 docclass A/B surface:
@@ -218,7 +225,7 @@ def normalize_metadata_rows(rows: list[dict]) -> list[dict]:
         for k in union:
             v = md.get(k, "")
             if isinstance(v, (dict, list)):
-                v = json.dumps(v, sort_keys=True, ensure_ascii=False)
+                v = json.dumps(v, sort_keys=True, ensure_ascii=False)  # KANBAN-088-EXEMPT: CSV cell value; the row-level writer below sanitizes
             else:
                 v = "" if v is None else str(v)
             flat[k] = v
@@ -311,7 +318,7 @@ def main_with_args(argv: list[str]) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("w", encoding="utf-8") as fh:
         for row in merged:
-            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+            fh.write(safe_jsonl_line(row) + "\n")
     print(f"\nWrote {len(merged)} rows -> {args.out}")
     return 0
 

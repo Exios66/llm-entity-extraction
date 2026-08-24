@@ -57,6 +57,13 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+# KANBAN-088: shared JSONL line-boundary safety (Hub worker splits rows on
+# U+2028/U+2029/NEL; see scripts/datasets/_jsonl_safety.py).
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from scripts.datasets._jsonl_safety import safe_jsonl_line
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -418,7 +425,7 @@ def main_with_args(argv: list[str]) -> int:
             p = out_dir / rel
             with p.open("w", encoding="utf-8") as fh2:
                 for row in rows:
-                    fh2.write(json.dumps(row, ensure_ascii=False) + "\n")
+                    fh2.write(safe_jsonl_line(row) + "\n")
             shas[rel] = hashlib.sha256(p.read_bytes()).hexdigest()
             print(f"wrote {len(rows):>7,} rows -> {rel} "
                   f"(sha256 {shas[rel][:12]}…)")

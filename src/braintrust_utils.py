@@ -173,7 +173,7 @@ def _deterministic_record_id(record: dict) -> str:
     import hashlib
     import json as _json
 
-    blob = _json.dumps(record, sort_keys=True, default=str, ensure_ascii=False)
+    blob = _json.dumps(record, sort_keys=True, default=str, ensure_ascii=False)  # KANBAN-088-EXEMPT: hash input — byte-stability beats split-safety; never persisted as JSONL rows
     return "rec-" + hashlib.sha256(blob.encode("utf-8")).hexdigest()[:32]
 
 

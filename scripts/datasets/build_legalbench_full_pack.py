@@ -39,6 +39,13 @@ import time
 from collections import Counter
 from pathlib import Path
 
+# KANBAN-088: shared JSONL line-boundary safety (Hub worker splits rows on
+# U+2028/U+2029/NEL; see scripts/datasets/_jsonl_safety.py).
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from scripts.datasets._jsonl_safety import safe_jsonl_line
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -306,7 +313,7 @@ def main() -> int:
                             stats[f"{split}_audit_{audit['status'].lower()}"] += 1
                     enriched.append(res)
                 (tdir / f"{out_name}.enriched.jsonl").write_text(
-                    "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in enriched),
+                    "".join(safe_jsonl_line(e) + "\n" for e in enriched),
                     encoding="utf-8")
             rec["enrichment_stats"] = dict(stats)
             report["tasks"][task] = dict(stats)
@@ -320,7 +327,7 @@ def main() -> int:
         time.sleep(REQUEST_SLEEP)
 
     (OUT_DIR / "index.jsonl").write_text(
-        "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in index_rows),
+        "".join(safe_jsonl_line(r) + "\n" for r in index_rows),
         encoding="utf-8")
     report["totals"] = dict(report["totals"])
     report["cuad_json_source"] = str(CUAD_JSON)

@@ -131,7 +131,7 @@ def normalize_blind_metadata(rows: list[dict]) -> list[dict]:
         for k in union:
             v = md.get(k, "")
             if isinstance(v, (dict, list)):
-                v = json.dumps(v, sort_keys=True, ensure_ascii=False)
+                v = json.dumps(v, sort_keys=True, ensure_ascii=False)  # KANBAN-088-EXEMPT: CSV cell value; row writers sanitize
             else:
                 v = "" if v is None else str(v)
             flat[k] = v

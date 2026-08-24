@@ -44,6 +44,13 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+# KANBAN-088: shared JSONL line-boundary safety (Hub worker splits rows on
+# U+2028/U+2029/NEL; see scripts/datasets/_jsonl_safety.py).
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from scripts.datasets._jsonl_safety import safe_jsonl_line
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.datasets.build_docclass_merged import (  # noqa: E402
@@ -161,7 +168,7 @@ def attach_clause_gt(merged: list[dict], cuad_gt: dict[str, dict],
                 hit = cuad_gt.get(stem2)
             if hit is not None:
                 gf["cuad_clause_labels"] = json.dumps(
-                    hit["clauses"], sort_keys=True, ensure_ascii=False)
+                    hit["clauses"], sort_keys=True, ensure_ascii=False)  # KANBAN-088-EXEMPT: field value; row-level write_jsonl() sanitizes
                 stats["cuad_joined"] += 1
         elif r.get("expected") == "merger_agreement":
             stats["maud_total"] += 1
@@ -169,7 +176,7 @@ def attach_clause_gt(merged: list[dict], cuad_gt: dict[str, dict],
             tasks = maud_gt.get(cid)
             if tasks:
                 gf["maud_clause_labels"] = json.dumps(
-                    tasks, sort_keys=True, ensure_ascii=False)
+                    tasks, sort_keys=True, ensure_ascii=False)  # KANBAN-088-EXEMPT: field value; row-level write_jsonl() sanitizes
                 stats["maud_joined"] += 1
     return stats
 
@@ -315,7 +322,7 @@ def write_jsonl(rows: list[dict], out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", encoding="utf-8") as fh:
         for r in rows:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+            fh.write(safe_jsonl_line(r) + "\n")
 
 
 def census(rows: list[dict]) -> str:
