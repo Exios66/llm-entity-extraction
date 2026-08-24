@@ -68,8 +68,12 @@ from agents.sorter_agent import (  # noqa: E402
     DOC_SUBCLASS_UNKNOWN,
     DOCCLASS_CLASS_KEYS,
     DOCCLASS_CLASSES,
+    DOCCLASS_PILOT_CLASSES,
+    DOCCLASS_PILOT_CLASS_KEYS,
+    DOCCLASS_PILOT_SCHEMA,
     DOCCLASS_SCHEMA,
     SorterAgent,
+    SUBCLASS_DIMENSIONS,
     equivalent_doc_subclasses,
     normalize_doc_subclass,
     normalize_subtype,
@@ -120,7 +124,7 @@ def load_docclass_dataset(dataset_names: list[str], project: str, project_id: st
     subclass dimension — e.g. correspondence).
     """
     rows: list[dict] = []
-    valid = set(DOCCLASS_CLASS_KEYS)
+    valid = set(DOCCLASS_CLASS_KEYS) | set(DOCCLASS_PILOT_CLASS_KEYS)
     for name in dataset_names:
         dataset = load_braintrust_dataset(project, name, valid=valid, project_id=project_id)
         for d in dataset:
@@ -276,6 +280,9 @@ def main_with_args(argv: list[str]) -> int:
                         help="STRATIFIED sample of N rows: evenly distributed across doc_type classes")
     parser.add_argument("--seed", type=int, default=42, help="Seed for --sample/--stratified")
     parser.add_argument("--model", default=_CONFIG.model, help=f"Model (default: {_CONFIG.model})")
+    parser.add_argument("--class-set", choices=["extended", "pilot"], default="extended",
+                        help="Primary class universe: extended (6 shared + merger + insurance) "
+                             "or pilot (the 5 classes the merged GT contains)")
     parser.add_argument("--prompt-version", default=DEFAULT_PROMPT,
                         help=f"Sorter prompt version (default: {DEFAULT_PROMPT})")
     parser.add_argument("--temperature", type=float, default=0.1, help="Sampling temperature")
@@ -373,9 +380,11 @@ def main_with_args(argv: list[str]) -> int:
                if args.stratified else
                f"sample {args.sample} (seed {args.seed})" if args.sample else
                f"limit {args.limit}" if args.limit else "all")
+        _classes = (DOCCLASS_PILOT_CLASS_KEYS if args.class_set == "pilot"
+                    else DOCCLASS_CLASS_KEYS)
         print(f"Dry run: {len(dataset)} rows ({how}) -> experiment '{experiment_name}'")
-        print(f"  sorter={args.prompt_version} model={args.model} "
-              f"classes={DOCCLASS_CLASS_KEYS}")
+        print(f"  sorter={args.prompt_version} model={args.model} class_set={args.class_set} "
+              f"classes={_classes}")
         print(f"  input_mode={args.input_mode} vision_pages={args.vision_pages} "
               f"tracing=langfuse-primary (phoenix fallback) "
               f"session={experiment_name} trace_name={args.lf_trace_name}")
@@ -452,7 +461,10 @@ def main_with_args(argv: list[str]) -> int:
         with tracer.trace_document(filename, expected_doc_type, trace_meta) as handle:
             sorter = SorterAgent(model=args.model, api_key=openrouter_key,
                                  prompt_version=args.prompt_version,
-                                 doc_classes=DOCCLASS_CLASSES, schema=DOCCLASS_SCHEMA,
+                                 doc_classes=(DOCCLASS_PILOT_CLASSES if args.class_set == "pilot"
+                                              else DOCCLASS_CLASSES),
+                                 schema=(DOCCLASS_PILOT_SCHEMA if args.class_set == "pilot"
+                                         else DOCCLASS_SCHEMA),
                                  callbacks=[handle.handler] if handle.handler else None)
             sorter._max_input_chars = args.max_input_chars
             sorter._max_tokens = args.max_tokens
@@ -522,20 +534,37 @@ def main_with_args(argv: list[str]) -> int:
 
             doc_type = str(result.get("doc_type", "correspondence")).strip().lower()
             doc_type_ok = doc_type == expected_doc_type
-            predicted_subclass = normalize_doc_subclass(
-                result.get("doc_subclass") if doc_type in ("merger_agreement", "corporate_record") else None,
-                doc_type,
-            ) if expected_subclass else None
+            # Canonicalize BOTH sides before comparing: the model emits enum
+            # keys while GT dialects vary by corpus (CUAD folder labels like
+            # 'License_Agreements', snake_case keys, folder conventions such
+            # as 'Joint Venture _ Filing'). contract rows score through the
+            # contract_subtype dimension (normalize_subtype); every registered
+            # doc_subclass dimension through normalize_doc_subclass.
+            if doc_type == "contract":
+                predicted_subclass = normalize_subtype(result.get("contract_subtype"))
+                expected_subclass_canon = normalize_subtype(expected_subclass)
+            elif doc_type in SUBCLASS_DIMENSIONS:
+                predicted_subclass = normalize_doc_subclass(
+                    result.get("doc_subclass"), doc_type)
+                expected_subclass_canon = normalize_doc_subclass(expected_subclass, doc_type)
+            else:
+                predicted_subclass = None
+                expected_subclass_canon = None
             # subclass_ok is None when the row carries no subclass GT (the
             # class has no second level) — those rows neither count for nor
-            # against subclass_accuracy.
-            subclass_ok = (predicted_subclass == expected_subclass) if expected_subclass else None
+            # against subclass_accuracy. GT 'other' stays a scoreable value.
+            if expected_subclass and expected_subclass_canon is not None:
+                subclass_ok = predicted_subclass == expected_subclass_canon
+            else:
+                subclass_ok = None
             # Equivalence-aware subclass: a defensible family read counts as a
             # hit (e.g. mixed_cash_stock <-> mixed_cash_stock_election), the
             # docclass mirror of subtype_accuracy_equiv.
             subclass_ok_equiv = (
-                doc_type_ok and equivalent_doc_subclasses(
-                    predicted_subclass, expected_subclass, doc_type)
+                doc_type_ok and expected_subclass_canon is not None and equivalent_doc_subclasses(
+                    predicted_subclass, expected_subclass_canon, doc_type)
+            ) if expected_subclass and doc_type != "contract" else (
+                doc_type_ok and predicted_subclass == expected_subclass_canon
             ) if expected_subclass else None
             exact = doc_type_ok and (subclass_ok if expected_subclass else True)
             try:
@@ -582,6 +611,7 @@ def main_with_args(argv: list[str]) -> int:
                                                "doc_subclass": predicted_subclass},
                                  "error": "",
                                  "expected_doc_type": expected_doc_type,
+                                 "expected_subclass_canon": expected_subclass_canon,
                                  "expected_subclass": expected_subclass,
                                  "scores": {"composite": composite}})
 

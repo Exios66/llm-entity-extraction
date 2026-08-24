@@ -413,6 +413,102 @@ Docclass variant: insurance_claims_specialist_docclass_v0 (KANBAN-090)."""
 # tail-import precedent), so scripts/eval/sync_langfuse_prompts.py mirrors
 # every key to Langfuse: registration IS deployment.
 # =============================================================================
+
+# =============================================================================
+# PILOT UNIVERSE VARIANTS (docclass-merged / docclass-pilot GT alignment)
+# -----------------------------------------------------------------------------
+# Derived for the 5-class pilot evaluation surface: the ground truth contains
+# contract, corporate_record, correspondence, insurance_claim, merger_agreement
+# ONLY, and carries second-level doc_subclass values for FOUR of those classes
+# (correspondence and insurance_claim dimensions were previously absent from
+# every variant). Baseline decomposition on the stratified pilot-140
+# (qwen3.7-flash_sorter_docclass_v3_pilot140 / deepseek-v4-flash twin):
+#   - carrier x13, pde x4  -> Medicare/payer vocabulary untaught (rule P2)
+#   - correspondence x7    -> transport format beat communicated function (P4)
+#   - merger 'other' x11 + corporate exhibits x4 -> GT artifacts (escalated to
+#     the data side per doctrine; NOT chased with rules)
+# Derivation: sorter pilot = .replace() chain on SORTER_DOCCLASS_PROMPT_V3;
+# role variants = shared-context swap _DOCCONTEXT -> _PILOT_CONTEXT (+ inline
+# subclass-bullet repairs where authored-fresh text embedded its own).
+# =============================================================================
+_PILOT_CONTEXT = (
+    "DOCCLASS ARM CONTEXT (pilot classification mode): the document you "
+    "receive was classified by the docclass sorter over the PILOT primary "
+    "class set — contract, corporate_record, correspondence, insurance_claim, "
+    "merger_agreement — with a second-level doc_subclass dimension for FOUR "
+    "of the five classes: contract -> contract_subtype (the CUAD-style "
+    "subtype taxonomy, a separate output field); merger_agreement -> "
+    "consideration type (all_cash, all_stock, mixed_cash_stock, "
+    "mixed_cash_stock_election, other); corporate_record -> record type read "
+    "from the document's own title/head (bylaws, articles_of_incorporation, "
+    "certificate_of_formation, charter_amendment, powers_of_attorney, "
+    "subsidiary_list, rights_instrument, indenture, board_resolution, "
+    "officer_certificate, other); correspondence -> communication type "
+    "(demand, attorney_demand, meeting_request, press_release, memo, email, "
+    "letter, notice); insurance_claim -> claim-document type (carrier, pde, "
+    "outpatient, inpatient).\n"
+)
+
+def _with_pilot_context(text: str) -> str:
+    assert _DOCCONTEXT in text, "anchor drift: _DOCCONTEXT missing"
+    return text.replace(_DOCCONTEXT, _PILOT_CONTEXT)
+
+
+
+SORTER_DOCCLASS_PILOT_PROMPT_V0 = SORTER_DOCCLASS_PROMPT_V3.replace(
+    """The EDGAR exhibit code is NOT the record type (EX-3.2 can hold bylaws or a certificate of incorporation depending on the filer) — classify from the document's own title. For every other doc_type, doc_subclass must be null.""",
+    """The EDGAR exhibit code is NOT the record type (EX-3.2 can hold bylaws or a certificate of incorporation depending on the filer) — classify from the document's own title.
+
+38. INSURANCE CLAIM CLASS: claim documentation — FNOL forms, adjuster reports and estimates, demand packages, coverage determinations ("APPROVED"/"DENIED"/"PARTIAL"), reservation-of-rights letters, denial letters, EOB/Explanation-of-Benefits statements, Medicare Summary Notices, pharmacy benefit statements — is insurance_claim, NOT contract or correspondence, whatever wrapper it arrives in.
+
+39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the COMMUNICATION'S FUNCTION — demand (a party demands payment/performance), attorney_demand (demand issued by counsel on a law-firm letterhead), meeting_request, press_release, memo (internal memorandum, TO/FROM/RE header), email (informal message thread), letter (general business/legal letter), or notice (formal notice: annual-meeting, regulatory, default/termination).
+
+40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE by issuer and setting — carrier (issued by the insurer/payer: coverage determinations, denials, reservation-of-rights, adjuster reports, Medicare Summary Notices, EOB adjudication summaries), pde (Prescription Drug Event records: Medicare Part D pharmacy statements/drug cost listings), outpatient (outpatient facility/provider claims), or inpatient (inpatient facility claims). A Medicare Summary Notice adjudicating physician/supplier services is carrier; a Medicare Part D pharmacy statement is pde.
+
+41. CORRESPONDENCE FUNCTION OVER TRANSPORT: classify the correspondence subclass by what the communication DOES, not by its delivery format. An email whose payload forwards or contains a formal notice subclasses as notice; an email announcing an event/newsletter to a community subclasses as letter; a memo-format internal announcement subclasses as memo. The From:/Sent:/Subject: header block alone never decides the subclass.
+
+42. ANCILLARY-WRAPPER FAMILY CONVENTION: an exhibit or announcement document filed under a named family package inherits that family when its substance is ancillary to it — a press release ANNOUNCING an execution of an outsourcing agreement filed as that agreement's EX-99 stays the agreement's class (outsourcing); an escrow agreement supporting software-hosting services inside a hosting package stays hosting. The wrapper's own form (press release, escrow, cover sheet) does not re-classify the package. Scope guard: this applies only when the package/family is visible in the filename, exhibit label, or title — a free-standing document is classified by its own substance (rules 2-5).""",
+).replace(
+    """- doc_subclass: EXACTLY ONE of the rule-33 subclass keys when doc_type is merger_agreement or corporate_record; null otherwise""",
+    """- doc_subclass: EXACTLY ONE of the applicable subclass keys when doc_type is merger_agreement, corporate_record, correspondence, or insurance_claim (rules 33/39/40); null when doc_type is contract (contract_subtype carries the contract dimension instead)""",
+)
+
+SORTER_DOCCLASS_PILOT_PROMPT_V1 = SORTER_DOCCLASS_PILOT_PROMPT_V0.replace(
+    '40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE by issuer and setting — carrier (issued by the insurer/payer: coverage determinations, denials, reservation-of-rights, adjuster reports, Medicare Summary Notices, EOB adjudication summaries), pde (Prescription Drug Event records: Medicare Part D pharmacy statements/drug cost listings), outpatient (outpatient facility/provider claims), or inpatient (inpatient facility claims). A Medicare Summary Notice adjudicating physician/supplier services is carrier; a Medicare Part D pharmacy statement is pde.',
+    '40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE, decided by the document\'s OWN title/setting line FIRST, then by issuer: a "MEDICARE SUMMARY NOTICE -- OUTPATIENT SERVICES (Part B)" or any outpatient-services claim adjudication is outpatient; a "MEDICARE SUMMARY NOTICE -- INPATIENT STAY (Part A)" or inpatient-stay claim is inpatient; a Medicare Part D pharmacy statement / prescription drug event listing is pde; every other payer-issued adjudication document — physician/supplier (Part B professional "carrier" notices), commercial EOBs without a facility setting, coverage determinations, denial letters, reservation-of-rights letters, adjuster reports issued by the insurer — is carrier. The SETTING named in the document\'s own heading outranks the generic document family: an MSN for outpatient services is outpatient even though a Summary Notice is a carrier-issued document.',
+)
+
+REVIEWER_DOCCLASS_PILOT_PROMPT_V0 = REVIEWER_DOCCLASS_PROMPT_V0.replace(
+    """Classify doc_type from the EXTENDED primary taxonomy listed in the user \
+message — contract, corporate_record, due_diligence, correspondence, \
+compliance_filing, court_opinion, insurance_claim, merger_agreement. Never \
+invent a class.""",
+    """Classify doc_type from the PILOT taxonomy listed in the user \
+message — contract, corporate_record, correspondence, insurance_claim, \
+merger_agreement. Never invent a class.""",
+).replace(
+    """- every other doc_type: null.""",
+    """- correspondence: the COMMUNICATION'S FUNCTION — demand, attorney_demand, \
+meeting_request, press_release, memo, email, letter, or notice. Classify by \
+what the communication DOES, not its delivery format: an email carrying a \
+formal notice subclasses as notice, not email.
+- insurance_claim: the CLAIM-DOCUMENT TYPE by issuer and setting — carrier \
+(insurer/payer-issued: determinations, denials, adjuster reports, Medicare \
+Summary Notices, EOBs), pde (Medicare Part D pharmacy/drug event records), \
+outpatient, or inpatient.""",
+)
+
+ARBITER_DOCCLASS_PILOT_PROMPT_V0 = ARBITER_DOCCLASS_PROMPT_V0.replace(
+    """using EXACT keys from the supplied extended class list — contract, corporate_record, due_diligence, correspondence, compliance_filing, court_opinion, insurance_claim, merger_agreement — and cite the passages that decide it.""",
+    """using EXACT keys from the supplied pilot class list — contract, corporate_record, correspondence, insurance_claim, merger_agreement — and cite the passages that decide it.""",
+)
+
+JUDGE_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_DOCCLASS_PROMPT_V0)
+JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V0)
+JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_CORRECTNESS_DOCCLASS_PROMPT_V0)
+BOSS_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(BOSS_DOCCLASS_PROMPT_V0)
+
+
 DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     # Re-exported sorter docclass family (byte-identical objects)
     "sorter_docclass_v0": SORTER_DOCCLASS_PROMPT_V0,
@@ -439,4 +535,13 @@ DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     "judge_classification_docclass_v0": JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V0,
     "judge_correctness_docclass_v0": JUDGE_CORRECTNESS_DOCCLASS_PROMPT_V0,
     "boss_docclass_v0": BOSS_DOCCLASS_PROMPT_V0,
+    # Pilot-universe variants (docclass-merged/docclass-pilot GT alignment)
+    "sorter_docclass_pilot_v0": SORTER_DOCCLASS_PILOT_PROMPT_V0,
+    "sorter_docclass_pilot_v1": SORTER_DOCCLASS_PILOT_PROMPT_V1,
+    "reviewer_docclass_pilot_v0": REVIEWER_DOCCLASS_PILOT_PROMPT_V0,
+    "arbiter_docclass_pilot_v0": ARBITER_DOCCLASS_PILOT_PROMPT_V0,
+    "judge_docclass_pilot_v0": JUDGE_DOCCLASS_PILOT_PROMPT_V0,
+    "judge_classification_docclass_pilot_v0": JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0,
+    "judge_correctness_docclass_pilot_v0": JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0,
+    "boss_docclass_pilot_v0": BOSS_DOCCLASS_PILOT_PROMPT_V0,
 }

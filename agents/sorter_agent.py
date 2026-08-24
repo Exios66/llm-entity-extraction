@@ -40,8 +40,28 @@ MERGER_AGREEMENT_CLASS = {
     "description": "Merger and acquisition agreements: agreements and plans of "
                    "merger, share/asset purchase agreements (MAUD corpus)",
 }
-DOCCLASS_CLASSES = DOC_CLASSES + [MERGER_AGREEMENT_CLASS]
+# Insurance claim documentation (docclass-merged v5+ / docclass-pilot GT):
+# FNOL forms, adjuster reports/estimates, demand packages, coverage
+# determinations, reservation-of-rights and denial letters, EOB statements.
+INSURANCE_CLAIM_CLASS = {
+    "key": "insurance_claim",
+    "label": "Insurance Claim",
+    "description": "Insurance claim documentation: FNOL forms, adjuster reports "
+                   "and estimates, demand packages, coverage determinations, "
+                   "reservation-of-rights and denial letters, EOB statements",
+}
+DOCCLASS_CLASSES = DOC_CLASSES + [MERGER_AGREEMENT_CLASS, INSURANCE_CLAIM_CLASS]
 DOCCLASS_CLASS_KEYS = [d["key"] for d in DOCCLASS_CLASSES]
+
+# Pilot class universe (KANBAN-090 lineage, docclass-merged/docclass-pilot GT):
+# the 5 primary classes the ground truth actually contains. The three shared
+# classes absent from every GT row (due_diligence, compliance_filing,
+# court_opinion) stay available on the extended surface but are excluded here
+# so the option list matches the data exactly.
+PILOT_CLASS_KEYS = ["contract", "corporate_record", "correspondence",
+                    "insurance_claim", "merger_agreement"]
+DOCCLASS_PILOT_CLASSES = [c for c in DOCCLASS_CLASSES if c["key"] in PILOT_CLASS_KEYS]
+DOCCLASS_PILOT_CLASS_KEYS = [d["key"] for d in DOCCLASS_PILOT_CLASSES]
 
 # Second-level dimension for non-contract doc classes (data-necessitated
 # granularity): consideration type for merger agreements (MAUD expert GT),
@@ -81,9 +101,41 @@ CORPORATE_RECORD_SUBCLASSES = [
      "description": "Officer's certificates (e.g. of incumbency)"},
 ]
 DOC_SUBCLASS_UNKNOWN = "other"
-DOC_SUBCLASSES = MERGER_SUBCLASSES + CORPORATE_RECORD_SUBCLASSES + [
-    {"key": DOC_SUBCLASS_UNKNOWN, "label": "Other", "description": "No matching subclass"}
+CORRESPONDENCE_SUBCLASSES = [
+    {"key": "demand", "label": "Demand Letter",
+     "description": "Payment/performance demand from a party (non-attorney)"},
+    {"key": "attorney_demand", "label": "Attorney Demand Letter",
+     "description": "Demand letter issued by counsel on a law-firm letterhead"},
+    {"key": "meeting_request", "label": "Meeting Request",
+     "description": "Request to schedule/convene a meeting or call"},
+    {"key": "press_release", "label": "Press Release",
+     "description": "Public announcement distributed to media"},
+    {"key": "memo", "label": "Memorandum",
+     "description": "Internal memorandum (TO/FROM/RE or memo header)"},
+    {"key": "email", "label": "Email",
+     "description": "Email message thread (From:/To:/Subject: headers)"},
+    {"key": "letter", "label": "General Letter",
+     "description": "General business/legal correspondence letter"},
+    {"key": "notice", "label": "Notice",
+     "description": "Formal notice: annual-meeting notices, regulatory notices, "
+                    "default/termination notices when not demanding payment"},
 ]
+INSURANCE_CLAIM_SUBCLASSES = [
+    {"key": "carrier", "label": "Carrier Document",
+     "description": "Insurer/carrier-issued claim document (coverage "
+                    "determination, denial, reservation of rights, adjuster "
+                    "report issued by the carrier)"},
+    {"key": "pde", "label": "Prescription Drug Event (PDE) Record",
+     "description": "Pharmacy/prescription drug event claim record"},
+    {"key": "outpatient", "label": "Outpatient Claim",
+     "description": "Outpatient medical claim/EOB documentation"},
+    {"key": "inpatient", "label": "Inpatient Claim",
+     "description": "Inpatient medical claim/EOB documentation"},
+]
+DOC_SUBCLASSES = (MERGER_SUBCLASSES + CORPORATE_RECORD_SUBCLASSES
+                  + CORRESPONDENCE_SUBCLASSES + INSURANCE_CLAIM_SUBCLASSES + [
+    {"key": DOC_SUBCLASS_UNKNOWN, "label": "Other", "description": "No matching subclass"}
+])
 DOC_SUBCLASS_KEYS = [s["key"] for s in DOC_SUBCLASSES]
 
 # Subclass dimension per doc class: which subclass enum applies to which
@@ -91,6 +143,8 @@ DOC_SUBCLASS_KEYS = [s["key"] for s in DOC_SUBCLASSES]
 SUBCLASS_DIMENSIONS: dict[str, list[dict]] = {
     "merger_agreement": MERGER_SUBCLASSES,
     "corporate_record": CORPORATE_RECORD_SUBCLASSES,
+    "correspondence": CORRESPONDENCE_SUBCLASSES,
+    "insurance_claim": INSURANCE_CLAIM_SUBCLASSES,
 }
 
 # Common phrasings that do not normalize to their key (singular/plural,
@@ -259,12 +313,38 @@ DOCCLASS_SCHEMA = build_structured_schema(
             "enum": DOC_SUBCLASS_KEYS,
             "description": "The second-level class: consideration type when doc_type is "
                            "merger_agreement, record type when doc_type is corporate_record, "
+                           "correspondence type when doc_type is correspondence (demand, "
+                           "attorney_demand, meeting_request, press_release, memo, email, "
+                           "letter, notice), claim-document type when doc_type is "
+                           "insurance_claim (carrier, pde, outpatient, inpatient), "
                            "null otherwise. See the subclass list in the prompt.",
         },
         "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
         "reasoning": {"type": "string"},
     },
     title="DocClassClassificationOutput",
+)
+
+# Pilot schema: same shape over the 5-class pilot universe (the classes the
+# docclass-merged / docclass-pilot ground truth actually contains).
+DOCCLASS_PILOT_SCHEMA = build_structured_schema(
+    {
+        "doc_type": {"type": "string", "enum": DOCCLASS_PILOT_CLASS_KEYS},
+        "contract_subtype": {
+            "type": ["string", "null"],
+            "enum": CONTRACT_SUBTYPE_KEYS + [SUBTYPE_UNKNOWN],
+            "description": "The contract family/subgroup — REQUIRED when doc_type is "
+                           "contract, null otherwise. See the subtype list in the prompt.",
+        },
+        "doc_subclass": {
+            "type": ["string", "null"],
+            "enum": DOC_SUBCLASS_KEYS,
+            "description": DOCCLASS_SCHEMA["properties"]["doc_subclass"]["description"],
+        },
+        "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "reasoning": {"type": "string"},
+    },
+    title="DocClassPilotClassificationOutput",
 )
 
 

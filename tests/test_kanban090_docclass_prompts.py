@@ -11,7 +11,7 @@ Guards three things:
    the docclass context block.
 """
 
-EXPECTED_DOCCLASS_KEY_COUNT = 21  # 8 sorter re-exports + 10 derived + 3 authored
+EXPECTED_DOCCLASS_KEY_COUNT = 29  # 21 KANBAN-090 keys + 8 pilot-universe variants
 
 
 def _doc():
