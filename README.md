@@ -252,6 +252,8 @@ docs/                    the GH Pages site: index.html + assets/ + slides/ + dat
                          sync-wiki.sh) + SCORING.md, memos/, sister-repos.md
 data/                    (gitignored run artifacts: manifests/, legalbench_local/, samples/)
                          + tracked data/eda/ (EDA report, findings, figures)
+                         + tracked data/gt/ (KANBAN-097 agent-bench ground truth:
+                           edge_suites/, per-doc packets/, insurance-claim GT)
 .opencode/               agent prompts + skills (prompt-engineer, experiment-log-sync, eval-judge)
 ```
 
