@@ -55,13 +55,18 @@ reporting = [
     "openpyxl>=3.1",
 ]
 embeddings = ["sentence-transformers>=3.0"]
+notebooks = [
+    "nbformat>=5.10",
+    "nbclient>=0.10",
+    "ipykernel>=6.29",
+]
 dev = [
     "pytest>=8.0",
     "pytest-mock>=3.14",
     "llm-entity-extraction[tracing]",
 ]
 all = [
-    "llm-entity-extraction[tracing,evals,datasets,reporting,embeddings]",
+    "llm-entity-extraction[tracing,evals,datasets,reporting,embeddings,notebooks]",
 ]
 pdf = ["llm-entity-extraction[datasets]"]  # legacy alias for [datasets]
 

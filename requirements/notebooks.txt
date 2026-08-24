@@ -1,0 +1,6 @@
+# Notebooks batch (KANBAN-068): headless notebook execution + kernelspec.
+# Mirrors the [notebooks] extra in pyproject.toml (KANBAN-081 parity contract).
+# Floors = versions verified working in-repo on 2026-08-24 (python3.13 venv).
+nbformat>=5.10
+nbclient>=0.10
+ipykernel>=6.29

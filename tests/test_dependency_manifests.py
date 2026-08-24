@@ -43,6 +43,7 @@ EXTRA_TO_BATCH_FILE = {
     "datasets": "datasets.txt",
     "reporting": "reporting.txt",
     "embeddings": "embeddings.txt",
+    "notebooks": "notebooks.txt",
     "dev": "dev.txt",
 }
 
@@ -150,10 +151,10 @@ def test_batch_files_match_pyproject_extras():
 def test_all_extra_and_all_txt_reference_every_non_dev_batch():
     extras = _load_pyproject()["project"]["optional-dependencies"]
     joined = extras["all"][0]
-    for batch in ("tracing", "evals", "datasets", "reporting", "embeddings"):
+    for batch in ("tracing", "evals", "datasets", "reporting", "embeddings", "notebooks"):
         assert batch in joined
     all_txt = (REPO_ROOT / "requirements" / "all.txt").read_text(encoding="utf-8")
-    for batch in ("tracing", "evals", "datasets", "reporting", "embeddings"):
+    for batch in ("tracing", "evals", "datasets", "reporting", "embeddings", "notebooks"):
         assert f"-r {batch}.txt" in all_txt
     # dev is deliberately NOT part of [all]: runtime installs never need pytest
     assert "dev" not in joined

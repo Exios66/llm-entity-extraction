@@ -6,3 +6,4 @@
 -r datasets.txt
 -r reporting.txt
 -r embeddings.txt
+-r notebooks.txt
