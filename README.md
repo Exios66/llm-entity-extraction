@@ -17,7 +17,7 @@ taxonomy/prompts.
 
 ## Contents
 
-- [The sorter's two jobs](#the-sorters-two-jobs)
+- [The sorter's three jobs](#the-sorters-three-jobs)
 - [The pipeline under test](#the-pipeline-under-test)
 - [Scoring (deterministic, field-type-aware)](#scoring-deterministic-field-type-aware)
 - [Layout (repo map)](#layout)
@@ -31,7 +31,7 @@ taxonomy/prompts.
 - [Credits](#credits)
 - [Docs & navigation](#docs--navigation)
 
-## The sorter's two jobs
+## The sorter's three jobs
 
 1. **Vision classification of the ACTUAL PDFs (RVL-CDIP pipeline)** — every
    eval row is ONE PDF with ALL of its pages: the streamer renders every page
@@ -108,6 +108,9 @@ key_obligations fidelity outweighs the cost/overall tradeoff.
 
 ## Scoring (deterministic, field-type-aware)
 
+<details>
+<summary>Scoring internals — field types, diagnostics, task dispatcher, Monte Carlo</summary>
+
 Exact-match-on-extraction treats every field identically, which is wrong. The
 evaluations score each field by its type (`config/taxonomy.yaml →
 field_scoring:`). The scoring definitions are **outsourced to the
@@ -183,11 +186,16 @@ paired-bootstrap-ablation / failure-pipeline / exemplar metrics over the joint
 reasoning corpus. Every metric (with formulas and reading) is in
 [`docs/SCORING.md`](docs/SCORING.md); the worked examples are in `docs/slides/`.
 
+</details>
+
 ## Layout
 
 The repo is a Python package (`pyproject.toml` — `pip install -e .` makes
 `agents`, `src`, `config` importable from ANY codebase, e.g. llm-mailroom's
 LangGraph). Every area has its own README — use them as the detailed map.
+
+<details>
+<summary>Repo map — top-level tree</summary>
 
 ```
 agents/                  LangChain agents under test (see agents/README.md)
@@ -247,7 +255,12 @@ data/                    (gitignored run artifacts: manifests/, legalbench_local
 .opencode/               agent prompts + skills (prompt-engineer, experiment-log-sync, eval-judge)
 ```
 
+</details>
+
 Under `scripts/` the key files are:
+
+<details>
+<summary>Full scripts inventory — streamers, eval runners, reporting, site</summary>
 
 ```
 scripts/datasets/
@@ -301,6 +314,8 @@ scripts/reporting/
 scripts/site/
   build_site.py                   rebuild docs/ (GitHub Pages) data from the JSONL
 ```
+
+</details>
 
 `data/manifests/`, `data/legalbench_local/`, and `data/samples/` are
 **gitignored** run checkpoints/local dumps (resumable manifests, the LegalBench
@@ -442,7 +457,12 @@ when available and falls back to OpenRouter embeddings automatically when it
 isn't. Without sentence-transformers, the rescue still works (OpenRouter
 fallback, tiny per-request cost); with it, nothing is sent to the network.
 
-Required env vars (in `braintrust.env` or `.env`; see `src/env_utils.py`):
+Required env vars (in `braintrust.env` or `.env`; see `src/env_utils.py` —
+and the full per-provider/per-sink guide in
+[`docs/configuration.md`](docs/configuration.md)):
+
+<details>
+<summary>Environment variable table</summary>
 
 | Variable | Purpose |
 |---|---|
@@ -456,7 +476,12 @@ Required env vars (in `braintrust.env` or `.env`; see `src/env_utils.py`):
 | `OPENROUTER_BASE_URL` | optional: any OpenAI-compatible endpoint (Ollama, vLLM) |
 | `EXPERIMENT_LOG_PATH` / `EXPERIMENT_LOG_MD_PATH` | experiment log paths (optional) |
 
+</details>
+
 ## Sync the HF corpora into Braintrust
+
+<details>
+<summary>Dataset sync commands — CUAD / MAUD / S-1 / LegalBench tasks / local PDF mirror</summary>
 
 ```bash
 # 1. CUAD / The Atticus Project (510 contract PDFs): ONE row per PDF with ALL
@@ -516,7 +541,12 @@ python scripts/datasets/download_cuad_pdfs.py --out-dir data/cuad_pdfs --skip-js
 python scripts/datasets/download_cuad_pdfs.py --overwrite    # re-download everything
 ```
 
+</details>
+
 ## The loop (one prompt at a time)
+
+<details>
+<summary>Command gallery — classification / extraction / chained / subtype / A/B examples</summary>
 
 ```bash
 # Vision classification of the CUAD PDFs (ONE row per PDF, ALL pages in one call)
@@ -613,6 +643,8 @@ python scripts/reporting/confusion_matrix.py --experiment qwen3.7-flash_sorter_v
 python scripts/reporting/render_experiment_log.py
 ```
 
+</details>
+
 Experiment naming is `{model-slug}_{prompt-version}` (optionally suffixed
 `_binary-{class}` / `_multiclass` / `_extraction` / `_chained`), so re-running
 the same command overwrites the same experiment — identical prompt versions
@@ -620,6 +652,9 @@ are directly comparable in the Braintrust UI, and different prompt versions
 never collide.
 
 ### Eval runners
+
+<details>
+<summary>Runner reference table — every script, its flags and scorers</summary>
 
 | Script | Tests |
 |---|---|
@@ -642,7 +677,12 @@ into experiment metadata. `run_classification_eval`/`run_extraction_eval`/
 `run_chained_eval` additionally accept `--manifest` (JSONL checkpoint) so an
 interrupted run resumes without re-paying LLM calls.
 
+</details>
+
 ### Prompt versions
+
+<details>
+<summary>Registered prompt families — sorter / vision / task / specialists / judges</summary>
 
 Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 
@@ -659,6 +699,8 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 Run `python -c "from src.prompts import list_prompts; print('\\n'.join(list_prompts()))"`
 for the authoritative, current list.
 
+</details>
+
 ### LangChain + Braintrust wiring
 
 The eval runners call `braintrust.integrations.langchain.setup_langchain()`
@@ -674,6 +716,9 @@ the PRIMARY sink is Langfuse (`run_langfuse_*_eval.py`) + LangSmith spans (see
 AGENTS.md "Run sink").
 
 ### Langfuse mirror (two projects, two purposes)
+
+<details>
+<summary>Langfuse project split, designated tasks & handoff-scope results</summary>
 
 The `run_langfuse_*_eval.py` runners execute the SAME datasets, tasks, and
 deterministic logic scorers as their Braintrust counterparts, but trace into a
@@ -716,6 +761,8 @@ python scripts/eval/run_langfuse_chained_eval.py --sample 5 --seed 42 \
     --sorter-prompt-version sorter_v6 --extractor-prompt-version contracts_specialist_v11 \
     --manifest data/manifests/chained_langfuse.jsonl
 ```
+
+</details>
 
 ## Adding a prompt version
 
