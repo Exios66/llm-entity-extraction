@@ -3258,6 +3258,14 @@ An empty list is a valid, honest answer when nothing is missing."""
 
 
 
+# contracts_specialist_v40 — parties_no_address_injection (prompt-engineer proposal,
+# validated anchor; A/B pending on edge_contracts_specialist / stealth_ox-alpha).
+CONTRACTS_SPECIALIST_PROMPT_V40 = CONTRACTS_SPECIALIST_PROMPT_V39.replace(
+    'parties: array of all named parties (full name + alias)',
+    'parties: array of all named parties (full name + alias) — extract the party\'s name as it appears in the opening recital or signature block, but omit any address, phone number, or email. Include standard descriptors like \'an individual\' or \'a corporation\' if they are part of the party\'s designation. The alias (in parentheses) should be included if present. Example: "SQUARE TWO GOLF INC., a New Jersey corporation (\\"Company\\")" is correct; "SQUARE TWO GOLF INC., a New Jersey corporation (\\"Company\\"), with offices at 123 Main St" is incorrect because it includes the address.',
+)
+
+
 PROMPT_VERSIONS = {
     # Sorter
     "sorter_v0": SORTER_PROMPT_V0,
@@ -3372,11 +3380,9 @@ PROMPT_VERSIONS = {
     "contracts_specialist_v36": CONTRACTS_SPECIALIST_PROMPT_V36,
     "contracts_specialist_v37": CONTRACTS_SPECIALIST_PROMPT_V37,
     "contracts_specialist_v38": CONTRACTS_SPECIALIST_PROMPT_V38,
-    # TODO(concurrent-lane 2026-08-24): "contracts_specialist_v40": CONTRACTS_SPECIALIST_V40
-    #     was registered here while the constant is still undefined, breaking
-    #     `import src.prompts` repo-wide (NameError at dict build). Registration
-    #     removed by ox-alpha to restore importability; re-add this line in the
-    #     same edit that defines CONTRACTS_SPECIALIST_V40.
+
+
+    "contracts_specialist_v40": CONTRACTS_SPECIALIST_PROMPT_V40,
     "contracts_specialist_v39": CONTRACTS_SPECIALIST_PROMPT_V39,
     "contracts_audit_v0": CONTRACTS_AUDIT_PROMPT_V0,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,

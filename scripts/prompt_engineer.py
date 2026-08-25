@@ -80,6 +80,27 @@ def load_manifest(path: Path) -> list[dict]:
         d = json.loads(line)
         if d.get("type"):
             continue
+        # Edge-bench manifest shape: {suite_id, transform, ungrounded_fields,
+        # extracted_fields, expectation_passes} — failures are rows whose
+        # expectations did not all pass or that errored outright.
+        if "suite_id" in d:
+            failed = ("error" in d) or any(
+                not v for v in (d.get("expectation_passes") or {}).values())
+            if not failed:
+                continue
+            un = d.get("ungrounded_fields") or []
+            gt = d.get("transform", "edge") + ("/" + ",".join(un) if un else "")
+            rows.append({"filename": d.get("base_filename",
+                                          d.get("suite_id","")),
+                         "doc_type": d.get("transform", "edge"),
+                         "gt": ",".join(un) if un else d.get("transform", "edge"),
+                         "pred_doc_type": None, "pred_subclass": None,
+                         "reasoning": json.dumps({
+                             "ungrounded_fields": un,
+                             "extracted_fields": d.get("extracted_fields", {}),
+                             "error": d.get("error"),
+                         })[:400]})
+            continue
         # Judge-mutation manifest shape: {filename, defect, verdict}
         if "verdict" in d and d.get("defect") not in (None, "FALSE-FLAG"):
             rows.append({"filename": d.get("filename",""), "doc_type": "judge",
@@ -229,10 +250,15 @@ def resolve_spec(spec_arg: str | None):
         import yaml
     except ImportError:
         raise SystemExit("PyYAML required for --spec")
-    fam = Path(spec_arg).name.replace(".yaml", "")
-    cfg_path = Path(spec_arg) if spec_arg.endswith((".yaml", ".yml")) \
-        else REPO_ROOT / "config" / "prompt_engineer" / f"{fam}.yaml"
-    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))[fam]
+    file_part, _, fam = spec_arg.partition(":")
+    fam = fam or Path(file_part).stem
+    cfg_path = (Path(file_part) if file_part.endswith((".yaml", ".yml"))
+                else REPO_ROOT / "config" / "prompt_engineer" / f"{Path(file_part).stem}.yaml")
+    families = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    if fam not in families:
+        raise SystemExit(f"family '{fam}' not in {cfg_path}; "
+                         f"known: {', '.join(families)}")
+    cfg = families[fam]
     TARGET_FILE = REPO_ROOT / cfg["target_file"]
     TESTS_FILE = REPO_ROOT / cfg["test_file"]
     return cfg
@@ -303,6 +329,7 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
+    spec_cfg = resolve_spec(args.spec) if args.spec else None
     rows = load_manifest(Path(args.manifest))
     clusters = decompose(rows)
     print(f"manifest failures: {len(rows)} across {len(clusters)} clusters\n")
@@ -346,7 +373,6 @@ def main() -> int:
             print("  -", p)
         return 1
 
-    spec_cfg = resolve_spec(args.spec) if args.spec else None
     if args.apply:
         apply_mutation(proposal, args.base_version,
                        (spec_cfg or {}).get("registry_dict",
