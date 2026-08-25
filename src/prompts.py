@@ -3265,6 +3265,11 @@ CONTRACTS_SPECIALIST_PROMPT_V40 = CONTRACTS_SPECIALIST_PROMPT_V39.replace(
     'parties: array of all named parties (full name + alias) — extract the party\'s name as it appears in the opening recital or signature block, but omit any address, phone number, or email. Include standard descriptors like \'an individual\' or \'a corporation\' if they are part of the party\'s designation. The alias (in parentheses) should be included if present. Example: "SQUARE TWO GOLF INC., a New Jersey corporation (\\"Company\\")" is correct; "SQUARE TWO GOLF INC., a New Jersey corporation (\\"Company\\"), with offices at 123 Main St" is incorrect because it includes the address.',
 )
 
+CONTRACTS_SPECIALIST_PROMPT_V41 = (
+    CONTRACTS_SPECIALIST_PROMPT_V40
+    + "\n" + "PARTY ALIAS SPLITTING (parties field): emit each party as ONE list item containing the legal name plus any short descriptor; surrounding double quotes are stripped from the boundaries only - never split a party into multiple items at a quotation mark or an opening parenthesis, and never include addresses, phone numbers or emails in party names. Worked example - source text \"SQUARE TWO GOLF, INC. ('Company') and KATHY WHITWORTH, an individual\" yields [\"SQUARE TWO GOLF, INC.\", \"KATHY WHITWORTH, an individual\"]: two items, no stray quote or parenthesis fragments."
+)
+
 
 PROMPT_VERSIONS = {
     # Sorter
@@ -3383,6 +3388,7 @@ PROMPT_VERSIONS = {
 
 
     "contracts_specialist_v40": CONTRACTS_SPECIALIST_PROMPT_V40,
+    "contracts_specialist_v41": CONTRACTS_SPECIALIST_PROMPT_V41,
     "contracts_specialist_v39": CONTRACTS_SPECIALIST_PROMPT_V39,
     "contracts_audit_v0": CONTRACTS_AUDIT_PROMPT_V0,
     "contracts_specialist_v28": CONTRACTS_SPECIALIST_PROMPT_V28,

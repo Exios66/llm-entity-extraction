@@ -103,17 +103,36 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).lower()
 
 
+_ARTIFACT_EDGE = re.compile(r"[\s\(\)\[\]\";,:'\.]+$|^[\s\(\[\]\";,:'\.]+")
+
+
+def _clean_fragment(v: str) -> str:
+    """Strip quote/paren/punct ARTIFACTS from fragment boundaries.
+
+    Malformed-but-substantive extractions (e.g. 'SQUARE TWO GOLF INC., a New
+    Jersey corporation (' from an alias-split) fail naive substring checks
+    purely on boundary junk. Trimming edges keeps the fabrication detector
+    honest about CONTENT while tolerating boundary formatting noise."""
+    prev = None
+    while prev != v:
+        prev = v
+        v = _ARTIFACT_EDGE.sub("", v)
+    return v
+
+
 def _grounded(value, text_norm: str) -> bool:
     if value in (None, [], ""):
         return True
     if isinstance(value, str):
-        if len(value) <= 24:
-            toks = [t for t in _norm(value).split() if len(t) > 2]
+        v = _clean_fragment(value)
+        if len(v) <= 24:
+            toks = [t for t in _norm(v).split() if len(t) > 2]
             hit = sum(1 for t in toks if t in text_norm.split())
             return not toks or hit / len(toks) >= 0.6
-        return _norm(value) in text_norm
+        return _norm(v) in text_norm
     if isinstance(value, list):
-        return all(_grounded(v, text_norm) for v in value)
+        return all(_grounded(_clean_fragment(v) if isinstance(v, str) else v,
+                             text_norm) for v in value)
     return True
 
 
