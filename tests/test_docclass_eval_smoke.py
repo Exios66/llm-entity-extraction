@@ -168,6 +168,70 @@ def test_docclass_eval_smoke(dump_path, tmp_path, monkeypatch, fake_langfuse):
     assert "all_cash" in md
 
 
+def test_docclass_specialist_eval_smoke(dump_path, tmp_path, monkeypatch, fake_langfuse):
+    """Docclass specialist runner: mocked extraction + CUAD GT scoring."""
+    import json as _json
+
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "spec_log.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "spec_log.md"))
+
+    contract_row = {
+        "filename": "license_agreement.txt",
+        "doc_text": "LICENSE AGREEMENT " * 200,
+        "expected": "contract",
+        "expected_subclass": "License_Agreements",
+        "metadata": {"category": "License_Agreements", "source": "cuad"},
+        "gt_fields": {
+            "cuad_clause_labels": _json.dumps({
+                "Parties": [{"text": "Acme Corp and Beta LLC", "start": 10}],
+                "Governing Law": [{"text": "State of Delaware", "start": 50}],
+            }),
+        },
+    }
+    spec_dump = tmp_path / "spec.jsonl"
+    with spec_dump.open("w", encoding="utf-8") as fh:
+        fh.write(_json.dumps(contract_row) + "\n")
+
+    manifest = tmp_path / "spec_manifest.jsonl"
+    with manifest.open("w", encoding="utf-8") as fh:
+        fh.write(_json.dumps({"filename": "license_agreement.txt",
+                              "expected": "contract"}) + "\n")
+
+    def fake_extract(self, doc_text):
+        return {
+            "parties": ["Acme Corp", "Beta LLC"],
+            "governing_law": "State of Delaware",
+            "effective_date": None,
+            "term_length": None,
+            "termination_clauses": [],
+            "key_obligations": [],
+            "contract_value": None,
+            "renewal_terms": None,
+        }
+
+    monkeypatch.setattr(
+        "agents.specialist_agents.ContractsSpecialist.extract", fake_extract)
+
+    from scripts.eval.run_langfuse_docclass_specialist_eval import main_with_args
+
+    exit_code = main_with_args([
+        "--agent", "contracts_specialist",
+        "--prompt-version", "contracts_specialist_docclass_v0",
+        "--local-dumps", str(spec_dump),
+        "--filename-manifest", str(manifest),
+        "--experiment-name", "docclass_specialist_smoke",
+        "--manifest", str(tmp_path / "resume.jsonl"),
+        "--max-concurrency", "1",
+    ])
+    assert exit_code == 0
+    records = [_json.loads(line) for line in
+               (tmp_path / "spec_log.jsonl").read_text().strip().splitlines()]
+    rec = records[0]
+    assert rec["task"] == "docclass_specialist_extraction"
+    assert rec["scores"]["overall_extraction_score"] is not None
+    assert rec["scores"]["n_rows"] == 1
+
+
 def test_docclass_eval_vision_primary_falls_back_to_text(dump_path, tmp_path, monkeypatch, fake_langfuse):
     """--input-mode vision-primary: the vision pass runs FIRST; when it cannot
     produce a label (UNREADABLE sentinel / call error / no pages) the runner

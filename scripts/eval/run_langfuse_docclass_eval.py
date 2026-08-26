@@ -157,6 +157,8 @@ def load_docclass_dataset(dataset_names: list[str], project: str, project_id: st
                     "expected": expected,
                     "metadata": metadata,
                     "expected_subclass": row.get("expected_subclass") or metadata.get("expected_subclass"),
+                    "gt_fields": dict(row.get("gt_fields") or {}),
+                    "split": row.get("split"),
                     "source_dataset": str(path),
                 })
         print(f"  {path}: local dump loaded")
@@ -186,6 +188,40 @@ def random_sample(dataset: list[dict], n: int, seed: int) -> list[dict]:
     import random
 
     return random.Random(seed).sample(dataset, min(n, len(dataset)))
+
+
+def filter_by_filename_manifest(dataset: list[dict], manifest_path: Path) -> list[dict]:
+    """Keep rows whose filename appears in a prior sample manifest (order preserved)."""
+    wanted: list[str] = []
+    with manifest_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            fn = row.get("filename")
+            if fn:
+                wanted.append(str(fn))
+    by_name = {d["filename"]: d for d in dataset}
+    missing = [fn for fn in wanted if fn not in by_name]
+    if missing:
+        raise SystemExit(
+            f"filename manifest references {len(missing)} rows absent from the "
+            f"loaded corpus (first: {missing[0]!r})"
+        )
+    return [by_name[fn] for fn in wanted]
+
+
+def write_sample_manifest(dataset: list[dict], manifest_path: Path) -> None:
+    """Persist the exact stratified/sample draw for cross-arm same-surface A/B."""
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    with manifest_path.open("w", encoding="utf-8") as fh:
+        for row in dataset:
+            fh.write(json.dumps({
+                "filename": row["filename"],
+                "expected": row["expected"],
+                "expected_subclass": row.get("expected_subclass"),
+            }, ensure_ascii=False) + "\n")
 
 
 def attach_pages_by_filename(dataset: list[dict], pdf_dir: Path) -> tuple[list[dict], int]:
@@ -282,6 +318,12 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--stratified", type=int, default=0,
                         help="STRATIFIED sample of N rows: evenly distributed across doc_type classes")
     parser.add_argument("--seed", type=int, default=42, help="Seed for --sample/--stratified")
+    parser.add_argument("--filename-manifest", type=Path, default=None,
+                        help="JSONL of {filename,...} rows — reuse an exact prior "
+                             "sample instead of re-drawing (--stratified/--sample)")
+    parser.add_argument("--export-sample-manifest", type=Path, default=None,
+                        help="After sampling, write the exact row list to this JSONL "
+                             "(for cross-arm same-surface A/B)")
     parser.add_argument("--model", default=_CONFIG.model, help=f"Model (default: {_CONFIG.model})")
     parser.add_argument("--class-set", choices=["extended", "pilot"], default="extended",
                         help="Primary class universe: extended (6 shared + merger + insurance) "
@@ -351,7 +393,11 @@ def main_with_args(argv: list[str]) -> int:
         dataset, matched = attach_pages_by_filename(dataset, args.pdf_dir)
         print(f"  vision pages attached: {matched}/{len(dataset)} rows "
               f"({len(dataset) - matched} will use text fallback in vision-primary)")
-    if args.stratified:
+    if args.filename_manifest:
+        dataset = filter_by_filename_manifest(dataset, args.filename_manifest)
+        print(f"Loaded {len(dataset)} rows from filename manifest "
+              f"{args.filename_manifest}")
+    elif args.stratified:
         dataset = stratified_sample(dataset, args.stratified, args.seed)
         print(f"Stratified {len(dataset)} rows evenly across doc_type "
               f"(requested {args.stratified}, seed {args.seed})")
@@ -359,6 +405,10 @@ def main_with_args(argv: list[str]) -> int:
         dataset = random_sample(dataset, args.sample, args.seed)
     elif args.limit:
         dataset = dataset[: args.limit]
+    if args.export_sample_manifest:
+        write_sample_manifest(dataset, args.export_sample_manifest)
+        print(f"Wrote sample manifest ({len(dataset)} rows) -> "
+              f"{args.export_sample_manifest}")
     if not dataset:
         parser.error("No rows found in the datasets.")
 
@@ -379,7 +429,9 @@ def main_with_args(argv: list[str]) -> int:
     md_log_path = default_md_path()
 
     if args.dry_run:
-        how = (f"stratified {args.stratified} (even across doc_type, seed {args.seed})"
+        how = (f"filename manifest {args.filename_manifest} ({len(dataset)} rows)"
+               if args.filename_manifest else
+               f"stratified {args.stratified} (even across doc_type, seed {args.seed})"
                if args.stratified else
                f"sample {args.sample} (seed {args.seed})" if args.sample else
                f"limit {args.limit}" if args.limit else "all")
