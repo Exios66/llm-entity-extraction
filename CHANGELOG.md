@@ -8,7 +8,17 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
-## [Unreleased]
+### Added
+
+- **Docclass agent bolster (KANBAN-101):** `src/prompts_docclass.py` grows from
+  32 → 54 registered keys — v1 bolstered variants for all 7 specialists
+  (contracts derives from `contracts_specialist_v39` + CUAD/MAUD hub rules),
+  reviewer/arbiter/boss/judge trio (label-consistency on correctness judge),
+  plus seven missing `*_specialist_docclass_pilot_v0` keys; `sorter_docclass_v7`
+  (v6 + rules 37–43 + correspondence/insurance subclass output contract) and
+  `sorter_docclass_vision_v1` (insurance_claim + v7 rules on the vision
+  skeleton) land in `src/prompts.py`. Registration remains the Langfuse deployment
+  seam; runtime defaults unchanged.
 
 ### Added
 

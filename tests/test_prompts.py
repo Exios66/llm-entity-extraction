@@ -451,6 +451,22 @@ def test_sorter_docclass_v6_registered_and_pins_rule_36_sharpened():
     assert "ILLUSTRATIVE, not exhaustive" not in SORTER_DOCCLASS_PROMPT_V4
 
 
+def test_sorter_docclass_v7_registered_and_pins_extended_universe_rules():
+    """sorter_docclass_v7 (KANBAN-101) = v6 + rules 37–43 + widened doc_subclass
+    output contract for correspondence/insurance_claim dimensions."""
+    from src.prompts import SORTER_DOCCLASS_PROMPT_V6, SORTER_DOCCLASS_PROMPT_V7
+
+    assert "sorter_docclass_v7" in PROMPT_VERSIONS
+    p = get_prompt("sorter_docclass_v7")
+    assert "37. AGREEMENT PACKAGES" in p
+    assert "38. INSURANCE CLAIM CLASS" in p
+    assert "39. CORRESPONDENCE SUBCLASS" in p
+    assert "43. CONTRACT VS INSURANCE CLAIM DISAMBIGUATION" in p
+    assert "correspondence, or insurance_claim (rules 33/39/40)" in p
+    assert SORTER_DOCCLASS_PROMPT_V7.startswith(SORTER_DOCCLASS_PROMPT_V6[:300])
+    assert "37. AGREEMENT PACKAGES" not in SORTER_DOCCLASS_PROMPT_V6
+
+
 def test_sorter_docclass_prompt_option_list_matches_schema():
     """The doc_subclass options visible in the docclass prompts must match the
     DOCCLASS_SCHEMA enum exactly — a subclass the model can output must be in
@@ -474,7 +490,7 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
     for version in ("sorter_docclass_v0", "sorter_docclass_v1",
                     "sorter_docclass_v2", "sorter_docclass_v3",
                     "sorter_docclass_v4", "sorter_docclass_v5",
-                    "sorter_docclass_v6"):
+                    "sorter_docclass_v6", "sorter_docclass_v7"):
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()
@@ -482,7 +498,7 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
         # four dimensions; legacy v0..v6 were frozen before the
         # correspondence/insurance dimensions existed and are never mutated
         # after a run — they must carry the merger/corporate keys only.
-        if "pilot" in version:
+        if "pilot" in version or version == "sorter_docclass_v7":
             expected_keys = DOC_SUBCLASS_KEYS
         else:
             legacy_excluded = {"demand", "attorney_demand", "meeting_request",

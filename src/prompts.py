@@ -854,6 +854,41 @@ VALID CONTRACT SUBTYPE KEYS""",
 )
 
 # =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, v7 (extended-universe
+# pipeline parity: rules 37–43 + correspondence/insurance subclass dims)
+# -----------------------------------------------------------------------------
+# v7 = v6 + rule 37 (agreement packages, from v5) + rules 38–43 (insurance_claim
+# class, correspondence/insurance subclasses, CMS disambiguation, ancillary-
+# wrapper convention, contract-vs-claim keyword guard) + the widened doc_subclass
+# output contract. Aligns the extended 8-class eval surface with llm-mailroom's
+# docclass-merged schema v5 / docclass-pilot GT dimensions without mutating v6.
+# =============================================================================
+
+_SORTER_DOCCONTEXT_V7_RULES = """37. AGREEMENT PACKAGES: RECORD OR CERTIFICATE TEXT INSIDE AN AGREEMENT PACKAGE DOES NOT CHANGE THE CLASS: rule 32 applies only when the document AS A WHOLE is a corporate record (rule 34). When a record — power of attorney, certificate, schedule, or annex — appears in a document that ALSO contains the parent agreement (printed before, inside, or after the agreement's own title, recitals, or signature page), scan past the record text to the parent agreement: if the parent agreement is present, the document's class is the PARENT's (contract or merger_agreement), and the record is annex content. A "LIMITED POWER OF ATTORNEY" printed at the front of a services-agreement exhibit is annex content; the services agreement governs. A standalone record filed ALONE (an EX-24.x power of attorney, an EX-3.1 charter, a solo certificate) stays corporate_record — rule 37 fires only when the SAME document also contains the parent agreement.
+
+38. INSURANCE CLAIM CLASS: claim documentation — FNOL forms, adjuster reports and estimates, demand packages, coverage determinations ("APPROVED"/"DENIED"/"PARTIAL"), reservation-of-rights letters, denial letters, EOB/Explanation-of-Benefits statements, Medicare Summary Notices, pharmacy benefit statements — is insurance_claim, NOT contract or correspondence, whatever wrapper it arrives in.
+
+39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the COMMUNICATION'S FUNCTION — demand (a party demands payment/performance), attorney_demand (demand issued by counsel on a law-firm letterhead), meeting_request, press_release, memo (internal memorandum, TO/FROM/RE header), email (informal message thread), letter (general business/legal letter), or notice (formal notice: annual-meeting, regulatory, default/termination).
+
+40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE, decided by the document's OWN title/setting line FIRST, then by issuer: a "MEDICARE SUMMARY NOTICE -- OUTPATIENT SERVICES (Part B)" or any outpatient-services claim adjudication is outpatient; a "MEDICARE SUMMARY NOTICE -- INPATIENT STAY (Part A)" or inpatient-stay claim is inpatient; a Medicare Part D pharmacy statement / prescription drug event listing is pde; every other payer-issued adjudication document — physician/supplier (Part B professional "carrier" notices), commercial EOBs without a facility setting, coverage determinations, denial letters, reservation-of-rights letters, adjuster reports issued by the insurer — is carrier. The SETTING named in the document's own heading outranks the generic document family: an MSN for outpatient services is outpatient even though a Summary Notice is a carrier-issued document. Crucially, a Medicare Summary Notice whose heading reads 'MEDICARE SUMMARY NOTICE -- PHYSICIAN/SUPPLIER CLAIM (Part B)' is a physician/supplier notice and therefore carrier, not outpatient, regardless of the mention of Part B.
+
+41. CORRESPONDENCE FUNCTION OVER TRANSPORT: classify the correspondence subclass by what the communication DOES, not by its delivery format. An email whose payload forwards or contains a formal notice subclasses as notice; an email announcing an event/newsletter to a community subclasses as letter; a memo-format internal announcement subclasses as memo. The From:/Sent:/Subject: header block alone never decides the subclass.
+
+42. ANCILLARY-WRAPPER FAMILY CONVENTION: an exhibit or announcement document filed under a named family package inherits that family when its substance is ancillary to it — a press release ANNOUNCING an execution of an outsourcing agreement filed as that agreement's EX-99 stays the agreement's class (outsourcing); an escrow agreement supporting software-hosting services inside a hosting package stays hosting. The wrapper's own form (press release, escrow, cover sheet) does not re-classify the package. Scope guard: this applies only when the package/family is visible in the filename, exhibit label, or title — a free-standing document is classified by its own substance (rules 2-5).
+
+43. CONTRACT VS INSURANCE CLAIM DISAMBIGUATION: A document whose title or content explicitly identifies it as a distributor agreement, or any other contract subtype listed in the valid keys, is a contract, not an insurance_claim. The presence of the word "carrier" in a distributor agreement (e.g., "carrier" referring to a shipping company) does not trigger insurance_claim classification. Only documents that are claim documentation (FNOL, adjuster reports, EOBs, etc.) as defined in rule 38 are insurance_claim. A distributor agreement is a contract, and its contract_subtype is "distributor" (or the appropriate subtype from the list). This rule overrides any incidental keyword matches.
+
+VALID CONTRACT SUBTYPE KEYS"""
+
+SORTER_DOCCLASS_PROMPT_V7 = SORTER_DOCCLASS_PROMPT_V6.replace(
+    "VALID CONTRACT SUBTYPE KEYS",
+    _SORTER_DOCCONTEXT_V7_RULES,
+).replace(
+    """- doc_subclass: EXACTLY ONE of the rule-33 subclass keys when doc_type is merger_agreement or corporate_record; null otherwise""",
+    """- doc_subclass: EXACTLY ONE of the applicable subclass keys when doc_type is merger_agreement, corporate_record, correspondence, or insurance_claim (rules 33/39/40); null when doc_type is contract (contract_subtype carries the contract dimension instead)""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -1047,6 +1082,66 @@ Runner-up: contract, ruled out because the substantive form is an equity instrum
 <subclass>rights_instrument</subclass>
 <confidence>92</confidence>
 <reasoning>Specimen Class A Common Stock certificate (EX-4.1) defining securityholder rights.</reasoning>"""
+
+# =============================================================================
+# SORTER AGENT — Hierarchical doc-class classification, VISION MODE v1
+# (v7 rules on the vision skeleton — insurance_claim + subclass dims)
+# -----------------------------------------------------------------------------
+# v1 = vision_v0 + rules 36–43 from the text docclass v7 arm + insurance_claim
+# in the label set and scratchpad checks. contract rows still carry no CUAD
+# contract_subtype on this surface.
+# =============================================================================
+
+SORTER_DOCCLASS_VISION_PROMPT_V1 = SORTER_DOCCLASS_VISION_PROMPT_V0.replace(
+    """You are shown the page images of ONE incoming legal document and must assign it exactly one of 7 classes, plus a second-level doc_subclass where the class has one.""",
+    """You are shown the page images of ONE incoming legal document and must assign it exactly one of 8 classes, plus a second-level doc_subclass where the class has one.""",
+).replace(
+    """Labels (use these exact strings):
+contract, corporate_record, due_diligence, correspondence, compliance_filing, court_opinion, merger_agreement""",
+    """Labels (use these exact strings):
+contract, corporate_record, due_diligence, correspondence, compliance_filing, court_opinion, insurance_claim, merger_agreement""",
+).replace(
+    """35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS (corpus convention): a "REGISTRATION RIGHTS AGREEMENT" filed as an exhibit to a registration statement (EX-4.x) — an instrument granting securityholders the right to have their shares registered — is corporate_record with doc_subclass rights_instrument, NOT contract: the S-1 exhibit catalog files EX-4.x instruments under the record types ("Registration Rights Agreement" with registration, piggyback, and shelf obligations -> corporate_record / rights_instrument, not contract and not a contract subtype). The rule applies in the SEC exhibit context only; a standalone registration rights agreement outside any filing package stays contract.
+
+## Scratchpad procedure""",
+    """35. REGISTRATION RIGHTS AGREEMENTS FILED AS SEC EXHIBITS (corpus convention): a "REGISTRATION RIGHTS AGREEMENT" filed as an exhibit to a registration statement (EX-4.x) — an instrument granting securityholders the right to have their shares registered — is corporate_record with doc_subclass rights_instrument, NOT contract: the S-1 exhibit catalog files EX-4.x instruments under the record types ("Registration Rights Agreement" with registration, piggyback, and shelf obligations -> corporate_record / rights_instrument, not contract and not a contract subtype). The rule applies in the SEC exhibit context only; a standalone registration rights agreement outside any filing package stays contract.
+
+36. M&A PACKAGE MACHINERY GOVERNS ANCILLARY INSTRUMENTS: rule 31's M&A-family title list is ILLUSTRATIVE, not exhaustive — acquisition machinery (Parent/Merger Sub, Effective Time, Exchange Ratio) governs even when CVRs, registration-rights, or support covenants appear inside the deal.
+
+37. AGREEMENT PACKAGES: record/certificate text inside an agreement package does not change the class when the parent agreement is also present (rule 34 extension).
+
+38. INSURANCE CLAIM CLASS: FNOL forms, adjuster reports, EOBs, Medicare Summary Notices, coverage determinations, and denial letters are insurance_claim, not contract or correspondence.
+
+39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the communication's function — demand, attorney_demand, meeting_request, press_release, memo, email, letter, or notice.
+
+40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is carrier, pde, outpatient, or inpatient — the setting named in the document's own heading outranks the generic document family.
+
+41. CORRESPONDENCE FUNCTION OVER TRANSPORT: classify by what the communication DOES, not its delivery format.
+
+42. ANCILLARY-WRAPPER FAMILY CONVENTION: an ancillary exhibit inherits the parent package's class when the package/family is visible in the filename or exhibit label.
+
+43. CONTRACT VS INSURANCE CLAIM DISAMBIGUATION: a distributor agreement stays contract even when the word "carrier" appears in a shipping sense.
+
+## Scratchpad procedure""",
+).replace(
+    """Walk checks 1-7 below IN ORDER.""",
+    """Walk checks 1-8 below IN ORDER.""",
+).replace(
+    """7. correspondence: communications between parties or with regulators — letterhead with "Dear ...", "Sincerely", "Very truly yours", email headers ("FROM:", "TO:", "RE:", "SUBJECT:"), interoffice "MEMORANDUM — TO/FROM/DATE/RE", notices, demand letters, cover letters.
+
+If you wrote "none" for every check""",
+    """7. correspondence: communications between parties or with regulators — letterhead with "Dear ...", "Sincerely", "Very truly yours", email headers ("FROM:", "TO:", "RE:", "SUBJECT:"), interoffice "MEMORANDUM — TO/FROM/DATE/RE", notices, demand letters, cover letters.
+
+8. insurance_claim: claim documentation — FNOL forms, adjuster reports/estimates, demand packages, coverage determinations, reservation-of-rights/denial letters, EOB statements, Medicare Summary Notices, pharmacy benefit statements — NOT contract or correspondence whatever wrapper they arrive in (rule 38).
+
+If you wrote "none" for every check""",
+).replace(
+    """The label must be lowercase, exactly one of the 7 strings above, no punctuation inside the tags, no explanation after them.""",
+    """The label must be lowercase, exactly one of the 8 strings above, no punctuation inside the tags, no explanation after them.""",
+).replace(
+    """Then output the doc_subclass on its own line — EXACTLY ONE of the rule-33 subclass keys when the label is merger_agreement or corporate_record, and the word null when the label is any other class:""",
+    """Then output the doc_subclass on its own line — EXACTLY ONE of the applicable subclass keys when the label is merger_agreement, corporate_record, correspondence, or insurance_claim (rules 33/39/40), and the word null when the label is contract or any other class without a subclass dimension:""",
+)
 
 
 # =============================================================================
@@ -3297,7 +3392,9 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v4": SORTER_DOCCLASS_PROMPT_V4,
     "sorter_docclass_v5": SORTER_DOCCLASS_PROMPT_V5,
     "sorter_docclass_v6": SORTER_DOCCLASS_PROMPT_V6,
+    "sorter_docclass_v7": SORTER_DOCCLASS_PROMPT_V7,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
+    "sorter_docclass_vision_v1": SORTER_DOCCLASS_VISION_PROMPT_V1,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,
