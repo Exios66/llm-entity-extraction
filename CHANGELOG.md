@@ -10,7 +10,17 @@ history of the repository's tags. Format follows
 
 ### Added
 
-- **Docclass agent bolster (KANBAN-101):** `src/prompts_docclass.py` grows from
+- **Stratified-120 docclass A/B (KANBAN-101):** `scripts/datasets/export_hf_docclass_merged.py`
+  exports HF `Lucius-Morningstar/docclass-merged` v5 (1,210 rows) to
+  `docclass_merged_v5.jsonl`; `run_langfuse_docclass_eval.py` gains
+  `--filename-manifest` / `--export-sample-manifest`; NEW
+  `run_langfuse_docclass_specialist_eval.py` runs contracts + insurance docclass
+  specialists on the pinned manifest. Same-surface A/B (seed 42, fp
+  `05f05e9f…` sorter / `34083b16…` contracts / `b238c80e…` insurance):
+  sorter v6→v7 exact **0.5833→0.6833** (+10.0pp), subclass **0.5917→0.6917**,
+  doc_type **0.9917** flat; contracts v0→v1 overall **0.6884→0.8444** (+15.6pp,
+  n=24 CUAD-scored / 48 routed); insurance v0→v1 overall **0.6957→0.6904**
+  (n=24, flat within noise).
   32 → 54 registered keys — v1 bolstered variants for all 7 specialists
   (contracts derives from `contracts_specialist_v39` + CUAD/MAUD hub rules),
   reviewer/arbiter/boss/judge trio (label-consistency on correctness judge),
