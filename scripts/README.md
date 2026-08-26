@@ -63,7 +63,7 @@ experiment-log append. Names are `{model-slug}_{prompt-version}[_suffix]`.
 | `run_langfuse_chained_eval.py` | **primary-sink mirror** of the chained eval (per-agent spans + task scores) |
 | `run_langfuse_extraction_eval.py` | **primary-sink mirror** of the extraction eval (`--chunked` supported) |
 | `run_langfuse_classification_eval.py` | **Langfuse mirror** of the classification eval (`--prompt-mode task` for LegalBench tasks) |
-| `run_langfuse_docclass_eval.py` | **hierarchical doc-class eval** (KANBAN-033): extended 7-class primary dimension (incl. merger_agreement) + doc_subclass second level (consideration type / record type); mixed surface of MAUD + CUAD + S-1 corporate records; Phoenix/Langfuse sink |
+| `run_langfuse_docclass_eval.py` | **hierarchical doc-class eval** (KANBAN-033/101): extended **8-class** primary dimension + doc_subclass second level; default `sorter_docclass_v7` on `data/datasets/docclass_merged.jsonl` (1,210 rows); Phoenix/Langfuse sink |
 | `run_langfuse_contracteval_eval.py` | **directly-mirrored ContractEval benchmark** (KANBAN-052, arXiv 2508.03080): one (contract, question) call per row over the CUAD test split, faithful full-context (`--max-input-chars 0`), ContractEval's exact rubric (F1/F2/Jaccard/false-nr + per-category) scored upstream (`llm-dojo-scoring` v0.4.0 `contracteval` kind); `task: contracteval` experiment-log record |
 | `sync_langfuse_datasets.py` | mirror Braintrust datasets into Langfuse datasets (deterministic item ids => upsert); `--maud`/`--s1` mirror the streamer local dumps |
 | `sync_langfuse_prompts.py` | mirror versioned prompts into Langfuse (idempotent; `--env-file` adds projects) |

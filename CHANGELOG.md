@@ -18,10 +18,15 @@ history of the repository's tags. Format follows
   (v6 + rules 37–43 + correspondence/insurance subclass output contract) and
   `sorter_docclass_vision_v1` (insurance_claim + v7 rules on the vision
   skeleton) land in `src/prompts.py`. Registration remains the Langfuse deployment
-  seam; runtime defaults unchanged.
-
-### Added
-
+  seam; runner default is now `sorter_docclass_v7` on `docclass_merged.jsonl`.
+- **Docclass scoring parity (KANBAN-101):** `classify_failure` treats
+  `subclass_ok is None` as pass (no spurious `subclass_miss`);
+  `src/score_emitter.py` adds `emit_docclass_run_scores` + headline metric
+  names; `run_langfuse_docclass_eval.py` wires the emitter; `docs/SCORING.md`
+  §7 documents the 1,210-row / 8-class surface; `tests/test_docclass_parity_audit.py`
+  machine-checks prompt/schema/metric alignment; `config/taxonomy.yaml` promotes
+  `insurance_claim` + correspondence/insurance subclasses; agent bench defaults
+  move to `*_docclass_v1`.
 - **Durability program (full-roster agent evaluation):** hand-labeled GT sets
   for contract (34)/corporate_record (11)/correspondence (27) validated by
   scripts/gt_workbench.py (type conformance + verbatim grounding); insurance
@@ -39,8 +44,6 @@ history of the repository's tags. Format follows
   overlay injection; judge_correctness pilot v1 reaches recall 1.00 /
   FPR 0.00 on verified GT after its label-consistency repair (v1) and HF
   date_filed artifact stripping.
-### Added
-
 - **Per-role eval tasks for the docclass roster — agent bench suite landed house-grade + silent no-op mutation repaired (KANBAN-097, [#51](https://github.com/Exios66/llm-entity-extraction/issues/51), human directive 2026-08-24):** every classification-chain role now has a deterministic, machine-scored eval surface — no LLM-as-judge anywhere. NEW/landed tooling: `scripts/run_agent_bench.py` gains **blind-classification edge mode for the sorter/reviewer roles** (exact doc_type match over the shared adversarial suite, per-transform breakdown as the mutation signal), a `--dry-run` plan gate on all three money-spending modes, testable `main_with_args`, SERVED-model recording (JudgeAgent silently swaps the BaseAgent default for the taxonomy judge.model — records now name what actually ran), version-suffixed manifests (prompt-version in the filename so A/B arms never clobber each other), and ONE compact append-only record per completed run in the canonical `reports/experiment_log.jsonl` (`task: agent_bench`); `scripts/gen_edge_cases.py` builds deterministic transform suites with machine-checkable expectations and CANONICAL taxonomy GT labels (`contract`, not `contracts`) round-robin-stratified across classes; `scripts/gt_workbench.py` validates hand-GT against specialist schemas incl. verbatim-grounding spot-checks; `agents/pipeline_agents.py` wraps reviewer/boss/arbiter/reporter/transcriber prompts in runnable agents; the vendored `insurance_claims_specialist_v0` prompt + `InsuranceClaimsSpecialist` complete the 7-specialist roster upstream. **RESULTS (qwen3.7-flash pilots, seed 42):** judge-mutation v0 recall 1.00 / clean-FPR 0.88 vs repaired `judge_correctness_docclass_pilot_v1` recall 0.60 / **FPR 0.00** on the matched n=48 arm — Pareto trade; v1 is the FPR-dominant choice for pipeline gating, v0 stays max-recall audit. Conflicts: boss 10/10, arbiter 7/10 on planted-defect rivals. Reviewer blind classification **20/20 = 1.000** across all 8 transform families (after fixing the GT-label artifact that had scored it 0/20). **DEFECT REPAIR:** `judge_correctness_docclass_pilot_v1` had shipped byte-identical to v0 (broken `.replace()` anchor); re-derived off the REAL marker with the lesson verbatim. **MUTATION 1:** `insurance_claims_specialist_v1` = v0 + EVIDENCE-ONLY VISIBILITY (single-anchor derivation, guard-pinned) — baseline no_fabrication 0/20 with 30 true fabrications (template fills `CLM-SAMPLE-001`, composed narratives); v1 eliminates the template/prior-fill class entirely and lifts all_optional_null to 3/3; residue (damages_description visible-token compositions + claim_type partial-view guesses) queued as KANBAN-098. Guard suite `tests/test_kanban097_agent_benches.py` (12 network-free).
 - **README Layout gains the tracked `data/gt/` bench corpus (human directive 2026-08-24, no-card edit):** one-line repo-map update — the `data/` entry now lists tracked `data/gt/` (KANBAN-097 agent-bench ground truth: `edge_suites/`, per-doc packets, insurance-claim GT) alongside the gitignored run artifacts and `data/eda/`, reflecting what `9483437` actually landed.
 - **Root README collapsible-headings declutter (human directive 2026-08-24, no-card edit):** surgical reorganization of the 804-line front door with `<details>` folds in the KANBAN-093 (The-Mailroom) pattern — nine collapsibles for the reference bulk (scoring internals, repo map, scripts inventory, dataset-sync gallery, command gallery, runner table, prompt-version families, env-var table, Langfuse mirror details) while the visible page keeps the orientation path (intro, sorter jobs, agent table, scoring intro, setup quickstart, credits, navigation). ZERO operational content removed — verified by a line-level parity check against git HEAD (all 700 non-empty HEAD lines present; only additions are fold scaffolding) plus fence-safety and tag-balance checks. Factual fix in passing: "The sorter's two jobs" → "three jobs" (the list always had three). Setup now links the new `docs/configuration.md` provider/sink guide from its env-var section.
