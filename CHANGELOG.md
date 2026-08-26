@@ -21,6 +21,7 @@ history of the repository's tags. Format follows
   doc_type **0.9917** flat; contracts v0→v1 overall **0.6884→0.8444** (+15.6pp,
   n=24 CUAD-scored / 48 routed); insurance v0→v1 overall **0.6957→0.6904**
   (n=24, flat within noise).
+- **Docclass agent bolster (KANBAN-101):** `src/prompts_docclass.py` grows from
   32 → 54 registered keys — v1 bolstered variants for all 7 specialists
   (contracts derives from `contracts_specialist_v39` + CUAD/MAUD hub rules),
   reviewer/arbiter/boss/judge trio (label-consistency on correctness judge),
