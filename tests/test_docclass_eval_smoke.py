@@ -87,6 +87,8 @@ def test_classify_failure_modes():
     assert classify_failure(True, True, "all_cash") is None
     assert classify_failure(False, False, "all_cash") == "doc_type_miss"
     assert classify_failure(True, False, "all_stock") == "subclass_miss"
+    # Rows without subclass GT (subclass_ok=None) must not get subclass_miss.
+    assert classify_failure(True, None, None) is None
 
 
 def test_docclass_eval_smoke(dump_path, tmp_path, monkeypatch, fake_langfuse):

@@ -52,8 +52,11 @@ GT = REPO_ROOT / "data" / "gt"
 SUITES = GT / "edge_suites"
 
 DEFAULT_PROMPT_VERSIONS = {
-    "contracts_specialist": "contracts_specialist_v39",
-    "insurance_claims_specialist": "insurance_claims_specialist_v0",
+    "contracts_specialist": "contracts_specialist_docclass_v1",
+    "corporate_records_specialist": "corporate_records_specialist_docclass_v1",
+    "correspondence_specialist": "correspondence_specialist_docclass_v1",
+    "compliance_specialist": "compliance_specialist_docclass_v1",
+    "insurance_claims_specialist": "insurance_claims_specialist_docclass_v1",
 }
 
 SPECIALIST_CLASSES = {
@@ -69,7 +72,7 @@ SPECIALIST_CLASSES = {
 # no local packets yet — honest coverage note recorded in run outputs).
 CLASSIFIER_ROLES = {
     "sorter": "sorter_docclass_pilot_v3",
-    "reviewer": "reviewer_docclass_pilot_v0",
+    "reviewer": "reviewer_docclass_v1",
 }
 PILOT_CLASSES = ["contract", "corporate_record", "correspondence",
                  "insurance_claim", "merger_agreement"]

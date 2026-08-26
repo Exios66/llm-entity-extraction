@@ -95,7 +95,8 @@ from src.prompts import list_prompts  # noqa: E402
 
 _CONFIG = load_braintrust_config()
 DEFAULT_DATASETS = "mailroom-maud-contracts,mailroom-cuad-contracts-full,mailroom-s1-corporate-records"
-DEFAULT_PROMPT = "sorter_docclass_v0"
+DEFAULT_LOCAL_DUMP = "data/datasets/docclass_merged.jsonl"
+DEFAULT_PROMPT = "sorter_docclass_v7"
 
 
 class EvalResultShim:
@@ -258,8 +259,10 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--dataset-project", default=_CONFIG.dataset_project, help="Project holding the datasets")
     parser.add_argument("--datasets", default=DEFAULT_DATASETS,
                         help="Comma-separated Braintrust datasets to evaluate")
-    parser.add_argument("--local-dumps", default=None,
-                        help="Comma-separated local JSONL dumps (replaces Braintrust loading)")
+    parser.add_argument("--local-dumps", default=DEFAULT_LOCAL_DUMP,
+                        help="Comma-separated local JSONL dumps (default: "
+                             f"{DEFAULT_LOCAL_DUMP} — schema v5 merged corpus, 1,210 rows; "
+                             "replaces Braintrust loading when set)")
     parser.add_argument("--input-mode", choices=["text", "vision", "vision-primary"],
                         default="text",
                         help="text: classify doc_text (default); vision: classify page "
@@ -322,7 +325,7 @@ def main_with_args(argv: list[str]) -> int:
     # --prompt-version always wins.
     if args.input_mode in ("vision", "vision-primary") \
             and args.prompt_version == DEFAULT_PROMPT:
-        args.prompt_version = "sorter_docclass_vision_v0"
+        args.prompt_version = "sorter_docclass_vision_v1"
         print(f"  --input-mode {args.input_mode}: defaulting prompt to "
               f"{args.prompt_version}")
 
@@ -771,6 +774,11 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             },
         },
     }
+
+    from src.score_emitter import build_emitter, emit_docclass_run_scores  # noqa: E402
+
+    emitter = build_emitter()
+    emit_docclass_run_scores(emitter, experiment_name, scores)
 
     record = {
         "type": "experiment",

@@ -54,7 +54,7 @@ taxonomy/prompts.
    not-introduced-to-prove-truth; CC BY 4.0) lives in `mailroom-lb-hearsay`
    and evaluates with `--valid-classes Yes,No`.
 3. **Hierarchical doc-class classification** — the sorter classifies into the
-   EXTENDED primary dimension (`sorter_docclass_v0`): the shared 6 doc classes
+   EXTENDED primary dimension (`sorter_docclass_v7`, champion): the shared 6 doc classes
    plus **`merger_agreement`** (the MAUD corpus class), with a second-level
    `doc_subclass` for the classes whose data necessitates it — consideration
    type for merger agreements (MAUD expert GT: all_cash / all_stock /
@@ -520,8 +520,8 @@ python scripts/eval/sync_langfuse_datasets.py --s1 --dry-run
 #     incl. merger_agreement) + doc_subclass (consideration type / record
 #     type) scored across MAUD + CUAD + S-1 records in one mixed surface.
 python scripts/eval/run_langfuse_docclass_eval.py --dry-run
-python scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/maud/contracts.jsonl,data/s1_corporate_records/corporate-records.jsonl \
-    --stratified 120 --seed 42
+python scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/datasets/docclass_merged.jsonl \
+  --stratified 120 --seed 42 --sorter-prompt-version sorter_docclass_v7
 
 # 3. LegalBench multi-class classification tasks (cuad_*, hearsay, and more)
 #    from the GitHub raw data — one Braintrust dataset per task; synced rows
@@ -690,7 +690,7 @@ Registered in `src/prompts.py` → `PROMPT_VERSIONS` (aliases noted):
 
 | Family | Versions |
 |---|---|
-| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1` … `sorter_v14`, `sorter_docclass_v0` |
+| Sorter (text) | `sorter_v0` (alias `sorter`), `sorter_v1` … `sorter_v14`, `sorter_docclass_v0` … `sorter_docclass_v7`, `sorter_docclass_vision_v1` |
 | Sorter (vision) | `sorter_vision_v0` |
 | LegalBench task | `legalbench_task_v0` |
 | Contracts specialist | `contracts_specialist` (v0), `contracts_specialist_v1` … `contracts_specialist_v31` |

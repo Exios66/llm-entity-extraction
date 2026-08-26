@@ -15,7 +15,7 @@ python scripts/datasets/build_docclass_merged.py             # write docclass_me
 
 | File | Rows | Sources |
 |---|---|---|
-| `docclass_merged.jsonl` | 676 (509 contract + 152 merger_agreement + 15 corporate_record) | `mailroom-cuad-contracts-full` (Braintrust) + `data/maud/contracts.jsonl` + `data/s1_corporate_records/corporate-records.jsonl` |
+| `docclass_merged.jsonl` | 1,210 (schema v5: 8-class extended surface incl. correspondence + insurance_claim) | CUAD + MAUD + S-1 + Enron correspondence + CMS insurance rows via `build_docclass_merged.py` |
 
 Row shape (the flat streamer-dump shape the docclass eval runner reads via
 `--local-dumps`): `{filename, doc_text, prompt, expected,
