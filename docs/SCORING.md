@@ -8,7 +8,7 @@ the run manifests, and `reports/experiment_log.jsonl` never disagree.
 ## 0. Where the scoring lives — the `llm-dojo-scoring` package
 
 The scoring definitions are **outsourced to the `llm-dojo-scoring` package**
-(KANBAN-044 / KANBAN-047, pinned `@v0.7.0` in `pyproject.toml` +
+(KANBAN-044 / KANBAN-047, pinned `@v0.10.0` in `pyproject.toml` +
 `requirements.txt`), the **single source shared with llm-mailroom**. The local
 `src/` modules are thin re-export shims so every import site (eval runners,
 reporting scripts, tests, and llm-mailroom's `pip install -e .` imports) keeps
@@ -52,7 +52,7 @@ llm_dojo_scoring.cli`).
 ### 0.1 The unified scoring layer & the score-emitter bridge (v0.19.0+)
 
 Since KANBAN-061 the package also owns this repo's metric **infrastructure**
-(pinned `@v0.5.1` at adoption, current pin `@v0.7.0`); calculations are
+(pinned `@v0.5.1` at adoption, current pin `@v0.10.0`); calculations are
 untouched — Hungarian matching, embedding rescue, bootstrap CI and CUAD
 equivalences all live upstream unchanged:
 

@@ -477,7 +477,7 @@ Key modules:
 
 The canonical, formula-level reference for every scorer and metric is
 **`docs/SCORING.md`** — where scoring lives (the **`llm-dojo-scoring` package**,
-pinned `@v0.7.0` and shared with llm-mailroom; the local `src/` modules are
+pinned `@v0.10.0` and shared with llm-mailroom; the local `src/` modules are
 thin re-export shims), classification, binary, multiclass, subtype, docclass
 hierarchical, task-aware (MAUD / LegalBench / court opinions / chained), the
 field-type-aware content scorer, factuality audit, judge calibration, chained

@@ -8,6 +8,15 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Pin `llm-dojo-scoring` `@v0.10.0`.** `pyproject.toml` + `requirements.txt` +
+  the dependency-manifest pin move from `@v0.7.0` to the tagged
+  [v0.10.0](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0)
+  release (field-micro P/R/F1/F2, docclass macro-PRF, insurance
+  `determination_consistency`). Docs (`README`, `AGENTS.md`, `SCORING.md`,
+  `docs/sister-repos.md`, wiki Scoring) cite the new pin.
+
 ### Added
 
 - **Stratified-120 docclass A/B (KANBAN-101):** `scripts/datasets/export_hf_docclass_merged.py`
