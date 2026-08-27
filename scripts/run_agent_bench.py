@@ -123,16 +123,59 @@ def _clean_fragment(v: str) -> str:
     return v
 
 
+MONTHS = {m: i + 1 for i, m in enumerate(
+    ["january", "february", "march", "april", "may", "june", "july",
+     "august", "september", "october", "november", "december"])}
+
+
+def _iso_date_grounded(v: str, raw_text_lower: str) -> bool | None:
+    """ISO-dated values ground when the same calendar date exists in the
+    source in ANY formatting (e.g. 'December 20, 2007'). Returns None when
+    v is not an ISO date."""
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})$", v.strip())
+    if not m:
+        return None
+    y, mo, d = m.groups()
+    if y in raw_text_lower and d.lstrip("0") in raw_text_lower:
+        return True
+    for name, num in MONTHS.items():
+        if num == int(mo) and name[:3] in raw_text_lower:
+            return True
+    return False
+
+
+def _maybe_parse_listlike(value):
+    if isinstance(value, str) and value.strip().startswith("["):
+        try:
+            import ast
+            parsed = ast.literal_eval(value)
+            if isinstance(parsed, list):
+                return parsed
+        except (ValueError, SyntaxError):
+            pass
+    return value
+
+
 def _grounded(value, text_norm: str) -> bool:
     if value in (None, [], ""):
         return True
+    value = _maybe_parse_listlike(value)
     if isinstance(value, str):
+        iso = _iso_date_grounded(_clean_fragment(value), text_norm)
+        if iso is not None:
+            return iso
         v = _clean_fragment(value)
-        if len(v) <= 24:
-            toks = [t for t in _norm(v).split() if len(t) > 2]
-            hit = sum(1 for t in toks if t in text_norm.split())
-            return not toks or hit / len(toks) >= 0.6
-        return _norm(v) in text_norm
+        # Token-coverage grounding: fabrications share almost no content
+        # tokens with the source; legitimate-but-reformatted values share
+        # nearly all of them. Strict-substring was failing every reformatted
+        # value (qwen normalizes dates/entities), flattening all versions to
+        # the same score.
+        toks = [t for t in _norm(v).split() if len(t) > 2]
+        if not toks:
+            return True
+        vocab = set(text_norm.split())
+        cov = sum(1 for t in toks if t in vocab) / len(toks)
+        return cov >= (0.60 if len(v) <= 24 else 0.75)
     if isinstance(value, list):
         return all(_grounded(_clean_fragment(v) if isinstance(v, str) else v,
                              text_norm) for v in value)
