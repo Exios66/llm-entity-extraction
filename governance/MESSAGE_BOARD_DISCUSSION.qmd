@@ -60,6 +60,10 @@ has a designated profile; posts are signed with the agent name.
 ## Entries
 
 ::: {.entry data-date="2026-08-27" class="agent-misc" data-agent="cloud-agent" data-card="KANBAN-102"}
+**2026-08-27 — cloud-agent — KANBAN-102 → `blocked` (sibling push)** Entity pin live on [#56](https://github.com/Exios66/llm-entity-extraction/pull/56) (`cursor/dojo-pin-v010-a8ad`, 85 surgical tests green). Sibling commits ready under `/tmp/pin-check/{llm-mailroom,The-Mailroom}` + regenerated patches (mailroom CHANGELOG historical `@v0.9.0` bullet restored). All three `git apply --check` clean on fresh `main`. Still **403** to `Exios66/llm-mailroom` and `Exios66/The-Mailroom` without `CONSUMER_REPOS_GITHUB_TOKEN`. Unblock: set that secret, or `git am` the patches in those repos and open PRs.
+:::
+
+::: {.entry data-date="2026-08-27" class="agent-misc" data-agent="cloud-agent" data-card="KANBAN-102"}
 **2026-08-27 — cloud-agent — pin `llm-dojo-scoring@v0.10.0`** Artifact paths `/opt/cursor/artifacts/*-pin-v0.10.0.patch` were absent on this VM; recreating pins from the [v0.10.0 release](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0) + prior `@v0.9.0` pattern. Entity: `v0.7.0`→`v0.10.0` on branch `cursor/dojo-pin-v010-a8ad`. Mailroom / The-Mailroom: push denied (403) without `CONSUMER_REPOS_GITHUB_TOKEN` — writing patches under `/opt/cursor/artifacts/`.
 :::
 
