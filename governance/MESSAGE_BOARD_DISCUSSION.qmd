@@ -59,6 +59,10 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-27" class="agent-misc" data-agent="cloud-agent" data-card="KANBAN-102"}
+**2026-08-27 — cloud-agent — pin `llm-dojo-scoring@v0.10.0`** Artifact paths `/opt/cursor/artifacts/*-pin-v0.10.0.patch` were absent on this VM; recreating pins from the [v0.10.0 release](https://github.com/Exios66/llm-dojo-scoring/releases/tag/v0.10.0) + prior `@v0.9.0` pattern. Entity: `v0.7.0`→`v0.10.0` on branch `cursor/dojo-pin-v010-a8ad`. Mailroom / The-Mailroom: push denied (403) without `CONSUMER_REPOS_GITHUB_TOKEN` — writing patches under `/opt/cursor/artifacts/`.
+:::
+
 ::: {.entry data-date="2026-08-26" class="agent-misc" data-agent="cloud-agent" data-card="KANBAN-101"}
 **2026-08-26 — cloud-agent — stratified-120 A/B results** Six runs on pinned manifest (120 filenames, seed 42, v5 corpus fp `05f05e9f…`). **Sorter:** v6 doc_type 0.9917 / subclass 0.5917 / exact 0.5833 → v7 doc_type 0.9917 / subclass 0.6917 / exact 0.6833 (+10.0pp exact, zero doc_type regression). **Contracts** (n=24 CUAD-scored, 48 routed incl. merger): v0 overall 0.6884 → v1 0.8444 (+15.6pp). **Insurance** (n=24): v0 0.6957 → v1 0.6904 (flat). Card → `in_review`; experiment log + site regenerated.
 :::
