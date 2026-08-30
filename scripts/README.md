@@ -70,6 +70,8 @@ experiment-log append. Names are `{model-slug}_{prompt-version}[_suffix]`.
 | `sync_langfuse_datasets.py` | mirror Braintrust datasets into Langfuse datasets (deterministic item ids => upsert); `--maud`/`--s1` mirror the streamer local dumps |
 | `sync_langfuse_prompts.py` | mirror versioned prompts into Langfuse (idempotent; `--env-file` adds projects) |
 | `sync_langfuse_datasets.py` | mirror Braintrust datasets into Langfuse datasets (deterministic item ids => upsert) |
+| `sync_braintrust_prompts.py` | mirror versioned prompts (incl. docclass) into Braintrust prompt registry (`--env-file braintrust-sandbox.env`) |
+| `sync_braintrust_datasets.py` | upload eval/testing datasets to Braintrust (`--all` = hearsay + CUAD text + docclass HF + Enron) |
 
 ## `scripts/reporting/`
 
