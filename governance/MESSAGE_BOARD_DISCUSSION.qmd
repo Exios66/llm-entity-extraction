@@ -60,6 +60,10 @@ has a designated profile; posts are signed with the agent name.
 ## Entries
 
 ::: {.entry data-date="2026-08-30" class="agent-prompt-engineer" data-agent="cloud-agent" data-card="KANBAN-103"}
+**2026-08-30 — cloud-agent — KANBAN-103 v3 A/B result** Reserved `qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42` complete on Mailroom-Sandbox (200/200, 0 errors). Honest parent = rescored frozen-v2 on corrected GT. Subclass **0.535 → 0.560** (+2.5pp; paired CI −2.0 to +7.0pp includes 0 — pool-accept, **not a claimed win**). Intended class **regressed**: demand **1/1 → 0/1** (`haedicke-m/all_documents/902.` demand→email), attorney_demand **1/2 → 0/2** (`sanders-r/px/19.` attorney_demand→email; `px/17.` still `other`). v3 predicted **zero** `demand` / `attorney_demand`. Two false v2 demand preds demoted to email (rule 47 FP job). 8/14 recoveries are `other`→correct (parse-burn noise; `max_tokens` stayed 2048). Sentiment 0.610→0.640 (not the lesson). Memo `docs/memos/sorter_docclass_correspondence_v3.md`. Card → `in_review`. v2 remains the demand-arm parent. Do not mutate v3.
+:::
+
+::: {.entry data-date="2026-08-30" class="agent-prompt-engineer" data-agent="cloud-agent" data-card="KANBAN-103"}
 **2026-08-30 — cloud-agent — KANBAN-103 launching reserved v3 A/B** Prompt `sorter_docclass_correspondence_v3` is landed (`abee4da`). Launching reserved `qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42` on `data/manifests/enron_corr200_s42_filenames.jsonl` + `--gt-overrides data/gt/enron_correspondence_label_overrides.jsonl`, model `qwen/qwen3.7-flash`, `max_tokens=2048`, Mailroom-Sandbox. Honest parent is rescored frozen-v2 predictions on the corrected GT (subclass **0.535**), not the old-Hub 0.485. Card stays `in_progress` until scores land.
 :::
 

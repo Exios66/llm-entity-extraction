@@ -108,8 +108,16 @@ history of the repository's tags. Format follows
   attorney_demand **1/3** plus the Hub false positives already demoted in
   `data/gt/enron_correspondence_label_overrides.jsonl`. Same-surface A/B
   reserved as `qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42`
-  on pinned `enron_corr200_s42_filenames.jsonl` + `--gt-overrides` — not
-  yet run.
+  on pinned `enron_corr200_s42_filenames.jsonl` + `--gt-overrides`.
+  **A/B 2026-08-30** (Mailroom-Sandbox, 200/200, 0 errors) vs **rescored
+  frozen-v2 on the corrected GT** (not old-Hub 0.485): subclass
+  **0.535 → 0.560** (+2.5pp; paired CI −2.0 to +7.0pp includes 0 —
+  pool-accept, not a claimed win). Intended class **regressed**: demand
+  **1/1 → 0/1**, attorney_demand **1/2 → 0/2**; v3 predicted zero
+  `demand` / `attorney_demand`. Email 0.614→0.671 (two false v2 `demand`
+  preds demoted). 8/14 recoveries are `other`→correct (parse-burn noise
+  at `max_tokens` 2048). v2 remains the demand-arm parent. Memo
+  `docs/memos/sorter_docclass_correspondence_v3.md`.
 
 ## [v0.21.0] - 2026-08-28
 
