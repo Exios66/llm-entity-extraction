@@ -67,6 +67,72 @@ history of the repository's tags. Format follows
   press_release 0.28→0.48, meeting_request 0.68→0.80; `demand` /
   `attorney_demand` still 0/28; sentiment flat 0.630→0.625.
   Memo `docs/memos/sorter_docclass_correspondence_v1.md`.
+- **Correspondence sorter GEPA v2 (KANBAN-103).** Prompt
+  `sorter_docclass_correspondence_v2` is a `.replace()` of v1 adding rule 46
+  (Hub demand markers): demand is a legal-phrase hit on the writer's own
+  text (`DEMAND LETTER`, `FINAL NOTICE`, `BREACH OF CONTRACT`, …), not a
+  formal letter addressed to the recipient; `attorney_demand` adds a
+  law-firm sender. Cascade re-ordered to the GT labeler
+  (meeting → press → demand → notice → memo → letter → email). Braintrust
+  live scorers reduced to `sorter_doc_type` + `sorter_subclass`; sentiment /
+  exact / confidence remain post-hoc. Reserved run
+  `qwen3.7-flash_sorter_docclass_correspondence_v2_enron200_s42`.
+  **Same-surface A/B 2026-08-30** (Mailroom-Sandbox, 200/200, 0 errors):
+  subclass **0.465 → 0.485** (+2.0pp; paired CI −1.5 to +6.0pp includes 0 —
+  accepted into the GEPA pool, not a claimed win). Demand **0/25 → 3/25**,
+  attorney_demand **0/3 → 1/3**; press_release 0.48→0.56. Memo
+  `docs/memos/sorter_docclass_correspondence_v2.md`.
+- **Correspondence sample takes every attorney_demand example (KANBAN-103).**
+  The Hub dedup dump has 3 `attorney_demand` rows (all already in the seed-42
+  200-row draw). The full CMU corpus has **4** — the leftover is
+  `sanders-r/ecogas/26.` (Milbank / Ecogas demand letter; exact-body twin of
+  `sanders-r/all_documents/126.`, dropped by first-occurrence dedup). Runner
+  gains `--include-all-attorney-demand` (append leftover Hub attorney_demand
+  after the draw) and `--extra-dumps` (merge recovered full-corpus rows).
+  Fixture `tests/fixtures/enron_attorney_demand_extras.jsonl` holds the
+  recovered 4th row (same Hub enrichment as its twin). Reserved expanded
+  surface
+  `qwen3.7-flash_sorter_docclass_correspondence_v2_enron200_s42_attyall`
+  (n=201 = pinned 200 + ecogas/26.). **Run 2026-08-30** (Mailroom-Sandbox,
+  201/201, 0 errors, frozen v2): `doc_type_accuracy` **1.000**,
+  `subclass_accuracy` **0.5124**, attorney_demand **1/4** (new row →
+  `email`, same miss as its twin). Not a same-surface A/B vs the 200-row
+  CIs. Memo `docs/memos/sorter_docclass_correspondence_v2_attyall.md`.
+- **Phoenix span-export guard (KANBAN-103).** `src/phoenix_tracing.py`
+  now calls `load_env()` before reading `PHOENIX_TRACING` (the v0
+  correspondence run imported the tracer before dotenv and default-on
+  OTLP-spammed a down `localhost:6006` — 86 `Failed to export span batch`
+  lines) and skips the BatchSpanProcessor when the Phoenix HTTP server
+  does not answer. Correspondence runner `--gt-overrides` applies
+  filename-keyed Hub GT patches; sample corrections live in
+  `data/gt/enron_correspondence_label_overrides.jsonl` (25 Hub `demand`
+  rows + 2 hypothetical `attorney_demand` twins demoted — phrase-lexicon
+  false positives). Publisher
+  `scripts/datasets/publish_enron_gt_overrides.py` patches Hub
+  `ground_truth/{train,test}.jsonl` and uploads a sidecar
+  `ground_truth/overrides.jsonl`.
+- **Correspondence sorter GEPA v3 (KANBAN-103).** Prompt
+  `sorter_docclass_correspondence_v3` is a `.replace()` of frozen v2 adding
+  rule 47 (demand is the speech act): this message itself demands that the
+  recipient pay / cure / cease / arbitrate. Overrides the v2 Hub phrase
+  lexicon (rule 46) — a mention, draft-request (`please draft a demand
+  letter` / `we could send a demand letter`), news clip, IT-outage
+  `FINAL NOTICE`, or cover note attaching a demand is NOT demand.
+  `attorney_demand` = that speech act AND a lawyer/law-firm is the
+  author/sender, not merely mentioned. Motivated by v2 demand **3/25** and
+  attorney_demand **1/3** plus the Hub false positives already demoted in
+  `data/gt/enron_correspondence_label_overrides.jsonl`. Same-surface A/B
+  reserved as `qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42`
+  on pinned `enron_corr200_s42_filenames.jsonl` + `--gt-overrides`.
+  **A/B 2026-08-30** (Mailroom-Sandbox, 200/200, 0 errors) vs **rescored
+  frozen-v2 on the corrected GT** (not old-Hub 0.485): subclass
+  **0.535 → 0.560** (+2.5pp; paired CI −2.0 to +7.0pp includes 0 —
+  pool-accept, not a claimed win). Intended class **regressed**: demand
+  **1/1 → 0/1**, attorney_demand **1/2 → 0/2**; v3 predicted zero
+  `demand` / `attorney_demand`. Email 0.614→0.671 (two false v2 `demand`
+  preds demoted). 8/14 recoveries are `other`→correct (parse-burn noise
+  at `max_tokens` 2048). v2 remains the demand-arm parent. Memo
+  `docs/memos/sorter_docclass_correspondence_v3.md`.
 
 ## [v0.21.0] - 2026-08-28
 

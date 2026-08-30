@@ -61,6 +61,11 @@ from src.braintrust_config import load_braintrust_config  # noqa: E402
 from src.braintrust_logging import langsmith_enabled  # noqa: E402
 from src.correspondence_eval import (  # noqa: E402
     CORRESPONDENCE_DOC_TYPE,
+    append_missing_by_subclass,
+    apply_gt_overrides,
+    merge_eval_rows,
+    read_filename_manifest,
+    read_gt_overrides,
     score_sentiment,
     stratified_by_subclass,
 )
@@ -152,16 +157,7 @@ def write_sample_manifest(dataset: list[dict], manifest_path: Path) -> None:
 
 def filter_by_filename_manifest(dataset: list[dict], manifest_path: Path) -> list[dict]:
     """Keep rows whose filename appears in a prior sample manifest."""
-    wanted: list[str] = []
-    with manifest_path.open(encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            row = json.loads(line)
-            fn = row.get("filename")
-            if fn:
-                wanted.append(str(fn))
+    wanted = read_filename_manifest(manifest_path)
     by_name = {d["filename"]: d for d in dataset}
     missing = [fn for fn in wanted if fn not in by_name]
     if missing:
@@ -193,6 +189,26 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--filename-manifest", type=Path, default=None)
+    parser.add_argument(
+        "--include-all-attorney-demand",
+        action="store_true",
+        help="After the draw, append every remaining attorney_demand row "
+             "from the loaded corpus (Hub n=3; extras via --extra-dumps).",
+    )
+    parser.add_argument(
+        "--extra-dumps",
+        default="",
+        help="Comma-separated joined JSONL dumps merged AFTER the Hub/local "
+             "draw (first filename wins). Used to restore full-corpus "
+             "attorney_demand rows the dedup dump dropped.",
+    )
+    parser.add_argument(
+        "--gt-overrides",
+        type=Path,
+        default=None,
+        help="JSONL of filename → GT patches (expected_subclass, …) applied "
+             "after the draw. Corrects Hub labels without a republish.",
+    )
     parser.add_argument("--export-sample-manifest", type=Path, default=None)
     parser.add_argument("--model", default=_CONFIG.model)
     parser.add_argument("--prompt-version", default=DEFAULT_PROMPT)
@@ -236,6 +252,8 @@ def main_with_args(argv: list[str]) -> int:
 
     splits = ("train", "test") if args.split == "all" else (args.split,)
     local_dumps = [Path(p.strip()) for p in args.local_dumps.split(",") if p.strip()]
+    extra_dumps = [Path(p.strip()) for p in args.extra_dumps.split(",") if p.strip()]
+    args.extra_dump_paths = extra_dumps
 
     if local_dumps:
         dataset: list[dict] = []
@@ -245,6 +263,7 @@ def main_with_args(argv: list[str]) -> int:
             loaded = load_local_jsonl(path)
             print(f"  {path}: {len(loaded)} correspondence rows")
             dataset.extend(loaded)
+        full_local = list(dataset)
     else:
         token = get_env("HF_TOKEN") or os.environ.get("HF_TOKEN") or None
         print(f"Loading GT from {args.hf_repo} splits={splits}")
@@ -264,6 +283,7 @@ def main_with_args(argv: list[str]) -> int:
             "sentiment_score": r.get("sentiment_score"),
             "_gt": r,
         } for r in gt_rows if r.get("filename")]
+        full_staged = list(staged)
         if args.filename_manifest:
             staged = filter_by_filename_manifest(staged, args.filename_manifest)
             print(f"Loaded {len(staged)} GT rows from filename manifest "
@@ -277,6 +297,13 @@ def main_with_args(argv: list[str]) -> int:
                   f"(requested {args.stratified}, seed {args.seed})")
         elif args.limit:
             staged = staged[: args.limit]
+        if args.include_all_attorney_demand:
+            before = len(staged)
+            staged = append_missing_by_subclass(
+                staged, full_staged, "attorney_demand")
+            added = len(staged) - before
+            print(f"  include-all-attorney-demand: appended {added} Hub "
+                  f"attorney_demand row(s) (now {len(staged)})")
         wanted = {s["filename"] for s in staged}
         print(f"  joining blind text for {len(wanted)} filenames…")
         dataset = attach_blind_text(
@@ -304,6 +331,39 @@ def main_with_args(argv: list[str]) -> int:
                   f"(requested {args.stratified}, seed {args.seed})")
         elif args.limit:
             dataset = dataset[: args.limit]
+        if args.include_all_attorney_demand:
+            before = len(dataset)
+            dataset = append_missing_by_subclass(
+                dataset, full_local, "attorney_demand")
+            added = len(dataset) - before
+            print(f"  include-all-attorney-demand: appended {added} local "
+                  f"attorney_demand row(s) (now {len(dataset)})")
+
+    if extra_dumps:
+        extras: list[dict] = []
+        for path in extra_dumps:
+            if not path.exists():
+                parser.error(f"extra dump not found: {path}")
+            loaded = load_local_jsonl(path)
+            print(f"  extra dump {path}: {len(loaded)} correspondence rows")
+            extras.extend(loaded)
+        before = len(dataset)
+        dataset = merge_eval_rows(dataset, extras)
+        print(f"  merged extra dumps: +{len(dataset) - before} new row(s) "
+              f"(now {len(dataset)})")
+
+    if args.gt_overrides:
+        if not args.gt_overrides.exists():
+            parser.error(f"gt-overrides file not found: {args.gt_overrides}")
+        overrides = read_gt_overrides(args.gt_overrides)
+        before_sub = Counter(d.get("expected_subclass") for d in dataset)
+        dataset = apply_gt_overrides(dataset, overrides)
+        after_sub = Counter(d.get("expected_subclass") for d in dataset)
+        n_hit = sum(1 for d in dataset if d.get("filename") in overrides)
+        print(f"  gt-overrides {args.gt_overrides}: {len(overrides)} patches, "
+              f"{n_hit} row(s) in sample")
+        if before_sub != after_sub:
+            print(f"  subclass GT after overrides: {dict(after_sub)}")
 
     if args.export_sample_manifest:
         write_sample_manifest(dataset, args.export_sample_manifest)
@@ -343,6 +403,13 @@ def main_with_args(argv: list[str]) -> int:
         )
         print(f"Dry run: {len(dataset)} correspondence rows ({how}) -> "
               f"experiment '{experiment_name}'")
+        if args.include_all_attorney_demand:
+            n_atty = sum(1 for d in dataset
+                         if d.get("expected_subclass") == "attorney_demand")
+            print(f"  include-all-attorney-demand: {n_atty} attorney_demand "
+                  f"row(s) in sample")
+        if extra_dumps:
+            print(f"  extra-dumps: {', '.join(str(p) for p in extra_dumps)}")
         print(f"  sorter={args.prompt_version} model={args.model}")
         print(f"  predicted fields: doc_type, doc_subclass, sentiment_label, "
               f"sentiment_score")
@@ -519,19 +586,6 @@ def main_with_args(argv: list[str]) -> int:
     def sorter_subclass(output: dict, expected) -> float:
         return 1.0 if ((output or {}).get("sorter") or {}).get("subclass_ok") else 0.0
 
-    def sorter_exact(output: dict, expected) -> float:
-        return 1.0 if ((output or {}).get("sorter") or {}).get("exact_match") else 0.0
-
-    def sorter_sentiment_label(output: dict, expected) -> float:
-        return 1.0 if ((output or {}).get("sorter") or {}).get("sentiment_label_ok") else 0.0
-
-    def sorter_sentiment_score_ok(output: dict, expected) -> float:
-        flag = ((output or {}).get("sorter") or {}).get("sentiment_score_ok")
-        return 1.0 if flag else 0.0
-
-    def sorter_confidence(output: dict, expected) -> float:
-        return float(((output or {}).get("sorter") or {}).get("confidence") or 0.0)
-
     def _report_eval(evaluator, result, verbose, jsonl):
         failures = [r for r in result.results if r.error]
         for failure_ in failures:
@@ -568,13 +622,12 @@ def main_with_args(argv: list[str]) -> int:
             args.project,
             data=lambda: rows_for_eval,
             task=classify,
+            # Braintrust live scorers: doc_type + subclass only (human
+            # directive 2026-08-30). Sentiment / exact / confidence stay
+            # post-hoc in the experiment-log record + report_generator.
             scores=[
                 sorter_doc_type,
                 sorter_subclass,
-                sorter_exact,
-                sorter_sentiment_label,
-                sorter_sentiment_score_ok,
-                sorter_confidence,
             ],
             max_concurrency=args.max_concurrency,
             reporter=braintrust.Reporter(
@@ -591,7 +644,10 @@ def main_with_args(argv: list[str]) -> int:
                 "dataset_fingerprint": dataset_fingerprint(dataset),
                 "stratified": args.stratified,
                 "seed": args.seed,
+                "include_all_attorney_demand": args.include_all_attorney_demand,
+                "extra_dumps": [str(p) for p in extra_dumps],
                 "ground_truth": "expected + expected_subclass + sentiment_label + sentiment_score",
+                "braintrust_scorers": ["sorter_doc_type", "sorter_subclass"],
             },
             description=(
                 f"{args.model} | {args.prompt_version} | Enron correspondence "
@@ -761,6 +817,9 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             "limit": args.limit,
             "seed": args.seed,
             "split": args.split,
+            "include_all_attorney_demand": args.include_all_attorney_demand,
+            "extra_dumps": [str(p) for p in getattr(args, "extra_dump_paths", [])],
+            "filename_manifest": str(args.filename_manifest or ""),
         },
         "parameters": {
             "hf_repo": args.hf_repo,
@@ -768,6 +827,7 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
             "sample": args.sample,
             "stratified": args.stratified,
             "seed": args.seed,
+            "include_all_attorney_demand": args.include_all_attorney_demand,
             "max_input_chars": args.max_input_chars,
             "max_tokens": args.max_tokens,
             "reasoning_effort": args.reasoning_effort,

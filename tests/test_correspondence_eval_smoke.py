@@ -8,6 +8,7 @@ field alignment, and ``main_with_args --dry-run`` / a mocked live loop.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -22,9 +23,11 @@ from src.correspondence_eval import (
     CORRESPONDENCE_DOC_TYPE,
     GT_FIELDS,
     PREDICTED_FIELDS,
+    append_missing_by_subclass,
     compose_doc_text,
     filter_correspondence,
     join_blind_and_gt,
+    merge_eval_rows,
     predicted_aligns_with_gt,
     score_sentiment,
     stratified_by_subclass,
@@ -69,6 +72,40 @@ def test_correspondence_v1_derives_from_v0_and_adds_channel_trap():
     assert "Never output doc_subclass other" in v1
     assert "Headers (From/To/Cc/Subject/Sent/Fwd/Re/MIME) are TRANSPORT" in v1
     assert "44. CORRESPONDENCE SENTIMENT" in v1
+
+
+def test_correspondence_v2_derives_from_v1_and_adds_demand_markers():
+    """GEPA v2 is a .replace() of v1: rule 46 Hub demand markers only."""
+    assert "sorter_docclass_correspondence_v2" in list_prompts()
+    v1 = get_prompt("sorter_docclass_correspondence_v1")
+    v2 = get_prompt("sorter_docclass_correspondence_v2")
+    assert v2.startswith(v1[:400])
+    assert v2 != v1
+    assert "46. HUB DEMAND MARKERS" in v2
+    assert "46. HUB DEMAND MARKERS" not in v1
+    assert "BREACH OF CONTRACT" in v2
+    assert "FINAL NOTICE" in v2
+    assert "kayescholer.com" in v2
+    assert "45. ENRON CHANNEL TRAP" in v2
+
+
+def test_correspondence_v3_derives_from_v2_and_adds_speech_act():
+    """GEPA v3 is a .replace() of v2: rule 47 demand speech-act only."""
+    assert "sorter_docclass_correspondence_v3" in list_prompts()
+    v2 = get_prompt("sorter_docclass_correspondence_v2")
+    v3 = get_prompt("sorter_docclass_correspondence_v3")
+    assert v3.startswith(v2[:400])
+    assert v3 != v2
+    assert "47. DEMAND IS THE SPEECH ACT" in v3
+    assert "47. DEMAND IS THE SPEECH ACT" not in v2
+    assert "OVERRIDES rule 46" in v3
+    assert "speech act" in v3.lower() or "performs the demand" in v3
+    assert "we could send a demand letter" in v3
+    assert "please draft a demand letter" in v3
+    assert "NOT demand" in v3
+    assert "46. HUB DEMAND MARKERS" in v3
+    assert "46. HUB DEMAND MARKERS" in v2
+    assert "Keep reasoning to two short sentences" in v3
 
 
 def test_predicted_fields_align_with_gt_assortment():
@@ -159,6 +196,49 @@ def test_stratified_by_subclass_covers_every_class():
     ]
 
 
+def test_append_missing_by_subclass_adds_only_absent():
+    selected = [
+        {"filename": "attorney_demand_0", "expected_subclass": "attorney_demand"},
+        {"filename": "email_0", "expected_subclass": "email"},
+    ]
+    pool = [
+        {"filename": "attorney_demand_0", "expected_subclass": "attorney_demand"},
+        {"filename": "attorney_demand_1", "expected_subclass": "attorney_demand"},
+        {"filename": "sanders-r/ecogas/26.", "expected_subclass": "attorney_demand"},
+        {"filename": "email_9", "expected_subclass": "email"},
+    ]
+    merged = append_missing_by_subclass(selected, pool, "attorney_demand")
+    assert [r["filename"] for r in merged] == [
+        "attorney_demand_0", "email_0",
+        "attorney_demand_1", "sanders-r/ecogas/26.",
+    ]
+
+
+def test_merge_eval_rows_first_filename_wins():
+    a = [{"filename": "x", "expected_subclass": "email"}]
+    b = [{"filename": "x", "expected_subclass": "attorney_demand"},
+         {"filename": "y", "expected_subclass": "attorney_demand"}]
+    merged = merge_eval_rows(a, b)
+    assert [r["filename"] for r in merged] == ["x", "y"]
+    assert merged[0]["expected_subclass"] == "email"
+
+
+def test_extra_attorney_demand_fixture_is_joined_shape():
+    from scripts.datasets.load_enron_correspondence import load_local_jsonl
+    from pathlib import Path
+
+    path = Path("tests/fixtures/enron_attorney_demand_extras.jsonl")
+    rows = load_local_jsonl(path)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["filename"] == "sanders-r/ecogas/26."
+    assert row["expected"] == "correspondence"
+    assert row["expected_subclass"] == "attorney_demand"
+    assert row["sentiment_label"] == "negative"
+    assert "Ecogas" in row["doc_text"]
+    assert "demand letter" in row["doc_text"].lower()
+
+
 def test_sentiment_scoring_band_and_label():
     hit = score_sentiment(0.10, "neutral", 0.0, "neutral")
     assert hit["sentiment_label_ok"] is True
@@ -224,6 +304,142 @@ def test_local_dump_filters_to_correspondence(dump_path):
     rows = load_local_jsonl(dump_path)
     assert {r["filename"] for r in rows} == {"e1", "m1", "d1"}
     assert all(r["expected"] == "correspondence" for r in rows)
+
+
+def test_patch_gt_file_rewrites_matching_rows(tmp_path):
+    from scripts.datasets.publish_enron_gt_overrides import patch_gt_file
+
+    src = tmp_path / "gt.jsonl"
+    dest = tmp_path / "out.jsonl"
+    src.write_text("\n".join([
+        json.dumps({"filename": "a", "expected_subclass": "demand"}),
+        json.dumps({"filename": "b", "expected_subclass": "email"}),
+    ]) + "\n")
+    hits = patch_gt_file(src, dest, {"a": {"expected_subclass": "email"}})
+    assert hits == 1
+    rows = [json.loads(line) for line in dest.read_text().splitlines() if line]
+    assert rows[0]["expected_subclass"] == "email"
+    assert rows[1]["expected_subclass"] == "email"
+
+
+def test_committed_gt_overrides_are_unique_and_valid():
+    from src.correspondence_eval import read_gt_overrides
+    from pathlib import Path
+
+    path = Path("data/gt/enron_correspondence_label_overrides.jsonl")
+    overrides = read_gt_overrides(path)
+    assert len(overrides) >= 20
+    allowed = {
+        "demand", "attorney_demand", "meeting_request", "press_release",
+        "memo", "email", "letter", "notice",
+    }
+    assert all(v.get("expected_subclass") in allowed for v in overrides.values())
+    # The two official attorney_demand hits stay unlabeled here (no override).
+    assert "sanders-r/px/19." not in overrides
+    assert "sanders-r/px/17." not in overrides
+    assert overrides["sanders-r/all_documents/126."]["expected_subclass"] == "email"
+
+
+def test_gt_overrides_patch_subclass():
+    from src.correspondence_eval import apply_gt_overrides, read_gt_overrides
+    from pathlib import Path
+    import tempfile
+
+    rows = [
+        {"filename": "a", "expected_subclass": "demand"},
+        {"filename": "b", "expected_subclass": "email"},
+    ]
+    patched = apply_gt_overrides(rows, {
+        "a": {"expected_subclass": "attorney_demand"},
+    })
+    assert patched[0]["expected_subclass"] == "attorney_demand"
+    assert patched[1]["expected_subclass"] == "email"
+    assert rows[0]["expected_subclass"] == "demand"
+
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "ov.jsonl"
+        path.write_text(json.dumps({
+            "filename": "a",
+            "expected_subclass": "attorney_demand",
+            "reason": "law-firm sender",
+        }) + "\n")
+        loaded = read_gt_overrides(path)
+        assert loaded == {"a": {"expected_subclass": "attorney_demand"}}
+
+
+def test_include_all_attorney_demand_merges_extra_dump(tmp_path, monkeypatch):
+    """Pinned draw + leftover attorney_demand extras land in one sample."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
+    monkeypatch.setenv("BRAINTRUST_API_KEY", "sk-bt-test")
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "log.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "log.md"))
+
+    dump = tmp_path / "drawn.jsonl"
+    dump.write_text("\n".join(json.dumps(r) for r in [
+        {"filename": "e1", "subject": "Hi", "doc_text": "Subject: Hi\n\nSee you.",
+         "expected": "correspondence", "expected_subclass": "email",
+         "sentiment_label": "neutral", "sentiment_score": 0.0},
+        {"filename": "sanders-r/px/19.", "subject": "CalPX",
+         "doc_text": "Subject: CalPX\n\nDraft demand for arbitration.",
+         "expected": "correspondence", "expected_subclass": "attorney_demand",
+         "sentiment_label": "neutral", "sentiment_score": 0.0},
+    ]) + "\n")
+    extra = Path("tests/fixtures/enron_attorney_demand_extras.jsonl")
+    manifest = tmp_path / "filenames.jsonl"
+    manifest.write_text(json.dumps({"filename": "e1", "expected_subclass": "email"}) + "\n")
+
+    from scripts.eval.run_correspondence_eval import main_with_args
+
+    code = main_with_args([
+        "--local-dumps", str(dump),
+        "--filename-manifest", str(manifest),
+        "--include-all-attorney-demand",
+        "--extra-dumps", str(extra),
+        "--dry-run",
+        "--no-braintrust-logging",
+        "--no-publish-prompt",
+        "--experiment-name", "correspondence_attyall_smoke",
+    ])
+    assert code == 0
+
+
+def test_gt_overrides_flag_rewrites_sample_subclass(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
+    monkeypatch.setenv("BRAINTRUST_API_KEY", "sk-bt-test")
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "log.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "log.md"))
+
+    dump = tmp_path / "drawn.jsonl"
+    dump.write_text(json.dumps({
+        "filename": "dasovich-j/all_documents/2894.",
+        "subject": "Arter",
+        "doc_text": "From: counsel@arterhadden.com\n\nDemand for payment.",
+        "expected": "correspondence",
+        "expected_subclass": "demand",
+        "sentiment_label": "negative",
+        "sentiment_score": -0.5,
+    }) + "\n")
+    overrides = tmp_path / "overrides.jsonl"
+    overrides.write_text(json.dumps({
+        "filename": "dasovich-j/all_documents/2894.",
+        "expected_subclass": "attorney_demand",
+        "reason": "law-firm sender missing from LAW_FIRM_DOMAINS",
+    }) + "\n")
+
+    from scripts.eval.run_correspondence_eval import main_with_args
+
+    code = main_with_args([
+        "--local-dumps", str(dump),
+        "--gt-overrides", str(overrides),
+        "--dry-run",
+        "--no-braintrust-logging",
+        "--no-publish-prompt",
+        "--experiment-name", "correspondence_override_smoke",
+    ])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "gt-overrides" in out
+    assert "attorney_demand" in out
 
 
 def test_correspondence_eval_dry_run(dump_path, tmp_path, monkeypatch):
