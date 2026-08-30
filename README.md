@@ -523,6 +523,14 @@ python scripts/eval/run_langfuse_docclass_eval.py --dry-run
 python scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/datasets/docclass_merged.jsonl \
   --stratified 120 --seed 42 --sorter-prompt-version sorter_docclass_v7
 
+# 2e. Correspondence-only Enron eval (KANBAN-103): primary doc_type +
+#     communication-function subclass + sentiment polarity, joined from
+#     Lucius-Morningstar/enron-correspondence-dedup (agent-blind + GT).
+#     Emails are short — default cap 20k chars; Braintrust traces ON.
+python scripts/eval/run_correspondence_eval.py --dry-run --stratified 200 --seed 42
+python scripts/eval/run_correspondence_eval.py --stratified 200 --seed 42 \
+  --experiment-name qwen3.7-flash_sorter_docclass_correspondence_v0_enron200_s42
+
 # 3. LegalBench multi-class classification tasks (cuad_*, hearsay, and more)
 #    from the GitHub raw data — one Braintrust dataset per task; synced rows
 #    carry deterministic ids (reruns upsert, never duplicate)

@@ -8,6 +8,26 @@ history of the repository's tags. Format follows
 
 ## [Unreleased]
 
+### Added
+- **Enron correspondence eval scaffold (KANBAN-103).** New runner
+  `scripts/eval/run_correspondence_eval.py` scores the docclass sorter on
+  Hugging Face [`Lucius-Morningstar/enron-correspondence-dedup`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup)
+  as a correspondence-only primary + secondary + sentiment task. Predicted
+  fields lock to the Hub `ground_truth` assortment (`doc_type`↔`expected`,
+  `doc_subclass`↔`expected_subclass`, `sentiment_label`/`sentiment_score`↔
+  same names). Default draw is **200 subclass-stratified** rows (seed 42;
+  reserved name `qwen3.7-flash_sorter_docclass_correspondence_v0_enron200_s42`).
+  Prompt `sorter_docclass_correspondence_v0` derives from `sorter_docclass_v7`
+  (rule 44 + sentiment output fields); schema `CORRESPONDENCE_EVAL_SCHEMA`
+  does not mutate `DOCCLASS_SCHEMA`. Braintrust experiment/span logging is
+  **on by default** for this runner (`--no-braintrust-logging` to opt out).
+  Loader `scripts/datasets/load_enron_correspondence.py` stratifies on GT
+  first, then stream-joins only the selected filenames. Logs + metrics:
+  `doc_type_accuracy`, `subclass_accuracy` (+ equiv), `exact_match`,
+  `sentiment_label_accuracy`, `sentiment_score_ok` / MAE (band 0.25),
+  `correspondence_exact`, CIs, per-subclass / per-sentiment tables,
+  confusion, `failure_insights` (incl. `sentiment_miss`).
+
 ## [v0.21.0] - 2026-08-28
 
 > Docclass bolster + stratified-120 A/B + dojo-scoring @v0.10.0

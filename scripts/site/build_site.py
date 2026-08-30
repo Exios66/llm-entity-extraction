@@ -272,6 +272,15 @@ def headline_score(record: dict) -> dict:
         if isinstance(value, (int, float)):
             detail = f"strict {_fmt(value)} · equiv {_fmt(scores.get('accuracy_equiv') or 0)}"
             return {"label": "family accuracy", "value": value, "detail": detail}
+    if task == "correspondence_classification":
+        exact = scores.get("correspondence_exact")
+        subclass = scores.get("subclass_accuracy")
+        sentiment = scores.get("sentiment_label_accuracy")
+        if isinstance(exact, (int, float)):
+            detail = f"subclass {_fmt(subclass)} · sentiment {_fmt(sentiment)}"
+            return {"label": "correspondence exact", "value": exact, "detail": detail}
+        if isinstance(subclass, (int, float)):
+            return {"label": "subclass", "value": subclass}
     return {}
 
 
@@ -339,6 +348,18 @@ def breakdown(record: dict) -> dict:
             "confidence_mean": scores.get("confidence_mean"),
             "calibration_error": scores.get("calibration_error"),
             "n_documents": scores.get("n_documents"),
+        }
+    if task == "correspondence_classification":
+        failures = (scores.get("sorter") or {}).get("failure_insights") or {}
+        return {
+            "doc_type_accuracy": scores.get("doc_type_accuracy"),
+            "subclass_accuracy": scores.get("subclass_accuracy"),
+            "sentiment_label_accuracy": scores.get("sentiment_label_accuracy"),
+            "sentiment_score_mae": scores.get("sentiment_score_mae"),
+            "correspondence_exact": scores.get("correspondence_exact"),
+            "confidence": scores.get("confidence"),
+            "n_failed": failures.get("n_failed"),
+            "mode_counts": failures.get("mode_counts") or {},
         }
     return {}
 
@@ -431,6 +452,9 @@ def _results_values(record: dict) -> list | None:
     if task == "subtype_classification":
         return [1.0 if r.get("sorter", {}).get("subtype_ok") else 0.0
                 for r in results if "subtype_ok" in (r.get("sorter") or {})]
+    if task == "correspondence_classification":
+        return [1.0 if r.get("sorter", {}).get("correspondence_exact") else 0.0
+                for r in results if "correspondence_exact" in (r.get("sorter") or {})]
     return None
 
 

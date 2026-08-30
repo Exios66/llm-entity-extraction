@@ -889,6 +889,29 @@ SORTER_DOCCLASS_PROMPT_V7 = SORTER_DOCCLASS_PROMPT_V6.replace(
 )
 
 # =============================================================================
+# SORTER AGENT — Correspondence-only eval (KANBAN-103): v7 + sentiment
+# -----------------------------------------------------------------------------
+# All rows are Enron correspondence. The sorter still emits the hierarchical
+# docclass contract (doc_type + correspondence doc_subclass) AND a polarity
+# pair aligned to the HF ground_truth config (sentiment_score ∈ [-1, 1],
+# sentiment_label ∈ negative/neutral/positive). v7 stays byte-identical.
+# =============================================================================
+
+SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0 = SORTER_DOCCLASS_PROMPT_V7.replace(
+    "VALID CONTRACT SUBTYPE KEYS",
+    """44. CORRESPONDENCE SENTIMENT: after assigning doc_type and doc_subclass, score the POLARITY of the correspondence content. sentiment_score is a float in [-1.0, 1.0] (negative = complaint/anger/threat/bad news; 0 = factual/routine; positive = thanks/approval/good news). sentiment_label is exactly one of negative, neutral, positive and MUST agree with the score: score < -0.15 → negative; score > 0.15 → positive; otherwise neutral. Score the writer's stance toward the recipient or the situation the message is about, not the mere presence of a formal sign-off. Politeness formulas ("please", "thanks", "best regards") alone do not make a message positive.
+
+VALID CONTRACT SUBTYPE KEYS""",
+).replace(
+    """- confidence: float between 0.0 and 1.0
+- reasoning: short explanation of your classification decision, citing the evidence""",
+    """- confidence: float between 0.0 and 1.0
+- sentiment_score: float in [-1.0, 1.0] — polarity of the correspondence content (rule 44)
+- sentiment_label: EXACTLY ONE of negative, neutral, positive (must agree with sentiment_score; rule 44)
+- reasoning: short explanation of your classification decision, citing the evidence for doc_type, subclass, and sentiment""",
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -3393,6 +3416,7 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v5": SORTER_DOCCLASS_PROMPT_V5,
     "sorter_docclass_v6": SORTER_DOCCLASS_PROMPT_V6,
     "sorter_docclass_v7": SORTER_DOCCLASS_PROMPT_V7,
+    "sorter_docclass_correspondence_v0": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
     "sorter_docclass_vision_v1": SORTER_DOCCLASS_VISION_PROMPT_V1,
 

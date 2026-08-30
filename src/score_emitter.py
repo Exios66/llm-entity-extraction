@@ -27,6 +27,7 @@ from src.env_utils import load_env
 
 __all__ = [
     "DEFAULT_MANIFEST_PATH",
+    "CORRESPONDENCE_HEADLINE_METRICS",
     "DOCCLASS_DASHBOARD_METRICS",
     "DOCCLASS_HEADLINE_METRICS",
     "build_emitter",
@@ -50,11 +51,23 @@ DOCCLASS_HEADLINE_METRICS: tuple[str, ...] = (
     "subclass_accuracy_equiv",
     "exact_match",
 )
+# Correspondence-only extras (KANBAN-103). Live on the dashboard so
+# emit_docclass_run_scores registers them; they are NOT T0 docclass headlines
+# (the mixed-surface runner does not emit them).
+CORRESPONDENCE_HEADLINE_METRICS: tuple[str, ...] = (
+    "sentiment_label_accuracy",
+    "correspondence_exact",
+)
 DOCCLASS_DASHBOARD_METRICS: tuple[str, ...] = DOCCLASS_HEADLINE_METRICS + (
     "doc_type_accuracy_ci",
     "subclass_accuracy_ci",
     "exact_match_ci",
     "confidence",
+) + CORRESPONDENCE_HEADLINE_METRICS + (
+    "sentiment_label_accuracy_ci",
+    "sentiment_score_ok",
+    "sentiment_score_mae",
+    "correspondence_exact_ci",
 )
 
 

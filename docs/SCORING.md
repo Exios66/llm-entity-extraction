@@ -365,6 +365,36 @@ folder key) as a separate output field; docclass eval does **not** apply
 Per-row flags carried in the record: `doc_type_ok`, `subclass_ok`,
 `subclass_ok_equiv`, `failure_mode`, `input_mode`, `fallback_reason`.
 
+### Correspondence-only surface (`run_correspondence_eval.py`)
+
+KANBAN-103 adds a correspondence-only sibling on Hugging Face
+`Lucius-Morningstar/enron-correspondence-dedup` (agent-blind `default` joined
+to `ground_truth` on `filename`; rows with `expected != correspondence` are
+dropped). Predicted fields lock to the Hub GT assortment:
+
+| Predicted | Ground truth |
+|---|---|
+| `doc_type` | `expected` (always `correspondence`) |
+| `doc_subclass` | `expected_subclass` (8 communication types) |
+| `sentiment_label` | `sentiment_label` (`negative` / `neutral` / `positive`) |
+| `sentiment_score` | `sentiment_score` (lexicon polarity in `[-1, 1]`) |
+
+Default draw: **200 subclass-stratified** rows, seed 42 (tiny class
+`attorney_demand` has 3 rows on the Hub dump — all 3 are taken; leftover
+slots redistribute). Schema `CORRESPONDENCE_EVAL_SCHEMA` (does not mutate
+`DOCCLASS_SCHEMA`). Prompt `sorter_docclass_correspondence_v0`.
+
+| Tracker | Definition |
+|---|---|
+| `doc_type_accuracy` / `subclass_accuracy` / `exact_match` | same as the mixed docclass surface above. |
+| `sentiment_label_accuracy` (+ CI) | exact match on the three-way polarity label. |
+| `sentiment_score_ok` | share of rows with `\|pred − gt\| ≤ 0.25` (`SENTIMENT_SCORE_BAND`). |
+| `sentiment_score_mae` | mean absolute residual on parseable score pairs. |
+| `correspondence_exact` (+ CI) | `doc_type` AND subclass AND sentiment label all exact. |
+| `per_sentiment_accuracy` / `per_sentiment_support` | per-label accuracy with support. |
+| `sentiment_confusion` | expected × predicted sentiment-label counts. |
+| `failure_insights` | mixed-surface modes plus `sentiment_miss` (class pair right, label wrong). |
+
 ## 8. Task-aware scoring dispatcher (`llm_dojo_scoring.tasks`)
 
 The CUAD-focused suite generalized to every task kind the eval loop produces

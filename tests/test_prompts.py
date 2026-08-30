@@ -490,7 +490,8 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
     for version in ("sorter_docclass_v0", "sorter_docclass_v1",
                     "sorter_docclass_v2", "sorter_docclass_v3",
                     "sorter_docclass_v4", "sorter_docclass_v5",
-                    "sorter_docclass_v6", "sorter_docclass_v7"):
+                    "sorter_docclass_v6", "sorter_docclass_v7",
+                    "sorter_docclass_correspondence_v0"):
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()
