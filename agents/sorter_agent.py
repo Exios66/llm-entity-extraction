@@ -347,6 +347,69 @@ DOCCLASS_PILOT_SCHEMA = build_structured_schema(
     title="DocClassPilotClassificationOutput",
 )
 
+# Correspondence-only eval schema (KANBAN-103): the docclass contract plus
+# sentiment polarity. Used ONLY by the Enron correspondence runner so the
+# CUAD/MAUD/S-1 docclass evals keep their existing output shape.
+SENTIMENT_LABELS = ("negative", "neutral", "positive")
+SENTIMENT_SCORE_BAND = 0.25  # |pred - gt| within this band counts as a hit
+SENTIMENT_LABEL_THRESHOLDS = (-0.15, 0.15)  # score → label agreement band
+
+
+def normalize_sentiment_label(value) -> str | None:
+    """Coerce a raw sentiment label to negative/neutral/positive, or None."""
+    if value is None:
+        return None
+    raw = str(value).strip().lower()
+    return raw if raw in SENTIMENT_LABELS else None
+
+
+def normalize_sentiment_score(value) -> float | None:
+    """Parse and clamp a sentiment score to [-1.0, 1.0], or None."""
+    if value is None or value == "":
+        return None
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    if score != score:  # NaN
+        return None
+    return max(-1.0, min(1.0, score))
+
+
+def sentiment_label_from_score(score: float | None) -> str | None:
+    """Derive a sentiment label from a clamped score (lexicon-style cutoffs)."""
+    if score is None:
+        return None
+    lo, hi = SENTIMENT_LABEL_THRESHOLDS
+    if score < lo:
+        return "negative"
+    if score > hi:
+        return "positive"
+    return "neutral"
+
+
+CORRESPONDENCE_EVAL_SCHEMA = build_structured_schema(
+    {
+        **DOCCLASS_SCHEMA["properties"],
+        "sentiment_score": {
+            "type": "number",
+            "minimum": -1.0,
+            "maximum": 1.0,
+            "description": "Polarity of the correspondence content in [-1.0, 1.0] "
+                           "(negative = complaint/anger/threat/bad news; 0 = factual/"
+                           "routine; positive = thanks/approval/good news).",
+        },
+        "sentiment_label": {
+            "type": "string",
+            "enum": list(SENTIMENT_LABELS),
+            "description": "Polarity bucket: negative, neutral, or positive. Must "
+                           "agree with sentiment_score (score < -0.15 → negative; "
+                           "score > 0.15 → positive; otherwise neutral).",
+        },
+    },
+    title="CorrespondenceClassificationOutput",
+)
+
 
 class SorterAgent(BaseAgent):
     """Classifies legal documents into mailroom document types.
@@ -439,7 +502,8 @@ class SorterAgent(BaseAgent):
                     confidence=confidence)
         return (doc_type, contract_subtype, confidence, reasoning)
 
-    def classify_json(self, doc_text: str, subtype_focus: bool = False) -> dict:
+    def classify_json(self, doc_text: str, subtype_focus: bool = False,
+                      correspondence_focus: bool = False) -> dict:
         """Classify and return the raw structured dict (used by eval loops).
 
         With ``subtype_focus=True`` the model is explicitly TASKED with
@@ -448,6 +512,11 @@ class SorterAgent(BaseAgent):
         decision being scored — used by the chained eval, whose rows are all
         contracts, so the sorter scores represent the subtype task rather
         than a general doc-type gate.
+
+        With ``correspondence_focus=True`` the model is tasked with the
+        correspondence-only surface (KANBAN-103): ``doc_type`` is
+        correspondence, ``doc_subclass`` is the communication function, and
+        ``sentiment_score`` / ``sentiment_label`` score content polarity.
         """
         truncated = self.truncate_input(doc_text)
         if subtype_focus:
@@ -457,6 +526,17 @@ class SorterAgent(BaseAgent):
                 "SUBTYPE: assign the contract_subtype key that best matches its "
                 "agreement family, and confirm doc_type as \"contract\".\n\n"
                 f"Contract text:\n\n{truncated}"
+            )
+        elif correspondence_focus:
+            user_message = (
+                "This document IS correspondence (all documents in this task "
+                "are correspondence). Assign doc_type as \"correspondence\", "
+                "the communication-function doc_subclass (demand, "
+                "attorney_demand, meeting_request, press_release, memo, email, "
+                "letter, or notice — classify by what the communication DOES, "
+                "not its delivery format), and a sentiment_score / "
+                "sentiment_label for the content.\n\n"
+                f"Correspondence text:\n\n{truncated}"
             )
         else:
             user_message = f"Classify this legal document:\n\n{truncated}"
@@ -476,11 +556,19 @@ class SorterAgent(BaseAgent):
         result["contract_subtype"] = normalize_subtype(
             result.get("contract_subtype") if doc_type == "contract" else None
         )
-        if "doc_subclass" in (self.schema.get("properties") or {}):
+        props = self.schema.get("properties") or {}
+        if "doc_subclass" in props:
             result["doc_subclass"] = normalize_doc_subclass(
                 result.get("doc_subclass") if doc_type in SUBCLASS_DIMENSIONS else None,
                 doc_type,
             )
+        if "sentiment_label" in props or "sentiment_score" in props:
+            score = normalize_sentiment_score(result.get("sentiment_score"))
+            label = normalize_sentiment_label(result.get("sentiment_label"))
+            if label is None:
+                label = sentiment_label_from_score(score)
+            result["sentiment_score"] = score
+            result["sentiment_label"] = label
         return result
 
     # ------------------------------------------------------------------

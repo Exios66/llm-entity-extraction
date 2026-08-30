@@ -355,6 +355,19 @@ rows (`docclass_merged.jsonl`, 7-class `DOCCLASS_SCHEMA`).
 Per-row flags carried in the record: `doc_type_ok`, `subclass_ok`,
 `subclass_ok_equiv`, `failure_mode`, `input_mode`, `fallback_reason`.
 
+### Correspondence-only surface (`run_correspondence_eval.py`)
+
+KANBAN-103 adds a correspondence-only sibling on Hugging Face
+`Lucius-Morningstar/enron-correspondence-dedup` (agent-blind `default` joined
+to `ground_truth` on `filename`; rows with `expected != correspondence` are
+dropped). Predicted fields lock to the Hub GT assortment:
+`doc_type`↔`expected`, `doc_subclass`↔`expected_subclass`,
+`sentiment_label`/`sentiment_score`↔ same names. Default draw: 200
+subclass-stratified rows, seed 42. Extra trackers:
+`sentiment_label_accuracy`, `sentiment_score_ok` (band 0.25),
+`sentiment_score_mae`, `correspondence_exact`, per-sentiment tables,
+`sentiment_miss` failure mode.
+
 ## 8. Task-aware scoring dispatcher (`llm_dojo_scoring.tasks`)
 
 The CUAD-focused suite generalized to every task kind the eval loop produces
