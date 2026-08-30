@@ -9,6 +9,21 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **Braintrust sandbox sync (KANBAN-104).** New runners
+  `scripts/eval/sync_braintrust_prompts.py` and
+  `scripts/eval/sync_braintrust_datasets.py` mirror the Langfuse twins into
+  the **`mailroom-sandbox`** Braintrust project (`--env-file
+  braintrust-sandbox.env`; template
+  `config/environments/braintrust-sandbox.env.example`, project id
+  `ba222477-2e1c-4fef-9f5d-02cc78765fe3`). Prompt sync upserts every
+  `PROMPT_VERSIONS` key (incl. all 54 docclass variants) via
+  `PUT /v1/prompt`; dataset sync uploads the default eval bundle
+  (`--all`: hearsay, CUAD text-only, HF docclass-merged,
+  Enron stratified-200 sample; `--enron-full` for ~247k corpus) with deterministic row ids.
+  Helpers
+  `get_prompt_by_slug` / `upsert_completion_prompt` live in
+  `src/braintrust_utils.py`; `BRAINTRUST_SANDBOX_ENV_FILE` in
+  `src/env_utils.py`.
 - **Enron correspondence eval scaffold (KANBAN-103).** New runner
   `scripts/eval/run_correspondence_eval.py` scores the docclass sorter on
   Hugging Face [`Lucius-Morningstar/enron-correspondence-dedup`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup)
