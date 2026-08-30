@@ -27,6 +27,16 @@ history of the repository's tags. Format follows
   `sentiment_label_accuracy`, `sentiment_score_ok` / MAE (band 0.25),
   `correspondence_exact`, CIs, per-subclass / per-sentiment tables,
   confusion, `failure_insights` (incl. `sentiment_miss`).
+  `report_generator.py --from-log` renders those scorers from the experiment
+  log (Braintrust fetch still works for label-only experiments).
+  **Baseline run 2026-08-30** (same 200-row filename manifest, seed 42,
+  Braintrust `Mailroom-Sandbox`): `doc_type_accuracy` **1.000**,
+  `subclass_accuracy` **0.400** (CI 0.335–0.465), `sentiment_label_accuracy`
+  **0.630**, `sentiment_score_ok` **0.779** (MAE 0.1593),
+  `correspondence_exact` **0.305**, 0 errors. Dominant miss: function
+  collapses to `email` (demand 0/25, memo 4/25, letter 5/25); negatives
+  collapse to `neutral` (3/28). Memo
+  `docs/memos/sorter_docclass_correspondence_v0.md`. GEPA A/B parked.
 
 ## [v0.21.0] - 2026-08-28
 
