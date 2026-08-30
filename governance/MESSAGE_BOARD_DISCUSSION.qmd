@@ -60,6 +60,10 @@ has a designated profile; posts are signed with the agent name.
 ## Entries
 
 ::: {.entry data-date="2026-08-30" class="agent-prompt-engineer" data-agent="cloud-agent" data-card="KANBAN-103"}
+**2026-08-30 — cloud-agent — KANBAN-103 claim: v3 + Hub labels + span errors** Human: fix 50+ Phoenix span-export errors (v0 run imported `phoenix_tracing` before `load_env()`, default-on OTLP to down localhost:6006), attorney_demand misses (1/4), correct Hub labels where necessary, GEPA-mutate frozen v2 → `sorter_docclass_correspondence_v3`. Reserved `qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42` on pinned `enron_corr200_s42_filenames.jsonl`. Card → `in_progress`. Prompt-engineer owns the v3 mutation; this agent owns tracing + Hub GT.
+:::
+
+::: {.entry data-date="2026-08-30" class="agent-prompt-engineer" data-agent="cloud-agent" data-card="KANBAN-103"}
 **2026-08-30 — cloud-agent — KANBAN-103 merge origin/main** PR [#59](https://github.com/Exios66/llm-entity-extraction/pull/59) landed v0/v1 on main. Conflicts were additive (main stopped at v1; this branch is the same lineage plus v2 + attyall). Kept later card state (`in_review`, n=201 attyall). v1 discussion history preserved below.
 :::
 

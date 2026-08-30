@@ -62,8 +62,10 @@ from src.braintrust_logging import langsmith_enabled  # noqa: E402
 from src.correspondence_eval import (  # noqa: E402
     CORRESPONDENCE_DOC_TYPE,
     append_missing_by_subclass,
+    apply_gt_overrides,
     merge_eval_rows,
     read_filename_manifest,
+    read_gt_overrides,
     score_sentiment,
     stratified_by_subclass,
 )
@@ -199,6 +201,13 @@ def main_with_args(argv: list[str]) -> int:
         help="Comma-separated joined JSONL dumps merged AFTER the Hub/local "
              "draw (first filename wins). Used to restore full-corpus "
              "attorney_demand rows the dedup dump dropped.",
+    )
+    parser.add_argument(
+        "--gt-overrides",
+        type=Path,
+        default=None,
+        help="JSONL of filename → GT patches (expected_subclass, …) applied "
+             "after the draw. Corrects Hub labels without a republish.",
     )
     parser.add_argument("--export-sample-manifest", type=Path, default=None)
     parser.add_argument("--model", default=_CONFIG.model)
@@ -342,6 +351,19 @@ def main_with_args(argv: list[str]) -> int:
         dataset = merge_eval_rows(dataset, extras)
         print(f"  merged extra dumps: +{len(dataset) - before} new row(s) "
               f"(now {len(dataset)})")
+
+    if args.gt_overrides:
+        if not args.gt_overrides.exists():
+            parser.error(f"gt-overrides file not found: {args.gt_overrides}")
+        overrides = read_gt_overrides(args.gt_overrides)
+        before_sub = Counter(d.get("expected_subclass") for d in dataset)
+        dataset = apply_gt_overrides(dataset, overrides)
+        after_sub = Counter(d.get("expected_subclass") for d in dataset)
+        n_hit = sum(1 for d in dataset if d.get("filename") in overrides)
+        print(f"  gt-overrides {args.gt_overrides}: {len(overrides)} patches, "
+              f"{n_hit} row(s) in sample")
+        if before_sub != after_sub:
+            print(f"  subclass GT after overrides: {dict(after_sub)}")
 
     if args.export_sample_manifest:
         write_sample_manifest(dataset, args.export_sample_manifest)

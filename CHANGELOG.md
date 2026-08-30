@@ -83,6 +83,19 @@ history of the repository's tags. Format follows
   `subclass_accuracy` **0.5124**, attorney_demand **1/4** (new row →
   `email`, same miss as its twin). Not a same-surface A/B vs the 200-row
   CIs. Memo `docs/memos/sorter_docclass_correspondence_v2_attyall.md`.
+- **Phoenix span-export guard (KANBAN-103).** `src/phoenix_tracing.py`
+  now calls `load_env()` before reading `PHOENIX_TRACING` (the v0
+  correspondence run imported the tracer before dotenv and default-on
+  OTLP-spammed a down `localhost:6006` — 86 `Failed to export span batch`
+  lines) and skips the BatchSpanProcessor when the Phoenix HTTP server
+  does not answer. Correspondence runner `--gt-overrides` applies
+  filename-keyed Hub GT patches; sample corrections live in
+  `data/gt/enron_correspondence_label_overrides.jsonl` (25 Hub `demand`
+  rows + 2 hypothetical `attorney_demand` twins demoted — phrase-lexicon
+  false positives). Publisher
+  `scripts/datasets/publish_enron_gt_overrides.py` patches Hub
+  `ground_truth/{train,test}.jsonl` and uploads a sidecar
+  `ground_truth/overrides.jsonl`.
 
 ## [v0.21.0] - 2026-08-28
 

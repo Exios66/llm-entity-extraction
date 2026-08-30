@@ -287,6 +287,67 @@ def test_local_dump_filters_to_correspondence(dump_path):
     assert all(r["expected"] == "correspondence" for r in rows)
 
 
+def test_patch_gt_file_rewrites_matching_rows(tmp_path):
+    from scripts.datasets.publish_enron_gt_overrides import patch_gt_file
+
+    src = tmp_path / "gt.jsonl"
+    dest = tmp_path / "out.jsonl"
+    src.write_text("\n".join([
+        json.dumps({"filename": "a", "expected_subclass": "demand"}),
+        json.dumps({"filename": "b", "expected_subclass": "email"}),
+    ]) + "\n")
+    hits = patch_gt_file(src, dest, {"a": {"expected_subclass": "email"}})
+    assert hits == 1
+    rows = [json.loads(line) for line in dest.read_text().splitlines() if line]
+    assert rows[0]["expected_subclass"] == "email"
+    assert rows[1]["expected_subclass"] == "email"
+
+
+def test_committed_gt_overrides_are_unique_and_valid():
+    from src.correspondence_eval import read_gt_overrides
+    from pathlib import Path
+
+    path = Path("data/gt/enron_correspondence_label_overrides.jsonl")
+    overrides = read_gt_overrides(path)
+    assert len(overrides) >= 20
+    allowed = {
+        "demand", "attorney_demand", "meeting_request", "press_release",
+        "memo", "email", "letter", "notice",
+    }
+    assert all(v.get("expected_subclass") in allowed for v in overrides.values())
+    # The two official attorney_demand hits stay unlabeled here (no override).
+    assert "sanders-r/px/19." not in overrides
+    assert "sanders-r/px/17." not in overrides
+    assert overrides["sanders-r/all_documents/126."]["expected_subclass"] == "email"
+
+
+def test_gt_overrides_patch_subclass():
+    from src.correspondence_eval import apply_gt_overrides, read_gt_overrides
+    from pathlib import Path
+    import tempfile
+
+    rows = [
+        {"filename": "a", "expected_subclass": "demand"},
+        {"filename": "b", "expected_subclass": "email"},
+    ]
+    patched = apply_gt_overrides(rows, {
+        "a": {"expected_subclass": "attorney_demand"},
+    })
+    assert patched[0]["expected_subclass"] == "attorney_demand"
+    assert patched[1]["expected_subclass"] == "email"
+    assert rows[0]["expected_subclass"] == "demand"
+
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "ov.jsonl"
+        path.write_text(json.dumps({
+            "filename": "a",
+            "expected_subclass": "attorney_demand",
+            "reason": "law-firm sender",
+        }) + "\n")
+        loaded = read_gt_overrides(path)
+        assert loaded == {"a": {"expected_subclass": "attorney_demand"}}
+
+
 def test_include_all_attorney_demand_merges_extra_dump(tmp_path, monkeypatch):
     """Pinned draw + leftover attorney_demand extras land in one sample."""
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
@@ -321,6 +382,45 @@ def test_include_all_attorney_demand_merges_extra_dump(tmp_path, monkeypatch):
         "--experiment-name", "correspondence_attyall_smoke",
     ])
     assert code == 0
+
+
+def test_gt_overrides_flag_rewrites_sample_subclass(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
+    monkeypatch.setenv("BRAINTRUST_API_KEY", "sk-bt-test")
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "log.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "log.md"))
+
+    dump = tmp_path / "drawn.jsonl"
+    dump.write_text(json.dumps({
+        "filename": "dasovich-j/all_documents/2894.",
+        "subject": "Arter",
+        "doc_text": "From: counsel@arterhadden.com\n\nDemand for payment.",
+        "expected": "correspondence",
+        "expected_subclass": "demand",
+        "sentiment_label": "negative",
+        "sentiment_score": -0.5,
+    }) + "\n")
+    overrides = tmp_path / "overrides.jsonl"
+    overrides.write_text(json.dumps({
+        "filename": "dasovich-j/all_documents/2894.",
+        "expected_subclass": "attorney_demand",
+        "reason": "law-firm sender missing from LAW_FIRM_DOMAINS",
+    }) + "\n")
+
+    from scripts.eval.run_correspondence_eval import main_with_args
+
+    code = main_with_args([
+        "--local-dumps", str(dump),
+        "--gt-overrides", str(overrides),
+        "--dry-run",
+        "--no-braintrust-logging",
+        "--no-publish-prompt",
+        "--experiment-name", "correspondence_override_smoke",
+    ])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "gt-overrides" in out
+    assert "attorney_demand" in out
 
 
 def test_correspondence_eval_dry_run(dump_path, tmp_path, monkeypatch):

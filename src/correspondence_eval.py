@@ -189,6 +189,54 @@ def merge_eval_rows(*groups: list[dict], id_key: str = "filename") -> list[dict]
     return out
 
 
+def read_gt_overrides(path: Path) -> dict[str, dict[str, Any]]:
+    """Load filename → field-patch rows from a JSONL override file.
+
+    Each line is ``{"filename": "...", "expected_subclass": "...", ...}``.
+    Only keys other than ``filename`` / ``reason`` are applied. Used to
+    correct Hub GT without waiting on a republish (KANBAN-103).
+    """
+    overrides: dict[str, dict[str, Any]] = {}
+    with Path(path).open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            filename = str(row.get("filename") or "")
+            if not filename:
+                continue
+            patch = {
+                k: v for k, v in row.items()
+                if k not in {"filename", "reason"} and v is not None
+            }
+            if patch:
+                overrides[filename] = patch
+    return overrides
+
+
+def apply_gt_overrides(
+    rows: list[dict],
+    overrides: dict[str, dict[str, Any]],
+    *,
+    id_key: str = "filename",
+) -> list[dict]:
+    """Return a copy of ``rows`` with Hub GT patches applied in place of keys."""
+    if not overrides:
+        return list(rows)
+    out: list[dict] = []
+    for row in rows:
+        filename = str(row.get(id_key) or "")
+        patch = overrides.get(filename)
+        if not patch:
+            out.append(row)
+            continue
+        updated = dict(row)
+        updated.update(patch)
+        out.append(updated)
+    return out
+
+
 def read_filename_manifest(manifest_path: Path) -> list[str]:
     """Return filenames from a sample manifest, preserving file order."""
     wanted: list[str] = []
@@ -290,12 +338,14 @@ __all__ = [
     "PREDICTED_FIELDS",
     "SENTIMENT_LABELS",
     "append_missing_by_subclass",
+    "apply_gt_overrides",
     "compose_doc_text",
     "filter_correspondence",
     "join_blind_and_gt",
     "merge_eval_rows",
     "predicted_aligns_with_gt",
     "read_filename_manifest",
+    "read_gt_overrides",
     "score_sentiment",
     "stratified_by_subclass",
 ]
