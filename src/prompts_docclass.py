@@ -9,7 +9,7 @@ own docclass-aware variant, in ONE separate prompt file:
 
     role                          key in DOCCLASS_PROMPT_VERSIONS
     -----------------------------  --------------------------------------
-    docclass sorter (re-export)    sorter_docclass_v0 .. _v7, correspondence_v0/v1/v2, vision_v0/v1
+    docclass sorter (re-export)    sorter_docclass_v0 .. _v7, correspondence_v0/v1/v2/v3, vision_v0/v1
     contracts_specialist           contracts_specialist_docclass_v0/v1
     corporate_records_specialist   corporate_records_specialist_docclass_v0/v1
     due_diligence_specialist       due_diligence_specialist_docclass_v0/v1
@@ -69,6 +69,7 @@ from src.prompts import (  # noqa: F401  (re-exports are part of the surface)
     SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
     SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1,
     SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2,
+    SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3,
     SORTER_DOCCLASS_VISION_PROMPT_V0,
     SORTER_DOCCLASS_VISION_PROMPT_V1,
 )
@@ -837,6 +838,7 @@ DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     "sorter_docclass_correspondence_v0": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
     "sorter_docclass_correspondence_v1": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1,
     "sorter_docclass_correspondence_v2": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2,
+    "sorter_docclass_correspondence_v3": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
     "sorter_docclass_vision_v1": SORTER_DOCCLASS_VISION_PROMPT_V1,
     # Derived specialist variants (append-only .replace() off real bases)

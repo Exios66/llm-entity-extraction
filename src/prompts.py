@@ -968,6 +968,35 @@ SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2 = (
 )
 
 # =============================================================================
+# SORTER AGENT — Correspondence-only eval v3 (KANBAN-103 GEPA)
+# -----------------------------------------------------------------------------
+# Parent: sorter_docclass_correspondence_v2 (FROZEN; subclass 0.485 on
+# enron200 s42; demand 3/25, attorney_demand 1/3). ONE lesson from the
+# audited demand/attorney_demand bodies: Hub correspondence_subclasses.py
+# fires on ANY demand-marker phrase in the writer's own text, so most
+# Hub-demand rows are NOT demands (IT FINAL NOTICE, spam FINAL NOTICE,
+# "please draft a demand letter", FYI news "breach of contract", Demand
+# Letter Log, cover notes attaching a demand, "they may send a demand
+# letter", pasted contract clauses). False positives are already demoted
+# in data/gt/enron_correspondence_label_overrides.jsonl. v2 rule 46 taught
+# that broken Hub convention. v3 OVERRIDES rule 46: demand is the speech
+# act. v2 bytes stay intact. Do not bump max_tokens (v2's 21 `other` rows
+# were 2048-token parse burns — keep reasoning short in this same block).
+# Reserved (unrun): qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42
+# =============================================================================
+
+CORRESPONDENCE_SUBCLASS_V3 = """47. DEMAND IS THE SPEECH ACT (correspondence-only; OVERRIDES rule 46): a Hub phrase hit is not enough. demand means THIS message itself performs the demand — the writer is telling the recipient to pay, cure, cease, perform, or arbitrate. A mention, draft-request ("please draft a demand letter"), hypothetical ("we could send a demand letter", "they may send a demand letter"), news clip, FYI/cover note attaching a demand, Demand Letter Log, pasted contract clause, IT-outage "FINAL NOTICE", or spam "FINAL NOTICE" is NOT demand — keep walking the rule-45 cascade (meeting_request / press_release / notice / memo / letter / email). attorney_demand = the message IS that speech act AND a lawyer or law firm is the AUTHOR/SENDER of the demand (kayescholer.com, milbank.com, bakerbotts.com, velaw.com, latham.com, skadden.com, or Esq./Counsel on the from-line), not a firm merely mentioned. A law firm circulating or revising its own draft demand instrument is attorney_demand; counsel discussing whether someone could send one is not. Keep reasoning to two short sentences so the JSON object still emits.
+
+VALID CONTRACT SUBTYPE KEYS"""
+
+SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3 = (
+    SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2.replace(
+        "VALID CONTRACT SUBTYPE KEYS",
+        CORRESPONDENCE_SUBCLASS_V3,
+    )
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -3475,6 +3504,7 @@ PROMPT_VERSIONS = {
     "sorter_docclass_correspondence_v0": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
     "sorter_docclass_correspondence_v1": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1,
     "sorter_docclass_correspondence_v2": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2,
+    "sorter_docclass_correspondence_v3": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
     "sorter_docclass_vision_v1": SORTER_DOCCLASS_VISION_PROMPT_V1,
 

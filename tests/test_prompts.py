@@ -467,6 +467,32 @@ def test_sorter_docclass_v7_registered_and_pins_extended_universe_rules():
     assert "37. AGREEMENT PACKAGES" not in SORTER_DOCCLASS_PROMPT_V6
 
 
+def test_sorter_docclass_correspondence_v3_speech_act_overrides_hub_lexicon():
+    """KANBAN-103 GEPA v3: .replace() of frozen v2; rule 47 demand speech-act."""
+    from src.prompts import (
+        CORRESPONDENCE_SUBCLASS_V3,
+        SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2,
+        SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3,
+    )
+
+    assert "sorter_docclass_correspondence_v3" in PROMPT_VERSIONS
+    v2 = get_prompt("sorter_docclass_correspondence_v2")
+    v3 = get_prompt("sorter_docclass_correspondence_v3")
+    assert v3 is SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3
+    assert v2 is SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2
+    assert v3.startswith(v2[:400])
+    assert "46. HUB DEMAND MARKERS" in v3
+    assert "47. DEMAND IS THE SPEECH ACT" in v3
+    assert "47. DEMAND IS THE SPEECH ACT" not in v2
+    assert "OVERRIDES rule 46" in CORRESPONDENCE_SUBCLASS_V3
+    assert "performs the demand" in v3
+    assert "we could send a demand letter" in v3
+    assert "please draft a demand letter" in v3
+    assert "NOT demand" in v3
+    assert "46. HUB DEMAND MARKERS" in v2
+    assert "speech act" not in v2.lower() or "47." not in v2
+
+
 def test_sorter_docclass_prompt_option_list_matches_schema():
     """The doc_subclass options visible in the docclass prompts must match the
     DOCCLASS_SCHEMA enum exactly — a subclass the model can output must be in
@@ -493,7 +519,8 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
                     "sorter_docclass_v6", "sorter_docclass_v7",
                     "sorter_docclass_correspondence_v0",
                     "sorter_docclass_correspondence_v1",
-                    "sorter_docclass_correspondence_v2"):
+                    "sorter_docclass_correspondence_v2",
+                    "sorter_docclass_correspondence_v3"):
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()

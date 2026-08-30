@@ -96,6 +96,20 @@ history of the repository's tags. Format follows
   `scripts/datasets/publish_enron_gt_overrides.py` patches Hub
   `ground_truth/{train,test}.jsonl` and uploads a sidecar
   `ground_truth/overrides.jsonl`.
+- **Correspondence sorter GEPA v3 (KANBAN-103).** Prompt
+  `sorter_docclass_correspondence_v3` is a `.replace()` of frozen v2 adding
+  rule 47 (demand is the speech act): this message itself demands that the
+  recipient pay / cure / cease / arbitrate. Overrides the v2 Hub phrase
+  lexicon (rule 46) — a mention, draft-request (`please draft a demand
+  letter` / `we could send a demand letter`), news clip, IT-outage
+  `FINAL NOTICE`, or cover note attaching a demand is NOT demand.
+  `attorney_demand` = that speech act AND a lawyer/law-firm is the
+  author/sender, not merely mentioned. Motivated by v2 demand **3/25** and
+  attorney_demand **1/3** plus the Hub false positives already demoted in
+  `data/gt/enron_correspondence_label_overrides.jsonl`. Same-surface A/B
+  reserved as `qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42`
+  on pinned `enron_corr200_s42_filenames.jsonl` + `--gt-overrides` — not
+  yet run.
 
 ## [v0.21.0] - 2026-08-28
 

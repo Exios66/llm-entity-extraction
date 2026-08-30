@@ -89,6 +89,25 @@ def test_correspondence_v2_derives_from_v1_and_adds_demand_markers():
     assert "45. ENRON CHANNEL TRAP" in v2
 
 
+def test_correspondence_v3_derives_from_v2_and_adds_speech_act():
+    """GEPA v3 is a .replace() of v2: rule 47 demand speech-act only."""
+    assert "sorter_docclass_correspondence_v3" in list_prompts()
+    v2 = get_prompt("sorter_docclass_correspondence_v2")
+    v3 = get_prompt("sorter_docclass_correspondence_v3")
+    assert v3.startswith(v2[:400])
+    assert v3 != v2
+    assert "47. DEMAND IS THE SPEECH ACT" in v3
+    assert "47. DEMAND IS THE SPEECH ACT" not in v2
+    assert "OVERRIDES rule 46" in v3
+    assert "speech act" in v3.lower() or "performs the demand" in v3
+    assert "we could send a demand letter" in v3
+    assert "please draft a demand letter" in v3
+    assert "NOT demand" in v3
+    assert "46. HUB DEMAND MARKERS" in v3
+    assert "46. HUB DEMAND MARKERS" in v2
+    assert "Keep reasoning to two short sentences" in v3
+
+
 def test_predicted_fields_align_with_gt_assortment():
     assert PREDICTED_FIELDS == (
         "doc_type", "doc_subclass", "sentiment_label", "sentiment_score")
