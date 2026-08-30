@@ -67,6 +67,19 @@ history of the repository's tags. Format follows
   accepted into the GEPA pool, not a claimed win). Demand **0/25 → 3/25**,
   attorney_demand **0/3 → 1/3**; press_release 0.48→0.56. Memo
   `docs/memos/sorter_docclass_correspondence_v2.md`.
+- **Correspondence sample takes every attorney_demand example (KANBAN-103).**
+  The Hub dedup dump has 3 `attorney_demand` rows (all already in the seed-42
+  200-row draw). The full CMU corpus has **4** — the leftover is
+  `sanders-r/ecogas/26.` (Milbank / Ecogas demand letter; exact-body twin of
+  `sanders-r/all_documents/126.`, dropped by first-occurrence dedup). Runner
+  gains `--include-all-attorney-demand` (append leftover Hub attorney_demand
+  after the draw) and `--extra-dumps` (merge recovered full-corpus rows).
+  Fixture `tests/fixtures/enron_attorney_demand_extras.jsonl` holds the
+  recovered 4th row (same Hub enrichment as its twin). Reserved expanded
+  surface
+  `qwen3.7-flash_sorter_docclass_correspondence_v2_enron200_s42_attyall`
+  (n=201 = pinned 200 + ecogas/26.). Not comparable as a headline A/B to
+  the 200-row CIs; attorney_demand support becomes 4.
 
 ## [v0.21.0] - 2026-08-28
 

@@ -8,6 +8,7 @@ field alignment, and ``main_with_args --dry-run`` / a mocked live loop.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -22,9 +23,11 @@ from src.correspondence_eval import (
     CORRESPONDENCE_DOC_TYPE,
     GT_FIELDS,
     PREDICTED_FIELDS,
+    append_missing_by_subclass,
     compose_doc_text,
     filter_correspondence,
     join_blind_and_gt,
+    merge_eval_rows,
     predicted_aligns_with_gt,
     score_sentiment,
     stratified_by_subclass,
@@ -174,6 +177,49 @@ def test_stratified_by_subclass_covers_every_class():
     ]
 
 
+def test_append_missing_by_subclass_adds_only_absent():
+    selected = [
+        {"filename": "attorney_demand_0", "expected_subclass": "attorney_demand"},
+        {"filename": "email_0", "expected_subclass": "email"},
+    ]
+    pool = [
+        {"filename": "attorney_demand_0", "expected_subclass": "attorney_demand"},
+        {"filename": "attorney_demand_1", "expected_subclass": "attorney_demand"},
+        {"filename": "sanders-r/ecogas/26.", "expected_subclass": "attorney_demand"},
+        {"filename": "email_9", "expected_subclass": "email"},
+    ]
+    merged = append_missing_by_subclass(selected, pool, "attorney_demand")
+    assert [r["filename"] for r in merged] == [
+        "attorney_demand_0", "email_0",
+        "attorney_demand_1", "sanders-r/ecogas/26.",
+    ]
+
+
+def test_merge_eval_rows_first_filename_wins():
+    a = [{"filename": "x", "expected_subclass": "email"}]
+    b = [{"filename": "x", "expected_subclass": "attorney_demand"},
+         {"filename": "y", "expected_subclass": "attorney_demand"}]
+    merged = merge_eval_rows(a, b)
+    assert [r["filename"] for r in merged] == ["x", "y"]
+    assert merged[0]["expected_subclass"] == "email"
+
+
+def test_extra_attorney_demand_fixture_is_joined_shape():
+    from scripts.datasets.load_enron_correspondence import load_local_jsonl
+    from pathlib import Path
+
+    path = Path("tests/fixtures/enron_attorney_demand_extras.jsonl")
+    rows = load_local_jsonl(path)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["filename"] == "sanders-r/ecogas/26."
+    assert row["expected"] == "correspondence"
+    assert row["expected_subclass"] == "attorney_demand"
+    assert row["sentiment_label"] == "negative"
+    assert "Ecogas" in row["doc_text"]
+    assert "demand letter" in row["doc_text"].lower()
+
+
 def test_sentiment_scoring_band_and_label():
     hit = score_sentiment(0.10, "neutral", 0.0, "neutral")
     assert hit["sentiment_label_ok"] is True
@@ -239,6 +285,42 @@ def test_local_dump_filters_to_correspondence(dump_path):
     rows = load_local_jsonl(dump_path)
     assert {r["filename"] for r in rows} == {"e1", "m1", "d1"}
     assert all(r["expected"] == "correspondence" for r in rows)
+
+
+def test_include_all_attorney_demand_merges_extra_dump(tmp_path, monkeypatch):
+    """Pinned draw + leftover attorney_demand extras land in one sample."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
+    monkeypatch.setenv("BRAINTRUST_API_KEY", "sk-bt-test")
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "log.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "log.md"))
+
+    dump = tmp_path / "drawn.jsonl"
+    dump.write_text("\n".join(json.dumps(r) for r in [
+        {"filename": "e1", "subject": "Hi", "doc_text": "Subject: Hi\n\nSee you.",
+         "expected": "correspondence", "expected_subclass": "email",
+         "sentiment_label": "neutral", "sentiment_score": 0.0},
+        {"filename": "sanders-r/px/19.", "subject": "CalPX",
+         "doc_text": "Subject: CalPX\n\nDraft demand for arbitration.",
+         "expected": "correspondence", "expected_subclass": "attorney_demand",
+         "sentiment_label": "neutral", "sentiment_score": 0.0},
+    ]) + "\n")
+    extra = Path("tests/fixtures/enron_attorney_demand_extras.jsonl")
+    manifest = tmp_path / "filenames.jsonl"
+    manifest.write_text(json.dumps({"filename": "e1", "expected_subclass": "email"}) + "\n")
+
+    from scripts.eval.run_correspondence_eval import main_with_args
+
+    code = main_with_args([
+        "--local-dumps", str(dump),
+        "--filename-manifest", str(manifest),
+        "--include-all-attorney-demand",
+        "--extra-dumps", str(extra),
+        "--dry-run",
+        "--no-braintrust-logging",
+        "--no-publish-prompt",
+        "--experiment-name", "correspondence_attyall_smoke",
+    ])
+    assert code == 0
 
 
 def test_correspondence_eval_dry_run(dump_path, tmp_path, monkeypatch):

@@ -16,8 +16,10 @@ free of the datasets extra.
 
 from __future__ import annotations
 
+import json
 import random
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 from agents.sorter_agent import (
@@ -146,6 +148,62 @@ def stratified_by_subclass(
     return selected[:n]
 
 
+def append_missing_by_subclass(
+    selected: list[dict],
+    pool: list[dict],
+    subclass: str,
+    *,
+    key: str = "expected_subclass",
+    id_key: str = "filename",
+) -> list[dict]:
+    """Append pool rows of ``subclass`` whose id is not already selected.
+
+    Keeps the original ``selected`` order, then adds missing extras sorted
+    by filename so reruns are deterministic. Tiny classes (Hub
+    ``attorney_demand`` n=3; full-corpus n=4) use this to force every
+    example into the experiment sample instead of relying on the
+    stratified leftover budget.
+    """
+    have = {str(r.get(id_key) or "") for r in selected}
+    extras = [
+        r for r in pool
+        if str(r.get(key) or "") == subclass
+        and str(r.get(id_key) or "")
+        and str(r.get(id_key) or "") not in have
+    ]
+    extras.sort(key=lambda r: str(r.get(id_key) or ""))
+    return list(selected) + extras
+
+
+def merge_eval_rows(*groups: list[dict], id_key: str = "filename") -> list[dict]:
+    """Concatenate row groups; the first occurrence of each filename wins."""
+    out: list[dict] = []
+    seen: set[str] = set()
+    for group in groups:
+        for row in group:
+            fn = str(row.get(id_key) or "")
+            if not fn or fn in seen:
+                continue
+            seen.add(fn)
+            out.append(row)
+    return out
+
+
+def read_filename_manifest(manifest_path: Path) -> list[str]:
+    """Return filenames from a sample manifest, preserving file order."""
+    wanted: list[str] = []
+    with Path(manifest_path).open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            fn = row.get("filename")
+            if fn:
+                wanted.append(str(fn))
+    return wanted
+
+
 def score_sentiment(
     predicted_score: float | None,
     predicted_label: str | None,
@@ -231,10 +289,13 @@ __all__ = [
     "GT_FIELDS",
     "PREDICTED_FIELDS",
     "SENTIMENT_LABELS",
+    "append_missing_by_subclass",
     "compose_doc_text",
     "filter_correspondence",
     "join_blind_and_gt",
+    "merge_eval_rows",
     "predicted_aligns_with_gt",
+    "read_filename_manifest",
     "score_sentiment",
     "stratified_by_subclass",
 ]
