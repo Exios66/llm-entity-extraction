@@ -78,8 +78,11 @@ history of the repository's tags. Format follows
   recovered 4th row (same Hub enrichment as its twin). Reserved expanded
   surface
   `qwen3.7-flash_sorter_docclass_correspondence_v2_enron200_s42_attyall`
-  (n=201 = pinned 200 + ecogas/26.). Not comparable as a headline A/B to
-  the 200-row CIs; attorney_demand support becomes 4.
+  (n=201 = pinned 200 + ecogas/26.). **Run 2026-08-30** (Mailroom-Sandbox,
+  201/201, 0 errors, frozen v2): `doc_type_accuracy` **1.000**,
+  `subclass_accuracy` **0.5124**, attorney_demand **1/4** (new row →
+  `email`, same miss as its twin). Not a same-surface A/B vs the 200-row
+  CIs. Memo `docs/memos/sorter_docclass_correspondence_v2_attyall.md`.
 
 ## [v0.21.0] - 2026-08-28
 
