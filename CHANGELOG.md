@@ -46,7 +46,12 @@ history of the repository's tags. Format follows
   `qwen3.7-flash_sorter_docclass_correspondence_v1_enron200_s42` on
   `data/manifests/enron_corr200_s42_filenames.jsonl`. Runner publishes the
   selected prompt into the Braintrust project library by default
-  (`--no-publish-prompt` to skip).
+  (`--no-publish-prompt` to skip). **Same-surface A/B 2026-08-30**
+  (Mailroom-Sandbox, 200/200, 0 errors): subclass **0.400 → 0.465**
+  (+6.5pp; paired bootstrap CI +1.5 to +12.0pp); letter 0.20→0.44,
+  press_release 0.28→0.48, meeting_request 0.68→0.80; `demand` /
+  `attorney_demand` still 0/28; sentiment flat 0.630→0.625.
+  Memo `docs/memos/sorter_docclass_correspondence_v1.md`.
 
 ## [v0.21.0] - 2026-08-28
 

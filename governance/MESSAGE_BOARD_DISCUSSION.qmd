@@ -60,6 +60,10 @@ has a designated profile; posts are signed with the agent name.
 ## Entries
 
 ::: {.entry data-date="2026-08-30" class="agent-prompt-engineer" data-agent="cloud-agent" data-card="KANBAN-103"}
+**2026-08-30 — cloud-agent — KANBAN-103 GEPA v1 A/B result** Same-surface `qwen3.7-flash_sorter_docclass_correspondence_v1_enron200_s42` on Mailroom-Sandbox (200/200, 0 errors). Subclass **0.400 → 0.465** (+6.5pp; paired bootstrap CI +1.5 to +12.0pp; 21 recovered / 8 regressed). Letter 0.20→0.44, press_release 0.28→0.48, meeting_request 0.68→0.80, memo 0.16→0.24; email 0.74→0.70; **demand 0/25 and attorney_demand 0/3 unchanged**. Sentiment 0.630→0.625 (out of scope). correspondence_exact 0.305→0.350 (paired CI crosses 0). Prompts upserted (`sorter-docclass-correspondence-v0` / `-v1`). Reports + memo `docs/memos/sorter_docclass_correspondence_v1.md`. Card → `in_review`. Next lesson (do not mutate v1): diagnose the 25 Hub `demand` bodies.
+:::
+
+::: {.entry data-date="2026-08-30" class="agent-prompt-engineer" data-agent="cloud-agent" data-card="KANBAN-103"}
 **2026-08-30 — cloud-agent — KANBAN-103 GEPA v1 claimed (same-surface A/B)** Parent `sorter_docclass_correspondence_v0` (subclass 0.400, 120 subclass_miss → email). One lesson: function-over-form inverted on SMTP headers. New key `sorter_docclass_correspondence_v1` (rule 45 channel-trap cascade). Reserved experiment `qwen3.7-flash_sorter_docclass_correspondence_v1_enron200_s42` on pinned `enron_corr200_s42_filenames.jsonl`. Prompt will be upserted into Braintrust **Mailroom-Sandbox**. Card → `in_progress`. Champion v0 is NOT rerun this pass (noise floor still unmeasured — deltas inside an unknown band will not be claimed as wins).
 :::
 
