@@ -42,6 +42,31 @@ history of the repository's tags. Format follows
   `sentiment_label_accuracy`, `sentiment_score_ok` / MAE (band 0.25),
   `correspondence_exact`, CIs, per-subclass / per-sentiment tables,
   confusion, `failure_insights` (incl. `sentiment_miss`).
+  `report_generator.py --from-log` renders those scorers from the experiment
+  log (Braintrust fetch still works for label-only experiments).
+  **Baseline run 2026-08-30** (same 200-row filename manifest, seed 42,
+  Braintrust `Mailroom-Sandbox`): `doc_type_accuracy` **1.000**,
+  `subclass_accuracy` **0.400** (CI 0.335–0.465), `sentiment_label_accuracy`
+  **0.630**, `sentiment_score_ok` **0.779** (MAE 0.1593),
+  `correspondence_exact` **0.305**, 0 errors. Dominant miss: function
+  collapses to `email` (demand 0/25, memo 4/25, letter 5/25); negatives
+  collapse to `neutral` (3/28). Memo
+  `docs/memos/sorter_docclass_correspondence_v0.md`.
+- **Correspondence sorter GEPA v1 (KANBAN-103).** Prompt
+  `sorter_docclass_correspondence_v1` is a `.replace()` of v0 adding rule 45
+  (Enron channel trap): SMTP headers are transport, never evidence for
+  subclass `email`; ordered payload cascade attorney_demand → demand →
+  meeting_request → press_release → notice → memo → letter → email;
+  `other` banned on this surface. Same-surface A/B reserved as
+  `qwen3.7-flash_sorter_docclass_correspondence_v1_enron200_s42` on
+  `data/manifests/enron_corr200_s42_filenames.jsonl`. Runner publishes the
+  selected prompt into the Braintrust project library by default
+  (`--no-publish-prompt` to skip). **Same-surface A/B 2026-08-30**
+  (Mailroom-Sandbox, 200/200, 0 errors): subclass **0.400 → 0.465**
+  (+6.5pp; paired bootstrap CI +1.5 to +12.0pp); letter 0.20→0.44,
+  press_release 0.28→0.48, meeting_request 0.68→0.80; `demand` /
+  `attorney_demand` still 0/28; sentiment flat 0.630→0.625.
+  Memo `docs/memos/sorter_docclass_correspondence_v1.md`.
 
 ## [v0.21.0] - 2026-08-28
 
