@@ -62,6 +62,11 @@ history of the repository's tags. Format follows
   live scorers reduced to `sorter_doc_type` + `sorter_subclass`; sentiment /
   exact / confidence remain post-hoc. Reserved run
   `qwen3.7-flash_sorter_docclass_correspondence_v2_enron200_s42`.
+  **Same-surface A/B 2026-08-30** (Mailroom-Sandbox, 200/200, 0 errors):
+  subclass **0.465 → 0.485** (+2.0pp; paired CI −1.5 to +6.0pp includes 0 —
+  accepted into the GEPA pool, not a claimed win). Demand **0/25 → 3/25**,
+  attorney_demand **0/3 → 1/3**; press_release 0.48→0.56. Memo
+  `docs/memos/sorter_docclass_correspondence_v2.md`.
 
 ## [v0.21.0] - 2026-08-28
 
