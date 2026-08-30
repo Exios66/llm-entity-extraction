@@ -11,7 +11,7 @@ Guards three things:
    the docclass context block.
 """
 
-EXPECTED_DOCCLASS_KEY_COUNT = 55  # 32 KANBAN-090 + 22 KANBAN-101 + 1 KANBAN-103
+EXPECTED_DOCCLASS_KEY_COUNT = 56  # 32 KANBAN-090 + 22 KANBAN-101 + 2 KANBAN-103
 
 
 def _doc():
@@ -63,6 +63,7 @@ def test_sorter_family_is_reexported_byte_identical():
         ("SORTER_DOCCLASS_PROMPT_V6", "sorter_docclass_v6"),
         ("SORTER_DOCCLASS_PROMPT_V7", "sorter_docclass_v7"),
         ("SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0", "sorter_docclass_correspondence_v0"),
+        ("SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1", "sorter_docclass_correspondence_v1"),
         ("SORTER_DOCCLASS_VISION_PROMPT_V0", "sorter_docclass_vision_v0"),
         ("SORTER_DOCCLASS_VISION_PROMPT_V1", "sorter_docclass_vision_v1"),
     ]:

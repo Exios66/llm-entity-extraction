@@ -491,7 +491,8 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
                     "sorter_docclass_v2", "sorter_docclass_v3",
                     "sorter_docclass_v4", "sorter_docclass_v5",
                     "sorter_docclass_v6", "sorter_docclass_v7",
-                    "sorter_docclass_correspondence_v0"):
+                    "sorter_docclass_correspondence_v0",
+                    "sorter_docclass_correspondence_v1"):
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()
@@ -499,7 +500,8 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
         # four dimensions; legacy v0..v6 were frozen before the
         # correspondence/insurance dimensions existed and are never mutated
         # after a run — they must carry the merger/corporate keys only.
-        if "pilot" in version or version == "sorter_docclass_v7":
+        if ("pilot" in version or version == "sorter_docclass_v7"
+                or "correspondence" in version):
             expected_keys = DOC_SUBCLASS_KEYS
         else:
             legacy_excluded = {"demand", "attorney_demand", "meeting_request",
