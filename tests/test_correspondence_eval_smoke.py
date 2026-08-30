@@ -291,3 +291,72 @@ def test_correspondence_eval_mocked_run(dump_path, tmp_path, monkeypatch):
     assert "correspondence_smoke_run" in md
     assert "Per-sentiment-label accuracy" in md
     assert "expected sent." in md
+
+
+def test_report_generator_from_log(tmp_path):
+    from scripts.reporting.report_generator import (
+        load_log_record,
+        render_correspondence_report,
+    )
+
+    record = {
+        "experiment_name": "corr_report_smoke",
+        "task": "correspondence_classification",
+        "model": "qwen/qwen3.7-flash",
+        "prompt_versions": {"sorter": "sorter_docclass_correspondence_v0"},
+        "data_source": {
+            "hf_repo": "Lucius-Morningstar/enron-correspondence-dedup",
+            "n_samples": 3, "stratified": 3, "seed": 42,
+            "ground_truth": "expected + expected_subclass + sentiment_label + sentiment_score",
+        },
+        "parameters": {"braintrust_logging": True},
+        "git": {"commit": "deadbeef"},
+        "tokens": {"total": {"prompt_tokens": 10, "completion_tokens": 5, "total_cost": 0.0}},
+        "scores": {
+            "n_rows": 3, "n_errors": 0,
+            "doc_type_accuracy": 1.0, "subclass_accuracy": 0.6667,
+            "subclass_accuracy_equiv": 0.6667, "exact_match": 0.6667,
+            "sentiment_label_accuracy": 1.0, "sentiment_score_ok": 1.0,
+            "sentiment_score_mae": 0.01, "sentiment_score_band": 0.25,
+            "correspondence_exact": 0.6667, "confidence": 0.9,
+            "per_subclass_accuracy": {"email": 1.0, "memo": 0.0},
+            "per_subclass_support": {"email": 2, "memo": 1},
+            "per_sentiment_accuracy": {"neutral": 1.0},
+            "per_sentiment_support": {"neutral": 3},
+            "subclass_confusion": {"email": {"email": 2}, "memo": {"email": 1}},
+            "sentiment_confusion": {"neutral": {"neutral": 3}},
+            "sorter": {"failure_insights": {
+                "n_failed": 1, "mode_counts": {"subclass_miss": 1},
+                "failures": [{
+                    "filename": "m1", "failure_mode": "subclass_miss",
+                    "expected": {"doc_subclass": "memo", "sentiment_label": "neutral"},
+                    "predicted": {"doc_subclass": "email", "sentiment_label": "neutral"},
+                    "reasoning": "looks like email",
+                }],
+            }},
+        },
+    }
+    md = render_correspondence_report(record)
+    assert "correspondence_exact" in md
+    assert "sentiment_label_accuracy" in md
+    assert "subclass_miss" in md
+    log = tmp_path / "log.jsonl"
+    log.write_text(json.dumps(record) + "\n")
+    assert load_log_record("corr_report_smoke", log)["task"] == "correspondence_classification"
+    import sys
+    import scripts.reporting.report_generator as rg
+    old = sys.argv
+    try:
+        sys.argv = [
+            "report_generator.py",
+            "--experiment", "corr_report_smoke",
+            "--from-log",
+            "--experiment-log", str(log),
+            "--output-dir", str(tmp_path),
+        ]
+        assert rg.main() == 0
+    finally:
+        sys.argv = old
+    written = (tmp_path / "report_corr_report_smoke.md").read_text()
+    assert "0.6667" in written
+    assert "Per-subclass accuracy" in written
