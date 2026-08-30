@@ -519,19 +519,6 @@ def main_with_args(argv: list[str]) -> int:
     def sorter_subclass(output: dict, expected) -> float:
         return 1.0 if ((output or {}).get("sorter") or {}).get("subclass_ok") else 0.0
 
-    def sorter_exact(output: dict, expected) -> float:
-        return 1.0 if ((output or {}).get("sorter") or {}).get("exact_match") else 0.0
-
-    def sorter_sentiment_label(output: dict, expected) -> float:
-        return 1.0 if ((output or {}).get("sorter") or {}).get("sentiment_label_ok") else 0.0
-
-    def sorter_sentiment_score_ok(output: dict, expected) -> float:
-        flag = ((output or {}).get("sorter") or {}).get("sentiment_score_ok")
-        return 1.0 if flag else 0.0
-
-    def sorter_confidence(output: dict, expected) -> float:
-        return float(((output or {}).get("sorter") or {}).get("confidence") or 0.0)
-
     def _report_eval(evaluator, result, verbose, jsonl):
         failures = [r for r in result.results if r.error]
         for failure_ in failures:
@@ -568,13 +555,12 @@ def main_with_args(argv: list[str]) -> int:
             args.project,
             data=lambda: rows_for_eval,
             task=classify,
+            # Braintrust live scorers: doc_type + subclass only (human
+            # directive 2026-08-30). Sentiment / exact / confidence stay
+            # post-hoc in the experiment-log record + report_generator.
             scores=[
                 sorter_doc_type,
                 sorter_subclass,
-                sorter_exact,
-                sorter_sentiment_label,
-                sorter_sentiment_score_ok,
-                sorter_confidence,
             ],
             max_concurrency=args.max_concurrency,
             reporter=braintrust.Reporter(
@@ -592,6 +578,7 @@ def main_with_args(argv: list[str]) -> int:
                 "stratified": args.stratified,
                 "seed": args.seed,
                 "ground_truth": "expected + expected_subclass + sentiment_label + sentiment_score",
+                "braintrust_scorers": ["sorter_doc_type", "sorter_subclass"],
             },
             description=(
                 f"{args.model} | {args.prompt_version} | Enron correspondence "

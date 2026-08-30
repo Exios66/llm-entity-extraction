@@ -52,6 +52,16 @@ history of the repository's tags. Format follows
   press_release 0.28→0.48, meeting_request 0.68→0.80; `demand` /
   `attorney_demand` still 0/28; sentiment flat 0.630→0.625.
   Memo `docs/memos/sorter_docclass_correspondence_v1.md`.
+- **Correspondence sorter GEPA v2 (KANBAN-103).** Prompt
+  `sorter_docclass_correspondence_v2` is a `.replace()` of v1 adding rule 46
+  (Hub demand markers): demand is a legal-phrase hit on the writer's own
+  text (`DEMAND LETTER`, `FINAL NOTICE`, `BREACH OF CONTRACT`, …), not a
+  formal letter addressed to the recipient; `attorney_demand` adds a
+  law-firm sender. Cascade re-ordered to the GT labeler
+  (meeting → press → demand → notice → memo → letter → email). Braintrust
+  live scorers reduced to `sorter_doc_type` + `sorter_subclass`; sentiment /
+  exact / confidence remain post-hoc. Reserved run
+  `qwen3.7-flash_sorter_docclass_correspondence_v2_enron200_s42`.
 
 ## [v0.21.0] - 2026-08-28
 

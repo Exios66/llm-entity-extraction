@@ -71,6 +71,21 @@ def test_correspondence_v1_derives_from_v0_and_adds_channel_trap():
     assert "44. CORRESPONDENCE SENTIMENT" in v1
 
 
+def test_correspondence_v2_derives_from_v1_and_adds_demand_markers():
+    """GEPA v2 is a .replace() of v1: rule 46 Hub demand markers only."""
+    assert "sorter_docclass_correspondence_v2" in list_prompts()
+    v1 = get_prompt("sorter_docclass_correspondence_v1")
+    v2 = get_prompt("sorter_docclass_correspondence_v2")
+    assert v2.startswith(v1[:400])
+    assert v2 != v1
+    assert "46. HUB DEMAND MARKERS" in v2
+    assert "46. HUB DEMAND MARKERS" not in v1
+    assert "BREACH OF CONTRACT" in v2
+    assert "FINAL NOTICE" in v2
+    assert "kayescholer.com" in v2
+    assert "45. ENRON CHANNEL TRAP" in v2
+
+
 def test_predicted_fields_align_with_gt_assortment():
     assert PREDICTED_FIELDS == (
         "doc_type", "doc_subclass", "sentiment_label", "sentiment_score")

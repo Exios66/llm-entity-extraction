@@ -946,6 +946,28 @@ SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1 = (
 )
 
 # =============================================================================
+# SORTER AGENT — Correspondence-only eval v2 (KANBAN-103 GEPA)
+# -----------------------------------------------------------------------------
+# Parent: sorter_docclass_correspondence_v1 (subclass 0.465 on enron200 s42).
+# ONE lesson from the v1 miss cluster: demand + attorney_demand stayed 0/28
+# because rule 45 required a formal demand letter addressed to the recipient.
+# Hub GT is the correspondence_subclasses.py marker list on the writer's OWN
+# text (forwarded tail stripped) — "FINAL NOTICE", "BREACH OF CONTRACT",
+# "DEMAND LETTER" in an FYI/drafting thread are demand. v1 stays byte-identical.
+# =============================================================================
+
+_SORTER_DOCCLASS_CORRESPONDENCE_V2_RULE_46 = """46. HUB DEMAND MARKERS (correspondence-only; overrides rule 45 steps 1–2): the Enron ground-truth demand class is a LEGAL-PHRASE hit in the writer's OWN text (subject + body above any forwarded-original separator — "-----Original Message-----", "-----Forwarded by", "---------------------- Forwarded by"). It is NOT "this document is itself a formal demand letter addressed to you." Internal FYI, drafting notes, and news forwards ARE demand when they contain one of these phrases: DEMAND LETTER, LETTER OF DEMAND, DEMAND FOR PAYMENT, DEMAND FOR ARBITRATION, DEMAND FOR DAMAGES, DEMAND FOR SPECIFIC PERFORMANCE, DEMAND FOR RELIEF, CEASE AND DESIST, LITIGATION HOLD, LEGAL HOLD, NOTICE OF DEFAULT, NOTICE OF BREACH, NOTICE TO CURE, FINAL NOTICE, FINAL DEMAND, IMMEDIATE PAYMENT, REMIT PAYMENT, ULTIMATUM, BREACH OF CONTRACT, BREACH OF THE AGREEMENT. Energy-market "demand charges" / "demand reduction" / TCF capacity is NOT demand. attorney_demand = a demand-marker hit AND a law-firm sender (domains such as kayescholer.com, milbank.com, bakerbotts.com, velaw.com, latham.com, skadden.com, or Esq./Counsel in the from-line). Re-order the rule-45 cascade to: meeting_request, press_release, attorney_demand/demand (this rule), notice, memo, letter, email. FINAL NOTICE and NOTICE OF DEFAULT/BREACH are demand, not notice.
+
+VALID CONTRACT SUBTYPE KEYS"""
+
+SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2 = (
+    SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1.replace(
+        "VALID CONTRACT SUBTYPE KEYS",
+        _SORTER_DOCCLASS_CORRESPONDENCE_V2_RULE_46,
+    )
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -3452,6 +3474,7 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v7": SORTER_DOCCLASS_PROMPT_V7,
     "sorter_docclass_correspondence_v0": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
     "sorter_docclass_correspondence_v1": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1,
+    "sorter_docclass_correspondence_v2": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
     "sorter_docclass_vision_v1": SORTER_DOCCLASS_VISION_PROMPT_V1,
 
