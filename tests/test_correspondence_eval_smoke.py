@@ -57,6 +57,20 @@ def test_correspondence_prompt_registered_and_derives_from_v7():
     assert "44. CORRESPONDENCE SENTIMENT" not in v7
 
 
+def test_correspondence_v1_derives_from_v0_and_adds_channel_trap():
+    """GEPA v1 is a .replace() of v0: rule 45 only; v0 bytes stay intact."""
+    assert "sorter_docclass_correspondence_v1" in list_prompts()
+    v0 = get_prompt("sorter_docclass_correspondence_v0")
+    v1 = get_prompt("sorter_docclass_correspondence_v1")
+    assert v1.startswith(v0[:400])
+    assert v1 != v0
+    assert "45. ENRON CHANNEL TRAP" in v1
+    assert "45. ENRON CHANNEL TRAP" not in v0
+    assert "Never output doc_subclass other" in v1
+    assert "Headers (From/To/Cc/Subject/Sent/Fwd/Re/MIME) are TRANSPORT" in v1
+    assert "44. CORRESPONDENCE SENTIMENT" in v1
+
+
 def test_predicted_fields_align_with_gt_assortment():
     assert PREDICTED_FIELDS == (
         "doc_type", "doc_subclass", "sentiment_label", "sentiment_score")
@@ -226,6 +240,7 @@ def test_correspondence_eval_dry_run(dump_path, tmp_path, monkeypatch):
         "--seed", "42",
         "--dry-run",
         "--no-braintrust-logging",
+        "--no-publish-prompt",
         "--experiment-name", "correspondence_smoke_dry",
     ])
     assert code == 0
@@ -269,6 +284,7 @@ def test_correspondence_eval_mocked_run(dump_path, tmp_path, monkeypatch):
         "--stratified", "3",
         "--seed", "42",
         "--no-braintrust-logging",
+        "--no-publish-prompt",
         "--experiment-name", "correspondence_smoke_run",
         "--manifest", str(tmp_path / "manifest.jsonl"),
         "--max-concurrency", "2",

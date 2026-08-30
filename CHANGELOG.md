@@ -36,7 +36,17 @@ history of the repository's tags. Format follows
   `correspondence_exact` **0.305**, 0 errors. Dominant miss: function
   collapses to `email` (demand 0/25, memo 4/25, letter 5/25); negatives
   collapse to `neutral` (3/28). Memo
-  `docs/memos/sorter_docclass_correspondence_v0.md`. GEPA A/B parked.
+  `docs/memos/sorter_docclass_correspondence_v0.md`.
+- **Correspondence sorter GEPA v1 (KANBAN-103).** Prompt
+  `sorter_docclass_correspondence_v1` is a `.replace()` of v0 adding rule 45
+  (Enron channel trap): SMTP headers are transport, never evidence for
+  subclass `email`; ordered payload cascade attorney_demand → demand →
+  meeting_request → press_release → notice → memo → letter → email;
+  `other` banned on this surface. Same-surface A/B reserved as
+  `qwen3.7-flash_sorter_docclass_correspondence_v1_enron200_s42` on
+  `data/manifests/enron_corr200_s42_filenames.jsonl`. Runner publishes the
+  selected prompt into the Braintrust project library by default
+  (`--no-publish-prompt` to skip).
 
 ## [v0.21.0] - 2026-08-28
 

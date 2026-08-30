@@ -106,6 +106,36 @@ def _enable_braintrust_logging(enabled: bool) -> bool:
     return enabled
 
 
+def publish_prompt_to_braintrust(
+    project_name: str, version: str, model: str,
+) -> None:
+    """Upsert one registered prompt version into a Braintrust project library."""
+    from src.prompts import get_prompt
+
+    braintrust.login()
+    project = braintrust.projects.create(name=project_name)
+    project.prompts.create(
+        name=version,
+        slug=version.replace("_", "-"),
+        description=(
+            f"KANBAN-103 correspondence sorter {version} "
+            f"(doc_type + communication-function subclass + sentiment)"
+        ),
+        messages=[{"role": "system", "content": get_prompt(version)}],
+        model=model,
+        if_exists="replace",
+        metadata={
+            "kanban": "103",
+            "prompt_version": version,
+            "task": "correspondence_classification",
+        },
+        tags=["correspondence", "docclass", "kanban-103"],
+    )
+    result = project.publish()
+    print(f"Published Braintrust prompt '{version}' -> project '{project_name}'"
+          f"{'' if result is None else f' ({result})'}")
+
+
 def write_sample_manifest(dataset: list[dict], manifest_path: Path) -> None:
     """Persist the exact stratified draw for same-surface A/B reruns."""
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,6 +213,12 @@ def main_with_args(argv: list[str]) -> int:
                         default=True,
                         help="Capture Braintrust experiment traces (default: on)")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--publish-prompt", action=argparse.BooleanOptionalAction, default=True,
+        help="Upsert the selected prompt version into the Braintrust project "
+             "prompt library (default: on when Braintrust logging is on; "
+             "--no-publish-prompt to skip).",
+    )
     args = parser.parse_args(argv)
 
     (openrouter_key,) = require_env("OPENROUTER_API_KEY")
@@ -290,6 +326,11 @@ def main_with_args(argv: list[str]) -> int:
 
     log_path = args.experiment_log or default_jsonl_path()
     md_log_path = default_md_path()
+
+    if args.publish_prompt:
+        require_env("BRAINTRUST_API_KEY")
+        publish_prompt_to_braintrust(
+            args.project, args.prompt_version, args.model)
 
     if args.dry_run:
         how = (

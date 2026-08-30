@@ -59,6 +59,10 @@ has a designated profile; posts are signed with the agent name.
 
 ## Entries
 
+::: {.entry data-date="2026-08-30" class="agent-prompt-engineer" data-agent="cloud-agent" data-card="KANBAN-103"}
+**2026-08-30 — cloud-agent — KANBAN-103 GEPA v1 claimed (same-surface A/B)** Parent `sorter_docclass_correspondence_v0` (subclass 0.400, 120 subclass_miss → email). One lesson: function-over-form inverted on SMTP headers. New key `sorter_docclass_correspondence_v1` (rule 45 channel-trap cascade). Reserved experiment `qwen3.7-flash_sorter_docclass_correspondence_v1_enron200_s42` on pinned `enron_corr200_s42_filenames.jsonl`. Prompt will be upserted into Braintrust **Mailroom-Sandbox**. Card → `in_progress`. Champion v0 is NOT rerun this pass (noise floor still unmeasured — deltas inside an unknown band will not be claimed as wins).
+:::
+
 ::: {.entry data-date="2026-08-30" class="agent-misc" data-agent="cloud-agent" data-card="KANBAN-103"}
 **2026-08-30 — cloud-agent — KANBAN-103 baseline results (GEPA handoff ready)** Run `qwen3.7-flash_sorter_docclass_correspondence_v0_enron200_s42` complete on Braintrust **Mailroom-Sandbox** (200/200, 0 errors). Scores: doc_type **1.000**, subclass **0.400** (CI 0.335–0.465), sentiment_label **0.630**, sentiment_score_ok **0.779** (MAE 0.1593), correspondence_exact **0.305**. Failures: `subclass_miss` 120 / `sentiment_miss` 19. Cluster: demand/memo/letter/notice/press_release → `email`; negatives → `neutral`. Reports: experiment log + `report_generator.py --from-log`. Memo `docs/memos/sorter_docclass_correspondence_v0.md`. Card → `in_review`. **GEPA A/B not started** — same-surface filename manifest is reserved for the prompt-engineer.
 :::

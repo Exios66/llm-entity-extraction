@@ -912,6 +912,40 @@ VALID CONTRACT SUBTYPE KEYS""",
 )
 
 # =============================================================================
+# SORTER AGENT — Correspondence-only eval v1 (KANBAN-103 GEPA)
+# -----------------------------------------------------------------------------
+# Parent: sorter_docclass_correspondence_v0. ONE lesson from the Enron-200
+# baseline (n=200, seed 42, fp 7df1e16be2c6f8b0…): v7 rule 41 (function over
+# transport) did not fire — 120/139 failures are subclass_miss, and the
+# dominant collapse is demand/memo/letter/notice/press_release → email
+# because the model cites SMTP headers (Subject:/From:/Fwd:) as class
+# evidence. v0 stays byte-identical. v1 adds rule 45: an ordered payload
+# cascade + an explicit ban on header-as-email and on `other`.
+# =============================================================================
+
+_SORTER_DOCCLASS_CORRESPONDENCE_V1_RULE_45 = """45. ENRON CHANNEL TRAP (correspondence-only): nearly every document arrives as SMTP. Headers (From/To/Cc/Subject/Sent/Fwd/Re/MIME) are TRANSPORT and are NEVER evidence for subclass email. Classify the PAYLOAD — the body, the attached/quoted title, the letterhead — not the envelope. Walk this cascade and take the FIRST match; do not keep looking after a match:
+
+(1) attorney_demand — outside-counsel letterhead, "on behalf of our client", "we demand"/"we insist" from a law firm, reservation-of-rights from counsel.
+(2) demand — a party demands payment, performance, cure, or compliance ("please remit", "you are required to", past-due, default, "we insist") even when the tone is polite or the wrapper is an email.
+(3) meeting_request — the message's PURPOSE is to schedule or confirm a meeting, call, or calendar slot (invite, agenda-for-attendance, "please join"). A memo or letter that merely mentions a meeting stays its own class.
+(4) press_release — "NEWS RELEASE" / "FOR IMMEDIATE RELEASE" / dateline + media contact, OR the payload being forwarded IS that release. A one-line "fyi, press release attached" is still press_release.
+(5) notice — numbered/titled Notice, regulatory/exchange/system notice, default/termination/exercise notice, official announcement to members/shippers/market participants.
+(6) memo — "MEMORANDUM" / TO-FROM-DATE-RE block, or an internal policy/analysis/briefing. Forwarding "the attached memo" is memo, not email.
+(7) letter — Dear/Sincerely business letter, community or customer newsletter, welcome/subscription letter, vendor letter. Formal address + closing that is not (1)–(6).
+(8) email — residual ONLY: an informal colleague thread whose payload matches none of (1)–(7). Do not pick email because a Subject: line exists.
+
+Never output doc_subclass other on this surface — choose the closest of the eight. Reasoning: two short sentences naming the payload function; do not list headers.
+
+VALID CONTRACT SUBTYPE KEYS"""
+
+SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1 = (
+    SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0.replace(
+        "VALID CONTRACT SUBTYPE KEYS",
+        _SORTER_DOCCLASS_CORRESPONDENCE_V1_RULE_45,
+    )
+)
+
+# =============================================================================
 # SORTER AGENT — Vision Classification (RVL-CDIP-style image pipeline)
 # -----------------------------------------------------------------------------
 # Modeled on the RVL-CDIP classifier repo's v17 prompt structure: an ordered
@@ -3417,6 +3451,7 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v6": SORTER_DOCCLASS_PROMPT_V6,
     "sorter_docclass_v7": SORTER_DOCCLASS_PROMPT_V7,
     "sorter_docclass_correspondence_v0": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
+    "sorter_docclass_correspondence_v1": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
     "sorter_docclass_vision_v1": SORTER_DOCCLASS_VISION_PROMPT_V1,
 
