@@ -50,7 +50,7 @@ def main_with_args(argv: list[str]) -> int:
 
     out_dir = args.mailroom_dir / "data" / "hf_gt"
     rows_out = []
-    for shard in sorted(args.parent_gt_dir.glob("*.parquet")):
+    for shard in sorted(args.parent_gt_dir.glob("**/*.parquet")):
         table = pq.read_table(shard)
         cols = set(table.column_names)
         if not {"intent", "subject_matter", "keywords"} <= cols:

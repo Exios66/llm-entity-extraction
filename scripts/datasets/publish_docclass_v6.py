@@ -297,7 +297,13 @@ def stage_sidecars(stage: Path, rows: list[dict],
 
 
 def render_card(rows: list[dict], append_stats: dict, file_stats: dict) -> str:
-    """Surgical evolution of the live v5 card (fetched fresh at build time)."""
+    """Surgical evolution of the live card (fetched fresh at build time).
+
+    Revision-idempotent: every scalar anchor tolerates BOTH the v5 card and a
+    previously-published v6 rev (counts may already carry any revision's
+    value), and the two KANBAN-105 sections are replaced whole when present
+    (inserted only on the first v6 publish) — so revN re-renders cleanly.
+    """
     corr_n = append_stats["corr_n"]
     ins_n = append_stats["ins_n"]
     r = __import__("subprocess").run(
@@ -307,57 +313,70 @@ def render_card(rows: list[dict], append_stats: dict, file_stats: dict) -> str:
     card = r.stdout
     assert card.startswith("---"), "could not fetch the live parent card"
 
-    # 1) pretty_name -> v6
-    card, n = re.subn(r'pretty_name: "Docclass Merged Corpus v5 \(([^)]+)\)"',
+    # 1) pretty_name -> v6 (v5 or a prior v6 rev)
+    card, n = re.subn(r'pretty_name: "Docclass Merged Corpus v[56] \(([^)]+)\)"',
                       'pretty_name: "Docclass Merged Corpus v6 (\\1)"',
                       card, count=1)
     assert n == 1, "pretty_name anchor"
     # 2) headline counts
     card, n = re.subn(
-        r"Single flat document-classification surface: \*\*1,210 legal documents\*\* across\nfive corpora, one row per document \(schema v5\):",
+        r"Single flat document-classification surface: \*\*[\d,]+ legal documents\*\* across\nfive corpora, one row per document \(schema v[56]\):",
         f"Single flat document-classification surface: **{len(rows):,} legal documents** across\nfive corpora, one row per document (schema v6):",
         card, count=1)
     assert n == 1, "headline anchor"
-    # 3) corpus table rows: Enron 110 -> 350, claims 400 -> 600
+    # 3) corpus table rows (Enron 110/350 -> 350; claims 400 -> 400 + ins_n)
     card, n = re.subn(
-        r"\| \*\*Enron correspondence sample\*\* \| \*\*110\*\* \|",
-        f"| **Enron correspondence sample** | **{110 + corr_n}** |",
+        r"\| \*\*Enron correspondence sample\*\* \| \*\*[\d,]+\*\* \|",
+        f"| **Enron correspondence sample** | **{PARENT_CORR_ROWS + corr_n}** |",
         card, count=1)
     assert n == 1, "enron row anchor"
     card, n = re.subn(
-        r"\| \*\*CMS DE-SynPUF rendered EOBs\*\* \| \*\*400\*\* \|",
-        f"| **CMS DE-SynPUF rendered EOBs** | **{400 + ins_n}** |",
+        r"\| \*\*CMS DE-SynPUF rendered EOBs\*\* \| \*\*[\d,]+\*\* \|",
+        f"| **CMS DE-SynPUF rendered EOBs** | **{PARENT_INS_ROWS + ins_n}** |",
         card, count=1)
     assert n == 1, "claims row anchor"
     # 4) correspondence deep-dive heading count
     card, n = re.subn(
-        r"### Enron correspondence sample — 110 rows \(`correspondence`\)",
-        f"### Enron correspondence sample — {110 + corr_n} rows (`correspondence`)",
+        r"### Enron correspondence sample — [\d,]+ rows \(`correspondence`\)",
+        f"### Enron correspondence sample — {PARENT_CORR_ROWS + corr_n} rows (`correspondence`)",
         card, count=1)
     assert n == 1, "correspondence heading anchor"
-    # 5) v6 provenance section before the Two-config section (inserted FIRST —
-    #    the original-files section below anchors on its heading)
-    marker = "## ⚠️ Two-config layout"
-    assert marker in card, "two-config anchor"
+
+    def upsert_section(card: str, heading: str, body: str,
+                       insert_before: str) -> str:
+        """Rev-idempotent section law: replace the section WHOLE when present
+        (heading .. next '## ' heading or EOF); insert it before insert_before
+        when absent. Never duplicates."""
+        assert body.startswith(heading) and body.endswith("\n\n"), \
+            f"section body malformed: {heading!r}"
+        start = card.find(heading)
+        if start >= 0:
+            nxt = card.find("\n## ", start + 1)
+            end = len(card) if nxt < 0 else nxt + 1
+            return card[:start] + body + card[end:]
+        marker_at = card.find(insert_before)
+        assert marker_at >= 0, f"insert anchor missing: {insert_before!r}"
+        return card[:marker_at] + body + card[marker_at:]
+
+    # 5) v6 provenance section (replace-or-insert before the Two-config section)
     if ins_n > 0:
         insurance_bullet = (
-            f"* **Insurance boost**: +{ins_n} rows (400 → {400 + ins_n}) — newly rendered EOBs from CMS DE-SynPUF Sample 1 via [Exios66/claims-data-eda](https://github.com/Exios66/claims-data-eda) with the verbatim GT contract asserted at render time; every existing record_id was excluded, so the original 400 claims are untouched. Subtypes: {append_stats['ins_types']}. Same synthetic-data caveats as v5 (PAID claims only, `adjuster` null, health LOB).")
+            f"* **Insurance boost**: +{ins_n} rows ({PARENT_INS_ROWS} → {PARENT_INS_ROWS + ins_n}) — newly rendered EOBs from CMS DE-SynPUF Sample 1 via [Exios66/claims-data-eda](https://github.com/Exios66/claims-data-eda) with the verbatim GT contract asserted at render time; every existing record_id was excluded, so the original {PARENT_INS_ROWS} claims are untouched. Subtypes: {append_stats['ins_types']}. Same synthetic-data caveats as v5 (PAID claims only, `adjuster` null, health LOB).")
     else:
         insurance_bullet = (
             "* **Insurance boost**: DEFERRED to a follow-up v6 revision — the +200-row claims-data-eda re-render was interrupted (staging lost to a tmp cleanup) and is being rebuilt; this revision publishes the correspondence rebalance + original files without touching the 400 existing claims.")
     v6_section = f"""## Schema v6 additions (KANBAN-105, 2026-08-30)
 
-* **Correspondence rebalance**: +{corr_n} rows (110 → {110 + corr_n}) — deterministic `sha256(filename)` stratified draw from [`enron-correspondence-dedup`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup) after excluding every existing filename; the shared Enron labelers (subclass / content-topic / sentiment) were RE-RUN on every drawn row as a verification pass and reproduce the Hub ground truth exactly; the KANBAN-103 phrase-lexicon GT overrides are honored. The dedup corpus carries no `attorney_demand` rows beyond the 3 already present (all in the v4 sample) — honest gap, not an omission.
+* **Correspondence rebalance**: +{corr_n} rows ({PARENT_CORR_ROWS} → {PARENT_CORR_ROWS + corr_n}) — deterministic `sha256(filename)` stratified draw from [`enron-correspondence-dedup`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup) after excluding every existing filename; the shared Enron labelers (subclass / content-topic / sentiment) were RE-RUN on every drawn row as a verification pass and reproduce the Hub ground truth exactly; the KANBAN-103 phrase-lexicon GT overrides are honored. The dedup corpus carries no `attorney_demand` rows beyond the 3 already present (all in the v4 sample) — honest gap, not an omission.
 {insurance_bullet}
 * **Blind-surface repair**: the `default` (blind) config no longer carries the label equivalents `expected_doc_type` / `expected_subclass` inside `metadata` (a v4-era flat-dump artifact v5 shipped verbatim) — it now honors the card's "NO label columns" contract; labels live ONLY in the `ground_truth` config ({append_stats['stripped_n']} rows repaired).
 * **Purpose/gist GT**: the ground_truth config now carries `intent` / `subject_matter` / `keywords` columns on BOTH splits (train rows labeled by the llm-mailroom purpose-GT push of 2026-08-30; new append rows are empty until the incremental labeler pass fills them in a follow-up revision — then every corporate_record / correspondence / insurance_claim row is gradable against the controlled `INTENT_LABELS` vocabularies).
 * **Class balance after v6**: contract {sum(1 for r in rows if r['expected'] == 'contract')} ({sum(1 for r in rows if r['expected'] == 'contract') / len(rows):.1%}), insurance_claim {sum(1 for r in rows if r['expected'] == 'insurance_claim')} ({sum(1 for r in rows if r['expected'] == 'insurance_claim') / len(rows):.1%}), correspondence {sum(1 for r in rows if r['expected'] == 'correspondence')} ({sum(1 for r in rows if r['expected'] == 'correspondence') / len(rows):.1%}), merger_agreement {sum(1 for r in rows if r['expected'] == 'merger_agreement')}, corporate_record {sum(1 for r in rows if r['expected'] == 'corporate_record')}.
 
 """
-    card = card.replace(marker, v6_section + marker, 1)
-    # 6) original-files section before the (just-inserted) v6 section
-    v6_marker = "## Schema v6 additions (KANBAN-105, 2026-08-30)"
-    assert v6_marker in card, "v6 section anchor"
+    card = upsert_section(card, "## Schema v6 additions (KANBAN-105, 2026-08-30)",
+                          v6_section, "## ⚠️ Two-config layout")
+    # 6) original-files section (replace-or-insert before the v6 section)
     files_section = f"""## Original files (KANBAN-105 addendum, 2026-08-30)
 
 The upstream originals for the three corpora that have them ride along under
@@ -378,11 +397,13 @@ Fetch one: `hf_hub_download("Lucius-Morningstar/docclass-merged",
 Per-file sha256 + sizes: `original_files_mapping.jsonl` sidecar.
 
 """
-    card = card.replace(v6_marker, files_section + v6_marker, 1)
+    card = upsert_section(card, "## Original files (KANBAN-105 addendum, 2026-08-30)",
+                          files_section,
+                          "## Schema v6 additions (KANBAN-105, 2026-08-30)")
     return card
 
 
-def publish(stage: Path) -> None:
+def publish(stage: Path, commit_message: str) -> None:
     import os
 
     from huggingface_hub import HfApi
@@ -391,7 +412,7 @@ def publish(stage: Path) -> None:
     api.create_repo(repo_id=REPO_ID, repo_type="dataset", exist_ok=True)
     api.upload_folder(folder_path=str(stage), repo_id=REPO_ID,
                       repo_type="dataset",
-                      commit_message="KANBAN-105: schema v6 rev1 — correspondence rebalance (+240 Enron), original files addendum (700 upstream originals), purpose-gist GT columns")
+                      commit_message=commit_message)
     print(f"Published -> https://huggingface.co/datasets/{REPO_ID}")
 
 
@@ -434,7 +455,11 @@ def main_with_args(argv: list[str]) -> int:
           f"({file_stats['bytes'] // 1048576} MB) {file_stats['by_class']}")
 
     if args.publish:
-        publish(args.stage)
+        revision = (f"rev2 (+{append_stats['ins_n']} insurance)" if ins_n(rows)
+                    else "rev1 (correspondence + original files)")
+        publish(args.stage,
+                f"KANBAN-105: schema v6 {revision} — {len(rows)} rows, "
+                f"{file_stats['n']} upstream originals, purpose-gist GT columns")
     return 0
 
 

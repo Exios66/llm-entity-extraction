@@ -103,6 +103,21 @@ def stage_acquire(claims_repo: Path) -> None:
     sys.path.insert(0, str(claims_repo / "scripts"))
     import acquire_synpuf  # noqa: E402  (claims-data-eda scripts/, imported)
 
+    # KANBAN-105 documented deviation: the claims repo pins the two carrier
+    # ZIPs (and the PDE first candidate) to Wayback timestamps, but Wayback is
+    # unreachable from this machine (session-verified twice). The CMS CDN
+    # serves the identical archives (probe HTTP 200; the acquirer zip-tests
+    # every download before accepting it) — appended as LAST-RESORT candidates
+    # so the claims repo's own priority order still wins whenever it can.
+    extra_urls = {
+        "DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.zip":
+            [f"http://downloads.cms.gov/files/"
+             f"DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.zip"],
+        "DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.zip":
+            [f"http://downloads.cms.gov/files/"
+             f"DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.zip"],
+    }
+
     raw = claims_repo / "data" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
     failed: list[str] = []
@@ -113,7 +128,7 @@ def stage_acquire(claims_repo: Path) -> None:
             continue
         print(f"  [get ] {name}", flush=True)
         try:
-            acquire_synpuf.download(urls, dest)
+            acquire_synpuf.download(list(urls) + extra_urls.get(name, []), dest)
         except Exception as exc:  # noqa: BLE001 - a dead source must not kill
             # the run: the 2010 bene summary (Wayback-only) degrades to the
             # documented nearest-year fallback; claim ZIPs have no fallback
@@ -215,6 +230,14 @@ def stage_index(claims_repo: Path) -> None:
         for label, zname in CLAIM_ZIPS:
             if state.get(zname):
                 print(f"  [skip] {zname} indexed ({state[zname]:,} events)")
+                continue
+            if not (raw / zname).exists():
+                # documented deviation (KANBAN-105): a missing claim ZIP (its
+                # sources unreachable) drops only that event family — the
+                # sampled claims shift to the reachable families; the verbatim
+                # GT contract and the exclusion law are unaffected
+                print(f"  !! {zname} missing — {label} events skipped "
+                      f"(documented source outage)", flush=True)
                 continue
             fn = {"inpatient": claim_event, "outpatient": claim_event}.get(label)
             n = 0
