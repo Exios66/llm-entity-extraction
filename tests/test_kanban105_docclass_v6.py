@@ -236,6 +236,40 @@ def test_publish_v6_gt_row_coercion_strings_or_null():
     assert set(out) == set(GT_COLUMNS) | {"split"}
 
 
+def test_original_file_mapping_is_cast_safe(tmp_path):
+    from scripts.datasets.build_docclass_v6 import (
+        build_v6, load_append, load_original_files, load_parent,
+    )
+
+    blind_dir, gt_dir = _write_parent(tmp_path / "p3", _parent_rows())
+    parent = load_parent(blind_dir, gt_dir)
+    corr = load_append(_append_jsonl(tmp_path / "c.jsonl", [
+        {"filename": "corr_new/3.", "doc_text": "x",
+         "expected": "correspondence", "expected_subclass": "email",
+         "split": "train", "gt_fields": {}, "metadata": {}}]),
+        "correspondence")
+    mapping_path = tmp_path / "mapping.jsonl"
+    mapping_path.write_text(json.dumps(
+        {"filename": "contract_a.pdf",
+         "original_file": "files/contract/Part_I/X.pdf"}) + "\n",
+        encoding="utf-8")
+    mapping = load_original_files(mapping_path)
+    rows = build_v6(parent, corr, [])
+    hit = miss = 0
+    for r in rows:
+        v = mapping.get(r["filename"], "")
+        r["metadata"]["original_file"] = v
+        hit += bool(v)
+        miss += not v
+    assert hit == 1 and miss == 3  # only the mapped contract row carries a path
+    # the union normalizer must keep the key on every row, string-typed
+    from scripts.datasets.build_docclass_merged import normalize_metadata_rows
+
+    normalized = normalize_metadata_rows(rows)
+    assert all(isinstance(r["metadata"].get("original_file"), str)
+               for r in normalized)
+
+
 def test_publish_v6_load_rejects_metadata_gt_leak(tmp_path):
     from scripts.datasets.publish_docclass_v6 import load_v6
 

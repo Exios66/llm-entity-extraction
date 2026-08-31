@@ -10,9 +10,12 @@ Human directive 2026-08-30: the merged corpus is contracts-concentrated
   ``build_correspondence_append.py``;
 * ``+200 insurance_claim`` rows (DE-SynPUF Sample-1 re-render via
   claims-data-eda, verbatim GT contract, existing record_ids excluded) —
-  staging JSONL from ``build_extra_claims.py``;
+  staging JSONL from ``build_extra_claims.py`` (EMPTY/pending in revision 1 —
+  the claims staging was lost to a tmp cleanup; the rebuild is a documented
+  card residue);
 
-for a 1,650-row v6 (contracts fall to 40.1%).
+for a 1,650-row v6 when complete (rev 1 ships 1,450: parent + correspondence
++ the original-files addendum; contracts fall to 35.1%).
 
 Fusion laws honored (imported from ``build_docclass_merged`` — never forked):
 
@@ -110,7 +113,7 @@ def load_parent(blind_dir: Path, gt_dir: Path) -> list[dict]:
     import pyarrow.parquet as pq
 
     blind: dict[str, dict] = {}
-    for shard in sorted(blind_dir.glob("*.parquet")):
+    for shard in sorted(blind_dir.glob("**/*.parquet")):
         table = pq.read_table(shard)
         names = table.column("filename").to_pylist()
         for i, fn in enumerate(names):
@@ -124,7 +127,7 @@ def load_parent(blind_dir: Path, gt_dir: Path) -> list[dict]:
             }
     gt: dict[str, dict] = {}
     gt_columns: dict[str, list[str]] = {}
-    for shard in sorted(gt_dir.glob("*.parquet")):
+    for shard in sorted(gt_dir.glob("**/*.parquet")):
         table = pq.read_table(shard)
         cols = set(table.column_names)
         gt_columns[shard.name] = sorted(cols & set(PARENT_GT_KEYS))
@@ -184,6 +187,14 @@ def load_append(path: Path, expected_class: str) -> list[dict]:
     return rows
 
 
+def load_original_files(path: Path) -> dict[str, str]:
+    """filename -> Hub-relative original-file path (attach_original_files.py)."""
+    mapping = {}
+    for r in read_jsonl(path):
+        mapping[str(r["filename"])] = str(r["original_file"])
+    return mapping
+
+
 def build_v6(parent: list[dict], corr_append: list[dict],
              ins_append: list[dict]) -> list[dict]:
     """Fuse parent + appends under the corpus-order + determinism laws."""
@@ -228,21 +239,49 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--correspondence-append", type=Path,
                         default=DEFAULT_CORR_APPEND)
     parser.add_argument("--insurance-append", type=Path, default=DEFAULT_INS_APPEND)
+    parser.add_argument("--original-files-mapping", type=Path, default=None,
+                        help="original_files_mapping.jsonl from "
+                             "attach_original_files.py (optional; adds the "
+                             "cast-safe metadata.original_file column)")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
     parent = load_parent(args.parent_blind_dir, args.parent_gt_dir)
     corr = load_append(args.correspondence_append, "correspondence")
-    ins = load_append(args.insurance_append, "insurance_claim")
+    # rev 1: the insurance append is OPTIONAL — an absent staging file means
+    # the +200 claims boost has not landed yet (documented KANBAN-105 residue)
+    ins = (load_append(args.insurance_append, "insurance_claim")
+           if args.insurance_append.exists() else [])
 
-    merged = normalize_metadata_rows(build_v6(parent, corr, ins))
+    merged = build_v6(parent, corr, ins)
+    if args.original_files_mapping:
+        mapping = load_original_files(args.original_files_mapping)
+        # cast-safe law: EVERY row carries the key ("" when the corpus has no
+        # upstream file — correspondence maildir text / DE-SynPUF renders).
+        # Applied BEFORE normalize_metadata_rows so the key joins the union.
+        hits = 0
+        for r in merged:
+            v = mapping.get(r["filename"], "")
+            r["metadata"]["original_file"] = v
+            hits += bool(v)
+        print(f"original_file mapped: {hits}/{len(merged)} rows "
+              f"(mapping {len(mapping)} entries; '' elsewhere)")
+    else:
+        print("no --original-files-mapping: rows carry no original_file column")
+    merged = normalize_metadata_rows(merged)
     print("\nv6 census:")
     print(census(merged))
-    if len(merged) != EXPECTED_V6_ROWS:
-        print(f"WARNING: expected {EXPECTED_V6_ROWS} rows "
-              f"(1210 parent + 240 correspondence + 200 insurance), "
-              f"got {len(merged)}", file=sys.stderr)
+    expected = len(parent) + len(corr) + len(ins)
+    if len(merged) != expected:
+        print(f"WARNING: fused {len(merged)} rows != inputs "
+              f"({len(parent)} parent + {len(corr)} corr + {len(ins)} ins)",
+              file=sys.stderr)
+    if len(ins) == 0:
+        print(f"NOTE: insurance append is EMPTY — this revision publishes "
+              f"{len(merged)} rows; the +200 claims boost (final v6 target "
+              f"{EXPECTED_V6_ROWS}) is a documented follow-up revision "
+              f"(KANBAN-105 residue)", file=sys.stderr)
     purpose_labeled = sum(1 for r in merged
                           if (r.get("gt_fields") or {}).get("intent"))
     print(f"purpose/gist GT (intent) present on {purpose_labeled} rows "

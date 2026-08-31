@@ -3,33 +3,36 @@
 **Status:** gitignored (local only, regenerable)
 
 The merged docclass corpus: every document the hierarchical sorter eval
-(KANBAN-033) classifies, in ONE dataset. Rebuild it with
-`scripts/datasets/build_docclass_merged.py`:
-
-```bash
-python scripts/datasets/build_docclass_merged.py --dry-run   # load + count + fingerprint
-python scripts/datasets/build_docclass_merged.py             # write docclass_merged.jsonl
-```
+(KANBAN-033) classifies, in ONE dataset. The Hub-published versions live at
+[`Lucius-Morningstar/docclass-merged`](https://huggingface.co/datasets/Lucius-Morningstar/docclass-merged)
+(parquet shards, `default` = blind / `ground_truth` = answer keys / `files` =
+upstream originals); the local JSONL dumps are the builder staging artifacts.
 
 ## Contents
 
 | File | Rows | Sources |
 |---|---|---|
-| `docclass_merged.jsonl` | 1,210 (schema v5: 8-class extended surface incl. correspondence + insurance_claim) | CUAD + MAUD + S-1 + Enron correspondence + CMS insurance rows via `build_docclass_merged.py` |
+| `docclass_merged_v6.jsonl` | 1,650 (schema v6, KANBAN-105: v5 parent + 240 correspondence + 200 insurance) | v5 Hub shards + `build_correspondence_append.py` + `build_extra_claims.py` via `build_docclass_v6.py` |
+| `correspondence_append_v6.jsonl` | 240 | stratified sha256 draw from `enron-correspondence-dedup` GT pool (3-labeler verification pass) |
+| `insurance_append_v6.jsonl` | 200 | DE-SynPUF Sample-1 re-render via claims-data-eda (existing 400 record_ids excluded) |
+| `v6_original_files/` | 700 files (~153MB) | CUAD source PDFs + MAUD `contract_N.txt` + S-1 EDGAR exhibit originals (`attach_original_files.py`) |
 
 Row shape (the flat streamer-dump shape the docclass eval runner reads via
-`--local-dumps`): `{filename, doc_text, prompt, expected,
-expected_subclass, metadata}` — `expected` is the doc_type key,
-`expected_subclass` the second-level key (None for contract rows: CUAD
-subtype scoring is the shared subtype surface's job).
+`--local-dumps`): `{filename, doc_text, prompt, expected, expected_subclass,
+split, gt_fields, metadata}` — `expected` is the doc_type key,
+`expected_subclass` the second-level key, `gt_fields` the joined answer keys
+(classification GT + clause labels + the 13 InsuranceClaimExtraction keys +
+purpose/gist trio where labeled).
 
 ## Consumers
 
-- `scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/datasets/docclass_merged.jsonl`
+- `scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/datasets/docclass_merged_v6.jsonl`
   — one-file A/B surface for the docclass sorter iterations.
 - `scripts/eval/sync_langfuse_datasets.py --docclass` — Langfuse mirror as a
   single `mailroom-docclass` dataset (llm-dojo).
 
-The dump is deterministically ordered (corpus, then filename), so its
-`dataset_fingerprint` is reproducible across rebuilds — the same-surface
-contract holds for any sample drawn from it.
+The dump is deterministically ordered (corpus rank, then filename), so its
+fingerprint is reproducible across rebuilds — the same-surface contract holds
+for any sample drawn from it. Pinned A/B surfaces
+(`data/manifests/docclass_ab120_s42_filenames.jsonl`) are filename-keyed and
+remain valid across schema versions.

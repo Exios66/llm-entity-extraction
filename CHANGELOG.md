@@ -9,6 +9,39 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
+- **Docclass-merged v6 rebalance + original files (KANBAN-105).** Human
+  directive 2026-08-30: the merged docclass corpus was contracts-concentrated
+  (contract 509 + merger_agreement 152 = 54.6% of the 1,210 v5 rows;
+  correspondence 110 = 9.1%). New builders in `scripts/datasets/`:
+  `build_correspondence_append.py` (+240 rows: deterministic
+  sha256-within-stratum draw from the
+  [`enron-correspondence-dedup`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup)
+  GT pool (247,413 available after excluding every existing filename; strata
+  demand 35 / email 35 / letter 34 / meeting_request 34 / memo 34 / notice 34
+  / press_release 34; `attorney_demand` honestly exhausted — all 3 corpus rows
+  already in the v4 sample) with a **3-labeler verification pass** — the
+  shared Enron labelers (`correspondence_subclasses` / `content_topics` /
+  `sentiment_scorer`, imported from `~/Enron-Evaluation-Environment`) re-run on
+  every drawn row and reproduce the Hub GT on 960/960 checks; KANBAN-103 GT
+  overrides applied);
+  `build_extra_claims.py` (+200 rows: DE-SynPUF Sample-1 re-render via
+  claims-data-eda with the verbatim GT contract, existing 400 record_ids
+  excluded, zip-streamed indexing — no extracted CSVs — and the claims repo's
+  own sampler pinned deterministic via `PYTHONHASHSEED=0`; 2010 Beneficiary
+  Summary unreachable (Wayback outage) → documented nearest-year demographic
+  fallback, GT integrity unaffected);
+  `attach_original_files.py` (**700/700 upstream originals staged**: 509 CUAD
+  source PDFs + 152 MAUD `contract_N.txt` + 39 S-1 EDGAR exhibit originals →
+  Hub `files/` tree + cast-safe `metadata.original_file` column +
+  sha256 sidecar); `build_docclass_v6.py` / `publish_docclass_v6.py` fuse and
+  publish **schema v6 (1,650 rows; contracts → 40.1%)** under the family
+  evolution discipline (parquet overwrite-in-place, manifest lineage,
+  surgical card edits, blind-GT leak guards). Purpose/gist GT completion:
+  `export_existing_purpose_gt.py` seeds llm-mailroom's
+  `sync_hf_ground_truth.py --real --resume` surface so the incremental
+  labeler pass labels ONLY the new purpose-class rows. Fixed en route:
+  `download_cuad_pdfs.py` 404'd on `#`-containing CUAD filenames (unencoded
+  URL fragment). Pins: `tests/test_kanban105_docclass_v6.py` (9 network-free).
 - **Braintrust sandbox sync (KANBAN-104).** New runners
   `scripts/eval/sync_braintrust_prompts.py` and
   `scripts/eval/sync_braintrust_datasets.py` mirror the Langfuse twins into

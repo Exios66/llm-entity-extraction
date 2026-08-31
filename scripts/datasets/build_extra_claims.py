@@ -105,13 +105,22 @@ def stage_acquire(claims_repo: Path) -> None:
 
     raw = claims_repo / "data" / "raw"
     raw.mkdir(parents=True, exist_ok=True)
+    failed: list[str] = []
     for name, urls in acquire_synpuf.FILES.items():
         dest = raw / name
         if dest.exists() and dest.stat().st_size > 0:
             print(f"  [skip] {name}")
             continue
         print(f"  [get ] {name}", flush=True)
-        acquire_synpuf.download(urls, dest)
+        try:
+            acquire_synpuf.download(urls, dest)
+        except Exception as exc:  # noqa: BLE001 - a dead source must not kill
+            # the run: the 2010 bene summary (Wayback-only) degrades to the
+            # documented nearest-year fallback; claim ZIPs have no fallback
+            print(f"  !! FAILED {name}: {exc}", flush=True)
+            failed.append(name)
+    if failed:
+        print(f"  acquire failures (tolerated): {failed}", flush=True)
 
 
 def _iso_date(raw):
@@ -162,6 +171,13 @@ def stage_index(claims_repo: Path) -> None:
     else:
         bene: dict[str, dict] = {}
         for year, zname in zip(YEARS, BENE_ZIPS):
+            if not (raw / zname).exists():
+                # documented deviation (KANBAN-105): a missing yearly bene file
+                # degrades only demographics (join_beneficiary falls back to the
+                # nearest year) — GT integrity is unaffected (no bene-derived GT)
+                print(f"  !! {zname} missing — bene year {year} skipped "
+                      f"(nearest-year fallback applies at render)", flush=True)
+                continue
             n = 0
             for row in zip_csv_rows(raw / zname):
                 bid = row["DESYNPUF_ID"]
