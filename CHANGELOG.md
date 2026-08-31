@@ -65,10 +65,15 @@ history of the repository's tags. Format follows
   hardcoded 10s httpx read timeout (600s) — large multi-file PUTs to the CDN
   exceeded it. Hub sha round-trip: 15/15 sampled across all five classes; Hub
   bytes verified: 1,474 train / 176 test per config, 0 rows without
-  `original_file`, 0 blind-surface leak keys. Purpose/gist GT: the llm-mailroom
-  `sync_hf_ground_truth.py --real --resume` incremental pass runs against the
-  rev2 pin (488 real seed labels re-exported; labeler run in flight at card
-  update time). Pins: `tests/test_kanban105_docclass_v6.py` (10 network-free).
+  `original_file`, 0 blind-surface leak keys. **Purpose/gist GT LANDED**: the
+  llm-mailroom `sync_hf_ground_truth.py --real --resume` incremental pass
+  labeled **375 new purpose-class rows** (488 real seed labels resumed with
+  zero re-labeling; 19 honest short-text skips) and pushed the enriched GT
+  train shard @ `a88e852b` — **863/1,474 train rows intent-labeled**;
+  mailroom `FULL_CORPUS_REVISION` advanced by the push. Mirror re-sync
+  (Langfuse llm-dojo + Braintrust Mailroom-Sandbox) blocked on project-scoped
+  keys absent from this machine. Pins: `tests/test_kanban105_docclass_v6.py`
+  (10 network-free).
 - **Braintrust sandbox sync (KANBAN-104).** New runners
   `scripts/eval/sync_braintrust_prompts.py` and
   `scripts/eval/sync_braintrust_datasets.py` mirror the Langfuse twins into
