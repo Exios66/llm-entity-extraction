@@ -274,7 +274,7 @@ def existing_claim_ids(parent_gt_dir: Path) -> set[str]:
     import pyarrow.parquet as pq
 
     ids: set[str] = set()
-    for shard in sorted(parent_gt_dir.glob("*.parquet")):
+    for shard in sorted(parent_gt_dir.glob("**/*.parquet")):
         table = pq.read_table(shard, columns=["filename", "expected"])
         for fn, exp in zip(table.column("filename").to_pylist(),
                            table.column("expected").to_pylist()):
@@ -344,13 +344,30 @@ def main_with_args(argv: list[str]) -> int:
     if len(new_rows) < args.take:
         parser.error(f"only {len(new_rows)} new rows available < --take "
                      f"{args.take} — raise --n-total")
-    new_rows = new_rows[:args.take]
+    # subtype-balanced selection: the sampler's output is grouped by claim
+    # type, so a first-N slice would take ONE family (measured: 200/200
+    # carrier). The v5 parent is family-parity (100/100/100/100) — the +200
+    # boost must round-robin across the subtypes (50/50/50/50) to preserve it.
+    by_type: dict[str, list[dict]] = {}
+    for r in new_rows:
+        by_type.setdefault(r["expected_subclass"], []).append(r)
+    subtypes = sorted(by_type)
+    quota, extra = divmod(args.take, len(subtypes))
+    balanced: list[dict] = []
+    for i, sub in enumerate(subtypes):
+        take = quota + (1 if i < extra else 0)
+        balanced.extend(by_type[sub][:take])
+    new_rows = balanced[:args.take]
 
     emitted = []
     type_counts: Counter = Counter()
+    from scripts.datasets.build_docclass_merged import assign_split
+
     for row in new_rows:
         verify_verbatim(row)
         type_counts[row["expected_subclass"]] += 1
+        # the claims dump carries no split — assert the family law at emit
+        row["split"] = assign_split(str(row["filename"]))
         emitted.append(row)
 
     print(f"  emitted distribution: {dict(sorted(type_counts.items()))}")

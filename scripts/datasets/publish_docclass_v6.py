@@ -198,13 +198,17 @@ v6_additions     : +{corr_n} correspondence rows (stratified sha256-filename dra
                    honored, {corr_overrides} override hits) from
                    Lucius-Morningstar/enron-correspondence-dedup;
 {ins_segment}original_files   : {files_n} upstream originals under files/ ({files_bytes_mb} MB) —
-                   contract {files_contract} CUAD source PDFs (theatticusproject/cuad),
-                   merger_agreement {files_merger} MAUD contract_N.txt (Zenodo 7500064),
-                   corporate_record {files_corporate} EDGAR exhibit originals.
-                   metadata.original_file carries the Hub-relative path ("" when the
-                   corpus has none: correspondence = maildir text, insurance_claim =
-                   synthetic renders — the render IS the original). Sha256 per file:
-                   original_files_mapping.jsonl sidecar.
+                   FILE-COMPLETE CORPUS: every row carries its original
+                   (contract {files_contract} CUAD source PDFs,
+                   merger_agreement {files_merger} MAUD contract_N.txt,
+                   corporate_record {files_corporate} EDGAR exhibit originals,
+                   correspondence {files_corr} CMU maildir raw RFC822 messages
+                   via Enron-Evaluation-Environment,
+                   insurance_claim {files_ins} rendered EOB documents via
+                   Exios66/claims-data-eda — the render IS the original).
+                   metadata.original_file carries the Hub-relative path on
+                   EVERY row. Sha256 per file: original_files_mapping.jsonl
+                   sidecar.
 purpose_gt       : intent/subject_matter/keywords on {purpose_n} rows (the
                    llm-mailroom purpose-GT push of 2026-08-30 covers the v5 train
                    purpose-class rows); new append rows are EMPTY until the
@@ -291,6 +295,8 @@ def stage_sidecars(stage: Path, rows: list[dict],
         files_contract=fb.get("contract", 0),
         files_merger=fb.get("merger_agreement", 0),
         files_corporate=fb.get("corporate_record", 0),
+        files_corr=fb.get("correspondence", 0),
+        files_ins=fb.get("insurance_claim", 0),
         purpose_n=purpose_n, legacy_jsonl=LEGACY_JSONL,
         stripped_n=append_stats["stripped_n"])
     (stage / "manifest.txt").write_text(text, encoding="utf-8")
@@ -379,19 +385,18 @@ def render_card(rows: list[dict], append_stats: dict, file_stats: dict) -> str:
     # 6) original-files section (replace-or-insert before the v6 section)
     files_section = f"""## Original files (KANBAN-105 addendum, 2026-08-30)
 
-The upstream originals for the three corpora that have them ride along under
-`files/` for easy access — the text content is what agents see; these are a
-convenience layer, not load-bearing:
+The originals for ALL five classes ride along under `files/` — a
+file-complete corpus for easy access (`metadata.original_file` carries the
+Hub-relative path on EVERY row):
 
 | doc_type | files | form | source |
 |---|---|---|---|
 | `contract` | {file_stats.get('by_class', {}).get('contract', 0)} | source PDFs (`metadata.pdf_path` layout) | [theatticusproject/cuad](https://huggingface.co/datasets/theatticusproject/cuad) (CC BY 4.0) |
 | `merger_agreement` | {file_stats.get('by_class', {}).get('merger_agreement', 0)} | upstream `contract_N.txt` (MAUD ships no PDFs) | Zenodo [7500064](https://zenodo.org/records/7500064) (CC BY 4.0) |
 | `corporate_record` | {file_stats.get('by_class', {}).get('corporate_record', 0)} | EDGAR exhibit originals (.htm) | SEC EDGAR via `metadata.exhibit_url` (public domain) |
+| `correspondence` | {file_stats.get('by_class', {}).get('correspondence', 0)} | CMU maildir raw RFC822 messages (full headers — `doc_text` is the composed Subject+body) | [Enron-Evaluation-Environment](https://github.com/Exios66/Enron-Evaluation-Environment) `acquire_enron.py` (CMU `enron_mail_20150507`) |
+| `insurance_claim` | {file_stats.get('by_class', {}).get('insurance_claim', 0)} | rendered EOB documents (.txt — the render IS the original) | [claims-data-eda](https://github.com/Exios66/claims-data-eda) `render_eob` |
 
-`metadata.original_file` carries the Hub-relative path on every row that has
-one (cast-safe `""` elsewhere: correspondence rows are maildir text and
-insurance_claim rows are synthetic renders — the render IS the original).
 Fetch one: `hf_hub_download("Lucius-Morningstar/docclass-merged",
 "files/contract/Part_I/License_Agreements/<file>.pdf", repo_type="dataset")`.
 Per-file sha256 + sizes: `original_files_mapping.jsonl` sidecar.
@@ -406,8 +411,12 @@ Per-file sha256 + sizes: `original_files_mapping.jsonl` sidecar.
 def publish(stage: Path, commit_message: str) -> None:
     import os
 
-    from huggingface_hub import HfApi
+    from huggingface_hub import HfApi, constants as hf_constants
 
+    # hub 1.x hardcodes a 10s httpx READ timeout (no env override) — large
+    # multi-file PUTs to the CDN regularly exceed it. Patch the module
+    # constant before any client construction (runtime-only, this process).
+    hf_constants.DEFAULT_REQUEST_TIMEOUT = 600.0
     api = HfApi(token=os.environ.get("HF_TOKEN"))
     api.create_repo(repo_id=REPO_ID, repo_type="dataset", exist_ok=True)
     api.upload_folder(folder_path=str(stage), repo_id=REPO_ID,
@@ -430,6 +439,13 @@ def main_with_args(argv: list[str]) -> int:
 
     rows = load_v6(args.v6)
     stripped_n = strip_blind_labels(rows)
+    # FILE-COMPLETE CORPUS (KANBAN-105 human directive): every row must carry
+    # its original file — all five classes stage under files/
+    missing_files = [r["filename"] for r in rows
+                     if not (r.get("metadata") or {}).get("original_file")]
+    assert not missing_files, (
+        f"{len(missing_files)} rows lack metadata.original_file — the corpus "
+        f"must be file-complete, e.g. {missing_files[:3]}")
     print(f"Loaded {len(rows)} v6 rows")
     ins_types = ", ".join(
         sorted(k for k, n in Counter(r["expected_subclass"] for r in rows

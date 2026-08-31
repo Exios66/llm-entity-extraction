@@ -257,8 +257,10 @@ def main_with_args(argv: list[str]) -> int:
     merged = build_v6(parent, corr, ins)
     if args.original_files_mapping:
         mapping = load_original_files(args.original_files_mapping)
-        # cast-safe law: EVERY row carries the key ("" when the corpus has no
-        # upstream file — correspondence maildir text / DE-SynPUF renders).
+        # cast-safe law: EVERY row carries the key — the mapping from
+        # attach_original_files.py now covers all five classes (file-complete
+        # corpus, KANBAN-105 human directive); "" survives only as the
+        # defensive fallback for an unmapped filename.
         # Applied BEFORE normalize_metadata_rows so the key joins the union.
         hits = 0
         for r in merged:

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Stage the ORIGINAL FILES for docclass-merged v6 (KANBAN-105 addendum).
 
-The human directive (2026-08-30): the original documents ride along in the
-docclass-merged dataset for easy access — text content already carries the
-intent, so the files are a convenience layer, not load-bearing.
+The human directive (2026-08-30, extended in-session): EVERY document class
+rides along in the docclass-merged ``files/`` tree — the text content already
+carries the intent, but the corpus is file-complete for easy access.
 
-Per-corpus originals (the three corpora that HAVE upstream files):
+Per-corpus originals (all five classes):
 
-* ``contract``          — the 510 CUAD source PDFs. ``metadata.pdf_path``
+* ``contract``          — the 509 CUAD source PDFs. ``metadata.pdf_path``
   (``CUAD_v1/full_contract_pdf/<Part>/<Category>/<file>.pdf``) resolves under
   ``--cuad-dir`` (populated by ``scripts/datasets/download_cuad_pdfs.py``
   against ``theatticusproject/cuad``). Hub path:
@@ -22,10 +22,16 @@ Per-corpus originals (the three corpora that HAVE upstream files):
   ``https://www.sec.gov`` with the house SEC-compliant identifying UA and a
   fair-access throttle (mirrors ``stream_s1_exhibits.py``). Hub path:
   ``files/corporate_record/<accession>/<basename>``.
-
-Honest gaps (documented in the card + manifest): correspondence rows are
-maildir text (no original files exist) and insurance_claim rows are synthetic
-renders (the render IS the original) — they get no ``original_file``.
+* ``correspondence``    — the CMU maildir originals (raw RFC822 message files,
+  fetched by ``~/Enron-Evaluation-Environment/scripts/acquire_enron.py`` —
+  the human-named source repo for this corpus). The row filename IS the
+  maildir path (``<custodian>/<folder>/<msg>.``); ``doc_text`` is the composed
+  Subject+body, so the original carries the full headers. Hub path:
+  ``files/correspondence/<custodian>/<folder>/<msg>.``.
+* ``insurance_claim``   — the rendered EOB documents from
+  ``Exios66/claims-data-eda`` (the render IS the original): each row's
+  ``doc_text`` is the render output, staged verbatim. Hub path:
+  ``files/insurance_claim/<record_id>.txt``.
 
 Outputs (staging):
     <files-dir>/files/...           the original files, Hub-relative layout
@@ -64,6 +70,9 @@ CUAD_PATH_PREFIX = "CUAD_v1/full_contract_pdf/"
 EDGAR_ARCHIVE = "https://www.sec.gov"
 EDGAR_UA = "llm-entity-extraction research contact@example.com"  # SEC-compliant plain form
 EDGAR_THROTTLE_S = 0.5
+DEFAULT_ENRON_DIR = Path.home() / "Enron-Evaluation-Environment"
+DEFAULT_CORR_APPEND = Path("data/datasets/correspondence_append_v6.jsonl")
+DEFAULT_INS_APPEND = Path("data/datasets/insurance_append_v6.jsonl")
 
 
 def sha256_file(path: Path) -> str:
@@ -75,21 +84,26 @@ def sha256_file(path: Path) -> str:
 
 
 def load_parent_rows(parent_blind_dir: Path, parent_gt_dir: Path) -> list[dict]:
-    """(filename, expected, pdf_path/contract/exhibit_url) per parent row.
+    """(filename, expected, pdf_path/contract/exhibit_url, doc_text) per row.
 
-    The blind config carries the provenance metadata; ``expected`` lives in
-    the ground_truth config — join the two on filename (1:1 by family law).
+    The blind config carries the provenance metadata + doc_text; ``expected``
+    lives in the ground_truth config — join the two on filename (1:1 by
+    family law).
     """
     import pyarrow.parquet as pq
 
     meta: dict[str, dict] = {}
-    for shard in sorted(parent_blind_dir.glob("*.parquet")):
-        table = pq.read_table(shard, columns=["filename", "metadata"])
-        for i in range(table.num_rows):
+    texts: dict[str, str] = {}
+    for shard in sorted(parent_blind_dir.glob("**/*.parquet")):
+        table = pq.read_table(shard)
+        names = table.column("filename").to_pylist()
+        for i, fn in enumerate(names):
             md = table.column("metadata")[i].as_py() or {}
-            meta[str(table.column("filename")[i].as_py())] = md
+            fn = str(fn)
+            meta[fn] = md
+            texts[fn] = str(table.column("doc_text")[i].as_py() or "")
     rows = []
-    for shard in sorted(parent_gt_dir.glob("*.parquet")):
+    for shard in sorted(parent_gt_dir.glob("**/*.parquet")):
         table = pq.read_table(shard, columns=["filename", "expected"])
         for i in range(table.num_rows):
             fn = str(table.column("filename")[i].as_py())
@@ -97,6 +111,7 @@ def load_parent_rows(parent_blind_dir: Path, parent_gt_dir: Path) -> list[dict]:
             rows.append({
                 "filename": fn,
                 "expected": str(table.column("expected")[i].as_py()),
+                "doc_text": texts.get(fn, ""),
                 "pdf_path": str(md.get("pdf_path") or ""),
                 "contract": str(md.get("contract") or ""),
                 "exhibit_url": str(md.get("exhibit_url") or ""),
@@ -110,16 +125,19 @@ def stage_contract(row: dict, cuad_dir: Path, files_dir: Path) -> str | None:
 
     Resolves both layouts: ``download_cuad_pdfs.py`` strips the
     ``CUAD_v1/full_contract_pdf/`` tree root locally (mirror layout), while
-    the full repo-relative layout is accepted for robustness.
+    the full repo-relative layout is accepted for robustness. Resumable: an
+    already-staged dest short-circuits (the /tmp source tree may be gone).
     """
     pdf_path = row["pdf_path"]
     if not pdf_path.startswith(CUAD_PATH_PREFIX):
         return None
     stem = pdf_path[len(CUAD_PATH_PREFIX):]
+    rel = f"files/contract/{stem}"
+    dest = files_dir / rel
+    if dest.exists() and dest.stat().st_size > 0:
+        return rel
     for candidate in (cuad_dir / stem, cuad_dir / pdf_path):
         if candidate.exists():
-            rel = f"files/contract/{stem}"
-            dest = files_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
             if not dest.exists():
                 shutil.copy2(candidate, dest)
@@ -175,6 +193,54 @@ def stage_corporate(row: dict, files_dir: Path) -> tuple[str | None, int]:
     return rel, 1
 
 
+def stage_correspondence(row: dict, maildir: Path, files_dir: Path) -> str | None:
+    """CMU maildir original -> files/correspondence/<custodian>/<folder>/<msg>.
+
+    The row filename IS the maildir-relative path (``<custodian>/<folder>/<msg>.``);
+    the raw RFC822 message carries the full headers (doc_text is only the
+    composed Subject+body).
+    """
+    fn = row["filename"]
+    src = maildir / fn
+    if not src.is_file():
+        return None
+    rel = f"files/correspondence/{fn}"
+    dest = files_dir / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if not dest.exists():
+        shutil.copy2(src, dest)
+    return rel
+
+
+def stage_insurance(row: dict, files_dir: Path) -> str:
+    """Rendered EOB document -> files/insurance_claim/<record_id>.txt.
+
+    The render IS the original (claims-data-eda ``render_eob``): the row's
+    ``doc_text`` is the render output, staged verbatim.
+    """
+    fn = row["filename"]
+    rel = f"files/insurance_claim/{fn}"
+    dest = files_dir / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(row["doc_text"], encoding="utf-8")
+    return rel
+
+
+def read_append_rows(path: Path, expected_class: str) -> list[dict]:
+    """Append-staging rows (filename, doc_text) for the two staged classes."""
+    rows = []
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            assert r.get("expected") == expected_class, \
+                f"{path}: expected {expected_class}, got {r.get('expected')!r}"
+            rows.append(r)
+    return rows
+
+
 def main_with_args(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--parent-blind-dir", type=Path, required=True,
@@ -186,6 +252,17 @@ def main_with_args(argv: list[str]) -> int:
                         help="CUAD PDF tree (download_cuad_pdfs.py output)")
     parser.add_argument("--maud-zip", type=Path,
                         default=Path("/tmp/opencode/maud_v1.zip"))
+    parser.add_argument("--enron-dir", type=Path, default=DEFAULT_ENRON_DIR,
+                        help="Enron-Evaluation-Environment root (its "
+                             "data/raw/maildir holds the CMU originals)")
+    parser.add_argument("--correspondence-append", type=Path,
+                        default=DEFAULT_CORR_APPEND,
+                        help="correspondence append staging JSONL (new rows "
+                             "beyond the parent)")
+    parser.add_argument("--insurance-append", type=Path,
+                        default=DEFAULT_INS_APPEND,
+                        help="insurance append staging JSONL (new rows "
+                             "beyond the parent)")
     parser.add_argument("--files-dir", type=Path, default=DEFAULT_FILES_DIR,
                         help="staging root for files/ + the mapping JSONL")
     parser.add_argument("--dry-run", action="store_true",
@@ -251,6 +328,50 @@ def main_with_args(argv: list[str]) -> int:
     print(f"  corporate_record: {n_ok} attached / {n_miss} missing "
           f"({n_fetch} fetched from EDGAR)")
 
+    # correspondence — CMU maildir originals (Enron-Evaluation-Environment)
+    maildir = args.enron_dir / "data" / "raw" / "maildir"
+    n_ok = n_miss = 0
+    corr_rows = by_class.get("correspondence", []) + read_append_rows(
+        args.correspondence_append, "correspondence")
+    for row in corr_rows:
+        if args.dry_run:
+            rel = f"files/correspondence/{row['filename']}"
+        else:
+            rel = stage_correspondence(row, maildir, files_dir)
+        if rel is None:
+            n_miss += 1
+            continue
+        assert rel not in seen_rel, f"collision: {rel}"
+        seen_rel.add(rel)
+        mapping.append({"filename": row["filename"], "original_file": rel})
+        n_ok += 1
+    stats["correspondence"] = {"attached": n_ok, "missing": n_miss}
+    print(f"  correspondence: {n_ok} attached / {n_miss} missing "
+          f"(CMU maildir originals under {maildir})")
+
+    # insurance_claim — rendered EOB documents (claims-data-eda; the render
+    # IS the original): parent rows from the blind parquet doc_text, append
+    # rows from the claims pipeline staging JSONL
+    n_ok = n_miss = 0
+    ins_rows = by_class.get("insurance_claim", []) + read_append_rows(
+        args.insurance_append, "insurance_claim")
+    for row in ins_rows:
+        rel = (f"files/insurance_claim/{row['filename']}"
+               if args.dry_run or (row.get("doc_text") or "").strip()
+               else None)
+        if rel is None:
+            n_miss += 1
+            continue
+        assert rel not in seen_rel, f"collision: {rel}"
+        seen_rel.add(rel)
+        mapping.append({"filename": row["filename"], "original_file": rel})
+        if not args.dry_run:
+            stage_insurance(row, files_dir)
+        n_ok += 1
+    stats["insurance_claim"] = {"attached": n_ok, "missing": n_miss}
+    print(f"  insurance_claim: {n_ok} attached / {n_miss} missing "
+          f"(rendered EOB documents)")
+
     # hash the staged files (skip on dry-run)
     if not args.dry_run:
         for m in mapping:
@@ -260,10 +381,11 @@ def main_with_args(argv: list[str]) -> int:
 
     total = sum(s["attached"] for s in stats.values())
     print(f"original files resolved: {total} "
-          f"(contract {stats['contract']['attached']}, "
-          f"merger {stats['merger_agreement']['attached']}, "
-          f"corporate {stats['corporate_record']['attached']}); "
-          f"honest gaps: correspondence + insurance_claim have no upstream files")
+          f"({ {k: s['attached'] for k, s in sorted(stats.items())} }) — "
+          f"file-complete corpus (every row carries its original)")
+    if n_miss or any(s.get("missing") for s in stats.values()):
+        print("WARNING: missing files — every class must be present per the "
+              "KANBAN-105 human directive", file=sys.stderr)
     if args.dry_run:
         print("\nDry run: nothing staged.")
         return 0
