@@ -9,39 +9,48 @@ history of the repository's tags. Format follows
 ## [Unreleased]
 
 ### Added
-- **Docclass-merged v6 rebalance + original files (KANBAN-105).** Human
-  directive 2026-08-30: the merged docclass corpus was contracts-concentrated
+- **Docclass-merged v6 rev1 PUBLISHED — correspondence rebalance + original
+  files addendum + blind-surface repair (KANBAN-105).** Human directive
+  2026-08-30; the merged docclass corpus was contracts-concentrated
   (contract 509 + merger_agreement 152 = 54.6% of the 1,210 v5 rows;
-  correspondence 110 = 9.1%). New builders in `scripts/datasets/`:
-  `build_correspondence_append.py` (+240 rows: deterministic
-  sha256-within-stratum draw from the
+  correspondence 110 = 9.1%). [`Lucius-Morningstar/docclass-merged`](https://huggingface.co/datasets/Lucius-Morningstar/docclass-merged)
+  now serves **schema v6 rev1 (1,450 rows)**: v5 parent + **+240
+  correspondence** (deterministic sha256-within-stratum draw from the
   [`enron-correspondence-dedup`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup)
-  GT pool (247,413 available after excluding every existing filename; strata
+  GT pool — 247,413 available after excluding every existing filename; strata
   demand 35 / email 35 / letter 34 / meeting_request 34 / memo 34 / notice 34
-  / press_release 34; `attorney_demand` honestly exhausted — all 3 corpus rows
-  already in the v4 sample) with a **3-labeler verification pass** — the
+  / press_release 34; `attorney_demand` honestly exhausted — all 3 corpus
+  rows already in the v4 sample; **3-labeler verification pass GREEN** — the
   shared Enron labelers (`correspondence_subclasses` / `content_topics` /
-  `sentiment_scorer`, imported from `~/Enron-Evaluation-Environment`) re-run on
-  every drawn row and reproduce the Hub GT on 960/960 checks; KANBAN-103 GT
-  overrides applied);
-  `build_extra_claims.py` (+200 rows: DE-SynPUF Sample-1 re-render via
-  claims-data-eda with the verbatim GT contract, existing 400 record_ids
-  excluded, zip-streamed indexing — no extracted CSVs — and the claims repo's
-  own sampler pinned deterministic via `PYTHONHASHSEED=0`; 2010 Beneficiary
-  Summary unreachable (Wayback outage) → documented nearest-year demographic
-  fallback, GT integrity unaffected);
-  `attach_original_files.py` (**700/700 upstream originals staged**: 509 CUAD
-  source PDFs + 152 MAUD `contract_N.txt` + 39 S-1 EDGAR exhibit originals →
-  Hub `files/` tree + cast-safe `metadata.original_file` column +
-  sha256 sidecar); `build_docclass_v6.py` / `publish_docclass_v6.py` fuse and
-  publish **schema v6 (1,650 rows; contracts → 40.1%)** under the family
-  evolution discipline (parquet overwrite-in-place, manifest lineage,
-  surgical card edits, blind-GT leak guards). Purpose/gist GT completion:
-  `export_existing_purpose_gt.py` seeds llm-mailroom's
+  `sentiment_scorer`, imported from `~/Enron-Evaluation-Environment`) re-run
+  on every drawn row and reproduce the Hub GT on 960/960 checks; KANBAN-103
+  GT overrides honored, 0 hits) + the **original-files addendum** —
+  `attach_original_files.py` staged **700/700 upstream originals** (509 CUAD
+  source PDFs + 152 MAUD `contract_N.txt` + 39 S-1 EDGAR exhibit originals;
+  Hub `files/` tree, cast-safe `metadata.original_file` column `""` for
+  corpora without upstream files, per-file sha256 +
+  `original_files_mapping.jsonl` sidecar; Hub sha round-trip verified) +
+  purpose/gist GT columns (`intent` / `subject_matter` / `keywords`) on both
+  GT splits. New builders in `scripts/datasets/`:
+  `build_correspondence_append.py`, `attach_original_files.py`,
+  `build_docclass_v6.py`, `publish_docclass_v6.py`, plus
+  `build_extra_claims.py` (+200 insurance rows — **tooling only; the append
+  is a documented follow-up v6 revision**: the DE-SynPUF claims-data-eda
+  staging was lost to a tmp cleanup and the rebuild is pending card residue;
+  rev1 ships 1,450 rows, contracts 35.1%) and
+  `export_existing_purpose_gt.py` (seeds llm-mailroom's
   `sync_hf_ground_truth.py --real --resume` surface so the incremental
-  labeler pass labels ONLY the new purpose-class rows. Fixed en route:
-  `download_cuad_pdfs.py` 404'd on `#`-containing CUAD filenames (unencoded
-  URL fragment). Pins: `tests/test_kanban105_docclass_v6.py` (9 network-free).
+  labeler pass labels ONLY the new purpose-class rows).
+  **Blind-surface repair** (discovered at publish): the v4-era flat dump rode
+  `expected_doc_type` / `expected_subclass` inside blind `metadata` and v5
+  carried them onto the `default` config verbatim, contradicting the card's
+  "NO label columns" contract — v6 strips them (labels live ONLY in the
+  `ground_truth` config; no repo consumer read the Hub blind metadata
+  labels — the BT/Langfuse mirrors take labels from the GT config /
+  top-level fields). Fixed en route: `render_card` asserted a v6 section
+  before inserting it; `download_cuad_pdfs.py` 404'd on `#`-containing CUAD
+  filenames (unencoded URL fragment). Pins: `tests/test_kanban105_docclass_v6.py`
+  (10 network-free).
 - **Braintrust sandbox sync (KANBAN-104).** New runners
   `scripts/eval/sync_braintrust_prompts.py` and
   `scripts/eval/sync_braintrust_datasets.py` mirror the Langfuse twins into

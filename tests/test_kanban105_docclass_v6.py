@@ -282,3 +282,20 @@ def test_publish_v6_load_rejects_metadata_gt_leak(tmp_path):
         encoding="utf-8")
     with pytest.raises(AssertionError, match="GT keys leaked"):
         load_v6(bad)
+
+
+def test_publish_v6_strips_label_equivalents_from_metadata():
+    """v6 blind-surface repair: the v4-era metadata label rides (stripped),
+    answer payloads never rode in metadata, non-label keys survive intact."""
+    from scripts.datasets.publish_docclass_v6 import strip_blind_labels
+
+    rows = [{"filename": f"f{i}.txt",
+             "metadata": {"expected_doc_type": "correspondence",
+                          "expected_subclass": "email",
+                          "custodian": "x"}} for i in range(2)]
+    assert strip_blind_labels(rows) == 2
+    assert all(r["metadata"] == {"custodian": "x"} for r in rows)
+    # idempotent: a clean row passes through with count 0
+    clean = [{"filename": "g.txt", "metadata": {"custodian": "y"}}]
+    assert strip_blind_labels(clean) == 0
+    assert clean[0]["metadata"] == {"custodian": "y"}

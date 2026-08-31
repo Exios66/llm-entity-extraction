@@ -12,10 +12,11 @@ upstream originals); the local JSONL dumps are the builder staging artifacts.
 
 | File | Rows | Sources |
 |---|---|---|
-| `docclass_merged_v6.jsonl` | 1,650 (schema v6, KANBAN-105: v5 parent + 240 correspondence + 200 insurance) | v5 Hub shards + `build_correspondence_append.py` + `build_extra_claims.py` via `build_docclass_v6.py` |
+| `docclass_merged_v6.jsonl` | 1,450 (schema v6 rev1, KANBAN-105: v5 parent + 240 correspondence; the +200 insurance boost is a pending follow-up revision) | v5 Hub shards + `build_correspondence_append.py` via `build_docclass_v6.py` |
 | `correspondence_append_v6.jsonl` | 240 | stratified sha256 draw from `enron-correspondence-dedup` GT pool (3-labeler verification pass) |
-| `insurance_append_v6.jsonl` | 200 | DE-SynPUF Sample-1 re-render via claims-data-eda (existing 400 record_ids excluded) |
+| `insurance_append_v6.jsonl` | (pending) | DE-SynPUF Sample-1 re-render via claims-data-eda (`build_extra_claims.py`; staging lost to tmp cleanup, rebuild pending) |
 | `v6_original_files/` | 700 files (~153MB) | CUAD source PDFs + MAUD `contract_N.txt` + S-1 EDGAR exhibit originals (`attach_original_files.py`) |
+| `v5_parent/` | 1,210 | the v5 Hub parquet shards (fusion parent) |
 
 Row shape (the flat streamer-dump shape the docclass eval runner reads via
 `--local-dumps`): `{filename, doc_text, prompt, expected, expected_subclass,
