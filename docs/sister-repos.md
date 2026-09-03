@@ -34,7 +34,7 @@ visualizer:       The-Mailroom (pixel-art UI over llm-mailroom's Langfuse traces
 | Repository | Role | Relationship to this repo |
 |---|---|---|
 | [llm-mailroom](https://github.com/Exios66/llm-mailroom) | LangGraph state machine that processes legal documents through specialist LLM agents (classify → extract → report → archive) | **Sister repo.** Deployment target of this loop's champion prompts; vendors this repo's LangChain sorter/contracts agents; shares ONE kanban board and discussion log |
-| [llm-dojo-scoring](https://github.com/Exios66/llm-dojo-scoring) | Deterministic, field-type-aware scoring engine (metric registry, T0–T3 tiers, agent profiles, doc-type bundles) | **Upstream governed dependency**, pinned in `pyproject.toml` (`@v0.7.0`); consumed through six thin re-export shims in `src/` |
+| [llm-dojo-scoring](https://github.com/Exios66/llm-dojo-scoring) | Deterministic, field-type-aware scoring engine (metric registry, T0–T3 tiers, agent profiles, doc-type bundles) | **Upstream governed dependency**, pinned in `pyproject.toml` (`@v0.10.0`); consumed through six thin re-export shims in `src/` |
 | [Enron-Evaluation-Environment](https://github.com/Exios66/Enron-Evaluation-Environment) | EDA + pipeline-ready correspondence dataset from the CMU Enron corpus; owns the shared ground-truth labelers | **Corpus feed** — source of [`enron-correspondence(-dedup)`](https://huggingface.co/datasets/Lucius-Morningstar/enron-correspondence-dedup); its labeler modules are imported (never forked) by this repo's HF publishers |
 | [claims-data-eda](https://github.com/Exios66/claims-data-eda) | Insurance-claims candidate-corpus EDA (CMS DE-SynPUF direction) | **Corpus feed (candidate)** for future insurance-claim extraction surfaces — honest-gap benchmark source |
 | [atticus-investigation](https://github.com/Exios66/atticus-investigation) | LegalBench classification prompt-engineering pipeline | **Eval sibling**: same prompt-version × model methodology, LegalBench focus |
@@ -46,7 +46,7 @@ visualizer:       The-Mailroom (pixel-art UI over llm-mailroom's Langfuse traces
 Eval datasets published from this repo live under the
 [`Lucius-Morningstar`](https://huggingface.co/datasets/Lucius-Morningstar)
 org: `legalbench-full`, `cuad-contracts(+full)`, `lb-hearsay`,
-`docclass-merged`, `enron-correspondence`, `enron-correspondence-dedup`.
+`mailroom-corpus`, `enron-correspondence`, `enron-correspondence-dedup`.
 One split rule for the whole family (`md5(filename) % 10 == 0 → test`,
 single-source `assign_split()`); Braintrust mirrors stay read-only per
 `AGENTS.md`. See `scripts/datasets/` and the board cards (KANBAN-069,
