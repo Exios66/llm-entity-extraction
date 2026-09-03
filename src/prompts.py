@@ -3722,3 +3722,39 @@ INSURANCE_CLAIMS_SPECIALIST_PROMPT_V1 = INSURANCE_CLAIMS_SPECIALIST_PROMPT_V0.re
     + _INS_V0_ANCHOR,
 )
 PROMPT_VERSIONS["insurance_claims_specialist_v1"] = INSURANCE_CLAIMS_SPECIALIST_PROMPT_V1
+
+# -----------------------------------------------------------------------------
+# insurance_claims_specialist_v2 — PURPOSE/GIST EXTRACTION (HUB-028 v8 LOB docs)
+# -----------------------------------------------------------------------------
+# The v8 LOB expansion (HUB-028: GNOTHEIA property FNOL bundles + BDR auto
+# decision letters) carries a purpose/gist GT trio on every row (intent /
+# subject_matter / keywords — §20–§21: intent is a separate dimension, never a
+# subclass). v0/v1 have no rules for subject_matter/keywords, so the schema
+# fields land null and the eval surface cannot score them. v2 adds two rules
+# (9b/9c) inside the evidence-only visibility discipline: both fields are
+# populated ONLY from visible document content — subject_matter is a one-line
+# gist grounded in the text, keywords are 5-7 short cover terms from the
+# document's own vocabulary (loss event per the source's taxonomy, document
+# kind, line of business, identifiers as printed). Derivation: .replace() off
+# the REAL v1 constant (contiguous anchor asserted single-occurrence).
+_INS_V1_ANCHOR = "9a. EVIDENCE-ONLY VISIBILITY (mandatory, overrides every other rule):"
+assert INSURANCE_CLAIMS_SPECIALIST_PROMPT_V1.count(_INS_V1_ANCHOR) == 1, \
+    "anchor drift: insurance specialist v1 rule 9a"
+_INS_V2_RULES = (
+    "9b. SUBJECT MATTER (the one-line gist): write ONE sentence naming what the\n"
+    "    document is about — the claim's purpose, the loss event, and the key\n"
+    "    facts (e.g. 'First notice of loss for water damage claim 261873769').\n"
+    "    Every element must be visible in the document; where the document is\n"
+    "    silent, say what is stated and nothing more. Never diagnose, never\n"
+    "    speculate about cause, never state a determination that is not written.\n"
+    "9c. KEYWORDS (5-7 short cover terms): emit short, grounded cover terms —\n"
+    "    the loss event/peril exactly as the document names it, the document\n"
+    "    kind, the line of business, and any identifiers as printed (claim no.).\n"
+    "    Every keyword must appear verbatim or near-verbatim in the document;\n"
+    "    never invent a term, never use generic filler ('insurance', 'claim').\n"
+)
+INSURANCE_CLAIMS_SPECIALIST_PROMPT_V2 = INSURANCE_CLAIMS_SPECIALIST_PROMPT_V1.replace(
+    _INS_V1_ANCHOR,
+    _INS_V1_ANCHOR + "\n" + _INS_V2_RULES,
+)
+PROMPT_VERSIONS["insurance_claims_specialist_v2"] = INSURANCE_CLAIMS_SPECIALIST_PROMPT_V2
