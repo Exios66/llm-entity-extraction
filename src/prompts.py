@@ -889,6 +889,47 @@ SORTER_DOCCLASS_PROMPT_V7 = SORTER_DOCCLASS_PROMPT_V6.replace(
 )
 
 # =============================================================================
+# SORTER AGENT — mailroom naming convention (HUB-041, human directive
+# 2026-09-03): NEW classification-chain versions register under
+# ``sorter_mailroom_*`` keys, replacing the retired ``sorter_docclass_*``
+# coinage in line with the docclass-merged -> mailroom-corpus dataset rename
+# (HUB-023). The existing docclass keys are FROZEN experiment identity —
+# never renamed, never mutated.
+#
+# sorter_mailroom_v0 — v8 insurance LOB subclass coverage (HUB-041). Derived
+# from sorter_docclass_v7 (the extended-arm default): rule 40 still teaches
+# ONLY the four CMS file types (carrier/pde/outpatient/inpatient) while the
+# mailroom-corpus v8 ground truth carries SIX insurance subclasses — property
+# (200 GNOTHEIA FNOL bundles) and auto (150 BDR motor decision letters) join
+# the CMS types — so 350/950 insurance rows were structurally ungradeable on
+# the subclass dimension. This version extends rule 40 (and ONLY rule 40)
+# with the two LOB lines; everything else is byte-identical v7. Defaults
+# unchanged: ``sorter_docclass_v7`` stays the runner default until this
+# version wins a same-surface A/B on the v8 corpus.
+# =============================================================================
+_SORTER_MRMSS_ANCHOR = (
+    "Crucially, a Medicare Summary Notice whose heading reads 'MEDICARE SUMMARY "
+    "NOTICE -- PHYSICIAN/SUPPLIER CLAIM (Part B)' is a physician/supplier notice "
+    "and therefore carrier, not outpatient, regardless of the mention of Part B."
+)
+assert _SORTER_DOCCONTEXT_V7_RULES.count(_SORTER_MRMSS_ANCHOR) == 1, \
+    "anchor drift: sorter rule 40 MSN tail"
+_SORTER_MAILROOM_V0_RULE40_TAIL = (
+    _SORTER_MRMSS_ANCHOR
+    + " The v8 corpus adds two LINE-OF-BUSINESS subclasses beyond the CMS file"
+      " types: property (property-line claim documentation — FNOL bundles naming"
+      " a loss event, adjuster estimates, coverage positions on buildings or"
+      " personal property) and auto (motor-line claim documentation — accident"
+      " FNOL, adjuster reports, coverage decision letters for a vehicle loss). A"
+      " property or vehicle loss document subclasses as property or auto —"
+      " 'carrier' stays reserved for payer/insurer-issued adjudication documents."
+)
+SORTER_MAILROOM_PROMPT_V0 = SORTER_DOCCLASS_PROMPT_V7.replace(
+    _SORTER_MRMSS_ANCHOR,
+    _SORTER_MAILROOM_V0_RULE40_TAIL,
+)
+
+# =============================================================================
 # SORTER AGENT — Correspondence-only eval (KANBAN-103): v7 + sentiment
 # -----------------------------------------------------------------------------
 # All rows are Enron correspondence. The sorter still emits the hierarchical
@@ -3501,6 +3542,7 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v5": SORTER_DOCCLASS_PROMPT_V5,
     "sorter_docclass_v6": SORTER_DOCCLASS_PROMPT_V6,
     "sorter_docclass_v7": SORTER_DOCCLASS_PROMPT_V7,
+    "sorter_mailroom_v0": SORTER_MAILROOM_PROMPT_V0,
     "sorter_docclass_correspondence_v0": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
     "sorter_docclass_correspondence_v1": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1,
     "sorter_docclass_correspondence_v2": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2,
