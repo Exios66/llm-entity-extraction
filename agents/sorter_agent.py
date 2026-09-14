@@ -119,6 +119,10 @@ CORRESPONDENCE_SUBCLASSES = [
     {"key": "notice", "label": "Notice",
      "description": "Formal notice: annual-meeting notices, regulatory notices, "
                     "default/termination notices when not demanding payment"},
+    {"key": "voicemail", "label": "Voicemail",
+     "description": "Voicemail transcription markers (voicemail/VM subject or body)"},
+    {"key": "other", "label": "Other",
+     "description": "Unparseable / no matching form (fallback bucket)"},
 ]
 INSURANCE_CLAIM_SUBCLASSES = [
     {"key": "carrier", "label": "Carrier Document",
@@ -319,11 +323,11 @@ DOCCLASS_SCHEMA = build_structured_schema(
         "doc_subclass": {
             "type": ["string", "null"],
             "enum": DOC_SUBCLASS_KEYS,
-            "description": "The second-level class: consideration type when doc_type is "
+"description": "The second-level class: consideration type when doc_type is "
                            "merger_agreement, record type when doc_type is corporate_record, "
                            "correspondence type when doc_type is correspondence (demand, "
-                           "attorney_demand, meeting_request, press_release, memo, email, "
-                           "letter, notice), claim-document type when doc_type is "
+                           "attorney_demand, meeting_request, voicemail, press_release, memo, email, "
+                           "letter, notice, other), claim-document type when doc_type is "
                            "insurance_claim (carrier, pde, outpatient, inpatient, "
                            "property, auto), "
                            "null otherwise. See the subclass list in the prompt.",
@@ -336,6 +340,14 @@ DOCCLASS_SCHEMA = build_structured_schema(
 
 # Pilot schema: same shape over the 5-class pilot universe (the classes the
 # docclass-merged / docclass-pilot ground truth actually contains).
+#
+# hub#51 subclass alignment: the pilot surface's insurance dimension is the
+# SIX-token set (the mailroom pilot lineage teaches all of carrier/pde/
+# outpatient/inpatient/property/auto — see sorter_mailroom_pilot_v0). The
+# frozen pre-v8 docclass pilot lineage (sorter_docclass_pilot_v0..v3)
+# predates the LOB tokens and teaches only the four CMS file types; those
+# versions are never mutated (frozen experiment identity), so the schema
+# enum below = the ACTIVE pilot surface and the parity test pins the split.
 DOCCLASS_PILOT_SCHEMA = build_structured_schema(
     {
         "doc_type": {"type": "string", "enum": DOCCLASS_PILOT_CLASS_KEYS},
@@ -541,8 +553,8 @@ class SorterAgent(BaseAgent):
                 "This document IS correspondence (all documents in this task "
                 "are correspondence). Assign doc_type as \"correspondence\", "
                 "the communication-function doc_subclass (demand, "
-                "attorney_demand, meeting_request, press_release, memo, email, "
-                "letter, or notice — classify by what the communication DOES, "
+                "attorney_demand, meeting_request, voicemail, press_release, memo, email, "
+                "letter, notice, or other — classify by what the communication DOES, "
                 "not its delivery format), and a sentiment_score / "
                 "sentiment_label for the content.\n\n"
                 f"Correspondence text:\n\n{truncated}"

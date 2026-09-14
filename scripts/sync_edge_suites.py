@@ -9,7 +9,7 @@ langfuse.env (different project).
 
 Usage:
     python3 scripts/sync_edge_suites.py \
-        --env-file /Users/luciusjmorningstar/Downloads/The-Mailroom/.env
+        --env-file /path/to/The-Mailroom/.env
     python3 scripts/sync_edge_suites.py --env-file ... --dataset edge-contracts-specialist
 """
 
@@ -44,8 +44,9 @@ def main() -> int:
 
     from langfuse import Langfuse
 
-    client = Langfuse(host=os.environ.get("LANGFUSE_HOST",
-                                          "https://us.cloud.langfuse.com"))
+    client = Langfuse(host=os.environ.get("LANGFUSE_HOST")
+                      or os.environ.get("LANGFUSE_BASE_URL")
+                      or "https://us.cloud.langfuse.com")
     try:
         client.auth_check()
         print("auth OK")
@@ -94,7 +95,7 @@ def main() -> int:
         print(f"{ds_name}: {len(items)} items | +{added} added, {skipped} already present")
 
     client.flush()
-    host = os.environ.get("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
+    host = os.environ.get("LANGFUSE_HOST") or os.environ.get("LANGFUSE_BASE_URL") or "https://us.cloud.langfuse.com"
     print(f"datasets live at {host}/datasets (project from --env-file)")
     return 0
 

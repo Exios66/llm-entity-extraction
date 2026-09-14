@@ -33,6 +33,12 @@ DEFAULT_OUT = Path("data/datasets/enron_correspondence_eval.jsonl")
 GT_FILES = ("ground_truth/train.jsonl", "ground_truth/test.jsonl")
 BLIND_FILES = ("blind/train.jsonl", "blind/test.jsonl")
 
+# hub#52: the eval data source is pinned to a recorded revision so a
+# corpus-side update cannot silently change every correspondence eval's
+# input. Recorded 2026-09-14 from the live Hub tip; override with
+# --repo-revision (runner) or --revision (this script) when re-pinning.
+ENRON_DEDUP_REVISION = "993919b4387f017b2fcff5902102de609ad41464"
+
 
 def _require_hub():
     try:
@@ -46,13 +52,15 @@ def _require_hub():
     return hf_hub_download
 
 
-def download_hub_jsonl(repo_id: str, filename: str, *, token: str | None) -> Path:
-    """Download one Hub JSONL file and return the local cache path."""
+def download_hub_jsonl(repo_id: str, filename: str, *, token: str | None,
+                       revision: str | None = None) -> Path:
+    """Download one Hub JSONL file at the pinned revision and return the path."""
     hf_hub_download = _require_hub()
     path = hf_hub_download(
         repo_id=repo_id,
         repo_type="dataset",
         filename=filename,
+        revision=revision,
         token=token or None,
     )
     return Path(path)
@@ -69,11 +77,13 @@ def iter_jsonl(path: Path):
 
 
 def load_gt_rows(repo_id: str, *, token: str | None,
-                 splits: tuple[str, ...] = ("train", "test")) -> list[dict]:
+                 splits: tuple[str, ...] = ("train", "test"),
+                 revision: str | None = None) -> list[dict]:
     """Load every ground_truth row (no email body — small enough to hold)."""
     rows: list[dict] = []
     for split in splits:
-        path = download_hub_jsonl(repo_id, f"ground_truth/{split}.jsonl", token=token)
+        path = download_hub_jsonl(repo_id, f"ground_truth/{split}.jsonl",
+                                  token=token, revision=revision)
         rows.extend(iter_jsonl(path))
     return rows
 
@@ -84,6 +94,7 @@ def attach_blind_text(
     *,
     token: str | None,
     splits: tuple[str, ...] = ("train", "test"),
+    revision: str | None = None,
 ) -> list[dict]:
     """Stream blind JSONL and attach subject/text for the requested filenames.
 
@@ -94,7 +105,8 @@ def attach_blind_text(
     wanted.discard("")
     found: dict[str, dict] = {}
     for split in splits:
-        path = download_hub_jsonl(repo_id, f"blind/{split}.jsonl", token=token)
+        path = download_hub_jsonl(repo_id, f"blind/{split}.jsonl",
+                                  token=token, revision=revision)
         for row in iter_jsonl(path):
             filename = str(row.get("filename") or "")
             if filename not in wanted or filename in found:
@@ -113,6 +125,7 @@ def load_enron_correspondence(
     token: str | None = None,
     splits: tuple[str, ...] = ("train", "test"),
     selected_filenames: set[str] | None = None,
+    revision: str | None = None,
 ) -> list[dict]:
     """Load correspondence-only eval rows (joined blind + GT).
 
@@ -121,10 +134,10 @@ def load_enron_correspondence(
     """
     load_env()
     token = token or get_env("HF_TOKEN") or os.environ.get("HF_TOKEN") or None
-    gt = load_gt_rows(repo_id, token=token, splits=splits)
+    gt = load_gt_rows(repo_id, token=token, splits=splits, revision=revision)
     if selected_filenames is not None:
         gt = [r for r in gt if str(r.get("filename") or "") in selected_filenames]
-    return attach_blind_text(gt, repo_id, token=token, splits=splits)
+    return attach_blind_text(gt, repo_id, token=token, splits=splits, revision=revision)
 
 
 def load_local_jsonl(path: Path) -> list[dict]:
@@ -165,6 +178,8 @@ def write_joined_jsonl(rows: list[dict], path: Path) -> None:
 def main_with_args(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=DEFAULT_REPO)
+    parser.add_argument("--revision", default=ENRON_DEDUP_REVISION,
+                        help=f"Hub dataset revision pin (default: {ENRON_DEDUP_REVISION[:12]}…)")
     parser.add_argument("--split", choices=("train", "test", "all"), default="all")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--write", action="store_true",
@@ -177,8 +192,8 @@ def main_with_args(argv: list[str]) -> int:
     load_env()
     token = get_env("HF_TOKEN") or os.environ.get("HF_TOKEN") or None
     splits = ("train", "test") if args.split == "all" else (args.split,)
-    print(f"Loading GT from {args.repo} splits={splits}")
-    gt = load_gt_rows(args.repo, token=token, splits=splits)
+    print(f"Loading GT from {args.repo} revision={args.revision} splits={splits}")
+    gt = load_gt_rows(args.repo, token=token, splits=splits, revision=args.revision)
     if args.limit:
         gt = gt[: args.limit]
     print(f"  GT rows: {len(gt)}")
@@ -188,7 +203,8 @@ def main_with_args(argv: list[str]) -> int:
     if args.dry_run:
         print("Dry run: skipping blind-text join.")
         return 0
-    rows = attach_blind_text(gt, args.repo, token=token, splits=splits)
+    rows = attach_blind_text(gt, args.repo, token=token, splits=splits,
+                             revision=args.revision)
     print(f"  joined correspondence rows: {len(rows)}")
     if args.write:
         write_joined_jsonl(rows, args.out)

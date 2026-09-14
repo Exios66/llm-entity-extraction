@@ -1,5 +1,5 @@
 """Score-emitter bridge — connects pipeline runs to the KANBAN-061 registry
-layer (llm-dojo-scoring v0.5.0 ``registry`` / ``bundles`` / ``emitter`` /
+layer (llm-dojo-scoring ``registry`` / ``bundles`` / ``emitter`` /
 ``pruning``).
 
 Thin by design: the package owns definitions, routing, and storage. This

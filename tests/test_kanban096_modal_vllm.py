@@ -41,8 +41,8 @@ def _install_modal_stub() -> None:
 
     class _Secret:
         @staticmethod
-        def from_local(*names):
-            return ("secret", names)
+        def from_dict(mapping):
+            return ("secret", mapping)
 
     class _Volume:
         @staticmethod
@@ -318,8 +318,8 @@ class TestDependencyManifests:
         req = self._parse_requirements_txt(REPO_ROOT / "requirements" / "deploy.txt")
         py_names = {}
         for entry in extras["deploy"]:
-            m = entry.split(">=")[0]
-            py_names[m.strip()] = entry
+            m = entry.split(">=")[0].split("==")[0].split("<")[0].strip()
+            py_names[m] = entry
         assert req.keys() == py_names.keys(), "deploy batch drifted"
         assert set(req) == {"modal"}
 

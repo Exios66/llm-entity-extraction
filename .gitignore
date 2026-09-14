@@ -117,7 +117,7 @@ docs/posit-src/_variables.yml
 # Vendored editable checkout of the llm-dojo-scoring dependency (KANBAN-044) —
 # a local dev clone used for the API audit and `pip install -e .`; the
 # authoritative source is the pinned git dependency in pyproject.toml /
-# requirements.txt (`llm-dojo-scoring @ git+…@v0.2.0`).
+# requirements.txt (`llm-dojo-scoring @ git+…@v0.14.0`).
 src/llm-dojo-scoring/
 
 # Monte Carlo joint corpus (KANBAN-048) — derived from the experiment log +

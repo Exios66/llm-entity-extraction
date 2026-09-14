@@ -7,8 +7,11 @@ Two repos under ``Lucius-Morningstar``:
    ``build_legalbench_full_pack.py`` (verbatim upstream TSVs + prompts +
    READMEs for every task dir, plus CUAD-enriched JSONL records for the
    ``cuad_*`` tasks).
-2. ``docclass-merged`` — the merged docclass corpus (CUAD 509 + MAUD 152 +
-   S-1 39 = 700 rows) staged by ``build_docclass_merged.py``.
+2. ``docclass-merged`` — **RETIRED (epic #18)**: the repo was deleted from
+   the Hub and the schema-v3 build is superseded by the v9 successor
+   ``Lucius-Morningstar/mailroom-dataset`` (published via the corpus-eda
+   stack). The ``publish_docclass`` arm refuses to run rather than
+   re-create the deleted repo.
 
 Verification (KANBAN-069 discipline):
 - per-file byte proof: every uploaded file's git blob OID (sha1, computed
@@ -25,6 +28,7 @@ import argparse
 import hashlib
 import json
 import os
+import sys
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -276,6 +280,19 @@ def publish_pack(api) -> dict:
 
 
 def publish_docclass(api) -> dict:
+    # RETIRED (2026-09-13, epic #18): the `docclass-merged` repo this arm
+    # publishes was DELETED from the Hub. It was the schema-v3 corpus that the
+    # v4→v8 `mailroom-corpus` line replaced, which the v9 build then succeeded
+    # as the standalone `Lucius-Morningstar/mailroom-dataset` (v1, 3,302 rows)
+    # published via the centralized corpus-eda stack
+    # (mailroom-corpus-eda/src/mailroom_eda/, scripts/build_v9.py). Re-creating
+    # the deleted repo with the stale v3 schema would resurrect an outdated
+    # dataset and shadow the canonical successor — refuse.
+    raise SystemExit(
+        "publish_docclass is RETIRED: the `docclass-merged` repo it targets was "
+        "deleted from the Hub. The canonical corpus is now "
+        "Lucius-Morningstar/mailroom-dataset (v9) — publish via the corpus-eda "
+        "stack (scripts/build_v9.py) instead (epic #18).")
     rows = [json.loads(l) for l in DOCCLASS_JSONL.open(encoding="utf-8") if l.strip()]
     rows_n = len(rows)
     # KANBAN-073/074 pre-upload schema guard: every row must carry non-empty
@@ -426,8 +443,13 @@ def main() -> int:
     if out.exists():
         try:
             merged.update(json.loads(out.read_text()))
-        except Exception:
-            pass
+        except (OSError, json.JSONDecodeError) as exc:
+            # hub#63: a corrupted/unreadable prior summary must not be silently
+            # swallowed then overwritten — that would destroy verified-publish
+            # evidence. Warn loudly, back it up, then write via temp+rename.
+            print(f"WARNING: prior publish summary unreadable ({exc}); backing it up", file=sys.stderr)
+            backup = out.with_suffix(".json.corrupt")
+            backup.write_text(out.read_bytes())
     merged.update(results)
     out.write_text(json.dumps(merged, indent=2))
     print(f"\nsummary -> {out}")

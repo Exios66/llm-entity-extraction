@@ -49,6 +49,21 @@ def test_correspondence_eval_schema_carries_sentiment_and_docclass():
     assert props["sentiment_score"]["maximum"] == 1.0
 
 
+def test_correspondence_repo_revision_is_pinned_full_sha():
+    """hub#52: the Enron correspondence eval data source must be revision-pinned
+    (not float on the live Hub tip) with a full 40-hex sha, so a corpus-side
+    update cannot silently change every correspondence eval's input."""
+    import re
+
+    from scripts.datasets.load_enron_correspondence import ENRON_DEDUP_REVISION
+
+    assert re.fullmatch(r"[0-9a-f]{40}", ENRON_DEDUP_REVISION), ENRON_DEDUP_REVISION
+    # the runner threads it through load_gt_rows / attach_blind_text
+    runner = Path("scripts/eval/run_correspondence_eval.py").read_text()
+    assert "revision=args.repo_revision" in runner
+    assert "repo_revision" in runner
+
+
 def test_correspondence_prompt_registered_and_derives_from_v7():
     assert "sorter_docclass_correspondence_v0" in list_prompts()
     prompt = get_prompt("sorter_docclass_correspondence_v0")

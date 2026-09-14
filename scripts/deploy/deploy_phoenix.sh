@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-───────────────────────── USER‑CONFIG ─────────────────────────
-REPO_DIR="/Users/luciusjmorningstar/Downloads/llm-entity-extraction"   # ← repo root
+#───────────────────────── USER‑CONFIG ─────────────────────────
+# hub#60: REPO_DIR resolves from this script's own location (the llm-entity-
+# extraction checkout), overridable via REPO_DIR env — never a hardcoded
+# developer-machine path.
+REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"   # ← repo root
 NODE_USER="jburleson"
 NODE_HOST="rogers-gpu-1.discovery.wisc.edu"
 SERVICE_NAME="phoenix-app"
 IMAGE_TAG="phoenix-app:latest"
-────────────────────────────────────────────────────────────────
+#────────────────────────────────────────────────────────────────
 
-───────────────────── Build Docker image on the node ─────────────
+#───────────────────── Build Docker image on the node ─────────────
 echo "Building Docker image on $NODE_HOST…"
 ssh -n "${NODE_USER}@${NODE_HOST}" <<'EOS'
 cd "${REPO_DIR}"
@@ -17,7 +20,7 @@ docker build -t "${IMAGE_TAG}" .
 EOS
 echo "✅ Docker image built."
 
-────────────────── Install systemd unit on the node ─────────────
+#────────────────── Install systemd unit on the node ─────────────
 echo "Installing systemd unit on $NODE_HOST…"
 ssh -n "${NODE_USER}@${NODE_HOST}" <<'EOS'
 cat >~/phoenix-app.service <<'EOF2'
@@ -44,13 +47,13 @@ sudo systemctl enable --now ${SERVICE_NAME}
 EOS
 echo "✅ systemd unit installed and started."
 
-────────────────── Start reverse tunnel (port 80) ───────────────
+#────────────────── Start reverse tunnel (port 80) ───────────────
 echo "Starting reverse SSH tunnel (public port 80 → 4000)…"
 ssh -N -R 80:localhost:4000 "${NODE_USER}@${NODE_HOST}" &
 TUNNEL_PID=$!
 echo "✅ Reverse tunnel running (PID $TUNNEL_PID)."
 
-────────────────── Verify everything is up ─────────────────────
+#────────────────── Verify everything is up ─────────────────────
 echo "✔️  Phoenix app should now be reachable at:"
 echo "    • http://localhost:4000   (local port‑forward)"
 echo "    • http://<public‑IP-or‑domain> (reverse tunnel on port 80)"

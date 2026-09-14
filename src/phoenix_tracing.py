@@ -40,6 +40,11 @@ from typing import Any, Iterator
 
 logger = structlog.get_logger(__name__)
 
+# hub#63: distinct sentinel for the score() label default — None means "omit
+# the correctness verdict entirely" (calibration metrics), while the sentinel
+# means "apply the 0.5 threshold verdict" (accuracy metrics).
+_OMIT_LABEL = object()
+
 _TRUE_VALUES = {"1", "true", "enabled", "yes", "on"}
 
 
@@ -235,8 +240,15 @@ class TraceHandle:
             logger.warning("phoenix_output_event_failed", trace_id=self.trace_id)
 
     def score(self, name: str, value: float, comment: str = "",
-              observation_id: str | None = None) -> None:
-        """Record one deterministic logic score as a span event + annotation."""
+              observation_id: str | None = None, *, label: object = _OMIT_LABEL) -> None:
+        """Record one deterministic logic score as a span event + annotation.
+
+        ``label`` defaults to the 0.5-threshold "correct"/"incorrect" verdict
+        for accuracy-style metrics. Pass ``label=None`` for calibration
+        metrics (e.g. ``confidence`` — a low-confidence-but-correct row is NOT
+        an "incorrect" annotation) so the Phoenix UI shows the value without a
+        misleading correctness verdict (hub#63).
+        """
         if self.disabled or self._span is None:
             return
         try:
@@ -245,13 +257,17 @@ class TraceHandle:
             })
         except Exception:  # noqa: BLE001
             logger.warning("phoenix_score_event_failed", trace_id=self.trace_id, name=name)
-        self._annotations.append({
+        if label is _OMIT_LABEL:
+            label = "correct" if value >= 0.5 else "incorrect"
+        annotation = {
             "name": name,
             "score": float(value),
-            "label": "correct" if value >= 0.5 else "incorrect",
             "annotator_kind": "CODE",
             "explanation": comment,
-        })
+        }
+        if label is not None:
+            annotation["label"] = label
+        self._annotations.append(annotation)
 
 
 @dataclass
@@ -277,8 +293,14 @@ class AgentHandle:
         except Exception:  # noqa: BLE001
             logger.warning("phoenix_agent_output_failed", trace_id=self.trace_id)
 
-    def score(self, name: str, value: float, comment: str = "") -> None:
-        """Record one deterministic logic score as a span event + annotation."""
+    def score(self, name: str, value: float, comment: str = "",
+              *, label: object = _OMIT_LABEL) -> None:
+        """Record one deterministic logic score as a span event + annotation.
+
+        Same ``label`` contract as ``TraceHandle.score``: default thresholds
+        correctness at 0.5; ``label=None`` omits the correctness verdict for
+        calibration metrics (hub#63).
+        """
         if self.disabled or self._span is None:
             return
         try:
@@ -288,13 +310,17 @@ class AgentHandle:
         except Exception:  # noqa: BLE001
             logger.warning("phoenix_agent_score_failed",
                            trace_id=self.trace_id, name=name)
-        self._annotations.append({
+        if label is _OMIT_LABEL:
+            label = "correct" if value >= 0.5 else "incorrect"
+        annotation = {
             "name": name,
             "score": float(value),
-            "label": "correct" if value >= 0.5 else "incorrect",
             "annotator_kind": "CODE",
             "explanation": comment,
-        })
+        }
+        if label is not None:
+            annotation["label"] = label
+        self._annotations.append(annotation)
 
 
 class PhoenixTracer:

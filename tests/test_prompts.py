@@ -32,6 +32,14 @@ def test_all_prompt_keys_exist():
     assert "judge-correctness" in PROMPT_VERSIONS
     assert "boss" in PROMPT_VERSIONS
     assert "reporter" in PROMPT_VERSIONS
+    # DMR-015 mailroom_prompts lineage (mailroom-corpus v8).
+    assert "sorter_mailroom_prompts_v0" in PROMPT_VERSIONS
+    assert "sorter_mailroom_prompts_vision_v0" in PROMPT_VERSIONS
+    assert "sorter_mailroom_prompts_pilot_v0" in PROMPT_VERSIONS
+    assert "contracts_specialist_mailroom_prompts_v0" in PROMPT_VERSIONS
+    assert "insurance_claims_specialist_mailroom_prompts_v0" in PROMPT_VERSIONS
+    assert "reviewer_mailroom_prompts_v0" in PROMPT_VERSIONS
+    assert "judge_mailroom_prompts_v0" in PROMPT_VERSIONS
 
 
 def test_contracts_archive_preserves_identity_and_version_keys():
@@ -521,7 +529,9 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
                     "sorter_docclass_correspondence_v1",
                     "sorter_docclass_correspondence_v2",
                     "sorter_docclass_correspondence_v3",
-                    "sorter_mailroom_v0"):
+                    "sorter_mailroom_v0",
+                    "sorter_mailroom_prompts_v0",
+                    "sorter_mailroom_prompts_vision_v0"):
         prompt = SorterAgent(prompt_version=version,
                              doc_classes=DOCCLASS_CLASSES,
                              schema=DOCCLASS_SCHEMA).system_prompt()
@@ -529,26 +539,37 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
         # four dimensions; legacy v0..v6 were frozen before the
         # correspondence/insurance dimensions existed and are never mutated
         # after a run — they must carry the merger/corporate keys only.
-        # HUB-041: the mailroom-named v8 lineages also teach the v8 LOB
+        # HUB-041 + DMR-015: the mailroom-named v8 lineages (incl. the
+        # mailroom_prompts line, mailroom-corpus v8) also teach the v8 LOB
         # tokens (property/auto); every docclass version frozen BEFORE the
         # v8 corpus (pilot v0-v3, v7, correspondence) predates them and is
         # never mutated — property/auto are excluded from their expectations.
-        if version == "sorter_mailroom_v0":
+        if version in ("sorter_mailroom_v0",
+                       "sorter_mailroom_prompts_v0",
+                       "sorter_mailroom_prompts_vision_v0"):
             expected_keys = DOC_SUBCLASS_KEYS
         elif ("pilot" in version or version == "sorter_docclass_v7"
                 or "correspondence" in version):
             expected_keys = [k for k in DOC_SUBCLASS_KEYS
                              if k not in {"property", "auto"}]
         else:
+            # Legacy v0..v6 predate the ENTIRE correspondence/insurance
+            # dimensions (their doc_subclass vocabulary is merger/corporate
+            # keys + the `other` fallback only). voicemail joined the
+            # correspondence enum with the Enron eval-env key expansion; it is
+            # a correspondence key, so the frozen lineage must NOT be expected
+            # to teach it (the exclusion set above predates the key).
             legacy_excluded = {"demand", "attorney_demand", "meeting_request",
                                "press_release", "memo", "email", "letter",
-                               "notice", "carrier", "pde", "outpatient",
-                               "inpatient", "property", "auto"}
+                               "notice", "voicemail", "carrier", "pde",
+                               "outpatient", "inpatient", "property", "auto"}
             expected_keys = [k for k in DOC_SUBCLASS_KEYS if k not in legacy_excluded]
         for key in expected_keys:
             assert key in prompt, f"{version}: doc_subclass key {key!r} missing from the prompt"
-        # The output contract names the field.
-        assert "- doc_subclass: EXACTLY ONE" in prompt
+        # The output contract names the field. (Vision surface uses XML
+        # <subclass> tags, not the text-arm JSON `- doc_subclass` line.)
+        if "vision" not in version:
+            assert "- doc_subclass: EXACTLY ONE" in prompt
         assert "merger_agreement" in prompt
 
 

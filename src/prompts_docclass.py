@@ -116,9 +116,18 @@ _DOCCONTEXT_V1 = (
     "articles_of_incorporation, certificate_of_formation, charter_amendment, "
     "powers_of_attorney, subsidiary_list, rights_instrument, indenture, "
     "board_resolution, officer_certificate, other); correspondence -> "
-    "communication type (demand, attorney_demand, meeting_request, press_release, "
-    "memo, email, letter, notice); insurance_claim -> claim-document type "
+    "communication type (demand, attorney_demand, meeting_request, voicemail, "
+    "press_release, memo, email, letter, notice, other); insurance_claim -> claim-document type "
     "(carrier, pde, outpatient, inpatient).\n"
+)
+
+# v2 context block — adds v8 LOB subclasses (property/auto) to the insurance
+# claim dimension (DMR-015). v0/v1 variants stay frozen.
+_DOCCONTEXT_V2 = _DOCCONTEXT_V1.replace(
+    "insurance_claim -> claim-document type "
+    "(carrier, pde, outpatient, inpatient).\n",
+    "insurance_claim -> claim-document type "
+    "(carrier, pde, outpatient, inpatient, property, auto).\n",
 )
 
 _SPECIALIST_RULES = (
@@ -495,10 +504,10 @@ _CORPORATE_V1_EXTRA = (
 
 _CORRESPONDENCE_V1_EXTRA = (
     "5. Hub communication_type: emit exactly one of email, letter, memo, notice, "
-    "demand, attorney_demand, press_release, meeting_request. Enron-style "
+    "demand, attorney_demand, press_release, meeting_request, voicemail. Enron-style "
     "inbox messages are email; internal memoranda are memo; calendar/meeting "
     "invites are meeting_request; news wires are press_release. Readable "
-    "correspondence is never unknown.\n"
+    "correspondence is never `other` (the doc_subclass fallback key; `unknown` is not a valid token).\n"
 )
 
 _COMPLIANCE_V1_EXTRA = (
@@ -592,13 +601,14 @@ INSURANCE_CLAIMS_SPECIALIST_DOCCLASS_PROMPT_V1 = (
 # Support agents — v1 upgrades (extended discriminators + exhibit-vs-form)
 _REVIEWER_V1_EXTRA = (
     "- correspondence: the COMMUNICATION'S FUNCTION — demand, attorney_demand, "
-    "meeting_request, press_release, memo, email, letter, or notice.\n"
+    "meeting_request, voicemail, press_release, memo, email, letter, notice, or other.\n"
     "- insurance_claim: the CLAIM-DOCUMENT TYPE — carrier, pde, outpatient, "
     "or inpatient (CMS setting in the document's own heading outranks generic "
     "family).\n"
     "Exhibit-vs-form: charter/bylaws/POA/rights-instrument BODY -> "
     "corporate_record (SEC wrapper does not win); CMS claim tables -> "
-    "insurance_claim; readable email/memo text -> correspondence, not unknown.\n"
+    "insurance_claim; readable email/memo text -> correspondence, never `other` "
+    "(the doc_subclass fallback key; `unknown` is not a valid token).\n"
 )
 
 REVIEWER_DOCCLASS_PROMPT_V1 = REVIEWER_DOCCLASS_PROMPT_V0.replace(
@@ -609,11 +619,110 @@ REVIEWER_DOCCLASS_PROMPT_V1 = REVIEWER_DOCCLASS_PROMPT_V0.replace(
     "Docclass variant: reviewer_docclass_v1 (KANBAN-101).",
 )
 
+# v2 reviewer extra — adds v8 LOB subclasses (property/auto) to the insurance
+# claim dimension (DMR-015). v0/v1 reviewer variants stay frozen.
+_REVIEWER_V2_EXTRA = _REVIEWER_V1_EXTRA.replace(
+    "- insurance_claim: the CLAIM-DOCUMENT TYPE — carrier, pde, outpatient, "
+    "or inpatient (CMS setting in the document's own heading outranks generic "
+    "family).\n",
+    "- insurance_claim: the CLAIM-DOCUMENT TYPE — carrier, pde, outpatient, "
+    "inpatient, property, or auto (CMS setting in the document's own heading "
+    "outranks generic family; property/auto cover non-CMS lines of business).\n",
+)
+
+# v2 reviewer — extends v1 with v8 LOB subclasses (property/auto) via
+# _REVIEWER_V2_EXTRA (DMR-015). Frozen v0/v1 stay unchanged.
+REVIEWER_DOCCLASS_PROMPT_V2 = REVIEWER_DOCCLASS_PROMPT_V0.replace(
+    "- every other doc_type: null.",
+    _REVIEWER_V2_EXTRA,
+).replace(
+    "Docclass variant: reviewer_docclass_v0 (KANBAN-090).",
+    "Docclass variant: reviewer_docclass_v2 (DMR-015, 6-token insurance).",
+)
+
+# =============================================================================
+# MAILROOM-PROMPTS LINEAGE (DMR-015, mailroom-corpus v8)
+# -----------------------------------------------------------------------------
+# Official chain-wide lineage for the renamed Lucius-Morningstar/mailroom-corpus
+# dataset (v8 six-token insurance subclass set: carrier/pde/outpatient/inpatient
+# + property/auto). Every agent in the classification chain registers a
+# ``{agent}_mailroom_prompts_v0`` key, derived from its frozen _docclass_v1
+# (or reviewer_v2) base by swapping the 4-token context for the 6-token
+# _DOCCONTEXT_V2 and re-stamping the marker. Frozen docclass_* keys stay
+# untouched. Registry keys carry `mailroom_prompts`, not `docclass`.
+# =============================================================================
+
+def _with_mailroom_prompts_context(text: str) -> str:
+    """Swap any docclass context block for its v8 six-token equivalent."""
+    if _DOCCONTEXT_V2 in text:
+        return text
+    if _DOCCONTEXT_V1 in text:
+        return text.replace(_DOCCONTEXT_V1, _DOCCONTEXT_V2)
+    if _DOCCONTEXT in text:
+        return text.replace(_DOCCONTEXT, _DOCCONTEXT_V2)
+    raise AssertionError("anchor drift: mailroom-prompts context missing")
+
+
+CONTRACTS_SPECIALIST_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    CONTRACTS_SPECIALIST_DOCCLASS_PROMPT_V1
+).replace(
+    _MARK_SPEC_CONTRACTS_V1,
+    "Docclass variant: contracts_specialist_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+CORPORATE_RECORDS_SPECIALIST_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    CORPORATE_RECORDS_SPECIALIST_DOCCLASS_PROMPT_V1
+).replace(
+    _MARK_SPEC_CORPORATE_V1,
+    "Docclass variant: corporate_records_specialist_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+DUE_DILIGENCE_SPECIALIST_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    DUE_DILIGENCE_SPECIALIST_DOCCLASS_PROMPT_V1
+).replace(
+    _MARK_SPEC_DD_V1,
+    "Docclass variant: due_diligence_specialist_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+CORRESPONDENCE_SPECIALIST_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    CORRESPONDENCE_SPECIALIST_DOCCLASS_PROMPT_V1
+).replace(
+    _MARK_SPEC_CORR_V1,
+    "Docclass variant: correspondence_specialist_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+COMPLIANCE_SPECIALIST_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    COMPLIANCE_SPECIALIST_DOCCLASS_PROMPT_V1
+).replace(
+    _MARK_SPEC_COMPL_V1,
+    "Docclass variant: compliance_specialist_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+COURT_OPINIONS_SPECIALIST_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    COURT_OPINIONS_SPECIALIST_DOCCLASS_PROMPT_V1
+).replace(
+    _MARK_SPEC_COURT_V1,
+    "Docclass variant: court_opinions_specialist_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+
+INSURANCE_CLAIMS_SPECIALIST_MAILROOM_PROMPTS_V0 = (
+    INSURANCE_CLAIMS_SPECIALIST_DOCCLASS_PROMPT_V1.replace(
+        "DOCLASS ARM CONTEXT (v1): claim documentation may arrive",
+        "DOCLASS ARM CONTEXT (mailroom-prompts v0, mailroom-corpus v8): claim "
+        "documentation may arrive — doc_subclass may be any of the six "
+        "claim-document types (carrier, pde, outpatient, inpatient, property, "
+        "auto)",
+    ).replace(
+        "Docclass variant: insurance_claims_specialist_docclass_v1 (KANBAN-101).",
+        "Docclass variant: insurance_claims_specialist_mailroom_prompts_v0 (mailroom-corpus v8).",
+    )
+)
+
+REVIEWER_MAILROOM_PROMPTS_V0 = REVIEWER_DOCCLASS_PROMPT_V2.replace(
+    "Docclass variant: reviewer_docclass_v2 (DMR-015, 6-token insurance).",
+    "Docclass variant: reviewer_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+
 _ARBITER_V1_EXTRA = (
     "Exhibit-vs-form: charter/bylaws/POA/rights-instrument BODY -> "
     "corporate_record even under an S-1/10-K wrapper; CMS claim tables -> "
     "insurance_claim; readable email/memo/invite text -> correspondence, "
-    "never unknown.\n"
+    "never `other` (the doc_subclass fallback key; `unknown` is not a valid token).\n"
 )
 
 ARBITER_DOCCLASS_PROMPT_V1 = ARBITER_DOCCLASS_PROMPT_V0.replace(
@@ -625,7 +734,7 @@ _BOSS_V1_EXTRA = (
     "4. Exhibit-vs-form: charter/bylaws/rights-instrument BODY -> "
     "corporate_record even with an SEC exhibit wrapper; CMS/DE-SynPUF claim "
     "tables -> insurance_claim; readable email/memo text -> correspondence, "
-    "not unknown.\n"
+    "never `other` (the doc_subclass fallback key; `unknown` is not a valid token).\n"
 )
 
 BOSS_DOCCLASS_PROMPT_V1 = BOSS_DOCCLASS_PROMPT_V0.replace(
@@ -636,7 +745,8 @@ BOSS_DOCCLASS_PROMPT_V1 = BOSS_DOCCLASS_PROMPT_V0.replace(
 _JUDGE_V1_EXTRA = (
     "3. Exhibit-vs-form: a charter/bylaws/POA/rights-instrument BODY is "
     "corporate_record even under an S-1/10-K wrapper; CMS claim tables are "
-    "insurance_claim; readable email/memo text is correspondence, not unknown.\n"
+    "insurance_claim; readable email/memo text is correspondence, never `other` "
+    "(the doc_subclass fallback key; `unknown` is not a valid token).\n"
 )
 
 JUDGE_DOCCLASS_PROMPT_V1 = JUDGE_DOCCLASS_PROMPT_V0.replace(
@@ -647,7 +757,8 @@ JUDGE_DOCCLASS_PROMPT_V1 = JUDGE_DOCCLASS_PROMPT_V0.replace(
 _JUDGE_CLASSIFICATION_V1_EXTRA = (
     "4. Exhibit-vs-form: a charter/bylaws/POA/rights-instrument BODY is "
     "corporate_record even under an S-1/10-K wrapper; CMS claim tables are "
-    "insurance_claim; readable email/memo text is correspondence, not unknown.\n"
+    "insurance_claim; readable email/memo text is correspondence, never `other` "
+    "(the doc_subclass fallback key; `unknown` is not a valid token).\n"
 )
 
 JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V1 = JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V0.replace(
@@ -659,6 +770,49 @@ JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V1 = JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V
 JUDGE_CORRECTNESS_DOCCLASS_PROMPT_V1 = JUDGE_CORRECTNESS_DOCCLASS_PROMPT_V0.replace(
     "Docclass variant: judge_correctness_docclass_v0 (KANBAN-090).",
     """LABEL CONSISTENCY (mandatory): extraction_correctness_label is DERIVED from your own field_verdicts — if every populated field's verdict is "correct", the label MUST be "accurate"; if any verdict is not "correct", the label MUST be "partial" or "inaccurate". Never write "fully correct" notes with a non-"accurate" label. Docclass variant: judge_correctness_docclass_v1 (KANBAN-101).""",
+)
+
+# =============================================================================
+# MAILROOM-PROMPTS LINEAGE — role variants (DMR-015, mailroom-corpus v8)
+# -----------------------------------------------------------------------------
+# Arbiter/judge/boss register their {agent}_mailroom_prompts_v0 keys here,
+# after their frozen _docclass_v1 bases. Context swap via
+# _with_mailroom_prompts_context (6-token _DOCCONTEXT_V2).
+# =============================================================================
+_ARBITER_MAILROOM_PROMPTS_EXTRA = (
+    "The insurance_claim class carries six claim-document subclasses — carrier, "
+    "pde, outpatient, inpatient (the CMS file types) plus property and auto "
+    "(the v8 LINE-OF-BUSINESS expansion).\n"
+)
+ARBITER_MAILROOM_PROMPTS_V0 = ARBITER_DOCCLASS_PROMPT_V1.replace(
+    "Docclass variant: arbiter_docclass_v1 (KANBAN-101).",
+    _ARBITER_MAILROOM_PROMPTS_EXTRA
+    + "Docclass variant: arbiter_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+
+JUDGE_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    JUDGE_DOCCLASS_PROMPT_V1
+).replace(
+    "Docclass variant: judge_docclass_v1 (KANBAN-101).",
+    "Docclass variant: judge_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+JUDGE_CLASSIFICATION_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V1
+).replace(
+    "Docclass variant: judge_classification_docclass_v1 (KANBAN-101).",
+    "Docclass variant: judge_classification_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+JUDGE_CORRECTNESS_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    JUDGE_CORRECTNESS_DOCCLASS_PROMPT_V1
+).replace(
+    "Docclass variant: judge_correctness_docclass_v1 (KANBAN-101).",
+    "Docclass variant: judge_correctness_mailroom_prompts_v0 (mailroom-corpus v8).",
+)
+BOSS_MAILROOM_PROMPTS_V0 = _with_mailroom_prompts_context(
+    BOSS_DOCCLASS_PROMPT_V1
+).replace(
+    "Docclass variant: boss_docclass_v1 (KANBAN-101).",
+    "Docclass variant: boss_mailroom_prompts_v0 (mailroom-corpus v8).",
 )
 
 # =============================================================================
@@ -698,16 +852,27 @@ _PILOT_CONTEXT = (
     "certificate_of_formation, charter_amendment, powers_of_attorney, "
     "subsidiary_list, rights_instrument, indenture, board_resolution, "
     "officer_certificate, other); correspondence -> communication type "
-    "(demand, attorney_demand, meeting_request, press_release, memo, email, "
-    "letter, notice); insurance_claim -> claim-document type (carrier, pde, "
+    "(demand, attorney_demand, meeting_request, voicemail, press_release, memo, email, "
+    "letter, notice, other); insurance_claim -> claim-document type (carrier, pde, "
     "outpatient, inpatient).\n"
 )
 
+# v1 pilot context — adds v8 LOB subclasses (property/auto) to the insurance
+# claim dimension (DMR-015). The base _PILOT_CONTEXT stays frozen.
+_PILOT_CONTEXT_V1 = _PILOT_CONTEXT.replace(
+    "insurance_claim -> claim-document type (carrier, pde, "
+    "outpatient, inpatient).\n",
+    "insurance_claim -> claim-document type (carrier, pde, "
+    "outpatient, inpatient, property, auto).\n",
+)
+
 def _with_pilot_context(text: str) -> str:
-    if _DOCCONTEXT in text:
-        return text.replace(_DOCCONTEXT, _PILOT_CONTEXT)
+    if _DOCCONTEXT_V2 in text:
+        return text.replace(_DOCCONTEXT_V2, _PILOT_CONTEXT_V1)
     if _DOCCONTEXT_V1 in text:
         return text.replace(_DOCCONTEXT_V1, _PILOT_CONTEXT)
+    if _DOCCONTEXT in text:
+        return text.replace(_DOCCONTEXT, _PILOT_CONTEXT)
     raise AssertionError("anchor drift: docclass context missing")
 
 
@@ -718,7 +883,7 @@ SORTER_DOCCLASS_PILOT_PROMPT_V0 = SORTER_DOCCLASS_PROMPT_V3.replace(
 
 38. INSURANCE CLAIM CLASS: claim documentation — FNOL forms, adjuster reports and estimates, demand packages, coverage determinations ("APPROVED"/"DENIED"/"PARTIAL"), reservation-of-rights letters, denial letters, EOB/Explanation-of-Benefits statements, Medicare Summary Notices, pharmacy benefit statements — is insurance_claim, NOT contract or correspondence, whatever wrapper it arrives in.
 
-39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the COMMUNICATION'S FUNCTION — demand (a party demands payment/performance), attorney_demand (demand issued by counsel on a law-firm letterhead), meeting_request, press_release, memo (internal memorandum, TO/FROM/RE header), email (informal message thread), letter (general business/legal letter), or notice (formal notice: annual-meeting, regulatory, default/termination).
+39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the COMMUNICATION'S FUNCTION — demand (a party demands payment/performance), attorney_demand (demand issued by counsel on a law-firm letterhead), meeting_request, voicemail (voicemail/VM transcription markers), press_release, memo (internal memorandum, TO/FROM/RE header), email (informal message thread), letter (general business/legal letter), notice (formal notice: annual-meeting, regulatory, default/termination), or other (no matching form — fallback bucket).
 
 40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE by issuer and setting — carrier (issued by the insurer/payer: coverage determinations, denials, reservation-of-rights, adjuster reports, Medicare Summary Notices, EOB adjudication summaries), pde (Prescription Drug Event records: Medicare Part D pharmacy statements/drug cost listings), outpatient (outpatient facility/provider claims), or inpatient (inpatient facility claims). A Medicare Summary Notice adjudicating physician/supplier services is carrier; a Medicare Part D pharmacy statement is pde.
 
@@ -746,7 +911,7 @@ merger_agreement. Never invent a class.""",
 ).replace(
     """- every other doc_type: null.""",
     """- correspondence: the COMMUNICATION'S FUNCTION — demand, attorney_demand, \
-meeting_request, press_release, memo, email, letter, or notice. Classify by \
+meeting_request, voicemail, press_release, memo, email, letter, notice, or other. Classify by \
 what the communication DOES, not its delivery format: an email carrying a \
 formal notice subclasses as notice, not email.
 - insurance_claim: the CLAIM-DOCUMENT TYPE by issuer and setting — carrier \
@@ -763,6 +928,24 @@ ARBITER_DOCCLASS_PILOT_PROMPT_V0 = ARBITER_DOCCLASS_PROMPT_V0.replace(
 JUDGE_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_DOCCLASS_PROMPT_V0)
 JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_CLASSIFICATION_DOCCLASS_PROMPT_V0)
 JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0 = _with_pilot_context(JUDGE_CORRECTNESS_DOCCLASS_PROMPT_V0)
+
+# pilot_v1 (hub#43): dual-taxonomy repair. PILOT_PROMPT_V0 swapped the PILOT
+# 5-class context block but its role rules still graded the EXTENDED 8-class
+# set (due_diligence / compliance_filing / court_opinion cannot occur on the
+# pilot surface). Mirror of the reviewer/arbiter pilot fix; V0 stays frozen
+# experiment identity.
+JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V1 = JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0.replace(
+    """1. You are grading the docclass chain itself: judge doc_type AND \
+doc_subclass against the EXTENDED primary set — contract, \
+corporate_record, due_diligence, correspondence, compliance_filing, \
+court_opinion, insurance_claim, merger_agreement.""",
+    """1. You are grading the docclass chain itself: judge doc_type AND \
+doc_subclass against the PILOT primary set — contract, corporate_record, \
+correspondence, insurance_claim, merger_agreement.""",
+).replace(
+    """3. expected_class must be an exact key from the extended list; leave it """,
+    """3. expected_class must be an exact key from the pilot list; leave it """,
+)
 
 # pilot_v1: label-consistency repair. Baseline benches (pilot-140 insurance,
 # clean GT copies) showed the judge writing all-"correct" field verdicts and
@@ -896,6 +1079,7 @@ DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     "insurance_claims_specialist_docclass_v1": INSURANCE_CLAIMS_SPECIALIST_DOCCLASS_PROMPT_V1,
     "reviewer_docclass_v0": REVIEWER_DOCCLASS_PROMPT_V0,
     "reviewer_docclass_v1": REVIEWER_DOCCLASS_PROMPT_V1,
+    "reviewer_docclass_v2": REVIEWER_DOCCLASS_PROMPT_V2,
     "arbiter_docclass_v0": ARBITER_DOCCLASS_PROMPT_V0,
     "arbiter_docclass_v1": ARBITER_DOCCLASS_PROMPT_V1,
     # Derived judgment/escalation variants
@@ -916,6 +1100,7 @@ DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     "arbiter_docclass_pilot_v0": ARBITER_DOCCLASS_PILOT_PROMPT_V0,
     "judge_docclass_pilot_v0": JUDGE_DOCCLASS_PILOT_PROMPT_V0,
     "judge_classification_docclass_pilot_v0": JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0,
+    "judge_classification_docclass_pilot_v1": JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V1,
     "judge_correctness_docclass_pilot_v0": JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V0,
     "judge_correctness_docclass_pilot_v1": JUDGE_CORRECTNESS_DOCCLASS_PILOT_PROMPT_V1,
     "boss_docclass_pilot_v0": BOSS_DOCCLASS_PILOT_PROMPT_V0,
@@ -929,4 +1114,20 @@ DOCCLASS_PROMPT_VERSIONS: dict[str, str] = {
     # Mailroom naming convention (HUB-041): NEW keys carry `mailroom`, not
     # `docclass` (dataset rename docclass-merged -> mailroom-corpus, HUB-023).
     "sorter_mailroom_pilot_v0": SORTER_MAILROOM_PILOT_PROMPT_V0,
+    # mailroom_prompts lineage (DMR-015, mailroom-corpus v8): official
+    # chain-wide six-token insurance subclass set for the renamed corpus.
+    "sorter_mailroom_prompts_pilot_v0": SORTER_MAILROOM_PILOT_PROMPT_V0,
+    "contracts_specialist_mailroom_prompts_v0": CONTRACTS_SPECIALIST_MAILROOM_PROMPTS_V0,
+    "corporate_records_specialist_mailroom_prompts_v0": CORPORATE_RECORDS_SPECIALIST_MAILROOM_PROMPTS_V0,
+    "due_diligence_specialist_mailroom_prompts_v0": DUE_DILIGENCE_SPECIALIST_MAILROOM_PROMPTS_V0,
+    "correspondence_specialist_mailroom_prompts_v0": CORRESPONDENCE_SPECIALIST_MAILROOM_PROMPTS_V0,
+    "compliance_specialist_mailroom_prompts_v0": COMPLIANCE_SPECIALIST_MAILROOM_PROMPTS_V0,
+    "court_opinions_specialist_mailroom_prompts_v0": COURT_OPINIONS_SPECIALIST_MAILROOM_PROMPTS_V0,
+    "insurance_claims_specialist_mailroom_prompts_v0": INSURANCE_CLAIMS_SPECIALIST_MAILROOM_PROMPTS_V0,
+    "reviewer_mailroom_prompts_v0": REVIEWER_MAILROOM_PROMPTS_V0,
+    "arbiter_mailroom_prompts_v0": ARBITER_MAILROOM_PROMPTS_V0,
+    "judge_mailroom_prompts_v0": JUDGE_MAILROOM_PROMPTS_V0,
+    "judge_classification_mailroom_prompts_v0": JUDGE_CLASSIFICATION_MAILROOM_PROMPTS_V0,
+    "judge_correctness_mailroom_prompts_v0": JUDGE_CORRECTNESS_MAILROOM_PROMPTS_V0,
+    "boss_mailroom_prompts_v0": BOSS_MAILROOM_PROMPTS_V0,
 }

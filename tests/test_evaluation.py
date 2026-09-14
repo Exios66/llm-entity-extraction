@@ -67,6 +67,21 @@ def test_manifest_metadata_mismatch_rejected(tmp_path):
         ManifestStore(path, {"a": 2})
 
 
+def test_manifest_class_set_flip_is_not_silently_reused(tmp_path):
+    """hub#51: a pilot run must not silently resume an extended run (or vice
+    versa) — the same dataset + prompt + model with a different class_set is
+    a different output contract, so the manifest header must refuse reuse."""
+    path = tmp_path / "run.jsonl"
+    base = {"experiment_name": "x", "dataset_fingerprint": "fp", "model": "m",
+            "prompt_version": "sorter_docclass_pilot_v3", "input_mode": "text"}
+    ManifestStore(path, {**base, "class_set": "pilot"}).initialize()
+    with pytest.raises(ValueError, match="does not match"):
+        ManifestStore(path, {**base, "class_set": "extended"})
+    # same class_set reuses cleanly
+    reloaded = ManifestStore(path, {**base, "class_set": "pilot"})
+    assert reloaded.reused is True
+
+
 # ---------------------------------------------------------------------------
 # Adaptive concurrency (sample-size scaling) + rate-limit retry
 # ---------------------------------------------------------------------------

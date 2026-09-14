@@ -47,6 +47,11 @@ from src.langfuse_config import LangfuseConfig, load_langfuse_config
 
 logger = structlog.get_logger(__name__)
 
+# hub#63: mirrors phoenix_tracing._OMIT_LABEL — callers pass label=None for
+# calibration metrics. Langfuse ignores the verdict either way (no label field
+# in its score model); the sentinel keeps one uniform score() signature.
+_OMIT_LABEL = object()
+
 TRACE_ID_LENGTH = 32
 
 
@@ -93,12 +98,17 @@ class TraceHandle:
             logger.warning("langfuse_trace_output_failed", trace_id=self.trace_id)
 
     def score(self, name: str, value: float, comment: str = "",
-              observation_id: str | None = None) -> None:
+              observation_id: str | None = None, *, label: object = _OMIT_LABEL) -> None:
         """Log one deterministic logic score against the document's trace.
 
         ``observation_id`` pins the score to a specific observation (e.g. an
         agent's span) instead of the whole trace — the per-agent task scores
         (sorter, contracts_specialist) attach to their own spans.
+
+        ``label`` mirrors the phoenix_tracing contract (a correctness verdict
+        for accuracy metrics, None for calibration) and is ignored by Langfuse,
+        whose score model has no label field — it exists so callers can use
+        one uniform signature across both tracers (hub#63).
         """
         if self.disabled or self._client is None:
             return
@@ -144,8 +154,13 @@ class AgentHandle:
         except Exception:  # noqa: BLE001 - observability must never break the run
             logger.warning("langfuse_agent_output_failed", trace_id=self.trace_id)
 
-    def score(self, name: str, value: float, comment: str = "") -> None:
-        """Log one deterministic logic score against the AGENT's observation."""
+    def score(self, name: str, value: float, comment: str = "",
+              *, label: object = _OMIT_LABEL) -> None:
+        """Log one deterministic logic score against the AGENT's observation.
+
+        ``label`` mirrors the phoenix_tracing contract (uniform signature,
+        ignored by Langfuse — its score model has no label field; hub#63).
+        """
         if self.disabled or self._client is None or not self.observation_id:
             return
         try:

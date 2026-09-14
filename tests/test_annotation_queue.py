@@ -23,11 +23,11 @@ from scripts.eval.run_annotation_queue import (
 def _sorter_trace(trace_id: str, doc_type_ok: bool, subtype_ok: bool,
                   session: str = "qwen3.7-flash_sorter_v6_subtype_langfuse",
                   version: str = "sorter_v6", filename: str | None = None,
-                  timestamp: str = "2026-08-12T19:50:39.000Z") -> dict:
+                  timestamp: str | None = None) -> dict:
     return {
         "id": trace_id,
         "name": "subtype_classification",
-        "timestamp": timestamp,
+        "timestamp": timestamp or _now_iso(),
         "sessionId": session,
         "input": {
             "filename": filename or f"sort_{trace_id}.txt",
@@ -45,13 +45,21 @@ def _sorter_trace(trace_id: str, doc_type_ok: bool, subtype_ok: bool,
     }
 
 
+def _now_iso(days_back: int = 2) -> str:
+    from datetime import datetime, timedelta, timezone
+
+    return (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime(
+        "%Y-%m-%dT%H:%M:%S.000Z"
+    )
+
+
 def _trace(trace_id: str, score: float | None, session: str = "qwen_contracts_specialist_v18_extraction_langfuse_50",
            version: str = "contracts_specialist_v18",
-           filename: str | None = None, timestamp: str = "2026-08-12T19:50:39.000Z") -> dict:
+           filename: str | None = None, timestamp: str | None = None) -> dict:
     return {
         "id": trace_id,
         "name": "contract_entity_extraction",
-        "timestamp": timestamp,
+        "timestamp": timestamp or _now_iso(),
         "sessionId": session,
         "input": {
             "filename": filename or f"doc_{trace_id}.txt",

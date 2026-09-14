@@ -28,7 +28,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "PyYAML>=6.0",
     "structlog>=24.0",
-    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.10.0",
+    "llm-dojo-scoring @ git+https://github.com/Exios66/llm-dojo-scoring.git@v0.15.0",
 ]
 
 # Purpose-scoped batches mirroring requirements/<batch>.txt (KANBAN-081).
@@ -64,7 +64,7 @@ notebooks = [
 # only — the runtime eval pipeline never imports modal. Install with:
 #   pip install -e ".[deploy]"
 deploy = [
-    "modal>=0.73",
+    "modal==1.5.5",
 ]
 dev = [
     "pytest>=8.0",
@@ -90,7 +90,7 @@ packages = ["agents", "src", "config"]
 config = ["*.yaml"]
 
 # Monorepo dev: resolve the shared scoring engine from the workspace instead
-# of the release git pin above (bumped 0.10.0 -> workspace 0.13.0 in dev).
+# of the release git pin above (bumped 0.10.0 -> workspace 0.14.0 in dev).
 # Plain `pip install .` keeps using the pin.
 [tool.uv.sources]
 llm-dojo-scoring = { workspace = true }

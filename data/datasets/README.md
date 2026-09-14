@@ -4,7 +4,7 @@
 
 The merged docclass corpus: every document the hierarchical sorter eval
 (KANBAN-033) classifies, in ONE dataset. The Hub-published versions live at
-[`Lucius-Morningstar/mailroom-corpus`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-corpus)
+[`Lucius-Morningstar/mailroom-dataset`](https://huggingface.co/datasets/Lucius-Morningstar/mailroom-dataset)
 (parquet shards, `default` = blind / `ground_truth` = answer keys / `files` =
 upstream originals); the local JSONL dumps are the builder staging artifacts.
 

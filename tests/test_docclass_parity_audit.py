@@ -98,13 +98,50 @@ def test_champion_and_pilot_prompts_list_all_schema_subclass_keys():
     for key in pilot_enum:
         assert key in mailroom_pilot, f"sorter_mailroom_pilot_v0 missing {key!r}"
 
+    # DMR-015 mailroom_prompts lineage (mailroom-corpus v8): every sorter
+    # surface teaches the full six-token insurance subclass set.
+    for key, full_enum in (
+        ("sorter_mailroom_prompts_v0", enum),
+        ("sorter_mailroom_prompts_vision_v0", enum),
+        ("sorter_mailroom_prompts_pilot_v0", pilot_enum),
+    ):
+        p = get_prompt(key)
+        for skey in full_enum:
+            assert skey in p, f"{key} missing {skey!r}"
+
+
+def test_mailroom_prompts_lineage_teaches_all_six_tokens():
+    """DMR-015: every {agent}_mailroom_prompts_v0 variant (specialists,
+    reviewer, arbiter, judges, boss) teaches the v8 six-token insurance
+    subclass set — the renamed mailroom-corpus corpus."""
+    six_tokens = {"carrier", "pde", "outpatient", "inpatient", "property", "auto"}
+    keys = [
+        "contracts_specialist_mailroom_prompts_v0",
+        "corporate_records_specialist_mailroom_prompts_v0",
+        "due_diligence_specialist_mailroom_prompts_v0",
+        "correspondence_specialist_mailroom_prompts_v0",
+        "compliance_specialist_mailroom_prompts_v0",
+        "court_opinions_specialist_mailroom_prompts_v0",
+        "insurance_claims_specialist_mailroom_prompts_v0",
+        "reviewer_mailroom_prompts_v0",
+        "arbiter_mailroom_prompts_v0",
+        "judge_mailroom_prompts_v0",
+        "judge_classification_mailroom_prompts_v0",
+        "judge_correctness_mailroom_prompts_v0",
+        "boss_mailroom_prompts_v0",
+    ]
+    for key in keys:
+        p = get_prompt(key)
+        for token in six_tokens:
+            assert token in p, f"{key} missing {token!r}"
+
 
 def test_scoring_md_documents_docclass_metric_names():
     text = Path("docs/SCORING.md").read_text(encoding="utf-8")
     section = text.split("## 7. Docclass hierarchical metrics")[1].split("## 8.")[0]
     for name in DOCCLASS_HEADLINE_METRICS:
         assert name in section, f"SCORING.md §7 missing {name!r}"
-    assert "1,210 rows" in section
+    assert "3,302 rows" in section
     assert "8 primary classes" in section or "8-class" in section
 
 
@@ -119,3 +156,48 @@ def test_classify_failure_none_subclass_is_not_subclass_miss():
     from src.dojo_compat import classify_failure
 
     assert classify_failure(True, None, None) is None
+
+
+def test_pilot_schema_aligns_with_active_pilot_prompt_vocabulary():
+    """hub#51: the pilot schema's doc_subclass enum must match what the ACTIVE
+    pilot sorter prompt (the mailroom lineage) actually teaches. The frozen
+    pre-v8 docclass pilot lineage (v0..v3) is expected to carry the pre-v8 key
+    set only (pinned separately below) — the schema speaks for the live surface.
+    """
+    pilot_enum = set(DOCCLASS_PILOT_SCHEMA["properties"]["doc_subclass"]["enum"])
+    assert pilot_enum == set(DOC_SUBCLASS_KEYS)
+
+    # The ACTIVE pilot sorter (mailroom lineage, v8+ LOB) teaches every token
+    # the pilot schema can emit.
+    mailroom_pilot = get_prompt("sorter_mailroom_pilot_v0")
+    for key in pilot_enum:
+        assert key in mailroom_pilot, f"sorter_mailroom_pilot_v0 missing {key!r}"
+
+    # The frozen docclass pilot lineage predates the LOB tokens: it must teach
+    # the pre-v8 key set and NEVER claim property/auto (pinned, not mutated).
+    frozen = get_prompt("sorter_docclass_pilot_v3")
+    lob = {"property", "auto"}
+    for key in pilot_enum - lob:
+        assert key in frozen, f"sorter_docclass_pilot_v3 missing {key!r}"
+    assert "property" not in frozen.split("INSURANCE CLAIM SUBCLASS")[1][:600]
+
+
+def test_prompts_name_real_fallback_other_never_unknown():
+    """hub#51: the doc_subclass fallback key is `other`; `unknown` is not a
+    schema token and must never be taught as one. Every docclass prompt that
+    instructs against the fallback must name `other`, and no registered prompt
+    text may contain the phantom `unknown` token."""
+    from src.prompts_docclass import DOCCLASS_PROMPT_VERSIONS
+
+    fallback_key = "other"
+    samples = ["sorter_docclass_v7", "sorter_docclass_pilot_v3",
+               "judge_docclass_v1", "judge_classification_docclass_v1",
+               "arbiter_docclass_v1", "boss_docclass_v1"]
+    for name in samples:
+        text = DOCCLASS_PROMPT_VERSIONS[name]
+        # the fallback key is taught; the phantom `unknown` token either never
+        # appears or appears ONLY as an explicit prohibition (never a valid
+        # option the model is invited to emit)
+        assert fallback_key in text, f"{name} must teach the `other` fallback"
+        if "unknown" in text:
+            assert "not a valid token" in text, f"{name} must name `unknown` only as a prohibition"

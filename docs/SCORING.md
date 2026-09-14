@@ -8,7 +8,7 @@ the run manifests, and `reports/experiment_log.jsonl` never disagree.
 ## 0. Where the scoring lives — the `llm-dojo-scoring` package
 
 The scoring definitions are **outsourced to the `llm-dojo-scoring` package**
-(KANBAN-044 / KANBAN-047, pinned `@v0.10.0` in `pyproject.toml` +
+(KANBAN-044 / KANBAN-047, pinned `.15.0` in `pyproject.toml` +
 `requirements.txt`), the **single source shared with llm-mailroom**. The local
 `src/` modules are thin re-export shims so every import site (eval runners,
 reporting scripts, tests, and llm-mailroom's `pip install -e .` imports) keeps
@@ -52,7 +52,7 @@ llm_dojo_scoring.cli`).
 ### 0.1 The unified scoring layer & the score-emitter bridge (v0.19.0+)
 
 Since KANBAN-061 the package also owns this repo's metric **infrastructure**
-(pinned `@v0.5.1` at adoption, current pin `@v0.10.0`); calculations are
+(pinned `@v0.5.1` at adoption, current pin `.15.0`); calculations are
 untouched — Hungarian matching, embedding rescue, bootstrap CI and CUAD
 equivalences all live upstream unchanged:
 
@@ -336,8 +336,8 @@ The hierarchical sorter task scores BOTH the primary `doc_type` and the
 second-level `doc_subclass` dimension (consideration type for merger
 agreements — MAUD expert GT; record type for corporate records —
 content-detected; communication type for correspondence; claim-document type
-for insurance_claim). The **extended** merged surface is the schema v5
-`mailroom-corpus` corpus — **1,210 rows / 8 primary classes**
+for insurance_claim). The **extended** merged surface is the
+`mailroom-dataset` corpus — **3,302 rows / 8 primary classes**
 (`data/datasets/docclass_merged.jsonl`, `DOCCLASS_SCHEMA`). The **pilot**
 surface is the 5-class docclass-pilot subset (138 stratified rows,
 `DOCCLASS_PILOT_SCHEMA`) with four second-level dimensions taught by

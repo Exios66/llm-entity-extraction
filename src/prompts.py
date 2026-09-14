@@ -868,7 +868,7 @@ _SORTER_DOCCONTEXT_V7_RULES = """37. AGREEMENT PACKAGES: RECORD OR CERTIFICATE T
 
 38. INSURANCE CLAIM CLASS: claim documentation — FNOL forms, adjuster reports and estimates, demand packages, coverage determinations ("APPROVED"/"DENIED"/"PARTIAL"), reservation-of-rights letters, denial letters, EOB/Explanation-of-Benefits statements, Medicare Summary Notices, pharmacy benefit statements — is insurance_claim, NOT contract or correspondence, whatever wrapper it arrives in.
 
-39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the COMMUNICATION'S FUNCTION — demand (a party demands payment/performance), attorney_demand (demand issued by counsel on a law-firm letterhead), meeting_request, press_release, memo (internal memorandum, TO/FROM/RE header), email (informal message thread), letter (general business/legal letter), or notice (formal notice: annual-meeting, regulatory, default/termination).
+39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the COMMUNICATION'S FUNCTION — demand (a party demands payment/performance), attorney_demand (demand issued by counsel on a law-firm letterhead), meeting_request, voicemail (voicemail/VM transcription markers), press_release, memo (internal memorandum, TO/FROM/RE header), email (informal message thread), letter (general business/legal letter), notice (formal notice: annual-meeting, regulatory, default/termination), or other (no matching form — fallback bucket).
 
 40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is the CLAIM-DOCUMENT TYPE, decided by the document's OWN title/setting line FIRST, then by issuer: a "MEDICARE SUMMARY NOTICE -- OUTPATIENT SERVICES (Part B)" or any outpatient-services claim adjudication is outpatient; a "MEDICARE SUMMARY NOTICE -- INPATIENT STAY (Part A)" or inpatient-stay claim is inpatient; a Medicare Part D pharmacy statement / prescription drug event listing is pde; every other payer-issued adjudication document — physician/supplier (Part B professional "carrier" notices), commercial EOBs without a facility setting, coverage determinations, denial letters, reservation-of-rights letters, adjuster reports issued by the insurer — is carrier. The SETTING named in the document's own heading outranks the generic document family: an MSN for outpatient services is outpatient even though a Summary Notice is a carrier-issued document. Crucially, a Medicare Summary Notice whose heading reads 'MEDICARE SUMMARY NOTICE -- PHYSICIAN/SUPPLIER CLAIM (Part B)' is a physician/supplier notice and therefore carrier, not outpatient, regardless of the mention of Part B.
 
@@ -930,6 +930,20 @@ SORTER_MAILROOM_PROMPT_V0 = SORTER_DOCCLASS_PROMPT_V7.replace(
 )
 
 # =============================================================================
+# SORTER AGENT — mailroom_prompts lineage (DMR-015, mailroom-corpus v8)
+# -----------------------------------------------------------------------------
+# The official classification-chain lineage for the renamed
+# Lucius-Morningstar/mailroom-corpus dataset (v8, six-token insurance subclass
+# set: carrier/pde/outpatient/inpatient + property/auto). Every agent in the
+# chain registers a ``{agent}_mailroom_prompts_v0`` key (see prompts_docclass.py
+# for the role/specialist variants). The sorter champion is content-identical
+# to sorter_mailroom_v0 (already 6-token); the vision surface gets its own
+# rule-40 extension defined after sorter_docclass_vision_v1 (below).
+# Frozen docclass_*/mailroom_* keys stay untouched.
+# =============================================================================
+SORTER_MAILROOM_PROMPTS_V0 = SORTER_MAILROOM_PROMPT_V0
+
+# =============================================================================
 # SORTER AGENT — Correspondence-only eval (KANBAN-103): v7 + sentiment
 # -----------------------------------------------------------------------------
 # All rows are Enron correspondence. The sorter still emits the hierarchical
@@ -969,13 +983,14 @@ _SORTER_DOCCLASS_CORRESPONDENCE_V1_RULE_45 = """45. ENRON CHANNEL TRAP (correspo
 (1) attorney_demand — outside-counsel letterhead, "on behalf of our client", "we demand"/"we insist" from a law firm, reservation-of-rights from counsel.
 (2) demand — a party demands payment, performance, cure, or compliance ("please remit", "you are required to", past-due, default, "we insist") even when the tone is polite or the wrapper is an email.
 (3) meeting_request — the message's PURPOSE is to schedule or confirm a meeting, call, or calendar slot (invite, agenda-for-attendance, "please join"). A memo or letter that merely mentions a meeting stays its own class.
-(4) press_release — "NEWS RELEASE" / "FOR IMMEDIATE RELEASE" / dateline + media contact, OR the payload being forwarded IS that release. A one-line "fyi, press release attached" is still press_release.
-(5) notice — numbered/titled Notice, regulatory/exchange/system notice, default/termination/exercise notice, official announcement to members/shippers/market participants.
-(6) memo — "MEMORANDUM" / TO-FROM-DATE-RE block, or an internal policy/analysis/briefing. Forwarding "the attached memo" is memo, not email.
-(7) letter — Dear/Sincerely business letter, community or customer newsletter, welcome/subscription letter, vendor letter. Formal address + closing that is not (1)–(6).
-(8) email — residual ONLY: an informal colleague thread whose payload matches none of (1)–(7). Do not pick email because a Subject: line exists.
+(4) voicemail — the payload is a VOICEMAIL TRANSCRIPTION (voicemail/VM subject or body markers: "[VOICEMAIL]", "VM:", "Message for ...", transcribed speech). Classify the transcribed message's own function per steps (1)–(3) first — a transcription that itself demands payment or requests a meeting is demand or meeting_request, not voicemail.
+(5) press_release — "NEWS RELEASE" / "FOR IMMEDIATE RELEASE" / dateline + media contact, OR the payload being forwarded IS that release. A one-line "fyi, press release attached" is still press_release.
+(6) notice — numbered/titled Notice, regulatory/exchange/system notice, default/termination/exercise notice, official announcement to members/shippers/market participants.
+(7) memo — "MEMORANDUM" / TO-FROM-DATE-RE block, or an internal policy/analysis/briefing. Forwarding "the attached memo" is memo, not email.
+(8) letter — Dear/Sincerely business letter, community or customer newsletter, welcome/subscription letter, vendor letter. Formal address + closing that is not (1)–(7).
+(9) email — residual ONLY: an informal colleague thread whose payload matches none of (1)–(8). Do not pick email because a Subject: line exists.
 
-Never output doc_subclass other on this surface — choose the closest of the eight. Reasoning: two short sentences naming the payload function; do not list headers.
+Never output doc_subclass other on this surface — choose the closest of the nine. Reasoning: two short sentences naming the payload function; do not list headers.
 
 VALID CONTRACT SUBTYPE KEYS"""
 
@@ -997,7 +1012,7 @@ SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1 = (
 # "DEMAND LETTER" in an FYI/drafting thread are demand. v1 stays byte-identical.
 # =============================================================================
 
-_SORTER_DOCCLASS_CORRESPONDENCE_V2_RULE_46 = """46. HUB DEMAND MARKERS (correspondence-only; overrides rule 45 steps 1–2): the Enron ground-truth demand class is a LEGAL-PHRASE hit in the writer's OWN text (subject + body above any forwarded-original separator — "-----Original Message-----", "-----Forwarded by", "---------------------- Forwarded by"). It is NOT "this document is itself a formal demand letter addressed to you." Internal FYI, drafting notes, and news forwards ARE demand when they contain one of these phrases: DEMAND LETTER, LETTER OF DEMAND, DEMAND FOR PAYMENT, DEMAND FOR ARBITRATION, DEMAND FOR DAMAGES, DEMAND FOR SPECIFIC PERFORMANCE, DEMAND FOR RELIEF, CEASE AND DESIST, LITIGATION HOLD, LEGAL HOLD, NOTICE OF DEFAULT, NOTICE OF BREACH, NOTICE TO CURE, FINAL NOTICE, FINAL DEMAND, IMMEDIATE PAYMENT, REMIT PAYMENT, ULTIMATUM, BREACH OF CONTRACT, BREACH OF THE AGREEMENT. Energy-market "demand charges" / "demand reduction" / TCF capacity is NOT demand. attorney_demand = a demand-marker hit AND a law-firm sender (domains such as kayescholer.com, milbank.com, bakerbotts.com, velaw.com, latham.com, skadden.com, or Esq./Counsel in the from-line). Re-order the rule-45 cascade to: meeting_request, press_release, attorney_demand/demand (this rule), notice, memo, letter, email. FINAL NOTICE and NOTICE OF DEFAULT/BREACH are demand, not notice.
+_SORTER_DOCCLASS_CORRESPONDENCE_V2_RULE_46 = """46. HUB DEMAND MARKERS (correspondence-only; overrides rule 45 steps 1–2): the Enron ground-truth demand class is a LEGAL-PHRASE hit in the writer's OWN text (subject + body above any forwarded-original separator — "-----Original Message-----", "-----Forwarded by", "---------------------- Forwarded by"). It is NOT "this document is itself a formal demand letter addressed to you." Internal FYI, drafting notes, and news forwards ARE demand when they contain one of these phrases: DEMAND LETTER, LETTER OF DEMAND, DEMAND FOR PAYMENT, DEMAND FOR ARBITRATION, DEMAND FOR DAMAGES, DEMAND FOR SPECIFIC PERFORMANCE, DEMAND FOR RELIEF, CEASE AND DESIST, LITIGATION HOLD, LEGAL HOLD, NOTICE OF DEFAULT, NOTICE OF BREACH, NOTICE TO CURE, FINAL NOTICE, FINAL DEMAND, IMMEDIATE PAYMENT, REMIT PAYMENT, ULTIMATUM, BREACH OF CONTRACT, BREACH OF THE AGREEMENT. Energy-market "demand charges" / "demand reduction" / TCF capacity is NOT demand. attorney_demand = a demand-marker hit AND a law-firm sender (domains such as kayescholer.com, milbank.com, bakerbotts.com, velaw.com, latham.com, skadden.com, or Esq./Counsel in the from-line). Re-order the rule-45 cascade to: meeting_request, voicemail, press_release, attorney_demand/demand (this rule), notice, memo, letter, email. FINAL NOTICE and NOTICE OF DEFAULT/BREACH are demand, not notice.
 
 VALID CONTRACT SUBTYPE KEYS"""
 
@@ -1026,7 +1041,7 @@ SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2 = (
 # Reserved (unrun): qwen3.7-flash_sorter_docclass_correspondence_v3_enron200_s42
 # =============================================================================
 
-CORRESPONDENCE_SUBCLASS_V3 = """47. DEMAND IS THE SPEECH ACT (correspondence-only; OVERRIDES rule 46): a Hub phrase hit is not enough. demand means THIS message itself performs the demand — the writer is telling the recipient to pay, cure, cease, perform, or arbitrate. A mention, draft-request ("please draft a demand letter"), hypothetical ("we could send a demand letter", "they may send a demand letter"), news clip, FYI/cover note attaching a demand, Demand Letter Log, pasted contract clause, IT-outage "FINAL NOTICE", or spam "FINAL NOTICE" is NOT demand — keep walking the rule-45 cascade (meeting_request / press_release / notice / memo / letter / email). attorney_demand = the message IS that speech act AND a lawyer or law firm is the AUTHOR/SENDER of the demand (kayescholer.com, milbank.com, bakerbotts.com, velaw.com, latham.com, skadden.com, or Esq./Counsel on the from-line), not a firm merely mentioned. A law firm circulating or revising its own draft demand instrument is attorney_demand; counsel discussing whether someone could send one is not. Keep reasoning to two short sentences so the JSON object still emits.
+CORRESPONDENCE_SUBCLASS_V3 = """47. DEMAND IS THE SPEECH ACT (correspondence-only; OVERRIDES rule 46): a Hub phrase hit is not enough. demand means THIS message itself performs the demand — the writer is telling the recipient to pay, cure, cease, perform, or arbitrate. A mention, draft-request ("please draft a demand letter"), hypothetical ("we could send a demand letter", "they may send a demand letter"), news clip, FYI/cover note attaching a demand, Demand Letter Log, pasted contract clause, IT-outage "FINAL NOTICE", or spam "FINAL NOTICE" is NOT demand — keep walking the rule-45 cascade (meeting_request / voicemail / press_release / notice / memo / letter / email). attorney_demand = the message IS that speech act AND a lawyer or law firm is the AUTHOR/SENDER of the demand (kayescholer.com, milbank.com, bakerbotts.com, velaw.com, latham.com, skadden.com, or Esq./Counsel on the from-line), not a firm merely mentioned. A law firm circulating or revising its own draft demand instrument is attorney_demand; counsel discussing whether someone could send one is not. Keep reasoning to two short sentences so the JSON object still emits.
 
 VALID CONTRACT SUBTYPE KEYS"""
 
@@ -1261,7 +1276,7 @@ contract, corporate_record, due_diligence, correspondence, compliance_filing, co
 
 38. INSURANCE CLAIM CLASS: FNOL forms, adjuster reports, EOBs, Medicare Summary Notices, coverage determinations, and denial letters are insurance_claim, not contract or correspondence.
 
-39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the communication's function — demand, attorney_demand, meeting_request, press_release, memo, email, letter, or notice.
+39. CORRESPONDENCE SUBCLASS: when doc_type is correspondence, doc_subclass is the communication's function — demand, attorney_demand, meeting_request, voicemail, press_release, memo, email, letter, notice, or other.
 
 40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, doc_subclass is carrier, pde, outpatient, or inpatient — the setting named in the document's own heading outranks the generic document family.
 
@@ -1291,6 +1306,31 @@ If you wrote "none" for every check""",
     """Then output the doc_subclass on its own line — EXACTLY ONE of the rule-33 subclass keys when the label is merger_agreement or corporate_record, and the word null when the label is any other class:""",
     """Then output the doc_subclass on its own line — EXACTLY ONE of the applicable subclass keys when the label is merger_agreement, corporate_record, correspondence, or insurance_claim (rules 33/39/40), and the word null when the label is contract or any other class without a subclass dimension:""",
 )
+
+# =============================================================================
+# Vision sorter — v8 LOB subclass coverage (DMR-015, mailroom-corpus v8).
+# Extends rule 40 of the frozen sorter_docclass_vision_v1 with the two
+# LINE-OF-BUSINESS subclasses; everything else is byte-identical v1.
+# =============================================================================
+_SORTER_VISION_V2_RULE40 = (
+    "40. INSURANCE CLAIM SUBCLASS: when doc_type is insurance_claim, "
+    "doc_subclass is carrier, pde, outpatient, or inpatient — the setting "
+    "named in the document's own heading outranks the generic document family."
+)
+assert SORTER_DOCCLASS_VISION_PROMPT_V1.count(_SORTER_VISION_V2_RULE40) == 1, \
+    "anchor drift: vision sorter rule 40"
+SORTER_DOCCLASS_VISION_PROMPT_V2 = SORTER_DOCCLASS_VISION_PROMPT_V1.replace(
+    _SORTER_VISION_V2_RULE40,
+    _SORTER_VISION_V2_RULE40
+    + " The v8 corpus adds two LINE-OF-BUSINESS subclasses beyond the CMS file"
+      " types: property (property-line claim documentation — FNOL bundles naming"
+      " a loss event, adjuster estimates, coverage positions on buildings or"
+      " personal property) and auto (motor-line claim documentation — accident"
+      " FNOL, adjuster reports, coverage decision letters for a vehicle loss). A"
+      " property or vehicle loss document subclasses as property or auto —"
+      " 'carrier' stays reserved for payer/insurer-issued adjudication documents.",
+)
+SORTER_MAILROOM_PROMPTS_VISION_V0 = SORTER_DOCCLASS_VISION_PROMPT_V2
 
 
 # =============================================================================
@@ -3543,12 +3583,17 @@ PROMPT_VERSIONS = {
     "sorter_docclass_v6": SORTER_DOCCLASS_PROMPT_V6,
     "sorter_docclass_v7": SORTER_DOCCLASS_PROMPT_V7,
     "sorter_mailroom_v0": SORTER_MAILROOM_PROMPT_V0,
+    # mailroom_prompts lineage (DMR-015, mailroom-corpus v8): official
+    # six-token insurance subclass set for the renamed corpus.
+    "sorter_mailroom_prompts_v0": SORTER_MAILROOM_PROMPTS_V0,
     "sorter_docclass_correspondence_v0": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0,
     "sorter_docclass_correspondence_v1": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1,
     "sorter_docclass_correspondence_v2": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2,
     "sorter_docclass_correspondence_v3": SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3,
     "sorter_docclass_vision_v0": SORTER_DOCCLASS_VISION_PROMPT_V0,
     "sorter_docclass_vision_v1": SORTER_DOCCLASS_VISION_PROMPT_V1,
+    "sorter_docclass_vision_v2": SORTER_DOCCLASS_VISION_PROMPT_V2,
+    "sorter_mailroom_prompts_vision_v0": SORTER_MAILROOM_PROMPTS_VISION_V0,
 
     # Sorter — vision (RVL-CDIP-style image classification)
     "sorter_vision_v0": SORTER_VISION_PROMPT_V0,

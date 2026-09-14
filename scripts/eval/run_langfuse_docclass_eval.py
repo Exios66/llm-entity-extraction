@@ -420,7 +420,11 @@ def main_with_args(argv: list[str]) -> int:
     print(f"doc_type distribution: {dict(class_counts)}")
     if subclass_counts:
         print(f"subclass GT distribution (where present): {dict(subclass_counts)}")
-    validate_dataset(dataset, valid=set(DOCCLASS_CLASS_KEYS))
+    # hub#51: validate against the SELECTED class set — a pilot run must reject
+    # extended-only rows up front instead of letting them pass and never match.
+    validate_dataset(dataset,
+                     valid=set(DOCCLASS_PILOT_CLASS_KEYS if args.class_set == "pilot"
+                               else DOCCLASS_CLASS_KEYS))
 
     log_path = args.experiment_log or default_jsonl_path()
     md_log_path = default_md_path()
@@ -483,6 +487,7 @@ def main_with_args(argv: list[str]) -> int:
             "datasets": args.datasets,
             "dataset_size": len(dataset),
             "dataset_fingerprint": dataset_fingerprint(dataset),
+            "class_set": args.class_set,
             "model": args.model,
             "prompt_version": args.prompt_version,
             "input_mode": args.input_mode,
@@ -659,7 +664,8 @@ def main_with_args(argv: list[str]) -> int:
                              comment="subclass exact OR defensible equivalent family")
             handle.score("exact_match", 1.0 if exact else 0.0,
                          comment="doc_type AND subclass exact")
-            handle.score("confidence", confidence, comment="model-reported confidence")
+            # calibration, not correctness — no 0.5-threshold verdict (hub#63)
+            handle.score("confidence", confidence, comment="model-reported confidence", label=None)
 
             if manifest:
                 manifest.append({"filename": filename, "status": "completed", "tag": "OK",

@@ -52,6 +52,7 @@ from agents.sorter_agent import (  # noqa: E402
 )
 from scripts.datasets.load_enron_correspondence import (  # noqa: E402
     DEFAULT_REPO,
+    ENRON_DEDUP_REVISION,
     attach_blind_text,
     load_gt_rows,
     load_local_jsonl,
@@ -179,6 +180,9 @@ def main_with_args(argv: list[str]) -> int:
     parser.add_argument("--project-id", default=_CONFIG.project_id)
     parser.add_argument("--hf-repo", default=DEFAULT_REPO,
                         help=f"Hugging Face dataset repo (default: {DEFAULT_REPO})")
+    parser.add_argument("--repo-revision", default=None,
+                        help="Hub dataset revision pin (default: ENRON_DEDUP_REVISION "
+                             "in scripts/datasets/load_enron_correspondence.py)")
     parser.add_argument("--split", choices=("train", "test", "all"), default="all")
     parser.add_argument("--local-dumps", default="",
                         help="Comma-separated joined JSONL dumps (skips Hub load)")
@@ -255,6 +259,11 @@ def main_with_args(argv: list[str]) -> int:
     extra_dumps = [Path(p.strip()) for p in args.extra_dumps.split(",") if p.strip()]
     args.extra_dump_paths = extra_dumps
 
+    # hub#52: the eval data source is revision-pinned (ENRON_DEDUP_REVISION),
+    # overridable via --repo-revision. The resolved pin is recorded in the
+    # experiment log so a run's provenance survives corpus-side moves.
+    args.repo_revision = args.repo_revision or ENRON_DEDUP_REVISION
+
     if local_dumps:
         dataset: list[dict] = []
         for path in local_dumps:
@@ -266,8 +275,9 @@ def main_with_args(argv: list[str]) -> int:
         full_local = list(dataset)
     else:
         token = get_env("HF_TOKEN") or os.environ.get("HF_TOKEN") or None
-        print(f"Loading GT from {args.hf_repo} splits={splits}")
-        gt_rows = load_gt_rows(args.hf_repo, token=token, splits=splits)
+        print(f"Loading GT from {args.hf_repo} revision={args.repo_revision} splits={splits}")
+        gt_rows = load_gt_rows(args.hf_repo, token=token, splits=splits,
+                               revision=args.repo_revision)
         gt_rows = [r for r in gt_rows
                    if str(r.get("expected") or "").strip() == CORRESPONDENCE_DOC_TYPE]
         print(f"  GT correspondence rows: {len(gt_rows)}")
@@ -308,6 +318,7 @@ def main_with_args(argv: list[str]) -> int:
         print(f"  joining blind text for {len(wanted)} filenames…")
         dataset = attach_blind_text(
             [s["_gt"] for s in staged], args.hf_repo, token=token, splits=splits,
+            revision=args.repo_revision,
         )
         by_name = {d["filename"]: d for d in dataset}
         ordered = [by_name[s["filename"]] for s in staged if s["filename"] in by_name]
@@ -434,6 +445,7 @@ def main_with_args(argv: list[str]) -> int:
         manifest = ManifestStore(args.manifest, {
             "experiment_name": experiment_name,
             "hf_repo": args.hf_repo,
+            "repo_revision": args.repo_revision,
             "dataset_size": len(dataset),
             "dataset_fingerprint": dataset_fingerprint(dataset),
             "model": args.model,
@@ -640,6 +652,7 @@ def main_with_args(argv: list[str]) -> int:
                 "model": args.model,
                 "task": "correspondence_classification",
                 "hf_repo": args.hf_repo,
+                "revision_resolved": args.repo_revision,
                 "dataset_size": len(dataset),
                 "dataset_fingerprint": dataset_fingerprint(dataset),
                 "stratified": args.stratified,
@@ -808,6 +821,7 @@ def log_experiment_to_repo(result, dataset, args, experiment_name,
         "prompt_versions": {"sorter": args.prompt_version},
         "data_source": {
             "hf_repo": args.hf_repo,
+            "revision_resolved": args.repo_revision,
             "ground_truth": "expected + expected_subclass + sentiment_label + sentiment_score",
             "ground_truth_mode": "enron_correspondence_dedup_gt_join",
             "dataset_fingerprint": dataset_fingerprint(dataset),
