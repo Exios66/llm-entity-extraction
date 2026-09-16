@@ -5,31 +5,63 @@
 # scoreboard. Gate policy (v1): report-only; wire thresholds into CI once
 # baselines stabilize for 2 consecutive runs.
 #
+# Live-or-loud (DMR-061): the gate NEVER claims success when a bench step
+# failed — every python invocation's rc is checked, stderr stays visible, and
+# the script exits 1 with the failing step named. A green scoreboard means
+# green runs.
+#
 # Usage: scripts/durability_gate.sh [limit-per-suite]   # default 6
-set -uo pipefail
+set -euo pipefail
 cd "$(dirname "$0")/.."
 
 LIMIT="${1:-6}"
 MODELS=("stealth/ox-alpha" "deepseek/deepseek-v4-flash")  # TEMP: ox-alpha cost swap
 SPECIALISTS=(contracts_specialist corporate_records_specialist correspondence_specialist insurance_claims_specialist)
 
+FAILED=0
+run_step() {
+    # run_step <label> [--allow-empty] -- cmd...
+    local label="$1"
+    shift
+    local allow_empty=0
+    if [ "$1" = "--allow-empty" ]; then
+        allow_empty=1
+        shift
+    fi
+    local out rc
+    out="$("$@" 2>&1)" || rc=$?
+    rc=${rc:-0}
+    if [ "$rc" -ne 0 ]; then
+        echo "!! [$label] FAILED rc=$rc — gate cannot report green" >&2
+        printf '%s\n' "$out" | sed 's/^/  | /' >&2
+        FAILED=1
+        return 1
+    fi
+    if [ "$allow_empty" -eq 0 ] && ! printf '%s' "$out" | grep -qE '.+'; then
+        echo "!! [$label] produced NO output — a silent no-op run looks green" >&2
+        FAILED=1
+        return 1
+    fi
+    printf '%s\n' "$out"
+}
+
 echo "== regenerating edge suites =="
-python3 scripts/gen_edge_cases.py --all >/dev/null
+run_step "gen_edge_cases" -- python3 scripts/gen_edge_cases.py --all
 
 for m in "${MODELS[@]}"; do
   ms=$(echo "$m" | tr '/' '_')
   echo ""
   echo "===== MODEL: $m ====="
   for a in "${SPECIALISTS[@]}"; do
-    python3 scripts/run_agent_bench.py --mode edge --agent "$a" --model "$m" \
-      --limit "$LIMIT" 2>/dev/null | grep -E "no_fabrication|edge bench" | sed "s/^/  [$a] /"
+    run_step "edge:$a:$m" python3 scripts/run_agent_bench.py --mode edge --agent "$a" --model "$m" \
+      --limit "$LIMIT" | grep -E "no_fabrication|edge bench" | sed "s/^/  [$a] /"
   done
-  python3 scripts/run_agent_bench.py --mode judge-mutation --model "$m" \
+  run_step "judge-mutation:$m" python3 scripts/run_agent_bench.py --mode judge-mutation --model "$m" \
     --prompt-version judge_correctness_docclass_pilot_v1 --limit "$LIMIT" \
-    2>/dev/null | grep -E "recall|FPR" | sed 's/^/  [judge_correctness] /'
+    | grep -E "recall|FPR" | sed 's/^/  [judge_correctness] /'
   for role in arbiter boss; do
-    python3 scripts/run_agent_bench.py --mode conflicts --role "$role" --model "$m" \
-      --limit "$LIMIT" 2>/dev/null | grep -E "correct" | sed "s/^/  [$role] /"
+    run_step "conflicts:$role:$m" python3 scripts/run_agent_bench.py --mode conflicts --role "$role" --model "$m" \
+      --limit "$LIMIT" | grep -E "correct" | sed "s/^/  [$role] /"
   done
 done
 
@@ -48,4 +80,9 @@ cat <<'PY'
 #           id=it["suite_id"], input={"filename": it["base_filename"], "doc_text": it["doc_text"]},
 #           expected_output=it["expectations"], metadata={"transform": it["transform"]})
 PY
+
+if [ "$FAILED" -ne 0 ]; then
+    echo "gate FAILED — at least one bench step errored or stayed empty (see above)" >&2
+    exit 1
+fi
 echo "gate complete."

@@ -119,7 +119,13 @@ def load_openrouter_costs(csv_path: Path, records: list[dict],
     for row in rows:
         try:
             gen_time = _parse_ts(row.get("created_at", ""))
-        except ValueError:
+        except ValueError as exc:
+            print(
+                f"WARNING: row with unparseable created_at "
+                f"{row.get('created_at', '')!r} is SKIPPED from the site data "
+                f"({exc})",
+                file=sys.stderr,
+            )
             continue
         idx = window_index(gen_time)
         kind = EVAL_MODELS[row["model_permaslug"]]

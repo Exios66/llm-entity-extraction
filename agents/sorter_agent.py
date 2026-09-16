@@ -516,6 +516,7 @@ class SorterAgent(BaseAgent):
         try:
             confidence = float(result.get("confidence", 0.5))
         except (TypeError, ValueError):
+            logger.warning("confidence_unparseable", raw=result.get("confidence"), doc_type=doc_type)
             confidence = 0.5
         reasoning = result.get("reasoning", "")
 
@@ -793,5 +794,6 @@ Provide your best classification with justification."""
         try:
             confidence = float(result.get("confidence", 0.5))
         except (TypeError, ValueError):
+            logger.warning("confidence_unparseable", raw=result.get("confidence"), doc_type=doc_type)
             confidence = 0.5
         return (doc_type, confidence, result.get("reasoning", ""))

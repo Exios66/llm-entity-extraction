@@ -54,6 +54,13 @@ def _install_modal_stub() -> None:
         def from_registry(ref, add_python=None):
             return _Image()
 
+        @staticmethod
+        def debian_slim(python_version=None):
+            return _Image()
+
+        def uv_pip_install(self, *pkgs):
+            return self
+
         def run_commands(self, *cmds):
             return self
 
@@ -61,7 +68,7 @@ def _install_modal_stub() -> None:
             return self
 
     class _App:
-        def __init__(self, name, image=None):
+        def __init__(self, name, image=None, **kwargs):
             self.name = name
 
         def function(self, **kwargs):
@@ -118,8 +125,69 @@ class TestModalVllmApp:
         assert "--host" in cmd and cmd[cmd.index("--host") + 1] == "0.0.0.0"
         assert "--port" in cmd and cmd[cmd.index("--port") + 1] == str(mod.SERVER_PORT)
         assert "--max-model-len" in cmd
+        # DMR-056: 32768 default RAISES at boot on L4-bf16 8B-class rows in
+        # v0.28.0 — 16384 is the boot-safe default (AWQ/FP8 rows override).
+        assert cmd[cmd.index("--max-model-len") + 1] == "16384"
         # fp16 default: no quantization flag unless configured
         assert "--quantization" not in cmd
+        # single-GPU default: no tensor-parallel flag
+        assert "--tensor-parallel-size" not in cmd
+
+    def test_tp_size_derived_from_gpu_suffix(self, monkeypatch):
+        first = _load_app_module()
+        original = first.TP_SIZE
+        try:
+            monkeypatch.setenv("MODAL_VLLM_GPU", "A100-80GB:2")
+            monkeypatch.delenv("MODAL_VLLM_TP_SIZE", raising=False)
+            mod = _load_app_module()  # module re-executes against the new env
+            assert mod.TP_SIZE == "2"
+            cmd = mod.build_vllm_command("RedHatAI/Llama-3.3-70B-Instruct-FP8-dynamic")
+            assert cmd[cmd.index("--tensor-parallel-size") + 1] == "2"
+        finally:
+            monkeypatch.delenv("MODAL_VLLM_GPU")
+            monkeypatch.delenv("MODAL_VLLM_TP_SIZE", raising=False)
+            assert _load_app_module().TP_SIZE == original
+
+    def test_masked_config_never_leaks_secrets(self, monkeypatch):
+        mod = _load_app_module()
+        monkeypatch.setenv("MODAL_VLLM_API_TOKEN", "tok-super-secret")
+        monkeypatch.setenv("HF_TOKEN", "hf_super-secret")
+        masked = mod._masked_config()
+        blob = str(masked).lower()
+        assert "super-secret" not in blob
+        assert masked["VLLM_API_KEY"] == "set"
+        assert masked["HF_TOKEN"] == "set"
+
+    def test_no_hf_transfer_deprecated_extra(self):
+        """DMR-056: hub 1.x has no [hf_transfer] extra — the deprecated env is
+        a silent pip warning path; the app must use Xet defaults."""
+        text = DEPLOY_APP.read_text(encoding="utf-8")
+        assert "huggingface_hub[hf_transfer]" not in text
+        assert "HF_HUB_ENABLE_HF_TRANSFER" not in text
+        assert "HF_XET_HIGH_PERFORMANCE" in text
+
+    def test_download_model_presence_and_empty_guard(self):
+        """DMR-053/056: a pre-warm function with an empty-snapshot loud guard."""
+        text = DEPLOY_APP.read_text(encoding="utf-8")
+        assert "def download_model(" in text
+        assert "snapshot_download" in text
+
+    def test_smoke_check_401_is_system_exit(self, monkeypatch):
+        import httpx
+
+        mod = _load_app_module()
+
+        class _Resp:
+            status_code = 401
+            text = "unauthorized"
+
+        def _fake_get(url, headers=None, timeout=None):
+            return _Resp()
+
+        monkeypatch.setattr(httpx, "get", _fake_get)
+        with pytest.raises(SystemExit) as exc:
+            mod._smoke_check("https://example--entity-vllm-serve.modal.run/v1")
+        assert "401" in str(exc.value)
 
     def test_quantization_flag_injected_when_configured(self):
         mod = _load_app_module()

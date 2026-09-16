@@ -76,8 +76,12 @@ def main() -> int:
             for it in getattr(ds, "items", []) or []:
                 if getattr(it, "id", None):
                     known.add(it.id)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(
+                f"WARNING: could not list existing dataset items ({str(exc)[:120]}) "
+                "- the sync treats every suite as NEW and may duplicate entries",
+                file=sys.stderr,
+            )
         for it in items:
             if it["suite_id"] in known:
                 skipped += 1

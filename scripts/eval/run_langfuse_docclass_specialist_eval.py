@@ -199,8 +199,13 @@ def _decode_listish(value):
             decoded = json.loads(value)
             if isinstance(decoded, list):
                 return decoded
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as exc:
+            print(
+                f"WARNING: list-shaped GT value does not parse as JSON "
+                f"({value[:80]!r}: {exc}) — returned as-is; downstream may "
+                "treat it as a scalar",
+                file=sys.stderr,
+            )
     return value
 
 

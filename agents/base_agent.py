@@ -252,7 +252,14 @@ class BaseAgent(ABC):
             structured = llm.with_structured_output(
                 json_schema, method="json_schema", include_raw=True
             )
-        except Exception:  # pragma: no cover - older SDKs fall back to prompting
+        except Exception as exc:  # older SDKs fall back to prompting — but that swap is loud now
+            logger.warning(
+                "structured_output_fallback",
+                agent=self.agent_name,
+                method="json_schema",
+                fallback="function_calling",
+                error=str(exc)[:200],
+            )
             structured = llm.with_structured_output(json_schema, method="function_calling", include_raw=True)
 
         system = system_prompt or self.system_prompt()
