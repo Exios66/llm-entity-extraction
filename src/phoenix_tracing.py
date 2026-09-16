@@ -40,6 +40,11 @@ from typing import Any, Iterator
 
 logger = structlog.get_logger(__name__)
 
+# hub#63: distinct sentinel for the score() label default — None means "omit
+# the correctness verdict entirely" (calibration metrics), while the sentinel
+# means "apply the 0.5 threshold verdict" (accuracy metrics).
+_OMIT_LABEL = object()
+
 _TRUE_VALUES = {"1", "true", "enabled", "yes", "on"}
 
 
@@ -48,8 +53,37 @@ def phoenix_enabled() -> bool:
 
     Reads PHOENIX_TRACING (default: enabled). When disabled the module
     degrades to a no-op tracer so runs are unaffected.
+
+    ``load_env()`` runs first so a dotenv ``PHOENIX_TRACING=disabled`` wins
+    even when this module is imported before the caller loads dotenv
+    (KANBAN-103: the first correspondence run imported the tracer at
+    module-import time and default-on OTLP-spammed a down Phoenix).
     """
+    try:
+        from src.env_utils import load_env
+
+        load_env()
+    except Exception:  # noqa: BLE001 — observability must never break the run
+        pass
     return os.environ.get("PHOENIX_TRACING", "enabled").strip().lower() in _TRUE_VALUES
+
+
+def phoenix_endpoint_reachable(timeout: float = 0.5) -> bool:
+    """Return True when the Phoenix HTTP server answers.
+
+    Probes the REST base (``PHOENIX_ENDPOINT`` with the ``/v1/traces`` suffix
+    stripped). A down server must not attach a BatchSpanProcessor — that is
+    what produced the 50+ ``Failed to export span batch`` lines on the
+    KANBAN-103 v0 run.
+    """
+    try:
+        import urllib.request
+
+        req = urllib.request.Request(_phoenix_server_base(), method="GET")
+        with urllib.request.urlopen(req, timeout=timeout):
+            return True
+    except Exception:  # noqa: BLE001 — down/refused/timeout => treat as absent
+        return False
 
 
 def _instrument_openai() -> None:
@@ -97,6 +131,14 @@ def _init_opentelemetry() -> Any | None:
     """
     if not phoenix_enabled():
         logger.info("phoenix_tracing_disabled", reason="PHOENIX_TRACING not enabled")
+        return None
+    if not phoenix_endpoint_reachable():
+        logger.info(
+            "phoenix_tracing_disabled",
+            reason="phoenix endpoint unreachable",
+            endpoint=os.environ.get(
+                "PHOENIX_ENDPOINT", "http://localhost:6006/v1/traces"),
+        )
         return None
     try:
         from opentelemetry import trace
@@ -198,8 +240,15 @@ class TraceHandle:
             logger.warning("phoenix_output_event_failed", trace_id=self.trace_id)
 
     def score(self, name: str, value: float, comment: str = "",
-              observation_id: str | None = None) -> None:
-        """Record one deterministic logic score as a span event + annotation."""
+              observation_id: str | None = None, *, label: object = _OMIT_LABEL) -> None:
+        """Record one deterministic logic score as a span event + annotation.
+
+        ``label`` defaults to the 0.5-threshold "correct"/"incorrect" verdict
+        for accuracy-style metrics. Pass ``label=None`` for calibration
+        metrics (e.g. ``confidence`` — a low-confidence-but-correct row is NOT
+        an "incorrect" annotation) so the Phoenix UI shows the value without a
+        misleading correctness verdict (hub#63).
+        """
         if self.disabled or self._span is None:
             return
         try:
@@ -208,13 +257,17 @@ class TraceHandle:
             })
         except Exception:  # noqa: BLE001
             logger.warning("phoenix_score_event_failed", trace_id=self.trace_id, name=name)
-        self._annotations.append({
+        if label is _OMIT_LABEL:
+            label = "correct" if value >= 0.5 else "incorrect"
+        annotation = {
             "name": name,
             "score": float(value),
-            "label": "correct" if value >= 0.5 else "incorrect",
             "annotator_kind": "CODE",
             "explanation": comment,
-        })
+        }
+        if label is not None:
+            annotation["label"] = label
+        self._annotations.append(annotation)
 
 
 @dataclass
@@ -240,8 +293,14 @@ class AgentHandle:
         except Exception:  # noqa: BLE001
             logger.warning("phoenix_agent_output_failed", trace_id=self.trace_id)
 
-    def score(self, name: str, value: float, comment: str = "") -> None:
-        """Record one deterministic logic score as a span event + annotation."""
+    def score(self, name: str, value: float, comment: str = "",
+              *, label: object = _OMIT_LABEL) -> None:
+        """Record one deterministic logic score as a span event + annotation.
+
+        Same ``label`` contract as ``TraceHandle.score``: default thresholds
+        correctness at 0.5; ``label=None`` omits the correctness verdict for
+        calibration metrics (hub#63).
+        """
         if self.disabled or self._span is None:
             return
         try:
@@ -251,13 +310,17 @@ class AgentHandle:
         except Exception:  # noqa: BLE001
             logger.warning("phoenix_agent_score_failed",
                            trace_id=self.trace_id, name=name)
-        self._annotations.append({
+        if label is _OMIT_LABEL:
+            label = "correct" if value >= 0.5 else "incorrect"
+        annotation = {
             "name": name,
             "score": float(value),
-            "label": "correct" if value >= 0.5 else "incorrect",
             "annotator_kind": "CODE",
             "explanation": comment,
-        })
+        }
+        if label is not None:
+            annotation["label"] = label
+        self._annotations.append(annotation)
 
 
 class PhoenixTracer:

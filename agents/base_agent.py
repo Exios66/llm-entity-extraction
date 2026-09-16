@@ -27,7 +27,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-from src.openrouter_utils import OPENROUTER_BASE_URL
+from src.openrouter_utils import resolve_openrouter_base_url
 
 logger = structlog.get_logger(__name__)
 
@@ -89,8 +89,11 @@ class BaseAgent(ABC):
     def llm(self) -> ChatOpenAI:
         """Lazily build the LangChain ``ChatOpenAI`` client.
 
-        Uses the OpenRouter base URL so any OpenAI-compatible endpoint
-        (Ollama, vLLM) can be swapped in via ``OPENROUTER_BASE_URL``.
+        Uses the OpenAI-compatible provider seam so any endpoint —
+        OpenRouter (default), Ollama, or a Modal-hosted vLLM deployment
+        (KANBAN-096) — can be swapped in via ``OPENROUTER_BASE_URL``.
+        Resolved at call time (after ``load_env()``), so dotenv-set values
+        take effect; see ``src/openrouter_utils.py::resolve_openrouter_base_url``.
         """
         if self._llm is None:
             from src.env_utils import load_env
@@ -99,7 +102,7 @@ class BaseAgent(ABC):
             self._llm = ChatOpenAI(
                 model=self.model,
                 api_key=self.api_key or os.environ.get("OPENROUTER_API_KEY") or None,
-                base_url=OPENROUTER_BASE_URL,
+                base_url=resolve_openrouter_base_url(),
                 temperature=self._temperature,
                 max_tokens=self._max_tokens,
                 timeout=120,
@@ -249,7 +252,14 @@ class BaseAgent(ABC):
             structured = llm.with_structured_output(
                 json_schema, method="json_schema", include_raw=True
             )
-        except Exception:  # pragma: no cover - older SDKs fall back to prompting
+        except Exception as exc:  # older SDKs fall back to prompting — but that swap is loud now
+            logger.warning(
+                "structured_output_fallback",
+                agent=self.agent_name,
+                method="json_schema",
+                fallback="function_calling",
+                error=str(exc)[:200],
+            )
             structured = llm.with_structured_output(json_schema, method="function_calling", include_raw=True)
 
         system = system_prompt or self.system_prompt()

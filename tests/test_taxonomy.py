@@ -9,8 +9,8 @@ def test_doc_classes_match_prompts():
     # (KANBAN-033) — the first six stay the sorter's default surface.
     assert keys == [
         "contract", "corporate_record", "due_diligence",
-        "correspondence", "compliance_filing", "court_opinion",
-        "merger_agreement",
+        "correspondence", "insurance_claim", "compliance_filing",
+        "court_opinion", "merger_agreement",
     ]
 
 
@@ -43,6 +43,18 @@ def test_doc_class_by_key():
     assert entry["specialist"] == "contracts_specialist"
     assert "field_types" in entry
     assert doc_class_by_key("banana") is None
+
+
+def test_insurance_claim_v8_surface():
+    """v8 LOB expansion (HUB-028): property/auto subclasses + the purpose/gist
+    extraction fields ride the insurance_claim taxonomy entry (they exist on
+    every v8 row and on the InsuranceClaimExtraction schema)."""
+    ins = doc_class_by_key("insurance_claim")
+    subclasses = {s["key"] for s in ins["subclasses"]}
+    assert {"carrier", "pde", "outpatient", "inpatient",
+            "property", "auto"} <= subclasses
+    ft = set(ins["field_types"])
+    assert {"subject_matter", "keywords"} <= ft
 
 
 def test_agent_config_defaults():

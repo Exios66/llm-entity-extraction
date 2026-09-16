@@ -11,7 +11,7 @@ Guards three things:
    the docclass context block.
 """
 
-EXPECTED_DOCCLASS_KEY_COUNT = 21  # 8 sorter re-exports + 10 derived + 3 authored
+EXPECTED_DOCCLASS_KEY_COUNT = 75  # 74 + 1 hub#43 (judge_classification_docclass_pilot_v1 pilot-rules repair)
 
 
 def _doc():
@@ -48,6 +48,24 @@ def test_registry_complete_and_resolvable():
         "boss_docclass_v0",
     ]
     assert all(k in PROMPT_VERSIONS for k in new_keys)
+    # DMR-015 mailroom_prompts lineage (mailroom-corpus v8) keys.
+    mr_lineage = [
+        "sorter_mailroom_prompts_pilot_v0",
+        "contracts_specialist_mailroom_prompts_v0",
+        "corporate_records_specialist_mailroom_prompts_v0",
+        "due_diligence_specialist_mailroom_prompts_v0",
+        "correspondence_specialist_mailroom_prompts_v0",
+        "compliance_specialist_mailroom_prompts_v0",
+        "court_opinions_specialist_mailroom_prompts_v0",
+        "insurance_claims_specialist_mailroom_prompts_v0",
+        "reviewer_mailroom_prompts_v0",
+        "arbiter_mailroom_prompts_v0",
+        "judge_mailroom_prompts_v0",
+        "judge_classification_mailroom_prompts_v0",
+        "judge_correctness_mailroom_prompts_v0",
+        "boss_mailroom_prompts_v0",
+    ]
+    assert all(k in PROMPT_VERSIONS for k in mr_lineage)
 
 
 def test_sorter_family_is_reexported_byte_identical():
@@ -61,7 +79,13 @@ def test_sorter_family_is_reexported_byte_identical():
         ("SORTER_DOCCLASS_PROMPT_V0", "sorter_docclass_v0"),
         ("SORTER_DOCCLASS_PROMPT_V3", "sorter_docclass_v3"),
         ("SORTER_DOCCLASS_PROMPT_V6", "sorter_docclass_v6"),
+        ("SORTER_DOCCLASS_PROMPT_V7", "sorter_docclass_v7"),
+        ("SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V0", "sorter_docclass_correspondence_v0"),
+        ("SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V1", "sorter_docclass_correspondence_v1"),
+        ("SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V2", "sorter_docclass_correspondence_v2"),
+        ("SORTER_DOCCLASS_CORRESPONDENCE_PROMPT_V3", "sorter_docclass_correspondence_v3"),
         ("SORTER_DOCCLASS_VISION_PROMPT_V0", "sorter_docclass_vision_v0"),
+        ("SORTER_DOCCLASS_VISION_PROMPT_V1", "sorter_docclass_vision_v1"),
     ]:
         # Same OBJECT, not just equal bytes — a re-export, never a redefinition.
         assert DOCCLASS_PROMPT_VERSIONS[key] is getattr(P, mod_name), key
@@ -170,6 +194,83 @@ def test_authored_fresh_v0s_carry_provenance_and_schema():
         "denial_reasons",
     ):
         assert field in INSURANCE_CLAIMS_SPECIALIST_DOCCLASS_PROMPT_V0
+
+
+def test_v1_variants_carry_kanban101_markers():
+    from src.prompts_docclass import DOCCLASS_PROMPT_VERSIONS
+
+    kanban101_keys = [
+        "contracts_specialist_docclass_v1",
+        "corporate_records_specialist_docclass_v1",
+        "due_diligence_specialist_docclass_v1",
+        "correspondence_specialist_docclass_v1",
+        "compliance_specialist_docclass_v1",
+        "court_opinions_specialist_docclass_v1",
+        "insurance_claims_specialist_docclass_v1",
+        "reviewer_docclass_v1",
+        "arbiter_docclass_v1",
+        "boss_docclass_v1",
+        "judge_docclass_v1",
+        "judge_classification_docclass_v1",
+        "judge_correctness_docclass_v1",
+    ]
+    for key in kanban101_keys:
+        assert key in DOCCLASS_PROMPT_VERSIONS
+        assert "(KANBAN-101)" in DOCCLASS_PROMPT_VERSIONS[key], key
+
+
+def test_pilot_specialist_variants_present():
+    from src.prompts_docclass import DOCCLASS_PROMPT_VERSIONS
+
+    for key in (
+        "contracts_specialist_docclass_pilot_v0",
+        "corporate_records_specialist_docclass_pilot_v0",
+        "due_diligence_specialist_docclass_pilot_v0",
+        "correspondence_specialist_docclass_pilot_v0",
+        "compliance_specialist_docclass_pilot_v0",
+        "court_opinions_specialist_docclass_pilot_v0",
+        "insurance_claims_specialist_docclass_pilot_v0",
+    ):
+        assert key in DOCCLASS_PROMPT_VERSIONS
+        assert "pilot" in DOCCLASS_PROMPT_VERSIONS[key].lower() or "PILOT" in DOCCLASS_PROMPT_VERSIONS[key]
+
+
+def test_every_pilot_prompt_grades_the_pilot_taxonomy():
+    """hub#43: every *_pilot_* prompt must grade the 5-class PILOT taxonomy
+    in BOTH context and rules — no 'EXTENDED primary set' token anywhere in
+    a pilot render. (Extended-only class NAMES may legitimately appear as
+    negative discriminators, e.g. sorter rule 32 'is corporate_record, not
+    compliance_filing'; the extended SET list is the contamination marker.)"""
+    from src.prompts_docclass import DOCCLASS_PROMPT_VERSIONS
+
+    pilot_keys = [k for k in DOCCLASS_PROMPT_VERSIONS if "_pilot_" in k]
+    assert pilot_keys, "no pilot keys found"
+    for key in pilot_keys:
+        if key == "judge_classification_docclass_pilot_v0":
+            # hub#43: the v0 key is FROZEN experiment identity and carries
+            # the historical dual-taxonomy rules — the repair lives in the
+            # new v1 key (pinned by test_judge_classification_pilot_v1_...).
+            continue
+        text = DOCCLASS_PROMPT_VERSIONS[key]
+        assert "EXTENDED primary set" not in text, f"{key} grades the extended set"
+        assert "from the extended list" not in text, f"{key} references the extended list"
+
+
+def test_judge_classification_pilot_v1_registered_and_frozen_v0():
+    """hub#43: the repaired pilot rules live under the NEW v1 key; the v0
+    key is frozen experiment identity."""
+    from src.prompts_docclass import (
+        DOCCLASS_PROMPT_VERSIONS,
+        JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0,
+        JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V1,
+    )
+
+    assert "judge_classification_docclass_pilot_v1" in DOCCLASS_PROMPT_VERSIONS
+    assert DOCCLASS_PROMPT_VERSIONS["judge_classification_docclass_pilot_v1"] == JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V1
+    assert "PILOT primary set" in JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V1
+    assert "from the pilot list" in JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V1
+    # v0 frozen: still carries the (historically wrong) extended rules text.
+    assert "EXTENDED primary set" in JUDGE_CLASSIFICATION_DOCCLASS_PILOT_PROMPT_V0
 
 
 def test_runtime_defaults_untouched():
