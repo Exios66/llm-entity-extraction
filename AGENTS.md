@@ -616,6 +616,40 @@ Verify the record is COMPLETE before moving on:
   backfill it from the Braintrust LLM spans before regenerating.
 - Never hand-edit `reports/experiment_log.md` — regenerate it.
 
+## Monorepo development (Digital-Mailroom)
+
+This repo is also `packages/llm-entity-extraction` inside the
+[Digital-Mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
+monorepo — a single `uv` workspace that holds every constellation repo as a
+git-subtree package (the monorepo is the dev source of truth for cross-repo
+development; the hub task board is `governance/TASKS.md`, cards `DMR-0NN`).
+
+- **One workspace, no cross-repo imports**: `uv sync` at the monorepo root
+  installs this package editable from `packages/llm-entity-extraction`.
+  Cross-package deps resolve via `[tool.uv.sources]` tables — published git
+  pins in `pyproject.toml` stay untouched for release/deploy builds.
+- **Sync contract**: `python scripts/sync_packages.py {status|pull|push}`
+  at the monorepo root reconciles subtree mirrors with `Exios66/*`.
+  Standalone-repo work flows monorepo-ward via `pull --squash`; monorepo
+  fixes flow out via `push`. The monorepo is the dev source of truth —
+  imported monorepo-side fixes win unless the upstream supersedes them.
+- **Monorepo-side adaptations** that live ONLY there (re-apply on conflict
+  when pulling): the `[tool.uv.sources]` block in `pyproject.toml`,
+  pruned-heavy-asset test skips, and CWD/UTC anchoring fixes. Nested
+  `.github/` workflows are inert in the monorepo (release-time only).
+- **Release propagation**: cutting a standalone release here (the
+  `scripts/release.py --bump` flow below) is step one; the release commit
+  then flows into the monorepo via the sync pass at release time —
+  `python scripts/sync_packages.py status` (drift), then
+  `push --package llm-entity-extraction` (content-only) or `push --all
+  --patch` (release-train sweep), then re-baseline the cursor. Consuming
+  pins (e.g. the sandbox `[evals]` extra) are bumped only at release time
+  of the pinned package.
+- **Test gates in the monorepo**: run
+  `uv run pytest packages/llm-entity-extraction/tests` — one package per
+  pytest invocation (several packages ship colliding top-level `tests`
+  packages).
+
 ## Release workflow (semantic versioning + tag)
 
 The changelog follows [Keep a Changelog](https://keepachangelog.com/) and
@@ -675,6 +709,13 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
    the "After every run" section, then commit + push there.
 9. Verify the tag exists on GitHub and the README/CHANGELOG/site render
    correctly (https://exios66.github.io/llm-entity-extraction/).
+10. **Propagate the release to the monorepo** — from
+    `LLM-Mailroom-Services/Digital-Mailroom`, run
+    `python scripts/sync_packages.py push --package llm-entity-extraction`
+    (content-only deltas) to land the release upstream, re-baseline the
+    cursor, and confirm `sync_packages.py status` shows in-sync. The
+    monorepo-side copy of this file carries the full contract under
+    "Monorepo development" above.
 
 ## Experiment log mechanics
 
