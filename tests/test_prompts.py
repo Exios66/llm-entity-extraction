@@ -555,13 +555,13 @@ def test_sorter_docclass_prompt_option_list_matches_schema():
         else:
             # Legacy v0..v6 predate the ENTIRE correspondence/insurance
             # dimensions (their doc_subclass vocabulary is merger/corporate
-            # keys + the `other` fallback only). voicemail joined the
-            # correspondence enum with the Enron eval-env key expansion; it is
-            # a correspondence key, so the frozen lineage must NOT be expected
-            # to teach it (the exclusion set above predates the key).
+            # keys + the `other` fallback only). The v8-era `voicemail` key
+            # left the correspondence enum at the mailroom-dataset v9 re-pin
+            # (DMR-071: not in the v9 GT vocabulary), and the frozen lineage
+            # never taught it.
             legacy_excluded = {"demand", "attorney_demand", "meeting_request",
                                "press_release", "memo", "email", "letter",
-                               "notice", "voicemail", "carrier", "pde",
+                               "notice", "carrier", "pde",
                                "outpatient", "inpatient", "property", "auto"}
             expected_keys = [k for k in DOC_SUBCLASS_KEYS if k not in legacy_excluded]
         for key in expected_keys:
