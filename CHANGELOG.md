@@ -215,6 +215,25 @@ history of the repository's tags. Format follows
   at `max_tokens` 2048). v2 remains the demand-arm parent. Memo
   `docs/memos/sorter_docclass_correspondence_v3.md`.
 
+### Fixed
+- **Test suite back to green (773 passed, was 3 failed + 28 errors).**
+  The `[tracing]` extra (and `requirements/tracing.txt`) now declares
+  `langchain>=1.0`: `langfuse.langchain.CallbackHandler` imports the full
+  `langchain` package, so a clean `pip install -e ".[dev]"` could not import
+  it and 28 Langfuse runner/tracing tests errored. The core-floor pin test
+  now expects `llm-dojo-scoring` v0.16.0 (missed in #63), and the
+  `normalize_label` snake-case test uses live classes, since v0.16.0 retired
+  `court_opinion` / `due_diligence`.
+- **Smoke tests no longer append to `reports/scores_manifest.jsonl`.**
+  `build_emitter()` honours a `SCORES_MANIFEST_PATH` override and the test
+  suite points it at a tmp dir; each full run used to add 24 fake rows to the
+  tracked manifest.
+- **`docs/posit-src/_pre-render.py` finds venvs that are not `.venv/`.** The
+  re-exec now also tries `$VIRTUAL_ENV` and `venv/`, compares venv prefixes
+  instead of interpreter realpaths (a venv's `bin/python` resolves to the
+  same binary as system `python3`, so the old check could skip the re-exec),
+  and exits with a clear message instead of a `ModuleNotFoundError`.
+
 ## [v0.21.0] - 2026-08-28
 
 > Docclass bolster + stratified-120 A/B + dojo-scoring @v0.10.0

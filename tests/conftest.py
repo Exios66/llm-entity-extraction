@@ -46,10 +46,12 @@ def _isolate_experiment_log(monkeypatch, tmp_path):
     """Redirect the repo experiment log to a per-test tmp dir.
 
     Tests that run the eval loops (smoke tests) append experiment records;
-    they must never pollute the repo's reports/experiment_log.* files.
+    they must never pollute the repo's reports/experiment_log.* files (or
+    reports/scores_manifest.jsonl, which the docclass runners emit to).
     """
     monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "experiment_log.jsonl"))
     monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "experiment_log.md"))
+    monkeypatch.setenv("SCORES_MANIFEST_PATH", str(tmp_path / "scores_manifest.jsonl"))
 
 
 @pytest.fixture

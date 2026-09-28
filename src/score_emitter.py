@@ -17,6 +17,7 @@ module only adapts THIS repo's run records to the unified emitter:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,9 @@ __all__ = [
 ]
 
 DEFAULT_MANIFEST_PATH = Path("reports/scores_manifest.jsonl")
+# Overrides the default sink path (tests point it at a tmp dir so smoke runs
+# never append to the tracked reports/scores_manifest.jsonl).
+MANIFEST_ENV = "SCORES_MANIFEST_PATH"
 
 # Docclass hierarchical task metrics (KANBAN-101). These live in the
 # experiment-log / Langfuse eval runners but are not yet in the shared
@@ -82,7 +86,8 @@ def build_emitter(
     missing — the LangfuseSink simply reports itself unavailable.
     """
     load_env()
-    sinks: list[Any] = [LocalManifestSink(manifest_path or DEFAULT_MANIFEST_PATH)]
+    path = manifest_path or os.environ.get(MANIFEST_ENV) or DEFAULT_MANIFEST_PATH
+    sinks: list[Any] = [LocalManifestSink(path)]
     if langfuse:
         sinks.append(LangfuseSink())
     return Emitter(sinks=sinks)
