@@ -185,6 +185,11 @@ def normalize_doc_subclass(value, doc_type: str | None = None) -> str:
         for candidate in allowed:
             if key == re.sub(r"[^a-z0-9]", "", candidate.lower()):
                 return candidate
+        # The vision <subclass> tag is free text: accept the display label
+        # ("Demand Letter" -> demand) as the unscoped path does.
+        for subclass in SUBCLASS_DIMENSIONS[doc_type]:
+            if key == re.sub(r"[^a-z0-9]", "", str(subclass.get("label", "")).lower()):
+                return subclass["key"]
         if key in _DOC_SUBCLASS_ALIASES and _DOC_SUBCLASS_ALIASES[key] in allowed:
             return _DOC_SUBCLASS_ALIASES[key]
         return DOC_SUBCLASS_UNKNOWN
@@ -628,7 +633,9 @@ class SorterAgent(BaseAgent):
         label_match = re.search(
             r"<label>\s*([^<]+?)\s*</label>", raw, flags=re.IGNORECASE | re.DOTALL
         )
-        tag_label = label_match.group(1).strip().lower() if label_match else ""
+        # "Merger Agreement" / "court-opinion" -> the snake_case class key.
+        tag_label = (re.sub(r"[^a-z0-9]+", "_", label_match.group(1).lower()).strip("_")
+                     if label_match else "")
         if tag_label == "unreadable":
             return {"doc_type": None, "contract_subtype": None, "doc_subclass": None,
                     "confidence": 0.0, "reasoning": extract_reasoning(raw) or "",
@@ -637,7 +644,10 @@ class SorterAgent(BaseAgent):
         # The tag label validates against the (possibly extended) class list;
         # ``clean_prediction`` only knows the shared 6 classes, so it is the
         # fallback for tag-less legacy outputs only.
-        if tag_label and tag_label in valid_keys:
+        # A tag that names no valid class is an invalid label, NOT a cue to
+        # scan the reasoning for a class word (that relabelled e.g. an
+        # unknown extended label as "contract" and skipped the text fallback).
+        if tag_label:
             doc_type = tag_label
         else:
             doc_type = clean_prediction(raw)

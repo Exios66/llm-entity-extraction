@@ -389,7 +389,16 @@ class BaseAgent(ABC):
             messages,
             config={"callbacks": self._callbacks} if self._callbacks else None,
         )
-        raw_content = response.content if isinstance(response.content, str) else str(response.content)
+        if isinstance(response.content, str):
+            raw_content = response.content
+        elif isinstance(response.content, list):
+            # Same join as _call_llm: str() of a block list is its repr.
+            raw_content = "".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in response.content
+            )
+        else:
+            raw_content = str(response.content or "")
 
         usage = getattr(response, "usage_metadata", None) or (response.response_metadata or {}).get("usage") or {}
         self._last_usage = {
