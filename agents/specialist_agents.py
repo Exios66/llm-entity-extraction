@@ -244,6 +244,8 @@ SPECIALIST_SCHEMAS = {
     "compliance_filing": COMPLIANCE_FILING_SCHEMA,
     "court_opinion": COURT_OPINIONS_SCHEMA,
     "insurance_claim": INSURANCE_CLAIMS_SCHEMA,
+    # taxonomy.yaml routes merger_agreement to contracts_specialist.
+    "merger_agreement": CONTRACTS_SCHEMA,
 }
 
 
@@ -361,6 +363,11 @@ class _SpecialistBase(BaseAgent):
         current: list[str] = []
         current_len = 0
         for para in paragraphs:
+            if current and len(para) > chunk_chars:
+                # Flush buffered paragraphs first so chunks stay in document
+                # order (the merge keeps the FIRST non-null scalar).
+                chunks.append("\n\n".join(current))
+                current, current_len = [], 0
             while len(para) > chunk_chars:  # pathological single paragraph
                 chunks.append(para[:chunk_chars])
                 para = para[chunk_chars:]
@@ -690,6 +697,8 @@ SPECIALIST_REGISTRY = {
     "correspondence": CorrespondenceSpecialist,
     "compliance_filing": ComplianceFilingSpecialist,
     "court_opinion": CourtOpinionsSpecialist,
+    # taxonomy.yaml routes merger_agreement to contracts_specialist.
+    "merger_agreement": ContractsSpecialist,
 }
 
 
@@ -726,3 +735,8 @@ class InsuranceClaimsSpecialist(_SpecialistBase):
 
     def system_prompt(self) -> str:
         return get_prompt(self.prompt_version)
+
+
+# Defined after the registry literal, so registered here (taxonomy.yaml:
+# insurance_claim -> insurance_claims_specialist).
+SPECIALIST_REGISTRY["insurance_claim"] = InsuranceClaimsSpecialist

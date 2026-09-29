@@ -53,10 +53,21 @@ def _ensure_scoring_deps() -> None:
         pass
     else:
         return
-    candidate = ROOT / ".venv" / "bin" / "python"
-    if (candidate.exists()
-            and os.path.realpath(candidate) != os.path.realpath(sys.executable)):
-        os.execv(str(candidate), [str(candidate), str(Path(__file__)), *sys.argv[1:]])
+    candidates = [ROOT / ".venv" / "bin" / "python", ROOT / "venv" / "bin" / "python"]
+    if os.environ.get("VIRTUAL_ENV"):
+        candidates.insert(0, Path(os.environ["VIRTUAL_ENV"]) / "bin" / "python")
+    # Compare venv prefixes, not interpreter realpaths: a venv's bin/python
+    # symlinks to the same base binary as the system python3.
+    here = os.path.realpath(sys.prefix)
+    for candidate in candidates:
+        if candidate.exists() and os.path.realpath(candidate.parent.parent) != here:
+            os.execv(str(candidate), [str(candidate), str(Path(__file__)), *sys.argv[1:]])
+    sys.exit(
+        "_pre-render.py: llm_dojo_scoring is not importable from "
+        f"{sys.executable} and no venv was found (tried "
+        f"{', '.join(str(c) for c in candidates)}). Install the repo with "
+        "`pip install -e .` into .venv/ or activate its venv before rendering."
+    )
 
 
 _ensure_scoring_deps()

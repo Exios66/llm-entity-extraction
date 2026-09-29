@@ -29,8 +29,10 @@ def clean_prediction(text: Union[str, None]) -> str:
         return ""
     text = text.strip().lower()
     tagged = re.search(r"<label>\s*([^<\s][^<]*?)\s*</label>", text, flags=re.DOTALL)
-    if tagged and tagged.group(1).strip() in VALID_CLASSES:
-        return tagged.group(1).strip()
+    if tagged:
+        label = re.sub(r"[^a-z0-9]+", "_", tagged.group(1)).strip("_")
+        if label in VALID_CLASSES:
+            return label
     for line in reversed(text.splitlines()):
         candidate = line.strip().strip("`*_ ").lower()
         if candidate in VALID_CLASSES:
@@ -82,10 +84,18 @@ def extract_confidence(text: str) -> Union[float, None]:
     """Extract the model's self-reported confidence (0-1) from a response."""
     if not text:
         return None
-    tag = re.search(r"<confidence>\s*(\d{1,3})\s*</confidence>", text, flags=re.IGNORECASE)
+    tag = re.search(r"<confidence>\s*(.*?)\s*</confidence>", text,
+                    flags=re.IGNORECASE | re.DOTALL)
     if tag:
-        value = int(tag.group(1))
-        return float(max(0, min(100, value))) / 100.0
+        # Prompts ask for an integer 0-100, but models also write 0.92, 95%
+        # or 87.5. A decimal <= 1 is a fraction; anything else is a percent.
+        number = re.fullmatch(r"(\d{1,3}(?:\.\d+)?|\.\d+)\s*(%?)", tag.group(1))
+        if not number:
+            return None  # e.g. <confidence>high</confidence>: no score given
+        value = float(number.group(1))
+        if "." in number.group(1) and value <= 1.0 and not number.group(2):
+            return value
+        return max(0.0, min(100.0, value)) / 100.0
     for line in reversed(text.splitlines()):
         line = line.strip()
         if re.fullmatch(r"\d{1,3}", line):
