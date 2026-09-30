@@ -143,8 +143,44 @@ def test_scores_emitted_as_openinference_annotations(fake_otel):
     assert agent.attributes["annotations.0.explanation"] == "TP (ContractEval verbatim rubric)"
     assert agent.attributes["annotations.1.name"] == "jaccard"
     assert agent.attributes["annotations.1.label"] == "incorrect"
-    assert root.attributes["annotations.0.name"] == "classification"
-    assert root.attributes["annotations.0.label"] == "incorrect"
+
+
+def test_score_label_none_omits_correctness_verdict(fake_otel):
+    """hub#63: calibration metrics (confidence) must not get a 0.5-threshold
+    correct/incorrect verdict — label=None omits the label entirely."""
+    tracer = pt.PhoenixTracer(session_id="exp_ce", tags=["t"], trace_name="contracteval")
+    with tracer.trace_document("doc", "X", {"category": "X"}) as trace_handle:
+        trace_handle.score("confidence", 0.3, comment="calibration", label=None)
+        trace_handle.score("accuracy", 1.0, comment="correctness")
+    (root,) = fake_otel.spans
+    assert root.attributes["annotations.0.name"] == "confidence"
+    assert root.attributes["annotations.0.score"] == 0.3
+    assert "annotations.0.label" not in root.attributes
+    assert root.attributes["annotations.1.name"] == "accuracy"
+    assert root.attributes["annotations.1.label"] == "correct"
+
+
+def test_phoenix_endpoint_reachable_false_on_refused(monkeypatch):
+    """A down Phoenix must not attach a BatchSpanProcessor (KANBAN-103)."""
+    import urllib.error
+
+    def boom(*_a, **_k):
+        raise urllib.error.URLError("Connection refused")
+
+    monkeypatch.setattr("urllib.request.urlopen", boom)
+    assert pt.phoenix_endpoint_reachable(timeout=0.05) is False
+
+
+def test_phoenix_endpoint_reachable_true_on_200(monkeypatch):
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_a):
+            return False
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_a, **_k: _Resp())
+    assert pt.phoenix_endpoint_reachable(timeout=0.05) is True
 
 
 def test_disabled_tracer_is_noop(fake_otel, monkeypatch):

@@ -151,6 +151,7 @@ Classifier reasoning: {reasoning or 'none provided'}
         try:
             quality = float(result.get("classification_quality", 0.0))
         except (TypeError, ValueError):
+            logger.warning("quality_unparseable", raw=result.get("classification_quality"))
             quality = 0.0
         return {
             "classification_correct": label,
@@ -225,6 +226,7 @@ Expected extraction fields:
         try:
             completeness = float(result.get("completeness", 0.0))
         except (TypeError, ValueError):
+            logger.warning("completeness_unparseable", raw=result.get("completeness"))
             completeness = 0.0
         return {
             "completeness": max(0.0, min(1.0, completeness)),
@@ -297,6 +299,7 @@ Document type: {doc_type}
         try:
             correctness = float(result.get("extraction_correctness", 0.0))
         except (TypeError, ValueError):
+            logger.warning("correctness_unparseable", raw=result.get("extraction_correctness"))
             correctness = 0.0
         return {
             "extraction_correctness": max(0.0, min(1.0, correctness)),

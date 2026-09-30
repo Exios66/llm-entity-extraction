@@ -37,6 +37,41 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 SITE_DIR = Path(__file__).resolve().parent
 
 sys.path.insert(0, str(ROOT / "src"))
+
+
+def _ensure_scoring_deps() -> None:
+    """Re-exec under the repo venv when the active interpreter lacks the
+    scoring package (KANBAN-094). Quarto invokes bare ``python3`` for this
+    hook; system interpreters may not have ``llm_dojo_scoring`` installed,
+    which made ``from experiment_log import ...`` die mid-render. Re-exec is
+    transparent: same argv, same stdio, same exit code."""
+    import os
+
+    try:
+        import llm_dojo_scoring  # noqa: F401
+    except ImportError:
+        pass
+    else:
+        return
+    candidates = [ROOT / ".venv" / "bin" / "python", ROOT / "venv" / "bin" / "python"]
+    if os.environ.get("VIRTUAL_ENV"):
+        candidates.insert(0, Path(os.environ["VIRTUAL_ENV"]) / "bin" / "python")
+    # Compare venv prefixes, not interpreter realpaths: a venv's bin/python
+    # symlinks to the same base binary as the system python3.
+    here = os.path.realpath(sys.prefix)
+    for candidate in candidates:
+        if candidate.exists() and os.path.realpath(candidate.parent.parent) != here:
+            os.execv(str(candidate), [str(candidate), str(Path(__file__)), *sys.argv[1:]])
+    sys.exit(
+        "_pre-render.py: llm_dojo_scoring is not importable from "
+        f"{sys.executable} and no venv was found (tried "
+        f"{', '.join(str(c) for c in candidates)}). Install the repo with "
+        "`pip install -e .` into .venv/ or activate its venv before rendering."
+    )
+
+
+_ensure_scoring_deps()
+
 from experiment_log import render_full_log  # noqa: E402
 
 # Sections that exist only to dump per-document/results content — omitted from

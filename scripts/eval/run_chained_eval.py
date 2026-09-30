@@ -52,7 +52,7 @@ from src.env_utils import (
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.evaluation import ManifestStore, model_settings, dataset_fingerprint, validate_dataset
 from src.eval_shims import run_local_eval
 from src.experiment_log import (
     append_experiment,
@@ -176,6 +176,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "dataset": args.dataset,
             "dataset_size": len(with_truth),

@@ -316,6 +316,12 @@ python scripts/datasets/stream_legalbench_tasks_to_bt.py --tasks hearsay  # e.g.
 python scripts/eval/run_langfuse_docclass_eval.py --dry-run
 python scripts/eval/run_langfuse_docclass_eval.py --local-dumps data/maud/contracts.jsonl,data/s1_corporate_records/corporate-records.jsonl \
     --stratified 120 --seed 42
+# Correspondence-only Enron eval (KANBAN-103): subclass + sentiment on
+# Lucius-Morningstar/enron-correspondence-dedup. Default 200 stratified,
+# seed 42; Braintrust traces ON. Reserved name
+# qwen3.7-flash_sorter_docclass_correspondence_v0_enron200_s42.
+python scripts/eval/run_correspondence_eval.py --dry-run --stratified 200 --seed 42
+python scripts/eval/run_correspondence_eval.py --stratified 200 --seed 42
 python scripts/datasets/stream_maud_to_bt.py --local-dump data/maud/          # rebuild MAUD dumps
 python scripts/datasets/stream_s1_exhibits.py --max-filings 40 --local-dump data/s1_corporate_records/  # EDGAR S-1 exhibits
 python scripts/eval/sync_langfuse_datasets.py --maud --s1 --dry-run           # mirror dumps into Langfuse
@@ -467,6 +473,7 @@ Key modules:
 | `src/monte_carlo.py` | zero-spend robustness simulation primitives over the joint reasoning corpus (committee voting, confidence-gated escalation, paired-bootstrap prompt ablation, failure-pipeline sim, exemplar mining — KANBAN-048). |
 | `src/langfuse_tracing.py` | Langfuse mirror tracer: one trace per document (session-scoped deterministic id), `agent_observation()` opens one span per pipeline agent with its designated task scores attached to that observation; graceful no-op when keys are missing. |
 | `src/experiment_log.py` | append-only JSONL + markdown renderer (tables, confusion matrices, scoring matrices, outputs, failure insights); `render_full_log()` for the rebuild; the append/git-snapshot/mean/tokens core re-exports `llm_dojo_scoring.experiment` + `.cost`. |
+| `src/correspondence_eval.py` | Enron correspondence eval primitives (KANBAN-103): blind↔GT join on `filename`, subclass-stratified sample, sentiment label/score scoring, predicted↔GT field alignment. |
 | `src/evaluation.py` | dataset validation, fingerprints, `ManifestStore` (thread-safe JSONL resume checkpoints), adaptive `resolve_concurrency`, `call_with_rate_limit_retry`. |
 | `src/scorers.py` | re-export shim → `llm_dojo_scoring.classification` (deterministic scorers exact_match, failure, `normalize_label`) + the local `cost` scorer and name registry. |
 | `src/score_emitter.py` | bridge → `llm_dojo_scoring.emitter` + `.pruning` (KANBAN-061 unified layer): `build_emitter()` (JSONL manifest sink + inert-unless-configured Langfuse), `emit_run_scores()` (registry-validated; unknown/None names returned as skipped, never dropped), `dashboard_names()` / `headline_names()` tier-capped views. |
@@ -477,7 +484,7 @@ Key modules:
 
 The canonical, formula-level reference for every scorer and metric is
 **`docs/SCORING.md`** — where scoring lives (the **`llm-dojo-scoring` package**,
-pinned `@v0.7.0` and shared with llm-mailroom; the local `src/` modules are
+pinned `.15.0` and shared with llm-mailroom; the local `src/` modules are
 thin re-export shims), classification, binary, multiclass, subtype, docclass
 hierarchical, task-aware (MAUD / LegalBench / court opinions / chained), the
 field-type-aware content scorer, factuality audit, judge calibration, chained
@@ -609,6 +616,40 @@ Verify the record is COMPLETE before moving on:
   backfill it from the Braintrust LLM spans before regenerating.
 - Never hand-edit `reports/experiment_log.md` — regenerate it.
 
+## Monorepo development (Digital-Mailroom)
+
+This repo is also `packages/llm-entity-extraction` inside the
+[Digital-Mailroom](https://github.com/LLM-Mailroom-Services/Digital-Mailroom)
+monorepo — a single `uv` workspace that holds every constellation repo as a
+git-subtree package (the monorepo is the dev source of truth for cross-repo
+development; the hub task board is `governance/TASKS.md`, cards `DMR-0NN`).
+
+- **One workspace, no cross-repo imports**: `uv sync` at the monorepo root
+  installs this package editable from `packages/llm-entity-extraction`.
+  Cross-package deps resolve via `[tool.uv.sources]` tables — published git
+  pins in `pyproject.toml` stay untouched for release/deploy builds.
+- **Sync contract**: `python scripts/sync_packages.py {status|pull|push}`
+  at the monorepo root reconciles subtree mirrors with `Exios66/*`.
+  Standalone-repo work flows monorepo-ward via `pull --squash`; monorepo
+  fixes flow out via `push`. The monorepo is the dev source of truth —
+  imported monorepo-side fixes win unless the upstream supersedes them.
+- **Monorepo-side adaptations** that live ONLY there (re-apply on conflict
+  when pulling): the `[tool.uv.sources]` block in `pyproject.toml`,
+  pruned-heavy-asset test skips, and CWD/UTC anchoring fixes. Nested
+  `.github/` workflows are inert in the monorepo (release-time only).
+- **Release propagation**: cutting a standalone release here (the
+  `scripts/release.py --bump` flow below) is step one; the release commit
+  then flows into the monorepo via the sync pass at release time —
+  `python scripts/sync_packages.py status` (drift), then
+  `push --package llm-entity-extraction` (content-only) or `push --all
+  --patch` (release-train sweep), then re-baseline the cursor. Consuming
+  pins (e.g. the sandbox `[evals]` extra) are bumped only at release time
+  of the pinned package.
+- **Test gates in the monorepo**: run
+  `uv run pytest packages/llm-entity-extraction/tests` — one package per
+  pytest invocation (several packages ship colliding top-level `tests`
+  packages).
+
 ## Release workflow (semantic versioning + tag)
 
 The changelog follows [Keep a Changelog](https://keepachangelog.com/) and
@@ -668,6 +709,13 @@ match the CHANGELOG header exactly. The mechanical steps are automated by
    the "After every run" section, then commit + push there.
 9. Verify the tag exists on GitHub and the README/CHANGELOG/site render
    correctly (https://exios66.github.io/llm-entity-extraction/).
+10. **Propagate the release to the monorepo** — from
+    `LLM-Mailroom-Services/Digital-Mailroom`, run
+    `python scripts/sync_packages.py push --package llm-entity-extraction`
+    (content-only deltas) to land the release upstream, re-baseline the
+    cursor, and confirm `sync_packages.py status` shows in-sync. The
+    monorepo-side copy of this file carries the full contract under
+    "Monorepo development" above.
 
 ## Experiment log mechanics
 

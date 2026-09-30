@@ -54,6 +54,7 @@ from src.env_utils import (  # noqa: E402
 )
 from src.evaluation import (  # noqa: E402
     ManifestStore,
+    model_settings,
     call_with_rate_limit_retry,
     dataset_fingerprint,
     resolve_concurrency,
@@ -217,6 +218,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "dataset": args.dataset,
             "dataset_size": len(with_truth),
