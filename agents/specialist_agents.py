@@ -312,7 +312,7 @@ class _SpecialistBase(BaseAgent):
                 result = self._call_structured(
                     user_message,
                     json_schema=self.schema,
-                    temperature=0.1,
+                    temperature=self._temperature,
                 )
             except Exception as exc:  # noqa: BLE001 - one bad chunk must not abort
                 logger.warning("chunk_call_failed", agent=self.agent_name,
@@ -442,7 +442,7 @@ class _SpecialistBase(BaseAgent):
         result = self._call_structured(
             user_message,
             json_schema=self.schema,
-            temperature=0.1,
+            temperature=self._temperature,
         )
         if result.get("_parse_error"):
             logger.error("specialist_parse_error", agent=self.agent_name)
@@ -564,7 +564,7 @@ class ContractsSpecialist(_SpecialistBase):
                 result = self._call_structured(
                     user_message,
                     json_schema=AUDIT_SCHEMA,
-                    temperature=0.1,
+                    temperature=self._temperature,
                 )
             except Exception as exc:  # noqa: BLE001 - one bad window must not abort
                 logger.warning("audit_call_failed", agent=self.agent_name,

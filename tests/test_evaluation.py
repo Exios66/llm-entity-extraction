@@ -214,3 +214,20 @@ def test_model_settings_changes_block_manifest_reuse(tmp_path):
     assert model_settings(second) == {"reasoning_effort": "high", "max_input_chars": 5000}
     with pytest.raises(ValueError, match="does not match"):
         ManifestStore(path, {"model": "m", "settings": model_settings(second)})
+
+
+def test_cost_models_alone_sees_taxonomy_prices():
+    import subprocess
+    import sys
+
+    code = ("import sys; sys.path.insert(0, '.'); "
+            "from src.cost_models import price_for; "
+            "print(price_for('openai/gpt-4.1-mini'))")
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert out.stdout.strip() == "(0.4, 1.6)", out.stderr[-400:]
+
+
+def test_effective_date_prefers_effective_date_category():
+    from src.metrics import _FIELD_CATEGORIES
+
+    assert _FIELD_CATEGORIES["effective_date"][0] == "Effective Date"

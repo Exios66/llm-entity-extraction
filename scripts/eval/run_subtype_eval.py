@@ -271,6 +271,7 @@ def main_with_args(argv: list[str]) -> int:
                              prompt_version=args.sorter_prompt_version)
         sorter._max_input_chars = args.max_input_chars
         sorter._max_tokens = args.max_tokens
+        sorter._temperature = args.temperature
         sorter._reasoning_effort = args.reasoning_effort
         # A failed call propagates: the harness records the row as an error
         # (n_errors) and rate limits reach the retry wrapper, instead of a fake

@@ -531,6 +531,7 @@ def main_with_args(argv: list[str]) -> int:
                                  callbacks=[handle.handler] if handle.handler else None)
             sorter._max_input_chars = args.max_input_chars
             sorter._max_tokens = args.max_tokens
+            sorter._temperature = args.temperature
             sorter._reasoning_effort = args.reasoning_effort
 
             input_mode_used = args.input_mode

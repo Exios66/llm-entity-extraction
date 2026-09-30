@@ -492,6 +492,7 @@ def main_with_args(argv: list[str]) -> int:
         )
         sorter._max_input_chars = args.max_input_chars
         sorter._max_tokens = args.max_tokens
+        sorter._temperature = args.temperature
         sorter._reasoning_effort = args.reasoning_effort
 
         # A failed call propagates so the eval harness records the row as an

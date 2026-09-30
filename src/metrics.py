@@ -71,6 +71,12 @@ _FIELD_CATEGORIES: dict[str, list[str]] = defaultdict(list)
 for _category, _spec in CUAD_CATEGORIES.items():
     if _spec.get("field"):
         _FIELD_CATEGORIES[_spec["field"]].append(_category)
+# The category named like the field answers it first: effective_date is
+# labelled by both "Agreement Date" and "Effective Date", and the two differ
+# on 56/510 master rows, so dict order made the MAE score effective_date
+# against the agreement date.
+for _field, _cats in _FIELD_CATEGORIES.items():
+    _cats.sort(key=lambda c, f=_field: c.lower().replace(" ", "_") != f)
 
 
 def _expected_for_field(master, filename: str, field: str, fallback: str) -> str:
