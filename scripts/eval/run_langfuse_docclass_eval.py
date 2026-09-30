@@ -84,6 +84,7 @@ from src.braintrust_utils import load_braintrust_dataset  # noqa: E402
 from src.env_utils import require_env  # noqa: E402
 from src.evaluation import (  # noqa: E402
     ManifestStore,
+    model_settings,
     call_with_rate_limit_retry,
     dataset_fingerprint,
     resolve_concurrency,
@@ -483,6 +484,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "datasets": args.datasets,
             "dataset_size": len(dataset),
@@ -573,17 +575,14 @@ def main_with_args(argv: list[str]) -> int:
                 if args.input_mode == "vision-primary":
                     # Vision call failed -> text fallback carries the row.
                     fallback_reason = f"vision_error:{type(exc).__name__}"
-                    try:
-                        result = sorter.classify_json(input_data["doc_text"])
-                    except Exception as text_exc:  # noqa: BLE001
-                        result = {"doc_type": "correspondence", "contract_subtype": None,
-                                  "doc_subclass": None, "confidence": 0.0,
-                                  "reasoning": f"error: {text_exc}"}
+                    # A failed text pass propagates: the row becomes an
+                    # error (n_errors), and rate limits reach the retry
+                    # wrapper, instead of a fake "correspondence" answer that
+                    # scored as correct on correspondence / "other" GT.
+                    result = sorter.classify_json(input_data["doc_text"])
                     input_mode_used = "text_fallback"
                 else:
-                    result = {"doc_type": "correspondence", "contract_subtype": None,
-                              "doc_subclass": None, "confidence": 0.0,
-                              "reasoning": f"error: {exc}"}
+                    raise
 
             # Usage accounting: count the vision call AND the fallback text call.
             usage_by_index[index] = sorter._last_usage or {}

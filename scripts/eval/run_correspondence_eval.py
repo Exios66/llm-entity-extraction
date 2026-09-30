@@ -75,6 +75,7 @@ from src.env_utils import get_env, load_env, require_env  # noqa: E402
 from src.eval_shims import run_local_eval  # noqa: E402
 from src.evaluation import (  # noqa: E402
     ManifestStore,
+    model_settings,
     dataset_fingerprint,
     resolve_concurrency,
     validate_dataset,
@@ -443,6 +444,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "hf_repo": args.hf_repo,
             "repo_revision": args.repo_revision,
@@ -492,19 +494,11 @@ def main_with_args(argv: list[str]) -> int:
         sorter._max_tokens = args.max_tokens
         sorter._reasoning_effort = args.reasoning_effort
 
-        try:
-            result = sorter.classify_json(
-                input_data["doc_text"], correspondence_focus=True)
-        except Exception as exc:  # noqa: BLE001
-            result = {
-                "doc_type": CORRESPONDENCE_DOC_TYPE,
-                "contract_subtype": None,
-                "doc_subclass": None,
-                "sentiment_score": None,
-                "sentiment_label": None,
-                "confidence": 0.0,
-                "reasoning": f"error: {exc}",
-            }
+        # A failed call propagates so the eval harness records the row as an
+        # error (n_errors). The old fallback answered "correspondence" with no
+        # subclass, which scored doc_type 1.0 and matched every "other" GT row.
+        result = sorter.classify_json(
+            input_data["doc_text"], correspondence_focus=True)
         usage_by_index[input_data["index"]] = sorter._last_usage or {}
 
         doc_type = str(result.get("doc_type") or CORRESPONDENCE_DOC_TYPE).strip().lower()

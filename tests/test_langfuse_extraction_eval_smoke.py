@@ -173,6 +173,7 @@ def test_langfuse_extraction_no_audit_by_default(fake_langfuse_extraction, monke
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("audit ran")))
     rc = runner.main_with_args(["--dataset", "mailroom-cuad-contracts",
                                 "--experiment-name", "smoke_langfuse_no_audit",
+                                "--manifest", str(tmp_path / "manifest.jsonl"),
                                 "--experiment-log", str(tmp_path / "exp.jsonl")])
     assert rc == 0
     record = json.loads(open(tmp_path / "exp.jsonl").read().splitlines()[-1])

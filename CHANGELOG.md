@@ -246,6 +246,24 @@ history of the repository's tags. Format follows
   `insurance_claim` and `merger_agreement` are registered specialists (per
   `taxonomy.yaml`), and the vision call joins list-content blocks instead of
   taking their Python repr.
+- **Failed sorter calls are errors, not "correspondence" answers.** The
+  docclass, correspondence and subtype runners replaced a raised LLM call
+  with a fake `{"doc_type": "correspondence", "doc_subclass": None}` result
+  and scored it: a docclass run where every call failed logged
+  `doc_type_accuracy` 0.25 with `n_errors` 0, a correspondence run logged
+  1.0 / 0.5 (a missing subclass normalises to `other`). The exception now
+  propagates, so the row is counted in `n_errors` and rate limits reach
+  `call_with_rate_limit_retry` (the swallowed exception had bypassed it).
+- **Resume manifests refuse a run whose model settings changed.** Headers
+  now carry `settings` (`src.evaluation.model_settings`: temperature,
+  max_tokens, reasoning_effort, max_input_chars, vision_pages, chunking,
+  ...), so e.g. `--reasoning-effort high` no longer silently reuses rows
+  cached at `medium`. A manifest whose LAST line was cut off mid-write (a
+  killed run) is now resumable: the partial line is dropped and rewritten.
+  Existing manifests from before this change will not match; delete them or
+  pass a new `--manifest`.
+- **`test_langfuse_extraction_no_audit_by_default` wrote to
+  `data/manifests/extraction_langfuse.jsonl`**; it now uses a tmp manifest.
 
 ## [v0.21.0] - 2026-08-28
 

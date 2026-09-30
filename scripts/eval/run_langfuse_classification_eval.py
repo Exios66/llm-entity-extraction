@@ -62,7 +62,7 @@ from src.env_utils import (  # noqa: E402
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint  # noqa: E402
+from src.evaluation import ManifestStore, model_settings, dataset_fingerprint  # noqa: E402
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
 from src.langfuse_config import load_langfuse_config  # noqa: E402
 from src.langfuse_tracing import LangfuseTracer  # noqa: E402
@@ -209,6 +209,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "dataset": args.dataset,
             "dataset_size": len(dataset),
