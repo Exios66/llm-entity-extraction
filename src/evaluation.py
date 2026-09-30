@@ -144,6 +144,28 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Run arguments that change model behaviour. They go into every resume
+# manifest header, so a run with a different reasoning effort, token budget,
+# page mode, ... refuses a stale manifest instead of reusing its rows.
+MODEL_SETTING_ARGS = (
+    "temperature", "max_tokens", "reasoning_effort", "sorter_reasoning_effort",
+    "max_input_chars", "vision_pages", "pdf_dir", "prompt_mode", "chunked",
+    "chunk_chars", "chunk_overlap", "audit", "judge", "handoff_scope",
+    "extractor_prompt_version",
+)
+
+
+def model_settings(args: Any) -> dict[str, Any]:
+    """The behaviour-changing run arguments present on ``args`` (JSON-safe)."""
+    settings: dict[str, Any] = {}
+    for name in MODEL_SETTING_ARGS:
+        if hasattr(args, name):
+            value = getattr(args, name)
+            settings[name] = value if isinstance(value, (bool, int, float, str, type(None))) \
+                else str(value)
+    return settings
+
+
 class ManifestStore:
     """Thread-safe JSONL manifest used to resume interrupted evaluations.
 
@@ -170,8 +192,19 @@ class ManifestStore:
             header = json.loads(lines[0])
             if header.get("type") != "header" or header.get("metadata") != self.metadata:
                 raise ValueError("manifest metadata does not match this evaluation")
-            for line in lines[1:]:
-                record = json.loads(line)
+            for i, line in enumerate(lines[1:], start=1):
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    if i == len(lines) - 1:
+                        # A run killed mid-append leaves a partial last line;
+                        # drop it (that row simply re-runs) so the manifest
+                        # stays resumable. Corruption elsewhere still fails.
+                        # Rewrite without it so later appends start on a
+                        # clean line.
+                        self.path.write_text("\n".join(lines[:-1]) + "\n", encoding="utf-8")
+                        continue
+                    raise
                 if record.get("filename"):
                     self.records[record["filename"]] = record
             self.reused = True

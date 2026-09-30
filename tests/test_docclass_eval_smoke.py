@@ -333,3 +333,29 @@ def test_docclass_eval_smoke_detects_subclass_miss(dump_path, tmp_path, monkeypa
     assert insights["mode_counts"].get("subclass_miss") == 1
     assert insights["n_failed"] == 1
     assert insights["failures"][0]["failure_mode"] == "subclass_miss"
+
+
+def test_docclass_eval_failed_calls_are_errors_not_predictions(
+        dump_path, tmp_path, monkeypatch, fake_langfuse):
+    """A sorter call that raises must land as an error row, never as a fake
+    "correspondence" answer that scores as correct on correspondence GT."""
+    monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "log.jsonl"))
+    monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "log.md"))
+
+    def failing_classify_json(self, doc_text):
+        raise RuntimeError("provider timeout")
+
+    monkeypatch.setattr("agents.sorter_agent.SorterAgent.classify_json", failing_classify_json)
+
+    from scripts.eval.run_langfuse_docclass_eval import main_with_args
+
+    main_with_args([
+        "--local-dumps", str(dump_path),
+        "--experiment-name", "docclass_error_test",
+        "--manifest", str(tmp_path / "manifest.jsonl"),
+        "--max-concurrency", "2",
+    ])
+    rec = json.loads((tmp_path / "log.jsonl").read_text().strip().splitlines()[-1])
+    assert rec["scores"]["n_errors"] == 4
+    assert rec["scores"]["n_rows"] == 0
+    assert rec["scores"]["doc_type_accuracy"] is None

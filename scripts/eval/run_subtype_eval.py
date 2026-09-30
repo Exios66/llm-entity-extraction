@@ -63,7 +63,7 @@ from src.env_utils import (  # noqa: E402
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset  # noqa: E402
+from src.evaluation import ManifestStore, model_settings, dataset_fingerprint, validate_dataset  # noqa: E402
 from src.eval_shims import run_local_eval  # noqa: E402
 from src.experiment_log import (  # noqa: E402
     append_experiment,
@@ -225,6 +225,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "dataset": args.dataset,
             "dataset_size": len(dataset),
@@ -271,11 +272,10 @@ def main_with_args(argv: list[str]) -> int:
         sorter._max_input_chars = args.max_input_chars
         sorter._max_tokens = args.max_tokens
         sorter._reasoning_effort = args.reasoning_effort
-        try:
-            result = sorter.classify_json(input_data["doc_text"])
-        except Exception as exc:  # noqa: BLE001 - one bad row must not abort
-            result = {"doc_type": "correspondence", "contract_subtype": SUBTYPE_UNKNOWN,
-                      "confidence": 0.0, "reasoning": f"error: {exc}"}
+        # A failed call propagates: the harness records the row as an error
+        # (n_errors) and rate limits reach the retry wrapper, instead of a fake
+        # "correspondence" answer being scored as a model miss.
+        result = sorter.classify_json(input_data["doc_text"])
         usage_by_index[input_data["index"]] = sorter._last_usage or {}
 
         doc_type = str(result.get("doc_type", "correspondence")).strip().lower()

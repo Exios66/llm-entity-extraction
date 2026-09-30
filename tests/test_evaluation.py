@@ -168,3 +168,49 @@ def test_rate_limit_retry_gives_up_and_non_rate_errors_raise():
 
     with pytest.raises(ValueError, match="real bug"):
         call_with_rate_limit_retry(other_error, retries=4)
+
+
+def test_manifest_resumes_after_truncated_last_line(tmp_path):
+    from src.evaluation import ManifestStore
+
+    path = tmp_path / "m.jsonl"
+    store = ManifestStore(path, {"run": 1})
+    store.initialize()
+    store.append({"filename": "a", "status": "completed"})
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write('{"filename": "b", "sta')  # killed mid-append
+    resumed = ManifestStore(path, {"run": 1})
+    assert resumed.get_completed("a") is not None
+    assert resumed.get_completed("b") is None
+    resumed.append({"filename": "b", "status": "completed"})
+    assert ManifestStore(path, {"run": 1}).get_completed("b") is not None
+
+
+def test_manifest_corruption_before_last_line_still_fails(tmp_path):
+    import pytest
+
+    from src.evaluation import ManifestStore
+
+    path = tmp_path / "m.jsonl"
+    store = ManifestStore(path, {"run": 1})
+    store.initialize()
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write('{"filename": "a", "sta\n{"filename": "b", "status": "completed"}\n')
+    with pytest.raises(ValueError):
+        ManifestStore(path, {"run": 1})
+
+
+def test_model_settings_changes_block_manifest_reuse(tmp_path):
+    from argparse import Namespace
+
+    import pytest
+
+    from src.evaluation import ManifestStore, model_settings
+
+    path = tmp_path / "m.jsonl"
+    first = Namespace(model="m", reasoning_effort="medium", max_input_chars=None)
+    ManifestStore(path, {"model": "m", "settings": model_settings(first)}).initialize()
+    second = Namespace(model="m", reasoning_effort="high", max_input_chars=5000)
+    assert model_settings(second) == {"reasoning_effort": "high", "max_input_chars": 5000}
+    with pytest.raises(ValueError, match="does not match"):
+        ManifestStore(path, {"model": "m", "settings": model_settings(second)})
