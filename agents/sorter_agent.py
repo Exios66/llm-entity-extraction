@@ -503,7 +503,7 @@ class SorterAgent(BaseAgent):
         result = self._call_structured(
             f"Classify this legal document:\n\n{truncated}",
             json_schema=SORTER_SCHEMA,
-            temperature=0.1,
+            temperature=self._temperature,
         )
 
         if result.get("_parse_error"):
@@ -568,7 +568,7 @@ class SorterAgent(BaseAgent):
         result = self._call_structured(
             user_message,
             json_schema=self.schema,
-            temperature=0.1,
+            temperature=self._temperature,
         )
         if result.get("_parse_error"):
             return {"doc_type": "correspondence", "contract_subtype": None,
@@ -709,7 +709,7 @@ class SorterAgent(BaseAgent):
             user_text=user_text,
             image_base64=image_base64,
             image_format=image_format,
-            temperature=0.1,
+            temperature=self._temperature,
             max_tokens=self._max_tokens,
         )
 
@@ -753,7 +753,7 @@ class SorterAgent(BaseAgent):
             system_prompt=system_text,
             user_text=user_text,
             images=[(b64, image_format) for b64 in pages_base64],
-            temperature=0.1,
+            temperature=self._temperature,
             max_tokens=self._max_tokens,
         )
 
@@ -793,7 +793,7 @@ Document text:
 
 Provide your best classification with justification."""
 
-        result = self._call_structured(prompt, json_schema=SORTER_SCHEMA, temperature=0.1)
+        result = self._call_structured(prompt, json_schema=SORTER_SCHEMA, temperature=self._temperature)
 
         if result.get("_parse_error"):
             return (previous_result.get("doc_type", "correspondence"), 0.3, "re-evaluation parse error")

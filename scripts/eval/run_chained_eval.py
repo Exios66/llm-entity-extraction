@@ -254,6 +254,7 @@ def main_with_args(argv: list[str]) -> int:
                                          prompt_version=args.extractor_prompt_version)
         specialist._max_input_chars = args.max_input_chars
         specialist._max_tokens = args.max_tokens
+        specialist._temperature = args.temperature
         specialist._reasoning_effort = args.reasoning_effort
         specialist.handoff_context = (
             f"Sorter classification: doc_type={sorter_doc_type} "
@@ -327,6 +328,7 @@ def main_with_args(argv: list[str]) -> int:
                 prompt_version=args.extractor_prompt_version)
             gt_specialist._max_input_chars = args.max_input_chars
             gt_specialist._max_tokens = args.max_tokens
+            gt_specialist._temperature = args.temperature
             gt_specialist._reasoning_effort = args.reasoning_effort
             gt_specialist.handoff_context = (
                 f"Sorter classification: doc_type={sorter_doc_type} "

@@ -274,6 +274,7 @@ def main_with_args(argv: list[str]) -> int:
                     callbacks=[agent_handle.handler] if agent_handle.handler else None)
                 sorter._max_input_chars = args.max_input_chars
                 sorter._max_tokens = args.max_tokens
+                sorter._temperature = args.temperature
                 try:
                     if args.prompt_mode == "task":
                         result = _answer_task(
@@ -371,7 +372,6 @@ def main_with_args(argv: list[str]) -> int:
         args.input_mode = "vision"
     else:
         args.input_mode = "text"
-    args.vision_pages = "all"
     args.scorers = None
     args.no_scorers = True
     args.documents_dir = args.images_dir = None

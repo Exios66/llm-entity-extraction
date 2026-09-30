@@ -277,8 +277,11 @@ def evaluate_record(record: dict, master_gt: dict[str, dict[str, list[str]]],
     """Evaluate ONE stored extraction record (an experiment-log line) against
     the master GT, returning the pooled ContractEval metrics + per-row detail.
 
-    Only rows whose normalized filename resolves in the GT and whose predicted
-    output parsed (no parse error) are scored; unjoinable rows are counted.
+    Rows whose normalized filename resolves in the GT are scored; unjoinable
+    rows are counted. A row that errored or failed to parse is scored as an
+    empty extraction ("no related clause" on every category, so its positives
+    are false negatives) rather than dropped: dropping it let a run where half
+    the documents crashed report the same recall as a clean run.
     """
     from src.field_scoring import disaggregate_clause_spans  # noqa: F401 (import path check)
 
@@ -293,7 +296,7 @@ def evaluate_record(record: dict, master_gt: dict[str, dict[str, list[str]]],
         predicted = row.get("predicted") or {}
         if row.get("error") or predicted.get("_parse_error"):
             n_parse_errors += 1
-            continue
+            predicted = {}
         doc_gt = master_gt.get(normalize_filename(row.get("filename")))
         if not doc_gt:
             n_unjoined += 1
@@ -329,7 +332,7 @@ def coverage_bands(record: dict, master_gt: dict[str, dict[str, list[str]]],
     for row in results:
         predicted = row.get("predicted") or {}
         if row.get("error") or predicted.get("_parse_error"):
-            continue
+            predicted = {}  # failed rows cover nothing (see evaluate_record)
         doc_gt = master_gt.get(normalize_filename(row.get("filename")))
         if not doc_gt:
             continue

@@ -321,6 +321,7 @@ def main_with_args(argv: list[str]) -> int:
                                          prompt_version=args.prompt_version)
         specialist._max_input_chars = args.max_input_chars
         specialist._max_tokens = args.max_tokens
+        specialist._temperature = args.temperature
         specialist._reasoning_effort = args.reasoning_effort
 
         if manifest:

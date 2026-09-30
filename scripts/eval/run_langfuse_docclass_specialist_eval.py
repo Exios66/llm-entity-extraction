@@ -411,6 +411,7 @@ def main_with_args(argv: list[str]) -> int:
                         callbacks=[specialist_handle.handler] if specialist_handle.handler else None)
                 specialist._max_input_chars = args.max_input_chars
                 specialist._max_tokens = args.max_tokens
+                specialist._temperature = args.temperature
                 specialist._reasoning_effort = args.reasoning_effort
 
                 try:
