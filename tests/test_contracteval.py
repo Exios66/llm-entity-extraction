@@ -280,3 +280,28 @@ def test_run_kpis_empty_record_degrades():
     assert k["n_positive"] == 0
     assert k["f1"] == 0.0
     assert k["jaccard_mean"] == 0.0
+
+
+def test_failed_rows_count_as_misses_not_dropped():
+    """An errored / unparsed row must lower recall, not vanish from the
+    denominator (a half-crashed run used to score like a clean one)."""
+    label = "NEITHER PARTY SHALL ASSIGN THIS AGREEMENT"
+    gt = {normalize_filename("Doc A.pdf"): {"Anti-Assignment": [label]},
+          normalize_filename("Doc B.pdf"): {"Anti-Assignment": [label]}}
+    good = {"filename": "Doc A.pdf", "error": None,
+            "predicted": {"key_obligations": [label], "termination_clauses": [],
+                          "reasoning": {"entries": []}}}
+    clean = evaluate_record({"results": [good]}, gt, categories=["Anti-Assignment"])
+    assert clean["recall"] == pytest.approx(1.0)
+
+    failed = {"filename": "Doc B.pdf", "error": "timeout", "predicted": {}}
+    unparsed = {"filename": "Doc B.pdf", "error": None,
+                "predicted": {"_parse_error": "bad json"}}
+    for bad in (failed, unparsed):
+        m = evaluate_record({"results": [good, bad]}, gt, categories=["Anti-Assignment"])
+        assert m["n_parse_errors"] == 1
+        assert m["n_positive"] == 2
+        assert m["recall"] == pytest.approx(0.5)
+        bands = coverage_bands({"results": [good, bad]}, gt, categories=["Anti-Assignment"])
+        assert bands["n_pos"] == 2
+        assert bands["verbatim"] == pytest.approx(0.5)

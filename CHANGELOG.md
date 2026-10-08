@@ -264,6 +264,26 @@ history of the repository's tags. Format follows
   pass a new `--manifest`.
 - **`test_langfuse_extraction_no_audit_by_default` wrote to
   `data/manifests/extraction_langfuse.jsonl`**; it now uses a tmp manifest.
+- **ContractEval mapping scorer counts failed documents as misses.**
+  `evaluate_record` / `coverage_bands` skipped rows with `error` or
+  `_parse_error`, so a run where half the documents crashed reported the
+  same recall and F1 as a clean one. Those rows are now scored as an empty
+  extraction ("no related clause" on every category); `n_parse_errors` still
+  counts them.
+- **ContractEval task runner leaves errored pairs out of the pooled
+  confusion.** A failed call's output is `""`, which is not "No related
+  clause.", so every errored negative pair was an FP. They are now excluded
+  and reported in `n_error`.
+- **`effective_date` MAE uses the Effective Date label first** (it used
+  Agreement Date, which differs on 56/510 master rows).
+- **`src/cost_models.py` loads the taxonomy prices itself**, so scripts
+  importing only it (`build_site.py`, `backfill_cost_estimates.py`) no
+  longer see package defaults (`openai/gpt-4.1-mini` priced `None`).
+- **`--temperature` is honoured.** The sorter and specialists hard-coded
+  0.1 while every runner logged the flag; runners now set `_temperature`
+  (default 0.1, so default runs are unchanged).
+  `run_langfuse_classification_eval.py` no longer overwrites
+  `--vision-pages` with `all` before logging it.
 
 ## [v0.21.0] - 2026-08-28
 

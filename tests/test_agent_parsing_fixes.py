@@ -90,3 +90,17 @@ def test_vision_call_joins_list_content(mocker):
     mocker.patch.object(sorter, "llm", return_value=_ListContentLLM())
     out = sorter._call_vision_multi("sys", "user", [("aGVsbG8=", "png")])
     assert out == "<label>contract</label>\n<confidence>90</confidence>"
+
+
+def test_sorter_uses_configured_temperature(mocker):
+    sorter = _docclass_sorter()
+    sorter._temperature = 0.7
+    seen = {}
+
+    def fake_structured(prompt, json_schema, temperature=None, **kwargs):
+        seen["temperature"] = temperature
+        return {"doc_type": "contract", "confidence": 0.9, "reasoning": "x"}
+
+    mocker.patch.object(sorter, "_call_structured", side_effect=fake_structured)
+    sorter.classify_json("THIS AGREEMENT")
+    assert seen["temperature"] == 0.7
