@@ -53,6 +53,7 @@ from src.env_utils import (  # noqa: E402
 )
 from src.evaluation import (  # noqa: E402
     ManifestStore,
+    model_settings,
     call_with_rate_limit_retry,
     dataset_fingerprint,
     resolve_concurrency,
@@ -247,6 +248,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "task_dataset": str(args.task_dataset),
             "contracts": str(args.contracts),
@@ -313,6 +315,7 @@ def main_with_args(argv: list[str]) -> int:
                 # reasoning — kill it before the LLM client is built.
                 sorter._reasoning_effort = None
                 sorter._max_tokens = args.max_tokens
+                sorter._temperature = args.temperature
                 # Trace/log label: the SorterAgent is only a plain-LLM carrier
                 # here — the system prompt is the CONTRACTEVAL prompt (never
                 # the sorter's); name it as such so inspection can't mistake
@@ -389,9 +392,13 @@ def main_with_args(argv: list[str]) -> int:
     # ------------------------------------------------------------------
     # Pooled ContractEval metrics via the canonical upstream evaluator.
     # ------------------------------------------------------------------
-    expected_spans = [r.input["label_spans"] for r in results]
-    outputs = [r.output for r in results]
-    categories = [r.input["category"] for r in results]
+    # Errored pairs (output "") are left out of the pooled confusion and
+    # reported as n_error: an empty output is not "No related clause.", so it
+    # used to count as a false positive on every negative pair.
+    scored = [r for r in results if not r.error]
+    expected_spans = [r.input["label_spans"] for r in scored]
+    outputs = [r.output for r in scored]
+    categories = [r.input["category"] for r in scored]
     metrics = score_task("contracteval", expected_spans, outputs, categories=categories)
 
     per_row = []

@@ -332,3 +332,38 @@ def test_report_contracteval(tmp_path):
     assert "qwen3.7-flash v0 | 3 | 2 | 0.667" in text
     assert "## Per-category breakdown" in text
     assert "Anti-Assignment" in text
+
+
+def test_runner_errored_pairs_are_not_false_positives(fake_contracteval_env, monkeypatch, tmp_path):
+    """A pair whose call failed has output "" — it must be reported as an
+    error, not pooled as an FP on a negative pair."""
+    import scripts.eval.run_langfuse_contracteval_eval as runner
+
+    def flaky_call_llm(self, user_message, system_prompt=None, temperature=None,
+                       max_tokens=None, reasoning_effort=None):
+        self._last_usage = {"prompt_tokens": 5, "completion_tokens": 5,
+                            "total_tokens": 10, "cost": 0.0}
+        if "Non-Compete" in user_message:
+            raise RuntimeError("provider timeout")
+        if "Anti-Assignment" in user_message:
+            return ANTI
+        return "No related clause."
+
+    monkeypatch.setattr("agents.sorter_agent.SorterAgent._call_llm", flaky_call_llm)
+    monkeypatch.setattr("scripts.eval.run_langfuse_contracteval_eval.resolve_openrouter_key",
+                        lambda *a, **k: "fake-key")
+    runner.main_with_args([
+        "--task-dataset", str(fake_contracteval_env["pairs"]),
+        "--contracts", str(fake_contracteval_env["contracts"]),
+        "--prompt-version", "contracteval_v0",
+        "--model", "qwen/qwen3.7-flash",
+        "--experiment-name", "smoke_contracteval_errors",
+        "--experiment-log", str(tmp_path / "exp.jsonl"),
+        "--manifest", str(tmp_path / "manifest.jsonl"),
+        "--max-concurrency", "2",
+    ])
+    record = json.loads(open(tmp_path / "exp.jsonl").read().strip().splitlines()[-1])
+    assert record["n_error"] == 1
+    s = record["scores"]
+    assert s["fp"] == 0
+    assert s["n_pairs"] == 2

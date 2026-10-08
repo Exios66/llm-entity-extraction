@@ -22,7 +22,14 @@ def test_normalize_label_from_json():
 
 def test_normalize_label_snake_variants():
     assert normalize_label("corporate record") == "corporate_record"
-    assert normalize_label("court opinion") == "court_opinion"
+    assert normalize_label("compliance filing") == "compliance_filing"
+    assert normalize_label("insurance claim") == "insurance_claim"
+
+
+def test_normalize_label_retired_classes_pass_through():
+    # llm-dojo-scoring v0.16.0 retired court_opinion / due_diligence (the
+    # sorter emits ``unknown``), so they no longer snake-case.
+    assert normalize_label("court opinion") == "court opinion"
 
 
 def test_normalize_label_unrecognized():

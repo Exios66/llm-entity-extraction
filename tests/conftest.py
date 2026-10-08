@@ -14,6 +14,10 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
+# Standalone convention: tests resolve data/fixture paths relative to the
+# package root ("runnable from the repo root"). In the monorepo pytest starts
+# at the hub root, so anchor CWD here exactly as the standalone suite expects.
+os.chdir(REPO_ROOT)
 
 FAKE_BT_KEY = "sk-test-braintrust-fake-key"
 FAKE_OR_KEY = "sk-or-test-fake-key"
@@ -42,10 +46,12 @@ def _isolate_experiment_log(monkeypatch, tmp_path):
     """Redirect the repo experiment log to a per-test tmp dir.
 
     Tests that run the eval loops (smoke tests) append experiment records;
-    they must never pollute the repo's reports/experiment_log.* files.
+    they must never pollute the repo's reports/experiment_log.* files (or
+    reports/scores_manifest.jsonl, which the docclass runners emit to).
     """
     monkeypatch.setenv("EXPERIMENT_LOG_PATH", str(tmp_path / "experiment_log.jsonl"))
     monkeypatch.setenv("EXPERIMENT_LOG_MD_PATH", str(tmp_path / "experiment_log.md"))
+    monkeypatch.setenv("SCORES_MANIFEST_PATH", str(tmp_path / "scores_manifest.jsonl"))
 
 
 @pytest.fixture

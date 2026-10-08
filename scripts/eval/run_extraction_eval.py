@@ -60,7 +60,7 @@ from src.env_utils import (  # noqa: E402
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.evaluation import ManifestStore, model_settings, dataset_fingerprint, validate_dataset
 from src.eval_shims import run_local_eval
 from src.experiment_log import (
     append_experiment,
@@ -238,7 +238,7 @@ def main_with_args(argv: list[str]) -> int:
         "judge": args.judge,
     }
     if args.manifest:
-        manifest = ManifestStore(args.manifest, manifest_meta)
+        manifest = ManifestStore(args.manifest, {**manifest_meta, "settings": model_settings(args)})
         manifest.initialize()
 
     if args.dry_run:
@@ -321,6 +321,7 @@ def main_with_args(argv: list[str]) -> int:
                                          prompt_version=args.prompt_version)
         specialist._max_input_chars = args.max_input_chars
         specialist._max_tokens = args.max_tokens
+        specialist._temperature = args.temperature
         specialist._reasoning_effort = args.reasoning_effort
 
         if manifest:

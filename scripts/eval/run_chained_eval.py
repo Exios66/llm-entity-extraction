@@ -52,7 +52,7 @@ from src.env_utils import (
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint, validate_dataset
+from src.evaluation import ManifestStore, model_settings, dataset_fingerprint, validate_dataset
 from src.eval_shims import run_local_eval
 from src.experiment_log import (
     append_experiment,
@@ -176,6 +176,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "dataset": args.dataset,
             "dataset_size": len(with_truth),
@@ -253,6 +254,7 @@ def main_with_args(argv: list[str]) -> int:
                                          prompt_version=args.extractor_prompt_version)
         specialist._max_input_chars = args.max_input_chars
         specialist._max_tokens = args.max_tokens
+        specialist._temperature = args.temperature
         specialist._reasoning_effort = args.reasoning_effort
         specialist.handoff_context = (
             f"Sorter classification: doc_type={sorter_doc_type} "
@@ -326,6 +328,7 @@ def main_with_args(argv: list[str]) -> int:
                 prompt_version=args.extractor_prompt_version)
             gt_specialist._max_input_chars = args.max_input_chars
             gt_specialist._max_tokens = args.max_tokens
+            gt_specialist._temperature = args.temperature
             gt_specialist._reasoning_effort = args.reasoning_effort
             gt_specialist.handoff_context = (
                 f"Sorter classification: doc_type={sorter_doc_type} "

@@ -120,12 +120,22 @@ def _load_records(log_path: Path | None) -> list[dict]:
     if not path.exists():
         return []
     out = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    corrupt = 0
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         if line.strip():
             try:
                 out.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
+            except json.JSONDecodeError as exc:
+                # Live-or-loud (DMR-061): an unscored row must be visible, not skipped.
+                corrupt += 1
+                if corrupt == 1:
+                    print(
+                        f"WARNING: {path} line {lineno} is corrupt JSON — row "
+                        f"unscored ({exc}); {corrupt} corrupt line(s) so far",
+                        file=sys.stderr,
+                    )
+    if corrupt:
+        print(f"WARNING: {corrupt} corrupt row(s) skipped from {path}", file=sys.stderr)
     return out
 
 

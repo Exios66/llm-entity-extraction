@@ -16,6 +16,11 @@ deterministic from the recorded token counts x the verified per-model prices
 
 from __future__ import annotations
 
+# Wire config/taxonomy.yaml prices into the package settings BEFORE any
+# lookup; without it a module that imports only cost_models (build_site.py,
+# backfill_cost_estimates.py) saw package defaults (e.g. no gpt-4.1-mini).
+import src.dojo_config  # noqa: F401,E402
+
 from llm_dojo_scoring.cost import (  # noqa: F401  (re-export shim)
     estimate_cost,
     estimate_for_record,

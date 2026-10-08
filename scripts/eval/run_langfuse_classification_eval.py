@@ -62,7 +62,7 @@ from src.env_utils import (  # noqa: E402
     require_env,
     resolve_openrouter_key,
 )
-from src.evaluation import ManifestStore, dataset_fingerprint  # noqa: E402
+from src.evaluation import ManifestStore, model_settings, dataset_fingerprint  # noqa: E402
 from src.experiment_log import default_jsonl_path, default_md_path  # noqa: E402
 from src.langfuse_config import load_langfuse_config  # noqa: E402
 from src.langfuse_tracing import LangfuseTracer  # noqa: E402
@@ -209,6 +209,7 @@ def main_with_args(argv: list[str]) -> int:
     manifest = None
     if args.manifest:
         manifest = ManifestStore(args.manifest, {
+            "settings": model_settings(args),
             "experiment_name": experiment_name,
             "dataset": args.dataset,
             "dataset_size": len(dataset),
@@ -273,6 +274,7 @@ def main_with_args(argv: list[str]) -> int:
                     callbacks=[agent_handle.handler] if agent_handle.handler else None)
                 sorter._max_input_chars = args.max_input_chars
                 sorter._max_tokens = args.max_tokens
+                sorter._temperature = args.temperature
                 try:
                     if args.prompt_mode == "task":
                         result = _answer_task(
@@ -370,7 +372,6 @@ def main_with_args(argv: list[str]) -> int:
         args.input_mode = "vision"
     else:
         args.input_mode = "text"
-    args.vision_pages = "all"
     args.scorers = None
     args.no_scorers = True
     args.documents_dir = args.images_dir = None
